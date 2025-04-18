@@ -92,10 +92,10 @@ export const getProperty = async (id) => {
   }
 };
 
-// Make an offer on a property
+// Make an offer on a property - Updated to use the new offer endpoint
 export const makeOffer = async (offerData) => {
   try {
-    const response = await api.post('/buyer/makeOffer', offerData);
+    const response = await api.post('/offer/makeOffer', offerData);
     return response.data;
   } catch (error) {
     handleRequestError(error, "Failed to make offer");
@@ -112,19 +112,17 @@ export const updateProperty = async (id, updatedData) => {
   }
 };
 
-// Get offers for a specific property
+// Get offers for a specific property - Updated to use the new offer endpoint
 export const getPropertyOffers = async (propertyId) => {
   try {
-    const response = await api.get(`/buyer/offers/property/${propertyId}`);
+    const response = await api.get(`/offer/property/${propertyId}`);
     return response.data;
   } catch (error) {
     handleRequestError(error, "Failed to fetch property offers");
   }
 };
 
-// Get offers for a specific buyer
-// Updated getBuyerOffers function in client/src/utils/api.js
-
+// Get offers for a specific buyer - Updated to use the new offer endpoint
 export const getBuyerOffers = async (params) => {
   try {
     // Handle different parameter formats
@@ -132,7 +130,7 @@ export const getBuyerOffers = async (params) => {
     
     if (typeof params === 'string') {
       // Direct buyerId as string
-      endpoint = `/buyer/offers/buyer?buyerId=${params}`;
+      endpoint = `/offer/buyer?buyerId=${params}`;
     } else if (params && typeof params === 'object') {
       // Object with parameters - extract the buyerId properly
       if (params.buyerId) {
@@ -140,11 +138,11 @@ export const getBuyerOffers = async (params) => {
           console.error('Invalid buyerId format:', params.buyerId);
           return { offers: [] };
         }
-        endpoint = `/buyer/offers/buyer?buyerId=${params.buyerId}`;
+        endpoint = `/offer/buyer?buyerId=${params.buyerId}`;
       } else if (params.email) {
-        endpoint = `/buyer/offers/buyer?email=${encodeURIComponent(params.email)}`;
+        endpoint = `/offer/buyer?email=${encodeURIComponent(params.email)}`;
       } else if (params.phone) {
-        endpoint = `/buyer/offers/buyer?phone=${encodeURIComponent(params.phone)}`;
+        endpoint = `/offer/buyer?phone=${encodeURIComponent(params.phone)}`;
       } else {
         console.error('Missing required parameter in getBuyerOffers:', params);
         return { offers: [] };

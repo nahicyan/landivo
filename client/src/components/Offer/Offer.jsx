@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { api } from "../../utils/api";
 import { parsePhoneNumber } from "libphonenumber-js";
@@ -52,53 +52,58 @@ export default function Offer({ propertyData }) {
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
   
-  // Track if form has been populated to prevent multiple calls
-  const [formPopulated, setFormPopulated] = useState(false);
+  // Use useRef instead of useState to track population status
+  // This persists across refreshes within the same component lifecycle
+  const formPopulationAttempted = useRef(false);
 
   // Get user data from Auth and VIP buyer contexts
-  const { user } = useAuth();
-  const { isVipBuyer, vipBuyerData } = useVipBuyer();
+  const { user, isLoading: authLoading } = useAuth();
+  const { isVipBuyer, vipBuyerData, isLoading: vipLoading } = useVipBuyer();
 
   // State for the Dialog notification
   const [dialogOpen, setDialogOpen] = useState(false);
   const [dialogMessage, setDialogMessage] = useState("");
   const [dialogType, setDialogType] = useState("success"); // "success" or "warning"
 
-  // Auto-populate user data when component mounts
+  // Auto-populate user data when component mounts or data becomes available
   useEffect(() => {
-    if (!formPopulated) {
+    // Only run if auth and VIP data is done loading and we haven't attempted population yet
+    if (!authLoading && !vipLoading && !formPopulationAttempted.current) {
       populateUserData();
-      setFormPopulated(true);
+      formPopulationAttempted.current = true;
     }
-  }, [user, isVipBuyer, vipBuyerData]);
+  }, [user, isVipBuyer, vipBuyerData, authLoading, vipLoading]);
 
   // Function to populate user data with priority
   const populateUserData = () => {
+    // Only set values for fields that are empty - don't overwrite existing data
+    // This helps preserve data on refreshes
+    
     // Priority 1: Use VIP buyer data if available
     if (isVipBuyer && vipBuyerData) {
-      setFirstName(vipBuyerData.firstName || "");
-      setLastName(vipBuyerData.lastName || "");
-      setEmail(vipBuyerData.email || "");
-      setPhone(formatPhoneNumber(vipBuyerData.phone || ""));
-      setBuyerType(vipBuyerData.buyerType || "");
+      if (!firstName && vipBuyerData.firstName) setFirstName(vipBuyerData.firstName);
+      if (!lastName && vipBuyerData.lastName) setLastName(vipBuyerData.lastName);
+      if (!email && vipBuyerData.email) setEmail(vipBuyerData.email);
+      if (!phone && vipBuyerData.phone) setPhone(formatPhoneNumber(vipBuyerData.phone));
+      if (!buyerType && vipBuyerData.buyerType) setBuyerType(vipBuyerData.buyerType);
       return;
     }
 
     // Priority 2: Fall back to Auth0 user data
     if (user) {
       // Try to extract name from Auth0 data
-      if (user.given_name) setFirstName(user.given_name);
-      if (user.family_name) setLastName(user.family_name);
+      if (!firstName && user.given_name) setFirstName(user.given_name);
+      if (!lastName && user.family_name) setLastName(user.family_name);
       
       // If no given/family name, try to parse from name
-      if (!user.given_name && !user.family_name && user.name) {
+      if ((!firstName || !lastName) && user.name) {
         const nameParts = user.name.split(' ');
-        if (nameParts.length > 0) setFirstName(nameParts[0]);
-        if (nameParts.length > 1) setLastName(nameParts.slice(1).join(' '));
+        if (nameParts.length > 0 && !firstName) setFirstName(nameParts[0]);
+        if (nameParts.length > 1 && !lastName) setLastName(nameParts.slice(1).join(' '));
       }
       
       // Set email if available
-      if (user.email) setEmail(user.email);
+      if (!email && user.email) setEmail(user.email);
     }
   };
 
@@ -195,7 +200,8 @@ export default function Offer({ propertyData }) {
     };
 
     try {
-      await api.post("/buyer/makeOffer", offerData);
+      // Use the new offer endpoint
+      await api.post("/offer/makeOffer", offerData);
 
       // If offer is below minPrice, show a warning and do not redirect
       if (parsedOfferPrice < propertyData?.minPrice) {

@@ -7,12 +7,13 @@ import session from "express-session";
 import path from "path";
 import fs from "fs";
 import { fileURLToPath } from "url";
-import "./config/passportConfig.js"; // Import your passport configuration
+import "./config/passportConfig.js";
 import { userRoute } from "./routes/userRoute.js";
 import { residencyRoute } from "./routes/residencyRoute.js";
 import { buyerRoute } from "./routes/buyerRoute.js";
+import { offerRoute } from "./routes/offerRoute.js";
 import { dealRoute } from "./routes/dealRoute.js";
-import { buyerActivityRoute } from "./routes/buyerActivityRoute.js"; // Add the activity route
+import { buyerActivityRoute } from "./routes/buyerActivityRoute.js";
 import { sessionLogger, ensureAuthenticated } from "./middlewares/sessionMiddleware.js";
 import { qualificationRoute } from "./routes/qualificationRoute.js";
 import { buyerListRoute } from "./routes/buyerListRoute.js";
@@ -73,9 +74,10 @@ app.use("/uploads", express.static(path.join(__dirname, "uploads")));
 // 6) API routes
 app.use(trackActivity);
 app.use("/api/user", userManagementRoute);
-
 app.use("/api/residency", residencyRoute);
 app.use("/api/buyer", buyerRoute);
+// Add the new offer route
+app.use("/api/offer", offerRoute);
 // Add the buyer activity routes
 app.use("/api/buyer", buyerActivityRoute);
 app.use("/api/qualification", qualificationRoute);

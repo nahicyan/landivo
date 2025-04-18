@@ -208,7 +208,7 @@ const BuyerDetailTabs = ({ buyer }) => {
     if (!buyer?.offers || !Array.isArray(buyer.offers) || buyer.offers.length === 0) {
       return;
     }
-
+  
     const details = {};
     for (const offer of buyer.offers) {
       try {

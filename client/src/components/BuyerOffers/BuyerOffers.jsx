@@ -97,13 +97,15 @@ export default function BuyerOffers() {
             <div className="text-center text-red-800">
               <h2 className="text-xl font-semibold mb-2">Error Loading Offers</h2>
               <p>{error || "Buyer not found"}</p>
-              <Button 
-                onClick={() => navigate("/admin/buyers")}
-                variant="outline" 
-                className="mt-4"
-              >
-                Back to Buyers List
-              </Button>
+              <div className="mt-4">
+                <Button 
+                  onClick={() => navigate("/admin/buyers")}
+                  variant="outline" 
+                  className="mt-4"
+                >
+                  Back to Buyers List
+                </Button>
+              </div>
             </div>
           </CardContent>
         </Card>

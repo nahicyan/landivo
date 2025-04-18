@@ -1,8 +1,5 @@
 import express from "express";
 import { 
-  makeOffer, 
-  getOffersByBuyer, 
-  getOffersOnProperty, 
   createVipBuyer,
   createBuyer,
   getAllBuyers,
@@ -18,13 +15,6 @@ import {
 import { getBuyerByAuth0Id } from '../controllers/buyerCntrl.js';
 
 const router = express.Router();
-
-// Route to create or update an offer
-router.post("/makeOffer", makeOffer);
-
-// Route to get offers by property or buyer
-router.get("/offers/property/:propertyId", getOffersOnProperty);
-router.get("/offers/buyer", getOffersByBuyer);
 
 // Routes to create buyers
 router.post("/createVipBuyer", createVipBuyer);

@@ -44,16 +44,15 @@ const BuyerOffersTable = () => {
                     // If ID is invalid, try to use the email as a fallback
                     if (vipBuyerData.email) {
                         console.log("Using email as fallback:", vipBuyerData.email);
+                        // Updated to use the new offer endpoint
                         const data = await getBuyerOffers({ email: vipBuyerData.email });
                         setOffers(data.offers || []);
-
-                        // Fetch property details for each offer
-                        // ... rest of the property fetching code
                     } else {
                         setError("Invalid buyer ID format and no email available");
                     }
                 } else {
                     // Use the ID directly if it's valid
+                    // Updated to use the new offer endpoint
                     const data = await getBuyerOffers(vipBuyerData.id); // Pass just the ID string
                     setOffers(data.offers || []);
 
@@ -81,8 +80,6 @@ const BuyerOffersTable = () => {
 
         fetchOffers();
     }, [vipBuyerData]);
-
-    // We're now using the shared formatCurrency helper from profileUtils.js
 
     // Handle click to view property details
     const handleViewProperty = (propertyId) => {
