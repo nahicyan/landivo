@@ -8,72 +8,149 @@ import {
 } from "../utils/offerNotification.js";
 
 /**
+ * Validates offer input from request
+ */
+const validateOfferInput = (req) => {
+  const { email, phone, propertyId, offeredPrice, firstName, lastName } = req.body;
+  
+  if (!email || !phone || !propertyId || !offeredPrice || !firstName || !lastName) {
+    return {
+      isValid: false,
+      message: "First Name, Last Name, Email, phone, property ID, and offered price are required."
+    };
+  }
+  
+  return { isValid: true };
+};
+
+/**
+ * Find existing buyer or create a new one
+ */
+const findOrCreateBuyer = async (buyerData) => {
+  const { email, phone, buyerType, firstName, lastName } = buyerData;
+  
+  let buyer = await prisma.buyer.findFirst({
+    where: {
+      OR: [{ email: email.toLowerCase() }, { phone }],
+    },
+  });
+
+  if (!buyer) {
+    buyer = await prisma.buyer.create({
+      data: {
+        email: email.toLowerCase(),
+        phone,
+        buyerType,
+        firstName,
+        lastName,
+        source: "Property Offer",
+      },
+    });
+  }
+  
+  return buyer;
+};
+
+/**
+ * Check if an offer already exists and if it can be updated
+ */
+const checkExistingOffer = async (buyerId, propertyId, newOfferedPrice) => {
+  const existingOffer = await prisma.offer.findFirst({
+    where: {
+      buyerId,
+      propertyId,
+    },
+  });
+  
+  if (existingOffer) {
+    const currentOfferPrice = parseFloat(existingOffer.offeredPrice);
+    const newOfferPrice = parseFloat(newOfferedPrice);
+    
+    if (newOfferPrice > currentOfferPrice) {
+      // Higher offer - allow update
+      return {
+        exists: true,
+        canUpdate: true,
+        offer: existingOffer
+      };
+    } else {
+      // Same or lower offer - reject
+      return {
+        exists: true,
+        canUpdate: false,
+        offer: existingOffer
+      };
+    }
+  }
+  
+  return { exists: false };
+};
+
+/**
+ * Update an existing offer with a new price
+ */
+const updateExistingOffer = async (offerId, offeredPrice) => {
+  return await prisma.offer.update({
+    where: { id: offerId },
+    data: {
+      offeredPrice,
+      timestamp: new Date(),
+    },
+  });
+};
+
+/**
+ * Create a new offer
+ */
+const createNewOffer = async (propertyId, offeredPrice, buyerId) => {
+  return await prisma.offer.create({
+    data: {
+      propertyId,
+      offeredPrice,
+      buyerId,
+      timestamp: new Date(),
+    },
+  });
+};
+
+/**
+ * Check if offer is below the property's minimum price
+ */
+const checkOfferBelowMinimum = (offeredPrice, property) => {
+  return parseFloat(offeredPrice) < parseFloat(property.minPrice);
+};
+
+/**
  * Make an offer on a property
  * @route POST /api/offer/makeOffer
  * @access Public
  */
 export const makeOffer = asyncHandler(async (req, res) => {
-  const {
-    email,
-    phone,
-    buyerType,
-    propertyId,
-    offeredPrice,
-    firstName,
-    lastName,
-  } = req.body;
-
-  if (!email || !phone || !propertyId || !offeredPrice || !firstName || !lastName) {
-    res.status(400).json({
-      message: "First Name, Last Name, Email, phone, property ID, and offered price are required.",
-    });
-    return;
-  }
-
   try {
-    // 1. Find or create buyer
-    let buyer = await prisma.buyer.findFirst({
-      where: {
-        OR: [{ email: email.toLowerCase() }, { phone }],
-      },
-    });
-
-    if (!buyer) {
-      buyer = await prisma.buyer.create({
-        data: {
-          email: email.toLowerCase(),
-          phone,
-          buyerType,
-          firstName,
-          lastName,
-          source: "Property Offer",
-        },
-      });
+    // 1. Validate input
+    const validation = validateOfferInput(req);
+    if (!validation.isValid) {
+      return res.status(400).json({ message: validation.message });
     }
 
-    // 2. Retrieve property details for notifications
-    const property = await prisma.residency.findUnique({
-      where: { id: propertyId },
-    });
+    const { email, phone, buyerType, propertyId, offeredPrice, firstName, lastName } = req.body;
 
-    // 3. Check if the buyer already made an offer on the same property
-    const existingOffer = await prisma.offer.findFirst({
-      where: {
-        buyerId: buyer.id,
-        propertyId,
-      },
-    });
+    // 2. Find or create buyer
+    const buyer = await findOrCreateBuyer({ email, phone, buyerType, firstName, lastName });
 
-    if (existingOffer) {
-      if (parseFloat(offeredPrice) > parseFloat(existingOffer.offeredPrice)) {
+    // 3. Retrieve property details for notifications
+    const property = await prisma.residency.findUnique({ where: { id: propertyId } });
+    if (!property) {
+      return res.status(404).json({ message: "Property not found." });
+    }
+
+    // 4. Check if the buyer already made an offer on the same property
+    const existingOfferCheck = await checkExistingOffer(buyer.id, propertyId, offeredPrice);
+    
+    if (existingOfferCheck.exists) {
+      if (existingOfferCheck.canUpdate) {
         // Update the existing offer with the higher price
-        const updatedOffer = await prisma.offer.update({
-          where: { id: existingOffer.id },
-          data: {
-            offeredPrice,
-            timestamp: new Date(),
-          },
-        });
+        const updatedOffer = await updateExistingOffer(existingOfferCheck.offer.id, offeredPrice);
 
         // Send response first
         res.status(200).json({
@@ -88,26 +165,20 @@ export const makeOffer = asyncHandler(async (req, res) => {
         );
         return;
       } else {
-        res.status(400).json({
-          message: `You have already made an offer of $${existingOffer.offeredPrice}. Offer a higher price to update.`,
-          existingOffer,
+        return res.status(400).json({
+          message: `You have already made an offer of $${existingOfferCheck.offer.offeredPrice}. Offer a higher price to update.`,
+          existingOffer: existingOfferCheck.offer,
         });
-        return;
       }
     }
 
-    // 4. Create a new offer
-    const newOffer = await prisma.offer.create({
-      data: {
-        propertyId,
-        offeredPrice,
-        buyerId: buyer.id,
-        timestamp: new Date(),
-      },
-    });
+    // 5. Create a new offer
+    const newOffer = await createNewOffer(propertyId, offeredPrice, buyer.id);
 
-    // 5. Check if the offer is below the minimum price
-    if (parseFloat(offeredPrice) < parseFloat(property.minPrice)) {
+    // 6. Check if the offer is below the minimum price
+    const isBelowMinimum = checkOfferBelowMinimum(offeredPrice, property);
+    
+    if (isBelowMinimum) {
       // Send response first with a low offer warning
       res.status(201).json({
         message: `Offer submitted successfully, but it is below the minimum price of $${property.minPrice}. Consider offering a higher price.`,
@@ -122,18 +193,17 @@ export const makeOffer = asyncHandler(async (req, res) => {
       return;
     }
 
-    // 6. Send response for successful offer submission
+    // 7. Send response for successful offer submission
     res.status(201).json({
       message: "Offer created successfully.",
       offer: newOffer,
     });
 
-    // 7. Send new offer notification in the background
+    // 8. Send new offer notification in the background
     await sendOfferNotification(
       "New Offer Submitted",
       newOfferTemplate(property, buyer, offeredPrice)
     );
-
   } catch (err) {
     console.error(err);
     res.status(500).json({

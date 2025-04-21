@@ -18,7 +18,7 @@ export const recordBuyerActivity = asyncHandler(async (req, res) => {
   }
   
   try {
-    console.log(`Processing ${events.length} activity events`);
+    // console.log(`Processing ${events.length} activity events`);
     let recordedEvents = 0;
     const errors = [];
     
@@ -28,7 +28,7 @@ export const recordBuyerActivity = asyncHandler(async (req, res) => {
         const { type, buyerId, auth0UserId, timestamp, data } = event;
         
         // Log the event being processed for debugging
-        console.log(`Processing event: ${type} for buyer ${buyerId}`, data);
+        // console.log(`Processing event: ${type} for buyer ${buyerId}`, data);
         
         if (!type || !buyerId) {
           errors.push({ event, error: "Missing required fields (type or buyerId)" });
@@ -77,7 +77,7 @@ export const recordBuyerActivity = asyncHandler(async (req, res) => {
           }
         });
         
-        console.log(`Successfully recorded ${type} event:`, createdActivity.id);
+        // console.log(`Successfully recorded ${type} event:`, createdActivity.id);
         recordedEvents++;
       } catch (eventError) {
         console.error("Error recording activity event:", eventError);
