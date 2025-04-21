@@ -261,8 +261,6 @@ const SearchAnalytics = ({ searchData }) => {
   );
 };
 
-// Updated ActivityDetail component in ActivityDetailView.jsx
-
 /**
  * Activity Detail Component - Shows a detailed breakdown of a specific activity
  */
@@ -273,8 +271,7 @@ const ActivityDetail = ({ activity, onBack, loading }) => {
       icon: <Eye className="h-5 w-5 text-blue-500" />,
       render: (item) => (
         <div key={item.timestamp || Math.random()} className="border rounded-md p-3 mb-2 bg-white">
-          <div className="font-medium text-[#324c48]">{item.propertyTitle}</div>
-          <div className="text-sm text-gray-500">{item.propertyAddress}</div>
+          <div className="font-medium text-[#324c48]">{item.propertyAddress}, {item.propertyCity || ''}, {item.propertyState || ''} {item.propertyZip || ''}</div>
           <div className="flex justify-between mt-1 text-sm">
             <span>{format(new Date(item.timestamp), 'MMM d, yyyy h:mm a')}</span>
             <span>Duration: {Math.floor(item.duration / 60)}m {item.duration % 60}s</span>
@@ -346,8 +343,7 @@ const ActivityDetail = ({ activity, onBack, loading }) => {
       icon: <DollarSign className="h-5 w-5 text-green-600" />,
       render: (item) => (
         <div key={item.id || item.timestamp || Math.random()} className="border rounded-md p-3 mb-2 bg-white">
-          <div className="font-medium text-[#324c48]">{item.propertyTitle}</div>
-          <div className="text-sm text-gray-500">{item.propertyAddress}</div>
+          <div className="font-medium text-[#324c48]">{item.propertyAddress}, {item.propertyCity || ''}, {item.propertyState || ''} {item.propertyZip || ''}</div>
           <div className="flex justify-between mt-1">
             <span className="font-bold">${typeof item.amount === 'number' ? 
               item.amount.toLocaleString() : 
@@ -543,7 +539,7 @@ const ActivitySummary = ({ activity, onViewDetail }) => {
               <span className="text-sm">Most viewed property:</span>
               {hasData('propertyViews') ? (
                 <span className="text-sm font-medium truncate max-w-[150px]">
-                  {activity.propertyViews[0].propertyTitle}
+                  {activity.propertyViews[0].propertyAddress}, {activity.propertyViews[0].propertyCity || ''}
                 </span>
               ) : (
                 <span className="text-sm text-gray-500">None</span>

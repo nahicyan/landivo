@@ -375,7 +375,7 @@ model Deal {
   downPayment    Float?
   loanAmount     Float?
   interestRate   Float?
-  term           Int // In months
+  term           Int?
   monthlyPayment Float?
 
   // Acquisition details
@@ -383,7 +383,7 @@ model Deal {
   transferTaxes      Float?
   appraisalValue     Float?
   loanOriginationFee Float?
-  financingType      String? // "Owner", "Bank", "Cash", etc.
+  financingType      String?
 
   // Status tracking
   status         DealStatus @default(ACTIVE)
@@ -391,17 +391,17 @@ model Deal {
   completionDate DateTime?
 
   // Payment tracking
-  paymentsReceived Int   @default(0)
-  paymentsOnTime   Int   @default(0)
-  paymentsLate     Int   @default(0)
-  totalPaidToDate  Float @default(0)
-  principalPaid    Float @default(0)
-  interestPaid     Float @default(0)
+  paymentsReceived Int?   @default(0)
+  paymentsOnTime   Int?   @default(0)
+  paymentsLate     Int?   @default(0)
+  totalPaidToDate  Float? @default(0)
+  principalPaid    Float? @default(0)
+  interestPaid     Float? @default(0)
 
   // Performance metrics
-  totalExpectedRevenue Float
-  currentRevenue       Float  @default(0)
-  profitLoss           Float  @default(0)
+  totalExpectedRevenue Float?
+  currentRevenue       Float?  @default(0)
+  profitLoss           Float?  @default(0)
   capRate              Float?
   cashOnCashReturn     Float?
 

@@ -2,6 +2,7 @@
 import React, { useState, useEffect } from "react";
 import { format, formatDistance } from "date-fns";
 import ActivityDataProvider from "@/services/ActivityDataProvider";
+import { api } from "@/utils/api";
 import { 
   Card, 
   CardHeader, 
@@ -11,7 +12,7 @@ import {
 } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Avatar } from "@/components/ui/avatar";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import {
   Eye,
   MousePointer,
@@ -25,7 +26,10 @@ import {
   ChevronRight,
   Loader2,
   User,
-  AlertCircle
+  AlertCircle,
+  Home,
+  CheckCircle,
+  XCircle
 } from "lucide-react";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -39,6 +43,7 @@ import { getAllBuyers } from "@/utils/api";
 const ActivityWidget = () => {
   const [loading, setLoading] = useState(true);
   const [activities, setActivities] = useState([]);
+  const [offerActivities, setOfferActivities] = useState([]);
   const [buyers, setBuyers] = useState({});
   const [activeTab, setActiveTab] = useState("all");
   const [error, setError] = useState(null);
@@ -51,6 +56,105 @@ const ActivityWidget = () => {
     click: 0,
     total: 0
   });
+
+  // Format property address
+  const formatPropertyAddress = (property) => {
+    if (!property) return "Unknown property";
+    
+    const address = property.streetAddress || property.address || "";
+    const city = property.city || "";
+    const state = property.state || "";
+    const zip = property.zip || "";
+    
+    if (!address) return property.propertyId || "Unknown property";
+    
+    return `${address}, ${city}${city && state ? ", " : ""}${state}${(city || state) && zip ? " " : ""}${zip}`.trim();
+  };
+
+  // Function to fetch offer activity specifically
+  const fetchOfferActivity = async () => {
+    try {
+      // Fetch recent offer activity using the same endpoint as RecentOfferActivity
+      const response = await api.get("/offer/activity/recent?limit=5");
+      return response.data.activities || [];
+    } catch (error) {
+      console.error("Error fetching offer activity:", error);
+      return [];
+    }
+  };
+
+  // Get activity icon based on status
+  const getOfferStatusIcon = (status) => {
+    switch (status) {
+      case "PENDING":
+        return <Clock className="h-5 w-5 text-amber-500" />;
+      case "ACCEPTED":
+        return <CheckCircle className="h-5 w-5 text-green-500" />;
+      case "REJECTED":
+        return <XCircle className="h-5 w-5 text-red-500" />;
+      case "COUNTERED":
+        return <RefreshCw className="h-5 w-5 text-blue-500" />;
+      case "EXPIRED":
+        return <AlertCircle className="h-5 w-5 text-gray-500" />;
+      default:
+        return <Clock className="h-5 w-5 text-gray-500" />;
+    }
+  };
+
+  // Get offer activity title
+  const getOfferActivityTitle = (activity) => {
+    if (!activity || !activity.newStatus) return "Unknown activity";
+    
+    // For new offers
+    if (activity.newStatus === "PENDING" && !activity.previousStatus) {
+      return `New offer submitted for ${formatPrice(activity.newPrice)}`;
+    }
+    
+    // For updated offers from buyer
+    if (activity.newStatus === "PENDING" && activity.previousStatus) {
+      return `Offer updated to ${formatPrice(activity.newPrice)}`;
+    }
+    
+    // For counter offers
+    if (activity.newStatus === "COUNTERED") {
+      return `Counter offer sent for ${formatPrice(activity.counteredPrice)}`;
+    }
+    
+    // For accepted offers
+    if (activity.newStatus === "ACCEPTED") {
+      return `Offer of ${formatPrice(activity.previousPrice || activity.newPrice)} accepted`;
+    }
+    
+    // For rejected offers
+    if (activity.newStatus === "REJECTED") {
+      return `Offer of ${formatPrice(activity.previousPrice || activity.newPrice)} rejected`;
+    }
+    
+    // For expired offers
+    if (activity.newStatus === "EXPIRED") {
+      return `Offer of ${formatPrice(activity.previousPrice || activity.newPrice)} expired`;
+    }
+    
+    return `Offer status changed to ${activity.newStatus}`;
+  };
+
+  // Get status badge class
+  const getStatusBadgeClass = (status) => {
+    switch (status) {
+      case "PENDING":
+        return "bg-amber-100 text-amber-800";
+      case "ACCEPTED":
+        return "bg-green-100 text-green-800";
+      case "REJECTED":
+        return "bg-red-100 text-red-800";
+      case "COUNTERED":
+        return "bg-blue-100 text-blue-800";
+      case "EXPIRED":
+        return "bg-gray-100 text-gray-800";
+      default:
+        return "bg-gray-100 text-gray-800";
+    }
+  };
 
   // Fetch buyers and activity data
   useEffect(() => {
@@ -67,6 +171,14 @@ const ActivityWidget = () => {
           buyersMap[buyer.id] = buyer;
         });
         setBuyers(buyersMap);
+        
+        // Fetch offer activities - this is new
+        if (activeTab === 'offer') {
+          const rawOfferActivities = await fetchOfferActivity();
+          setOfferActivities(rawOfferActivities);
+          setLoading(false);
+          return;
+        }
         
         // Filter VIP buyers (those with auth0Id)
         const vipBuyers = allBuyers.filter(buyer => buyer.auth0Id);
@@ -177,24 +289,6 @@ const ActivityWidget = () => {
         const sortedActivities = allActivities
           .slice(0, 5);
         
-        // Create a lookup map for each activity type
-        const activitiesByType = {
-          'all': sortedActivities,
-          'property_view': topPropertyViews,
-          'search': topSearches,
-          'offer': topOffers,
-          'page_visit': topPageVisits,
-          'click': topClicks
-        };
-        
-        console.log(`Fetched activities with counts:`, counts);
-        console.log('Activities by type:', {
-          all: activitiesByType.all.length,
-          property_view: activitiesByType.property_view.length,
-          search: activitiesByType.search.length,
-          offer: activitiesByType.offer.length
-        });
-        
         setActivities(allActivities);
         setError(null);
       } catch (err) {
@@ -207,7 +301,7 @@ const ActivityWidget = () => {
     };
     
     fetchData();
-  }, [refreshing]);
+  }, [activeTab, refreshing]);
 
   // Function to refresh data
   const handleRefresh = () => {
@@ -238,12 +332,14 @@ const ActivityWidget = () => {
     
     switch (type) {
       case 'property_view':
-        return `Viewed ${data.propertyTitle || 'a property'}`;
+        // Changed from title to address format
+        return `Viewed property at ${data.propertyAddress || 'unknown location'}`;
       case 'search':
         return `Searched for "${data.query || 'properties'}"`;
       case 'page_visit':
         return `Visited ${data.url || data.path || 'a page'}`;
       case 'offer':
+        // Changed from property title to address format
         return `Made an offer of ${formatPrice(data.amount || data.offeredPrice || 0)}`;
       case 'click':
         return `Clicked on ${data.elementType || data.element || 'an element'}`;
@@ -258,13 +354,15 @@ const ActivityWidget = () => {
     
     switch (type) {
       case 'property_view':
+        // Already using propertyAddress
         return data.propertyAddress || '';
       case 'search':
         return `${data.resultsCount || 0} results`;
       case 'page_visit':
         return data.duration ? `Spent ${Math.floor(data.duration / 60)}m ${data.duration % 60}s` : '';
       case 'offer':
-        return data.propertyTitle || data.propertyAddress || '';
+        // Changed from property title to address format
+        return data.propertyAddress || '';
       case 'click':
         return data.page || '';
       default:
@@ -406,86 +504,182 @@ const ActivityWidget = () => {
         </div>
       </CardHeader>
       <CardContent className="px-3 py-3">
-        {filteredActivities.length === 0 ? (
-          <div className="text-center py-6 text-gray-500">
-            {activeTab === 'all' ? (
-              <>
-                <p className="mb-2">No recent activity found</p>
-                <p className="text-xs">Activity tracking is available for VIP buyers</p>
-              </>
-            ) : (
-              <div className="flex flex-col items-center">
-                <AlertCircle className="h-6 w-6 text-gray-400 mb-2" />
-                <p className="mb-1">No {activeTab.replace('_', ' ')} activity</p>
+        {/* Special Rendering for Offer Tab */}
+        {activeTab === 'offer' ? (
+          // New Layout for Offer Tab - Similar to RecentOfferActivity
+          <div className="space-y-3">
+            {offerActivities.length === 0 ? (
+              <div className="text-center py-6 text-gray-500">
+                <AlertCircle className="h-6 w-6 text-gray-400 mb-2 mx-auto" />
+                <p className="mb-1">No recent offer activity</p>
                 <p className="text-xs">
-                  {activeTab === 'property_view' && "No recent property views by VIP buyers"}
-                  {activeTab === 'search' && "No recent searches by VIP buyers"}
-                  {activeTab === 'offer' && "No recent offers by VIP buyers"}
+                  Check back later for updates on buyer offers
                 </p>
               </div>
-            )}
-          </div>
-        ) : (
-          <div className="space-y-3">
-            {filteredActivities.map((activity, index) => {
-              const buyer = buyers[activity.buyerId] || {};
-              const secondaryText = getActivitySecondaryText(activity);
-              const initials = buyer.firstName && buyer.lastName 
-                ? `${buyer.firstName[0]}${buyer.lastName[0]}`
-                : '??';
+            ) : (
+              offerActivities.map((activity, index) => {
+                const buyer = buyers[activity.buyerId] || {};
+                const initials = buyer.firstName && buyer.lastName 
+                  ? `${buyer.firstName[0]}${buyer.lastName[0]}`
+                  : '??';
                 
-              return (
-                <div 
-                  key={`${activity.type}-${index}`} 
-                  className="flex items-start gap-3 p-3 rounded-md hover:bg-gray-50 transition-colors border"
-                >
-                  <Avatar className="h-8 w-8 bg-[#324c48] text-white">
-                    <div className="flex items-center justify-center text-xs font-medium">
-                      {initials}
+                return (
+                  <div 
+                    key={`offer-activity-${index}`} 
+                    className="flex gap-4 items-start border-b pb-4 last:border-0"
+                  >
+                    <div className="p-2 rounded-full bg-gray-100">
+                      {getOfferStatusIcon(activity.newStatus)}
                     </div>
-                  </Avatar>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex justify-between items-start">
-                      <p className="text-sm font-medium text-[#324c48]">
-                        {getActivityDescription(activity)}
-                      </p>
-                      <Badge 
-                        variant="outline" 
-                        className={`text-xs ${getActivityBadgeClass(activity.type)}`}
-                      >
-                        {activity.type.replace('_', ' ')}
-                      </Badge>
+                    
+                    <div className="flex-1 space-y-1">
+                      <div className="flex items-center justify-between">
+                        <h4 className="font-medium">{getOfferActivityTitle(activity)}</h4>
+                        <Badge 
+                          className={getStatusBadgeClass(activity.newStatus)}
+                        >
+                          {activity.newStatus}
+                        </Badge>
+                      </div>
+                      
+                      <div className="flex items-center text-sm text-gray-500">
+                        <User className="h-4 w-4 mr-1" />
+                        <span className="mr-4">{buyer.firstName} {buyer.lastName}</span>
+                        
+                        <Home className="h-4 w-4 mr-1" />
+                        <span className="mr-4">
+                          {/* Use formatted address instead of title */}
+                          {activity.propertyAddress 
+                            ? `${activity.propertyAddress}, ${activity.propertyCity || ''}, ${activity.propertyState || ''} ${activity.propertyZip || ''}`
+                            : (activity.propertyId || 'Unknown property')}
+                        </span>
+                        
+                        <Calendar className="h-4 w-4 mr-1" />
+                        <span>{format(new Date(activity.timestamp), "MMM d, yyyy")}</span>
+                      </div>
+                      
+                      {/* Show messages if present */}
+                      {(activity.buyerMessage || activity.sysMessage) && (
+                        <div className="mt-2 pt-2 text-sm italic bg-gray-50 p-2 rounded-md">
+                          {activity.buyerMessage && (
+                            <div className="mb-1">
+                              <span className="font-semibold text-xs">Buyer says:</span> {activity.buyerMessage}
+                            </div>
+                          )}
+                          
+                          {activity.sysMessage && (
+                            <div>
+                              <span className="font-semibold text-xs">Admin says:</span> {activity.sysMessage}
+                            </div>
+                          )}
+                        </div>
+                      )}
                     </div>
-                    {secondaryText && (
-                      <p className="text-xs text-gray-500 mt-0.5 truncate">
-                        {secondaryText}
-                      </p>
-                    )}
-                    <div className="flex items-center justify-between mt-1.5">
-                      <p className="text-xs font-medium">
-                        {buyer.firstName} {buyer.lastName}
-                      </p>
-                      <p className="text-xs text-gray-500">
-                        {activity.timestamp ? 
-                          formatDistance(new Date(activity.timestamp), new Date(), { addSuffix: true }) : 
-                          'Unknown time'
-                        }
-                      </p>
-                    </div>
+                    
+                    <Avatar className="h-10 w-10 bg-primary-100 text-primary-800">
+                      <AvatarFallback className="bg-[#324c48] text-white">
+                        {initials}
+                      </AvatarFallback>
+                    </Avatar>
                   </div>
-                </div>
-              );
-            })}
+                );
+              })
+            )}
             
             <Button 
               variant="ghost" 
               className="w-full mt-2 text-[#324c48]"
-              onClick={() => window.location.href = "/admin/buyers"}
+              onClick={() => window.location.href = "/admin/offers"}
             >
-              View Buyer Management
+              View All Offers
               <ChevronRight className="h-4 w-4 ml-1" />
             </Button>
           </div>
+        ) : (
+          // Original Layout for Other Tabs
+          <>
+            {filteredActivities.length === 0 ? (
+              <div className="text-center py-6 text-gray-500">
+                {activeTab === 'all' ? (
+                  <>
+                    <p className="mb-2">No recent activity found</p>
+                    <p className="text-xs">Activity tracking is available for VIP buyers</p>
+                  </>
+                ) : (
+                  <div className="flex flex-col items-center">
+                    <AlertCircle className="h-6 w-6 text-gray-400 mb-2" />
+                    <p className="mb-1">No {activeTab.replace('_', ' ')} activity</p>
+                    <p className="text-xs">
+                      {activeTab === 'property_view' && "No recent property views by VIP buyers"}
+                      {activeTab === 'search' && "No recent searches by VIP buyers"}
+                      {activeTab === 'offer' && "No recent offers by VIP buyers"}
+                    </p>
+                  </div>
+                )}
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {filteredActivities.map((activity, index) => {
+                  const buyer = buyers[activity.buyerId] || {};
+                  const secondaryText = getActivitySecondaryText(activity);
+                  const initials = buyer.firstName && buyer.lastName 
+                    ? `${buyer.firstName[0]}${buyer.lastName[0]}`
+                    : '??';
+                    
+                  return (
+                    <div 
+                      key={`${activity.type}-${index}`} 
+                      className="flex items-start gap-3 p-3 rounded-md hover:bg-gray-50 transition-colors border"
+                    >
+                      <Avatar className="h-8 w-8 bg-[#324c48] text-white">
+                        <div className="flex items-center justify-center text-xs font-medium">
+                          {initials}
+                        </div>
+                      </Avatar>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex justify-between items-start">
+                          <p className="text-sm font-medium text-[#324c48]">
+                            {getActivityDescription(activity)}
+                          </p>
+                          <Badge 
+                            variant="outline" 
+                            className={`text-xs ${getActivityBadgeClass(activity.type)}`}
+                          >
+                            {activity.type.replace('_', ' ')}
+                          </Badge>
+                        </div>
+                        {secondaryText && (
+                          <p className="text-xs text-gray-500 mt-0.5 truncate">
+                            {secondaryText}
+                          </p>
+                        )}
+                        <div className="flex items-center justify-between mt-1.5">
+                          <p className="text-xs font-medium">
+                            {buyer.firstName} {buyer.lastName}
+                          </p>
+                          <p className="text-xs text-gray-500">
+                            {activity.timestamp ? 
+                              formatDistance(new Date(activity.timestamp), new Date(), { addSuffix: true }) : 
+                              'Unknown time'
+                            }
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+                
+                <Button 
+                  variant="ghost" 
+                  className="w-full mt-2 text-[#324c48]"
+                  onClick={() => window.location.href = "/admin/buyers"}
+                >
+                  View Buyer Management
+                  <ChevronRight className="h-4 w-4 ml-1" />
+                </Button>
+              </div>
+            )}
+          </>
         )}
       </CardContent>
     </Card>

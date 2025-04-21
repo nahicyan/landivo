@@ -101,8 +101,7 @@ const PropertyViews = ({ data }) => {
     <div className="space-y-3">
       {data.slice(0, 3).map((view, idx) => (
         <div key={idx} className="border rounded-md p-3 bg-white">
-          <div className="font-medium">{view.propertyTitle || 'Unknown Property'}</div>
-          <div className="text-sm text-gray-500">{view.propertyAddress || 'Address not available'}</div>
+          <div className="font-medium">{view.propertyAddress}, {view.propertyCity || ''}, {view.propertyState || ''} {view.propertyZip || ''}</div>
           <div className="text-xs text-gray-400 mt-1">
             {view.timestamp ? format(new Date(view.timestamp), 'MMM d, yyyy h:mm a') : 'Unknown time'}
           </div>
@@ -773,15 +772,7 @@ const TransactionsView = ({ transactions, metrics, getStatusBadgeClass, formatPr
                     </TableCell>
                     <TableCell>
                       <div className="max-w-[200px] truncate">
-                        {transaction.property.title || transaction.property.streetAddress || `Property ID: ${transaction.property.id?.substring(0, 8) || 'Unknown'}`}
-                      </div>
-                      <div className="text-xs text-gray-500 flex items-center">
-                        {transaction.property.city && transaction.property.state ? (
-                          <>
-                            <MapPin className="h-3 w-3 mr-1" />
-                            {transaction.property.city}, {transaction.property.state}
-                          </>
-                        ) : 'Location unknown'}
+                        {transaction.property.streetAddress}, {transaction.property.city || ''}, {transaction.property.state || ''} {transaction.property.zip || ''}
                       </div>
                     </TableCell>
                     <TableCell>
