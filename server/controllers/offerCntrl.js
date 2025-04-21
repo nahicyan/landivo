@@ -311,21 +311,25 @@ export const getOffersOnProperty = asyncHandler(async (req, res) => {
  * @access Public
  */
 export const getOffersByBuyer = asyncHandler(async (req, res) => {
-  const { buyerId, email, phone } = req.query;
+  const { buyerId, email, phone, auth0Id } = req.query;
 
-  if (!buyerId && !email && !phone) {
+  if (!buyerId && !email && !phone && !auth0Id) {
     return res.status(400).json({ 
-      message: "At least one of buyerId, email or phone is required." 
+      message: "At least one of buyerId, email, phone, or auth0Id is required." 
     });
   }
 
   try {
-    // Find buyer by ID, email or phone
+    // Find buyer by ID, email, phone, or auth0Id
     let buyer;
     
     if (buyerId) {
       buyer = await prisma.buyer.findUnique({
         where: { id: buyerId }
+      });
+    } else if (auth0Id) {
+      buyer = await prisma.buyer.findFirst({
+        where: { auth0Id }
       });
     } else if (email) {
       buyer = await prisma.buyer.findFirst({

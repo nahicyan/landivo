@@ -52,9 +52,17 @@ export default function Offer({ propertyData }) {
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
   
+  // New states for handling existing offers
+  const [existingOffer, setExistingOffer] = useState(null);
+  const [hasExistingOffer, setHasExistingOffer] = useState(false);
+  const [updateDialogOpen, setUpdateDialogOpen] = useState(false);
+  const [newOfferPrice, setNewOfferPrice] = useState("");
+  const [foundBuyer, setFoundBuyer] = useState(null);
+  
   // Use useRef instead of useState to track population status
   // This persists across refreshes within the same component lifecycle
   const formPopulationAttempted = useRef(false);
+  const existingOfferChecked = useRef(false);
 
   // Get user data from Auth and VIP buyer contexts
   const { user, isLoading: authLoading } = useAuth();
@@ -73,6 +81,132 @@ export default function Offer({ propertyData }) {
       formPopulationAttempted.current = true;
     }
   }, [user, isVipBuyer, vipBuyerData, authLoading, vipLoading]);
+
+  // Check for existing offers when user data is loaded
+  useEffect(() => {
+    // Check for existing offers once user data is populated and we have enough info
+    if ((email || (user && user.email)) && !existingOfferChecked.current && propertyData?.id) {
+      checkForExistingOffer();
+      existingOfferChecked.current = true;
+    }
+  }, [email, phone, user, propertyData?.id]);
+
+  // Function to check for existing offers and populate buyer data
+  const checkForExistingOffer = async () => {
+    try {
+      // Construct query parameters based on available information
+      let queryParams = new URLSearchParams();
+      
+      if (user?.sub) {
+        // If authenticated, check by Auth0 ID
+        queryParams.append("auth0Id", user.sub);
+      } else if (email) {
+        // Otherwise check by email
+        queryParams.append("email", email);
+      } else if (phone) {
+        // Or by phone if available
+        queryParams.append("phone", phone);
+      } else {
+        // No identifiers available yet
+        return;
+      }
+      
+      // Fetch buyer's offers
+      const response = await api.get(`/offer/buyer?${queryParams}`);
+      
+      if (response.data && response.data.buyer) {
+        // Store the found buyer
+        setFoundBuyer(response.data.buyer);
+        
+        // Auto-populate the buyer's info
+        populateBuyerData(response.data.buyer);
+        
+        // Check for offers on this property
+        if (response.data.offers) {
+          const offerForThisProperty = response.data.offers.find(
+            offer => offer.propertyId === propertyData.id
+          );
+          
+          if (offerForThisProperty) {
+            console.log("Found existing offer:", offerForThisProperty);
+            setExistingOffer(offerForThisProperty);
+            setHasExistingOffer(true);
+            
+            // Set the current offer price
+            if (offerForThisProperty.offeredPrice) {
+              setOfferPrice(offerForThisProperty.offeredPrice.toLocaleString());
+            }
+          }
+        }
+      }
+    } catch (error) {
+      console.error("Error checking for existing offers:", error);
+    }
+  };
+
+  // Function to populate buyer data from API response
+  const populateBuyerData = (buyer) => {
+    if (!buyer) return;
+    
+    // Only set values if they're not already set by the user
+    if (!firstName && buyer.firstName) setFirstName(buyer.firstName);
+    if (!lastName && buyer.lastName) setLastName(buyer.lastName);
+    if (!email && buyer.email) setEmail(buyer.email);
+    if (!phone && buyer.phone) setPhone(formatPhoneNumber(buyer.phone));
+    if (!buyerType && buyer.buyerType) setBuyerType(buyer.buyerType);
+    
+    console.log("Auto-populated buyer data:", { firstName: buyer.firstName, lastName: buyer.lastName, buyerType: buyer.buyerType });
+  };
+
+  // When email or phone changes, check for existing buyer and offers
+  const handleIdentifierChange = async (field, value) => {
+    if (field === 'email') {
+      setEmail(value);
+    } else if (field === 'phone') {
+      setPhone(formatPhoneNumber(value));
+    }
+    
+    // If either email or phone has changed, check for buyer data
+    if ((email || field === 'email') && (phone || field === 'phone')) {
+      try {
+        // Find buyer by email or phone
+        const queryParams = new URLSearchParams();
+        if (field === 'email') {
+          queryParams.append("email", value);
+        } else {
+          queryParams.append("phone", formatPhoneNumber(value));
+        }
+        
+        const response = await api.get(`/offer/buyer?${queryParams}`);
+        
+        if (response.data && response.data.buyer) {
+          // We found a buyer - auto-populate fields
+          setFoundBuyer(response.data.buyer);
+          populateBuyerData(response.data.buyer);
+          
+          // Check for existing offers on this property
+          if (response.data.offers && propertyData?.id) {
+            const offerForThisProperty = response.data.offers.find(
+              offer => offer.propertyId === propertyData.id
+            );
+            
+            if (offerForThisProperty) {
+              setExistingOffer(offerForThisProperty);
+              setHasExistingOffer(true);
+              
+              // Set the current offer price
+              if (offerForThisProperty.offeredPrice) {
+                setOfferPrice(offerForThisProperty.offeredPrice.toLocaleString());
+              }
+            }
+          }
+        }
+      } catch (error) {
+        // It's okay if we don't find a buyer - just log and continue
+        console.log("No buyer found with the provided information");
+      }
+    }
+  };
 
   // Function to populate user data with priority
   const populateUserData = () => {
@@ -144,6 +278,7 @@ export default function Offer({ propertyData }) {
   const handlePhoneChange = (e) => {
     const formatted = formatPhoneNumber(e.target.value);
     setPhone(formatted);
+    handleIdentifierChange('phone', formatted);
   };
 
   const formatPhoneNumber = (input) => {
@@ -167,6 +302,18 @@ export default function Offer({ propertyData }) {
     return formattedNumber;
   };
 
+  const validateOfferPrice = (price) => {
+    // If no existing offer, any price is valid
+    if (!hasExistingOffer) return true;
+    
+    // Parse the prices for comparison
+    const existingPriceValue = existingOffer.offeredPrice;
+    const newPriceValue = parseFloat(price.replace(/,/g, ""));
+    
+    // Check if new price is higher than existing
+    return newPriceValue > existingPriceValue;
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
   
@@ -178,7 +325,7 @@ export default function Offer({ propertyData }) {
       return;
     }
     
-    // === Phone Validation with libphonenumber-js ===
+    // Phone Validation with libphonenumber-js
     if (!validatePhone(phone)) {
       setDialogMessage("Invalid phone number. Please enter a valid number.");
       setDialogType("warning");
@@ -188,6 +335,16 @@ export default function Offer({ propertyData }) {
   
     // Remove commas before converting to float
     const parsedOfferPrice = parseFloat(offerPrice.replace(/,/g, ""));
+    
+    // If there's an existing offer, check if the new price is higher
+    if (hasExistingOffer) {
+      if (!validateOfferPrice(offerPrice)) {
+        // Show dialog for entering a higher price
+        setNewOfferPrice("");
+        setUpdateDialogOpen(true);
+        return;
+      }
+    }
   
     const offerData = {
       email,
@@ -218,16 +375,87 @@ export default function Offer({ propertyData }) {
       }
   
       // If valid offer, show success and (optionally) navigate back
-      setDialogMessage("Offer submitted successfully!");
+      setDialogMessage(hasExistingOffer 
+        ? "Your offer has been successfully updated!" 
+        : "Offer submitted successfully!");
       setDialogType("success");
       setDialogOpen(true);
+      
+      // Update the local state to show this is now an existing offer
+      setExistingOffer({
+        ...existingOffer,
+        offeredPrice: parsedOfferPrice
+      });
+      setHasExistingOffer(true);
     } catch (error) {
       setDialogMessage(
-        "You've already offered this or a higher amount. Please adjust your offer to continue!"
+        "There was an error processing your offer. Please try again."
       );
       setDialogType("warning");
       setDialogOpen(true);
     }
+  };
+  
+  // Handle update from dialog
+  const handleUpdateFromDialog = async () => {
+    if (!newOfferPrice) {
+      return;
+    }
+    
+    // Parse and validate the new price
+    const parsedNewPrice = parseFloat(newOfferPrice.replace(/,/g, ""));
+    if (isNaN(parsedNewPrice) || parsedNewPrice <= existingOffer.offeredPrice) {
+      setDialogMessage(
+        `Please enter an amount higher than your previous offer of $${existingOffer.offeredPrice.toLocaleString()}.`
+      );
+      setDialogType("warning");
+      setUpdateDialogOpen(false);
+      setDialogOpen(true);
+      return;
+    }
+    
+    // Update the offer price field
+    setOfferPrice(parsedNewPrice.toLocaleString());
+    setUpdateDialogOpen(false);
+    
+    // Submit the form with the new price
+    const offerData = {
+      email,
+      phone,
+      buyerType,
+      propertyId: propertyData?.id,
+      offeredPrice: parsedNewPrice,
+      firstName,
+      lastName,
+      auth0Id: user?.sub || null
+    };
+    
+    try {
+      await api.post("/offer/makeOffer", offerData);
+      
+      setDialogMessage("Your offer has been successfully updated!");
+      setDialogType("success");
+      setDialogOpen(true);
+      
+      // Update local state
+      setExistingOffer({
+        ...existingOffer,
+        offeredPrice: parsedNewPrice
+      });
+    } catch (error) {
+      setDialogMessage(
+        "There was an error updating your offer. Please try again."
+      );
+      setDialogType("warning");
+      setDialogOpen(true);
+    }
+  };
+  
+  // Handle email change with existing offer check
+  const handleEmailChange = (e) => {
+    const value = e.target.value;
+    setEmail(value);
+    handleIdentifierChange('email', value);
   };
   
   return (
@@ -235,7 +463,7 @@ export default function Offer({ propertyData }) {
       <Card className="w-full max-w-md border border-[#405025]/20 bg-white shadow-lg mx-auto">
         <CardHeader className="text-center">
           <CardTitle className="text-2xl font-bold text-[#405025]">
-            Make An Offer
+            {hasExistingOffer ? "Update Your Offer" : "Make An Offer"}
           </CardTitle>
           <CardDescription className="text-[#324d49]">
             For {propertyData.streetAddress || "This Property"}
@@ -284,7 +512,7 @@ export default function Offer({ propertyData }) {
                 type="email"
                 placeholder="example@mail.com"
                 value={email}
-                onChange={(e) => setEmail(e.target.value)}
+                onChange={handleEmailChange}
                 required
               />
             </div>
@@ -331,7 +559,7 @@ export default function Offer({ propertyData }) {
             {/* Offer Price */}
             <div>
               <Label htmlFor="offerPrice" className="text-sm text-[#050002]">
-                Offer Price ($)
+                {hasExistingOffer ? "Your Previous Offer" : "Offer Price ($)"}
               </Label>
               <Input
                 id="offerPrice"
@@ -341,6 +569,9 @@ export default function Offer({ propertyData }) {
                 onChange={handleOfferPriceChange}
                 required
               />
+              {hasExistingOffer && (
+                <p className="text-sm text-[#405025] mt-1">Improve your offer to increase your chances</p>
+              )}
             </div>
 
             {/* Submit Button */}
@@ -348,7 +579,7 @@ export default function Offer({ propertyData }) {
               type="submit"
               className="w-full bg-[#324c48] text-[#FFF] hover:bg-[#324c48]/90 font-semibold mt-4"
             >
-              Submit Offer
+              {hasExistingOffer ? "Update Your Offer" : "Submit Offer"}
             </Button>
           </form>
           <div className="py-6">
@@ -379,6 +610,59 @@ export default function Offer({ propertyData }) {
               className="bg-[#324c48] text-[#FFF]"
             >
               Okay
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+      
+      {/* Update Offer Dialog */}
+      <Dialog open={updateDialogOpen} onOpenChange={setUpdateDialogOpen}>
+        <DialogContent className="bg-[#FFF] text-[#050002] border border-[#405025]/30 shadow-lg">
+          <DialogHeader>
+            <DialogTitle className="text-[#405025]">Improve Your Offer</DialogTitle>
+            <DialogDescription>
+              Your new offer must be higher than your previous offer of ${existingOffer?.offeredPrice?.toLocaleString() || "0"}.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="py-4">
+            <Label htmlFor="newOfferPrice" className="text-sm text-[#050002]">
+              New Offer Price ($)
+            </Label>
+            <Input
+              id="newOfferPrice"
+              type="text"
+              placeholder={`Higher than ${existingOffer?.offeredPrice?.toLocaleString() || "0"}`}
+              value={newOfferPrice}
+              onChange={(e) => {
+                let value = e.target.value;
+                value = value.replace(/,/g, "");
+                if (value === "") {
+                  setNewOfferPrice("");
+                  return;
+                }
+                const floatValue = parseFloat(value);
+                if (!isNaN(floatValue)) {
+                  setNewOfferPrice(floatValue.toLocaleString("en-US"));
+                } else {
+                  setNewOfferPrice(value);
+                }
+              }}
+              className="mt-1"
+            />
+          </div>
+          <DialogFooter>
+            <Button
+              onClick={() => setUpdateDialogOpen(false)}
+              variant="outline"
+              className="mr-2"
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={handleUpdateFromDialog}
+              className="bg-[#324c48] text-[#FFF]"
+            >
+              Update Offer
             </Button>
           </DialogFooter>
         </DialogContent>
