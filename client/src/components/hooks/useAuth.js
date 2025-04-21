@@ -127,7 +127,7 @@ export function useAuth() {
           // Try to find user in database
           const dbUser = await checkUserExists(user.sub);
           
-          if (dbUser) {
+          if (dbUser) {  
             // User exists, check if profile is complete
             setNeedsProfileCompletion(!dbUser.firstName || !dbUser.lastName);
             console.log('User exists in database, profile complete:', !!dbUser.firstName && !!dbUser.lastName);

@@ -169,7 +169,7 @@ export default function Offer({ propertyData }) {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-
+  
     // Basic required field check
     if (!offerPrice || !email || !firstName || !lastName || !phone || !buyerType) {
       setDialogMessage("All fields are required.");
@@ -185,10 +185,10 @@ export default function Offer({ propertyData }) {
       setDialogOpen(true);
       return;
     }
-
+  
     // Remove commas before converting to float
     const parsedOfferPrice = parseFloat(offerPrice.replace(/,/g, ""));
-
+  
     const offerData = {
       email,
       phone,
@@ -197,12 +197,16 @@ export default function Offer({ propertyData }) {
       offeredPrice: parsedOfferPrice,
       firstName,
       lastName,
+      // Pass auth0Id from authenticated user if available
+      auth0Id: user?.sub || null
     };
-
+  
+    console.log("Submitting offer with data:", offerData);
+  
     try {
       // Use the new offer endpoint
       await api.post("/offer/makeOffer", offerData);
-
+  
       // If offer is below minPrice, show a warning and do not redirect
       if (parsedOfferPrice < propertyData?.minPrice) {
         setDialogMessage(
@@ -212,7 +216,7 @@ export default function Offer({ propertyData }) {
         setDialogOpen(true);
         return;
       }
-
+  
       // If valid offer, show success and (optionally) navigate back
       setDialogMessage("Offer submitted successfully!");
       setDialogType("success");
@@ -225,7 +229,7 @@ export default function Offer({ propertyData }) {
       setDialogOpen(true);
     }
   };
-
+  
   return (
     <div className="bg-white text-[#050002]">
       <Card className="w-full max-w-md border border-[#405025]/20 bg-white shadow-lg mx-auto">

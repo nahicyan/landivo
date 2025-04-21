@@ -27,15 +27,49 @@ const validateOfferInput = (req) => {
  * Find existing buyer or create a new one
  */
 const findOrCreateBuyer = async (buyerData) => {
-  const { email, phone, buyerType, firstName, lastName } = buyerData;
+  const { email, phone, buyerType, firstName, lastName, auth0Id } = buyerData;
   
-  let buyer = await prisma.buyer.findFirst({
+  let buyer = null;
+  let buyerFoundMethod = 'none';
+  
+  // First try to find buyer by Auth0 ID if provided
+  if (auth0Id) {
+    console.log(`Attempting to find buyer by Auth0 ID: ${auth0Id}`);
+    buyer = await prisma.buyer.findFirst({
+      where: { auth0Id }
+    });
+    
+    // If found by Auth0 ID, return early
+    if (buyer) {
+      buyerFoundMethod = 'auth0Id';
+      console.log(`Buyer found by Auth0 ID: ${auth0Id}, buyerId: ${buyer.id}`);
+      return buyer;
+    }
+  }
+  
+  // If not found by Auth0 ID, try email or phone
+  console.log(`Attempting to find buyer by email: ${email} or phone: ${phone}`);
+  buyer = await prisma.buyer.findFirst({
     where: {
       OR: [{ email: email.toLowerCase() }, { phone }],
     },
   });
 
-  if (!buyer) {
+  if (buyer) {
+    buyerFoundMethod = buyer.email.toLowerCase() === email.toLowerCase() ? 'email' : 'phone';
+    console.log(`Buyer found by ${buyerFoundMethod}: buyerId: ${buyer.id}`);
+    
+    // If buyer found by email/phone but doesn't have Auth0 ID, update with Auth0 ID
+    if (auth0Id && !buyer.auth0Id) {
+      console.log(`Updating existing buyer (${buyer.id}) with Auth0 ID: ${auth0Id}`);
+      buyer = await prisma.buyer.update({
+        where: { id: buyer.id },
+        data: { auth0Id }
+      });
+    }
+  } else {
+    // Create a new buyer if not found
+    console.log(`No existing buyer found. Creating new buyer with email: ${email}, phone: ${phone}${auth0Id ? `, auth0Id: ${auth0Id}` : ''}`);
     buyer = await prisma.buyer.create({
       data: {
         email: email.toLowerCase(),
@@ -44,8 +78,11 @@ const findOrCreateBuyer = async (buyerData) => {
         firstName,
         lastName,
         source: "Property Offer",
+        auth0Id: auth0Id || null // Store Auth0 ID if provided
       },
     });
+    buyerFoundMethod = 'created';
+    console.log(`New buyer created with ID: ${buyer.id}`);
   }
   
   return buyer;
@@ -133,10 +170,19 @@ export const makeOffer = asyncHandler(async (req, res) => {
       return res.status(400).json({ message: validation.message });
     }
 
-    const { email, phone, buyerType, propertyId, offeredPrice, firstName, lastName } = req.body;
+    const { email, phone, buyerType, propertyId, offeredPrice, firstName, lastName, auth0Id } = req.body;
+
+    console.log(`Received offer: propertyId: ${propertyId}, price: ${offeredPrice}, email: ${email}, auth0Id: ${auth0Id || 'not provided'}`);
 
     // 2. Find or create buyer
-    const buyer = await findOrCreateBuyer({ email, phone, buyerType, firstName, lastName });
+    const buyer = await findOrCreateBuyer({ 
+      email, 
+      phone, 
+      buyerType, 
+      firstName, 
+      lastName,
+      auth0Id  // Pass Auth0 ID if provided in request body
+    });
 
     // 3. Retrieve property details for notifications
     const property = await prisma.residency.findUnique({ where: { id: propertyId } });
