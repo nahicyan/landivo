@@ -1,4 +1,4 @@
-// Updated ActivityDetailView.jsx
+// Updated ActivityDetailView.jsx - Improved Offer History
 import React, { useState, useEffect } from "react";
 import { format } from "date-fns";
 import {
@@ -23,6 +23,7 @@ import {
   Loader2
 } from "lucide-react";
 import ActivityDataProvider from "@/services/ActivityDataProvider";
+import OfferHistory from "./OfferHistory";
 
 /**
  * Activity Detail View component
@@ -261,6 +262,10 @@ const SearchAnalytics = ({ searchData }) => {
   );
 };
 
+// Activity icon and title functions are moved to the OfferHistory component
+
+// The OfferHistory component is now imported from a separate file
+
 /**
  * Activity Detail Component - Shows a detailed breakdown of a specific activity
  */
@@ -338,31 +343,11 @@ const ActivityDetail = ({ activity, onBack, loading }) => {
         </div>
       )
     },
-    offerHistory: {
+          offerHistory: {
       title: "Offer History",
       icon: <DollarSign className="h-5 w-5 text-green-600" />,
-      render: (item) => (
-        <div key={item.id || item.timestamp || Math.random()} className="border rounded-md p-3 mb-2 bg-white">
-          <div className="font-medium text-[#324c48]">{item.propertyAddress}, {item.propertyCity || ''}, {item.propertyState || ''} {item.propertyZip || ''}</div>
-          <div className="flex justify-between mt-1">
-            <span className="font-bold">${typeof item.amount === 'number' ? 
-              item.amount.toLocaleString() : 
-              (typeof item.offeredPrice === 'number' ? 
-                item.offeredPrice.toLocaleString() : '0')}</span>
-            <Badge className={`
-              ${item.status === 'Pending' ? 'bg-yellow-100 text-yellow-800' : ''}
-              ${item.status === 'Accepted' ? 'bg-green-100 text-green-800' : ''}
-              ${item.status === 'Rejected' ? 'bg-red-100 text-red-800' : ''}
-              ${item.status === 'Countered' ? 'bg-blue-100 text-blue-800' : ''}
-            `}>
-              {item.status || 'Pending'}
-            </Badge>
-          </div>
-          <div className="text-sm mt-1">
-            {item.timestamp ? format(new Date(item.timestamp), 'MMM d, yyyy h:mm a') : 'Date not available'}
-          </div>
-        </div>
-      )
+      render: null, // Not using item-by-item rendering for offers anymore
+      renderCustom: (data) => <OfferHistory offers={data} /> // Using custom renderer
     },
     emailInteractions: {
       title: "Email Interactions",
@@ -467,20 +452,25 @@ const ActivityDetail = ({ activity, onBack, loading }) => {
       
       <div className="space-y-2">
         {activity.data && activity.data.length > 0 ? (
-          // Map over the data and render each item
-          activity.data.map(item => {
-            // Make sure the renderer exists for this activity type
-            if (activityTypes[activity.type] && typeof activityTypes[activity.type].render === 'function') {
-              return activityTypes[activity.type].render(item);
-            }
-            // Fallback for unknown activity types
-            return (
-              <div key={Math.random()} className="border rounded-md p-3 mb-2 bg-white">
-                <div className="font-medium text-[#324c48]">Unknown activity type</div>
-                <pre className="text-xs overflow-auto mt-2">{JSON.stringify(item, null, 2)}</pre>
-              </div>
-            );
-          })
+          // Check if we have a custom renderer for this activity type (like offer history)
+          activity.type === "offerHistory" && activityTypes[activity.type]?.renderCustom ? (
+            activityTypes[activity.type].renderCustom(activity.data)
+          ) : (
+            // Otherwise map over the data and render each item
+            activity.data.map(item => {
+              // Make sure the renderer exists for this activity type
+              if (activityTypes[activity.type] && typeof activityTypes[activity.type].render === 'function') {
+                return activityTypes[activity.type].render(item);
+              }
+              // Fallback for unknown activity types
+              return (
+                <div key={Math.random()} className="border rounded-md p-3 mb-2 bg-white">
+                  <div className="font-medium text-[#324c48]">Unknown activity type</div>
+                  <pre className="text-xs overflow-auto mt-2">{JSON.stringify(item, null, 2)}</pre>
+                </div>
+              );
+            })
+          )
         ) : (
           <div className="text-center p-8 bg-gray-50 border border-gray-200 rounded-lg">
             <p className="text-gray-500 mb-2">No data available for this activity type.</p>
@@ -589,12 +579,13 @@ const ActivitySummary = ({ activity, onViewDetail }) => {
                 <div className="flex items-center justify-between">
                   <span className="text-sm">Latest status:</span>
                   <Badge className={`
-                    ${activity.offerHistory[0].status === 'Pending' ? 'bg-yellow-100 text-yellow-800' : ''}
-                    ${activity.offerHistory[0].status === 'Accepted' ? 'bg-green-100 text-green-800' : ''}
-                    ${activity.offerHistory[0].status === 'Rejected' ? 'bg-red-100 text-red-800' : ''}
-                    ${activity.offerHistory[0].status === 'Countered' ? 'bg-blue-100 text-blue-800' : ''}
+                    ${activity.offerHistory[0].status === 'PENDING' ? 'bg-amber-100 text-amber-800' : ''}
+                    ${activity.offerHistory[0].status === 'ACCEPTED' ? 'bg-green-100 text-green-800' : ''}
+                    ${activity.offerHistory[0].status === 'REJECTED' ? 'bg-red-100 text-red-800' : ''}
+                    ${activity.offerHistory[0].status === 'COUNTERED' ? 'bg-blue-100 text-blue-800' : ''}
+                    ${activity.offerHistory[0].status === 'EXPIRED' ? 'bg-gray-100 text-gray-800' : ''}
                   `}>
-                    {activity.offerHistory[0].status}
+                    {activity.offerHistory[0].status || 'PENDING'}
                   </Badge>
                 </div>
               </>

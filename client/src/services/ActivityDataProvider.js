@@ -1,5 +1,5 @@
 // Updated ActivityDataProvider.js
-import { getBuyerActivity, getBuyerActivitySummary, getPropertyOffers, getBuyerById } from '@/utils/api';
+import { getBuyerActivity, getBuyerActivitySummary, getPropertyOffers, getBuyerById, getProperty, getBuyerOffers } from '@/utils/api';
 
 /**
  * Service for fetching buyer activity data for the ActivityDetailView
@@ -47,8 +47,6 @@ export default class ActivityDataProvider {
       return [];
     }
     
-    console.log('Formatting property views:', propertyViews);
-    
     return propertyViews.map(view => {
       // Extract data from eventData if present, otherwise from the top level
       const data = view.eventData || {};
@@ -57,6 +55,9 @@ export default class ActivityDataProvider {
         propertyId: data.propertyId || view.propertyId,
         propertyTitle: data.propertyTitle || 'Unknown Property',
         propertyAddress: data.propertyAddress || 'Address not available',
+        propertyCity: data.propertyCity,
+        propertyState: data.propertyState,
+        propertyZip: data.propertyZip,
         timestamp: view.timestamp || new Date().toISOString(),
         duration: data.duration || 60, // Default to 60 seconds if not available
         details: data.details || 'Viewed property details'
@@ -126,7 +127,7 @@ export default class ActivityDataProvider {
   }
 
   /**
-   * Format offer history data
+   * Format offer history data with enhanced details
    * @private
    * @param {Array} offerHistory - Raw offer history data
    * @returns {Array} Formatted offer history
@@ -141,15 +142,21 @@ export default class ActivityDataProvider {
     
     return offerHistory.map(offer => {
       const property = offer.property || {};
+      // Create a complete offer object with status details and complete address
       return {
+        id: offer.id,
         propertyId: offer.propertyId,
         propertyTitle: property.title || 'Unknown Property',
         propertyAddress: property.streetAddress ? 
           `${property.streetAddress}, ${property.city || ''}, ${property.state || ''}` : 
           'Address not available',
         amount: offer.offeredPrice,
-        status: offer.status || 'Pending',
-        timestamp: offer.timestamp
+        counteredPrice: offer.counteredPrice,
+        status: offer.offerStatus || offer.status || 'PENDING',
+        timestamp: offer.timestamp,
+        buyerMessage: offer.buyerMessage,
+        sysMessage: offer.sysMessage,
+        offerHistory: offer.offerHistory || []
       };
     });
   }
@@ -224,6 +231,7 @@ export default class ActivityDataProvider {
       };
     });
   }
+  
   /**
    * Get detailed activity data for a specific category
    * @param {string} buyerId - Buyer ID
@@ -237,7 +245,7 @@ export default class ActivityDataProvider {
       
       // Special handling for offer history which needs to be fetched differently
       if (activityType === 'offerHistory') {
-        return await this._getOfferHistory(buyerId);
+        return await this._getEnhancedOfferHistory(buyerId);
       }
       
       // For other activity types, proceed as before
@@ -273,55 +281,77 @@ export default class ActivityDataProvider {
   }
   
   /**
-   * Fetch offer history specifically using the buyer's offers endpoint
-   * @private
+   * Enhanced method to get comprehensive offer history with all status changes
    * @param {string} buyerId - Buyer ID
-   * @returns {Promise<Array>} Formatted offer history
+   * @returns {Promise<Array>} Formatted offer history with detailed status changes
    */
-  static async _getOfferHistory(buyerId) {
+  static async _getEnhancedOfferHistory(buyerId) {
     try {
-      // Get buyer details first to access offers
-      const buyer = await getBuyerById(buyerId);
+      // Use getBuyerOffers to fetch all offers for this buyer
+      const response = await getBuyerOffers(buyerId);
       
-      if (!buyer) {
-        console.warn(`Buyer with ID ${buyerId} not found`);
-        return [];
-      }
-      
-      console.log(`Found buyer:`, buyer);
-      
-      // Check if buyer has offers
-      if (!buyer.offers || !Array.isArray(buyer.offers) || buyer.offers.length === 0) {
+      if (!response || !response.offers || !Array.isArray(response.offers) || response.offers.length === 0) {
         console.log(`No offers found for buyer ${buyerId}`);
         return [];
       }
       
-      // Process and format each offer with property details
-      const offers = await Promise.all(buyer.offers.map(async offer => {
+      console.log(`Found ${response.offers.length} offers for buyer ${buyerId}`);
+      
+      // Process each offer to add property details and structure history
+      const enhancedOffers = await Promise.all(response.offers.map(async (offer) => {
         try {
-          // Try to get property details
-          let propertyDetails = { title: 'Unknown Property', streetAddress: 'Address not available' };
-          
+          // Get property details 
+          let propertyDetails = null;
           try {
-            // This will be a separate API call to get property details
-            const property = await this._getPropertyDetails(offer.propertyId);
-            if (property) {
-              propertyDetails = property;
-            }
-          } catch (propertyError) {
-            console.warn(`Error fetching property details for offer ${offer.id}:`, propertyError);
+            propertyDetails = await getProperty(offer.propertyId);
+          } catch (err) {
+            console.warn(`Error fetching property ${offer.propertyId}:`, err);
+            propertyDetails = { 
+              title: "Unknown Property", 
+              streetAddress: "Address not available" 
+            };
           }
           
+          // Extract history from offer if available
+          const historyEntries = Array.isArray(offer.offerHistory) ? offer.offerHistory : [];
+          
+          // If no history in offer, create a basic history entry from the offer itself
+          if (historyEntries.length === 0) {
+            historyEntries.push({
+              timestamp: offer.timestamp || new Date().toISOString(),
+              newStatus: offer.offerStatus || 'PENDING',
+              newPrice: offer.offeredPrice,
+              counteredPrice: offer.counteredPrice,
+              buyerMessage: offer.buyerMessage,
+              sysMessage: offer.sysMessage
+            });
+          }
+          
+          // Return enhanced offer with history and property details
           return {
+            id: offer.id,
             propertyId: offer.propertyId,
             propertyTitle: propertyDetails.title || 'Unknown Property',
             propertyAddress: propertyDetails.streetAddress ? 
               `${propertyDetails.streetAddress}, ${propertyDetails.city || ''}, ${propertyDetails.state || ''}` : 
               'Address not available',
             amount: offer.offeredPrice,
-            status: offer.status || 'Pending',
+            counteredPrice: offer.counteredPrice,
+            status: offer.offerStatus || 'PENDING',
             timestamp: offer.timestamp,
-            id: offer.id
+            buyerMessage: offer.buyerMessage,
+            sysMessage: offer.sysMessage,
+            history: historyEntries.map(entry => ({
+              timestamp: entry.timestamp || offer.timestamp,
+              previousStatus: entry.previousStatus,
+              newStatus: entry.newStatus || offer.offerStatus || 'PENDING',
+              previousPrice: entry.previousPrice,
+              newPrice: entry.newPrice || offer.offeredPrice,
+              counteredPrice: entry.counteredPrice || offer.counteredPrice,
+              buyerMessage: entry.buyerMessage || offer.buyerMessage,
+              sysMessage: entry.sysMessage || offer.sysMessage,
+              updatedByName: entry.updatedByName || "System"
+            }))
           };
         } catch (offerError) {
           console.error(`Error processing offer ${offer.id}:`, offerError);
@@ -329,13 +359,15 @@ export default class ActivityDataProvider {
         }
       }));
       
-      // Filter out any null offers from processing errors
-      const validOffers = offers.filter(offer => offer !== null);
-      console.log(`Processed ${validOffers.length} valid offers`);
+      // Filter out any null offers from processing errors and sort by timestamp (newest first)
+      const validOffers = enhancedOffers
+        .filter(offer => offer !== null)
+        .sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
       
+      console.log(`Processed ${validOffers.length} valid offers with enhanced history`);
       return validOffers;
     } catch (error) {
-      console.error(`Error fetching offer history for buyer ${buyerId}:`, error);
+      console.error(`Error fetching enhanced offer history for buyer ${buyerId}:`, error);
       return [];
     }
   }
@@ -347,17 +379,19 @@ export default class ActivityDataProvider {
    * @returns {Promise<Object>} Property details
    */
   static async _getPropertyDetails(propertyId) {
-    // This would normally call an API endpoint to get property details
-    // For now, it returns a placeholder object
-    // In a real implementation, you would use something like:
-    // return await getProperty(propertyId);
-    return {
-      title: 'Property #' + propertyId.substring(0, 6),
-      streetAddress: '123 Main St',
-      city: 'Example City',
-      state: 'EX',
-      askingPrice: 0
-    };
+    try {
+      return await getProperty(propertyId);
+    } catch (error) {
+      console.error(`Error fetching property ${propertyId}:`, error);
+      // Return placeholder data if property fetch fails
+      return {
+        title: 'Property #' + propertyId.substring(0, 6),
+        streetAddress: 'Address not available',
+        city: '',
+        state: '',
+        askingPrice: 0
+      };
+    }
   }
 
   /**
