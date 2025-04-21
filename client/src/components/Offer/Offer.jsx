@@ -79,6 +79,7 @@ export default function Offer({ propertyData }) {
   const { isVipBuyer, vipBuyerData, isLoading: vipLoading } = useVipBuyer();
 
   // State for the Dialog notification
+  const [updateMessage, setUpdateMessage] = useState("");
   const [dialogOpen, setDialogOpen] = useState(false);
   const [dialogMessage, setDialogMessage] = useState("");
   const [dialogType, setDialogType] = useState("success"); // "success" or "warning"
@@ -371,9 +372,9 @@ export default function Offer({ propertyData }) {
       setDialogOpen(true);
       return;
     }
-    
+
     setIsAcceptingCounter(true);
-    
+
     try {
       // Make API call to accept the counter offer
       const response = await api.put(`/offer/${existingOffer.id}/status`, {
@@ -381,22 +382,22 @@ export default function Offer({ propertyData }) {
         buyerMessage: "Counter offer accepted",
         acceptedPrice: counteredPrice  // Explicitly include the accepted price
       });
-      
+
       setDialogMessage("You have accepted the counter offer! Our team will contact you soon with the next steps.");
       setDialogType("success");
       setDialogOpen(true);
-      
+
       // Update local state
       setOfferStatus("ACCEPTED");
       setOfferPrice(counteredPrice.toLocaleString());  // Update displayed price to match counter price
-      
+
       // Update existing offer object in state
       setExistingOffer({
         ...existingOffer,
         offerStatus: "ACCEPTED",
         offeredPrice: counteredPrice  // Update the price in our local state
       });
-      
+
     } catch (error) {
       setDialogMessage("Failed to accept counter offer. Please try again or contact support.");
       setDialogType("warning");
@@ -542,7 +543,7 @@ export default function Offer({ propertyData }) {
       offeredPrice: parsedNewPrice,
       firstName,
       lastName,
-      buyerMessage: buyerMessage,
+      buyerMessage: updateMessage || null,
       auth0Id: user?.sub || null
     };
 
@@ -556,6 +557,8 @@ export default function Offer({ propertyData }) {
       // Update local state
       setExistingOffer(response.data.offer);
       setOfferStatus("PENDING");
+      // Reset the update message after successful submission
+      setUpdateMessage("");
     } catch (error) {
       setDialogMessage(
         "There was an error updating your offer. Please try again."
@@ -947,6 +950,18 @@ export default function Offer({ propertyData }) {
               }}
               className="mt-1"
             />
+            <div className="mt-4">
+              <Label htmlFor="updateMessage" className="text-sm text-[#050002]">
+                Message (Optional)
+              </Label>
+              <textarea
+                id="updateMessage"
+                placeholder="Include any notes about your updated offer..."
+                value={updateMessage}
+                onChange={(e) => setUpdateMessage(e.target.value)}
+                className="w-full min-h-[80px] p-2 rounded-md border border-input bg-background resize-y mt-1"
+              />
+            </div>
           </div>
           <DialogFooter>
             <Button
