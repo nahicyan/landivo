@@ -169,20 +169,40 @@ model Residency {
 
 //---------------------- Offer ----------------------//
 
+
+
 model Offer {
-  id           String   @id @default(auto()) @map("_id") @db.ObjectId
-  propertyId   String
-  offeredPrice Float
-  timestamp    DateTime @default(now())
-  buyerId      String   @db.ObjectId
-  buyer        Buyer    @relation("BuyerOffers", fields: [buyerId], references: [id])
+  id              String       @id @default(auto()) @map("_id") @db.ObjectId
+  propertyId      String
+  offeredPrice    Float
+  counteredPrice  Float?       // Added field for counter offers
+  timestamp       DateTime     @default(now())
+  buyerId         String       @db.ObjectId
+  buyer           Buyer        @relation("BuyerOffers", fields: [buyerId], references: [id])
+  offerStatus     OfferStatus  @default(PENDING) // Added status enum
+  
+  // Message fields
+  buyerMessage    String?
+  sysMessage      String?
+  
+  // History tracking
+  offerHistory    Json[]       // Array of status changes with timestamps and messages
   
   // Audit fields
-  createdById  String?  @db.ObjectId
-  updatedById  String?  @db.ObjectId
+  createdById     String?      @db.ObjectId
+  updatedById     String?      @db.ObjectId
+  updatedAt       DateTime     @updatedAt
   
   // Track modifications
   modificationHistory Json?
+}
+
+enum OfferStatus {
+  PENDING
+  ACCEPTED
+  REJECTED
+  COUNTERED
+  EXPIRED
 }
 
 //---------------------- Buyer ----------------------//

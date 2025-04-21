@@ -47,6 +47,7 @@ export default function AdminLayout() {
     // { text: "Add Property", icon: <AddIcon />, path: "/admin/add-property" },
     { text: "Users", icon: <PeopleIcon />, path: "/admin/users" },
     { text: "Deals", icon: <AttachMoneyIcon />, path: "/admin/deals" },
+    { text: "Offers", icon: <AttachMoneyIcon />, path: "/admin/offers" },
     { text: "Buyers", icon: <PersonIcon />, path: "/admin/buyers" },
     { text: "Email Lists", icon: <ViewListIcon />, path: "/admin/buyer-lists" },
     { text: "Financing Applications", icon: <AssessmentIcon />, path: "/admin/financing" },

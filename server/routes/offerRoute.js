@@ -1,33 +1,36 @@
-// server/routes/offerRoute.js
+// server/routes/offerRoute.js - With permissions and checks removed
 import express from "express";
 import { 
   makeOffer, 
   getOffersOnProperty, 
-  getOffersByBuyer
+  getOffersByBuyer,
+  updateOfferStatus,
+  getOfferHistory,
+  getAllOffers,
+  getRecentOfferActivity 
 } from "../controllers/offerCntrl.js";
-import { jwtCheck, extractUserFromToken, checkPermissions } from "../middlewares/authMiddleware.js";
 
 const router = express.Router();
 
 // Create a new offer
-// Route to create or update an offer
 router.post("/makeOffer", makeOffer);
 
-// Get offers by property - public access for property pages
+// Get offers by property
 router.get("/property/:propertyId", getOffersOnProperty);
 
 // Get offers by buyer (with query params)
 router.get("/buyer", getOffersByBuyer);
 
-// Protected routes (require authentication and permissions)
-// These are examples that would require auth - uncomment and adjust as needed
-/*
-router.delete("/:id", 
-  jwtCheck, 
-  extractUserFromToken, 
-  checkPermissions(['delete:offers']), 
-  deleteOffer
-);
-*/
+// Get all offers
+router.get("/all", getAllOffers);
+
+// Get recent offer activity
+router.get("/activity/recent", getRecentOfferActivity);
+
+// Update offer status
+router.put("/:id/status", updateOfferStatus);
+
+// Get offer history
+router.get("/:id/history", getOfferHistory);
 
 export { router as offerRoute };

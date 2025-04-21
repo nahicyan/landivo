@@ -45,6 +45,7 @@ import BuyerLists from "./components/BuyerLists/BuyerLists";
 import Profile from "./pages/Profile/Profile";
 import VipSignupSuccess from "./pages/Subscription/VipSignupSuccess";
 import AdminDeals from "./pages/AdminDeals/AdminDeals";
+import AdminOffer from "./pages/AdminOffer/AdminOffer";
 import CreateDealForm from "@/components/Deal/CreateDealForm";
 import DealDetail from "@/components/Deal/DealDetail";
 import DealFinancialSummary from "@/components/Deal/DealFinancialSummary";
@@ -152,6 +153,8 @@ function App() {
                           <Route index element={<Admin />} />
                           <Route path="add-property" element={<AddProperty />} />
                           <Route path="edit-property/:propertyId" element={<EditProperty />} />
+                          <Route path="offers" element={<AdminOffer />} />
+
                           
                           {/* New Properties Management Route */}
                           {/* <Route
