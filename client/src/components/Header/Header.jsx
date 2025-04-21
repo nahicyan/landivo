@@ -118,7 +118,7 @@ const Header = () => {
             <Link to="/" title="Landivo">
               <img
                 className="w-auto h-10 lg:h-12"
-                src="https://shinyhomes.net/wp-content/uploads/2025/02/Landivo.svg"
+                src="https://cdn.landivo.com/wp-content/uploads/2025/04/logo.svg"
                 alt="Logo"
               />
             </Link>

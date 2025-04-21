@@ -4,45 +4,71 @@
 import React, { useState, useEffect, useMemo } from "react";
 import { PuffLoader } from "react-spinners";
 import useProperties from "../../components/hooks/useProperties.js";
-import { columns } from "../DataTable/Columns";
 import { DataTable } from "../DataTable/DataTable";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+import PropertiesTableFilter from "../PropertiesTableFilter/PropertiesTableFilter";
 import { 
-  Select, 
-  SelectContent, 
-  SelectItem, 
-  SelectTrigger, 
-  SelectValue 
-} from "@/components/ui/select";
+  MoreHorizontal, 
+  PencilIcon, 
+  TrashIcon, 
+  Eye 
+} from "lucide-react";
 import {
-  Accordion,
-  AccordionContent,
-  AccordionItem,
-  AccordionTrigger,
-} from "@/components/ui/accordion";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import { Slider } from "@/components/ui/slider";
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { X, Filter, SlidersHorizontal } from "lucide-react";
 
 export default function PropertiesTable({ propertyData }) {
   const { data, isError, isLoading } = useProperties();
   // Generic search query
   const [searchQuery, setSearchQuery] = useState("");
   const [activeFilters, setActiveFilters] = useState([]);
+  
+  // All available columns from schema
+  const allAvailableColumns = [
+    { id: "title", name: "Title", accessor: "title" },
+    { id: "status", name: "Status", accessor: "status" },
+    { id: "location", name: "Location", accessor: (row) => `${row.city}, ${row.state}` },
+    { id: "askingPrice", name: "Asking Price", accessor: "askingPrice" },
+    { id: "area", name: "Area", accessor: "area" },
+    { id: "ownerId", name: "Owner ID", accessor: "ownerId" },
+    { id: "featured", name: "Featured", accessor: "featured" },
+    { id: "description", name: "Description", accessor: "description" },
+    { id: "streetAddress", name: "Street Address", accessor: "streetAddress" },
+    { id: "city", name: "City", accessor: "city" },
+    { id: "county", name: "County", accessor: "county" },
+    { id: "state", name: "State", accessor: "state" },
+    { id: "zip", name: "ZIP", accessor: "zip" },
+    { id: "apnOrPin", name: "APN/PIN", accessor: "apnOrPin" },
+    { id: "latitude", name: "Latitude", accessor: "latitude" },
+    { id: "longitude", name: "Longitude", accessor: "longitude" },
+    { id: "sqft", name: "Square Feet", accessor: "sqft" },
+    { id: "acre", name: "Acres", accessor: "acre" },
+    { id: "minPrice", name: "Min Price", accessor: "minPrice" },
+    { id: "financing", name: "Financing", accessor: "financing" },
+    { id: "water", name: "Water", accessor: "water" },
+    { id: "sewer", name: "Sewer", accessor: "sewer" },
+    { id: "electric", name: "Electric", accessor: "electric" },
+    { id: "roadCondition", name: "Road Condition", accessor: "roadCondition" },
+    { id: "floodplain", name: "Floodplain", accessor: "floodplain" },
+    { id: "zoning", name: "Zoning", accessor: "zoning" },
+    { id: "restrictions", name: "Restrictions", accessor: "restrictions" },
+    { id: "mobileHomeFriendly", name: "Mobile Home Friendly", accessor: "mobileHomeFriendly" },
+    { id: "hoaPoa", name: "HOA/POA", accessor: "hoaPoa" },
+    { id: "hoaFee", name: "HOA Fee", accessor: "hoaFee" },
+    { id: "createdAt", name: "Created At", accessor: "createdAt" },
+    { id: "updatedAt", name: "Updated At", accessor: "updatedAt" },
+  ];
+
+  // Default visible columns
+  const [visibleColumns, setVisibleColumns] = useState([
+    "title", "location", "askingPrice", "status", "area"
+  ]);
   
   // Filter states
   const [filters, setFilters] = useState({
@@ -59,13 +85,86 @@ export default function PropertiesTable({ propertyData }) {
     financing: "all",
   });
 
-  // For mobile filter toggle
-  const [showMobileFilters, setShowMobileFilters] = useState(false);
-
   // Format numbers with commas
   const formatNumber = (num) => {
     return num.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
   };
+
+  // Generate dynamic columns based on visibleColumns
+  const dynamicColumns = useMemo(() => {
+    // Always include actions column
+    const columns = [
+      ...visibleColumns.map(colId => {
+        const columnDef = allAvailableColumns.find(col => col.id === colId);
+        if (!columnDef) return null;
+        
+        return {
+          accessorKey: columnDef.id,
+          header: columnDef.name,
+          cell: ({ row }) => {
+            const value = typeof columnDef.accessor === 'function' 
+              ? columnDef.accessor(row.original) 
+              : row.original[columnDef.accessor];
+            
+            // Format different types of data
+            if (colId === 'askingPrice' || colId === 'minPrice' || colId === 'hoaFee') {
+              return value ? `${Number(value).toLocaleString()}` : 'N/A';
+            } else if (colId === 'sqft') {
+              return value ? `${Number(value).toLocaleString()} sqft` : 'N/A';
+            } else if (colId === 'acre') {
+              return value ? `${Number(value).toFixed(2)} acres` : 'N/A';
+            } else if (colId === 'status') {
+              return (
+                <Badge className={
+                  value === 'Available' ? 'bg-green-100 text-green-800' : 
+                  value === 'Pending' ? 'bg-orange-100 text-orange-800' : 
+                  value === 'Sold' ? 'bg-blue-100 text-blue-800' : 
+                  'bg-gray-100 text-gray-800'
+                }>
+                  {value || 'Unknown'}
+                </Badge>
+              );
+            } else if (colId === 'featured') {
+              return value === 'Yes' ? 'Yes' : 'No';
+            } else if (colId === 'createdAt' || colId === 'updatedAt') {
+              return value ? new Date(value).toLocaleDateString() : 'N/A';
+            } else if (typeof value === 'boolean') {
+              return value ? 'Yes' : 'No';
+            }
+            
+            return value || 'N/A';
+          }
+        };
+      }).filter(Boolean),
+      {
+        id: "actions",
+        cell: ({ row }) => {
+          return (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" className="h-8 w-8 p-0">
+                  <span className="sr-only">Open menu</span>
+                  <MoreHorizontal className="h-4 w-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={() => window.open(`/properties/${row.original.id}`, '_blank')}>
+                  <Eye className="mr-2 h-4 w-4" /> View
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => window.open(`/admin/edit-property/${row.original.id}`, '_blank')}>
+                  <PencilIcon className="mr-2 h-4 w-4" /> Edit
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          );
+        },
+      }
+    ];
+    
+    return columns;
+  }, [visibleColumns]);
 
   // Parse filtered data
   const filteredData = useMemo(() => {
@@ -171,34 +270,6 @@ export default function PropertiesTable({ propertyData }) {
     setActiveFilters(newActiveFilters);
   }, [filters]);
 
-  // Handle filter changes
-  const handleFilterChange = (type, value) => {
-    setFilters(prev => ({
-      ...prev,
-      [type]: value
-    }));
-  };
-
-  // Handle price range changes
-  const handlePriceRangeChange = (value) => {
-    setFilters(prev => ({
-      ...prev,
-      priceRange: value,
-      minPriceDisplay: formatNumber(value[0]),
-      maxPriceDisplay: formatNumber(value[1])
-    }));
-  };
-
-  // Handle square footage range changes
-  const handleSqftRangeChange = (value) => {
-    setFilters(prev => ({
-      ...prev,
-      squareFeet: value,
-      minSqftDisplay: formatNumber(value[0]),
-      maxSqftDisplay: formatNumber(value[1])
-    }));
-  };
-
   // Remove a specific filter
   const removeFilter = (type, value) => {
     if (type === 'priceRange') {
@@ -260,379 +331,34 @@ export default function PropertiesTable({ propertyData }) {
   return (
     <div className="w-full bg-[#FDF8F2] rounded-lg p-4 sm:p-6">
       <div className="space-y-4">
-        {/* Main Search and Filter Controls */}
-        <div className="flex flex-col lg:flex-row gap-4 items-start">
-          {/* Search Input */}
-          <div className="w-full lg:flex-1">
-            <div className="relative">
-              <Input
-                type="text"
-                placeholder="Search by title, address, state, zip, area, APN, tags, city, or county"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:border-[#D4A017] focus:ring-1 focus:ring-[#D4A017]"
-              />
-              <svg
-                className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400"
-                xmlns="http://www.w3.org/2000/svg"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
-                />
-              </svg>
-            </div>
-          </div>
-
-          {/* Desktop Filter Button */}
-          <div className="hidden lg:flex">
-            <Popover>
-              <PopoverTrigger asChild>
-                <Button 
-                  variant="outline" 
-                  className="border-[#324c48] text-[#324c48] hover:bg-[#324c48] hover:text-white"
-                >
-                  <SlidersHorizontal className="h-4 w-4 mr-2" /> 
-                  Advanced Filters
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent className="w-[500px] p-4">
-                <h3 className="font-medium text-lg mb-4">Filter Properties</h3>
-                <div className="grid grid-cols-2 gap-4">
-                  {/* Status filter */}
-                  <div className="space-y-2">
-                    <Label htmlFor="status-filter">Status</Label>
-                    <Select
-                      value={filters.status}
-                      onValueChange={(value) => handleFilterChange('status', value)}
-                    >
-                      <SelectTrigger id="status-filter">
-                        <SelectValue placeholder="Select status" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="all">All Statuses</SelectItem>
-                        <SelectItem value="Available">Available</SelectItem>
-                        <SelectItem value="Pending">Pending</SelectItem>
-                        <SelectItem value="Sold">Sold</SelectItem>
-                        <SelectItem value="Not Available">Not Available</SelectItem>
-                        <SelectItem value="Testing">Testing</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-
-                  {/* Area filter */}
-                  <div className="space-y-2">
-                    <Label htmlFor="area-filter">Area</Label>
-                    <Select
-                      value={filters.area}
-                      onValueChange={(value) => handleFilterChange('area', value)}
-                    >
-                      <SelectTrigger id="area-filter">
-                        <SelectValue placeholder="Select area" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="all">All Areas</SelectItem>
-                        <SelectItem value="DFW">DFW</SelectItem>
-                        <SelectItem value="Austin">Austin</SelectItem>
-                        <SelectItem value="Houston">Houston</SelectItem>
-                        <SelectItem value="San Antonio">San Antonio</SelectItem>
-                        <SelectItem value="Other Areas">Other Areas</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-
-                  {/* Financing filter */}
-                  <div className="space-y-2">
-                    <Label htmlFor="financing-filter">Financing</Label>
-                    <Select
-                      value={filters.financing}
-                      onValueChange={(value) => handleFilterChange('financing', value)}
-                    >
-                      <SelectTrigger id="financing-filter">
-                        <SelectValue placeholder="Select financing option" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="all">All Options</SelectItem>
-                        <SelectItem value="Available">Available</SelectItem>
-                        <SelectItem value="Not-Available">Not Available</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-
-                  {/* Owner ID filter */}
-                  <div className="space-y-2">
-                    <Label htmlFor="owner-filter">Owner ID</Label>
-                    <Input
-                      id="owner-filter"
-                      type="text"
-                      value={filters.ownerId}
-                      onChange={(e) => handleFilterChange('ownerId', e.target.value)}
-                      placeholder="Enter owner ID"
-                    />
-                  </div>
-
-                  {/* Price Range filter */}
-                  <div className="space-y-2 col-span-2">
-                    <div className="flex justify-between items-center">
-                      <Label>Price Range</Label>
-                      <div className="flex space-x-2 text-sm">
-                        <span>${filters.minPriceDisplay}</span>
-                        <span>-</span>
-                        <span>${filters.maxPriceDisplay}</span>
-                      </div>
-                    </div>
-                    <Slider
-                      defaultValue={[0, 5000000]}
-                      value={filters.priceRange}
-                      min={0}
-                      max={5000000}
-                      step={10000}
-                      onValueChange={handlePriceRangeChange}
-                      className="mt-2"
-                    />
-                  </div>
-
-                  {/* Square Footage filter */}
-                  <div className="space-y-2 col-span-2">
-                    <div className="flex justify-between items-center">
-                      <Label>Square Footage</Label>
-                      <div className="flex space-x-2 text-sm">
-                        <span>{filters.minSqftDisplay}</span>
-                        <span>-</span>
-                        <span>{filters.maxSqftDisplay} sqft</span>
-                      </div>
-                    </div>
-                    <Slider
-                      defaultValue={[0, 500000]}
-                      value={filters.squareFeet}
-                      min={0}
-                      max={500000}
-                      step={1000}
-                      onValueChange={handleSqftRangeChange}
-                      className="mt-2"
-                    />
-                  </div>
-                </div>
-
-                <div className="flex justify-end mt-4 space-x-2">
-                  <Button 
-                    variant="outline" 
-                    onClick={clearAllFilters}
-                    className="text-red-500 border-red-500 hover:bg-red-50"
-                  >
-                    Clear All
-                  </Button>
-                  <Button 
-                    onClick={() => document.body.click()}
-                    className="bg-[#324c48] hover:bg-[#3f4f24]"
-                  >
-                    Apply Filters
-                  </Button>
-                </div>
-              </PopoverContent>
-            </Popover>
-          </div>
-
-          {/* Mobile Filter Button */}
-          <div className="lg:hidden w-full">
-            <Button 
-              variant="outline" 
-              className="w-full border-[#324c48] text-[#324c48]"
-              onClick={() => setShowMobileFilters(!showMobileFilters)}
-            >
-              <Filter className="h-4 w-4 mr-2" />
-              Filters
-            </Button>
-          </div>
-        </div>
-
-        {/* Mobile Filters Accordion */}
-        {showMobileFilters && (
-          <div className="lg:hidden bg-white rounded-lg shadow p-4 space-y-4">
-            <h3 className="font-medium text-lg">Filters</h3>
-            
-            <Accordion type="single" collapsible className="w-full">
-              <AccordionItem value="status">
-                <AccordionTrigger>Status</AccordionTrigger>
-                <AccordionContent>
-                  <Select
-                    value={filters.status}
-                    onValueChange={(value) => handleFilterChange('status', value)}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select status" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">All Statuses</SelectItem>
-                      <SelectItem value="Available">Available</SelectItem>
-                      <SelectItem value="Pending">Pending</SelectItem>
-                      <SelectItem value="Sold">Sold</SelectItem>
-                      <SelectItem value="Not Available">Not Available</SelectItem>
-                      <SelectItem value="Testing">Testing</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </AccordionContent>
-              </AccordionItem>
-
-              <AccordionItem value="area">
-                <AccordionTrigger>Area</AccordionTrigger>
-                <AccordionContent>
-                  <Select
-                    value={filters.area}
-                    onValueChange={(value) => handleFilterChange('area', value)}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select area" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">All Areas</SelectItem>
-                      <SelectItem value="DFW">DFW</SelectItem>
-                      <SelectItem value="Austin">Austin</SelectItem>
-                      <SelectItem value="Houston">Houston</SelectItem>
-                      <SelectItem value="San Antonio">San Antonio</SelectItem>
-                      <SelectItem value="Other Areas">Other Areas</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </AccordionContent>
-              </AccordionItem>
-
-              <AccordionItem value="financing">
-                <AccordionTrigger>Financing</AccordionTrigger>
-                <AccordionContent>
-                  <Select
-                    value={filters.financing}
-                    onValueChange={(value) => handleFilterChange('financing', value)}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select financing option" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">All Options</SelectItem>
-                      <SelectItem value="Available">Available</SelectItem>
-                      <SelectItem value="Not-Available">Not Available</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </AccordionContent>
-              </AccordionItem>
-
-              <AccordionItem value="price">
-                <AccordionTrigger>Price Range</AccordionTrigger>
-                <AccordionContent>
-                  <div className="space-y-6">
-                    <div className="flex justify-between items-center">
-                      <span>${filters.minPriceDisplay}</span>
-                      <span>-</span>
-                      <span>${filters.maxPriceDisplay}</span>
-                    </div>
-                    <Slider
-                      defaultValue={[0, 5000000]}
-                      value={filters.priceRange}
-                      min={0}
-                      max={5000000}
-                      step={10000}
-                      onValueChange={handlePriceRangeChange}
-                    />
-                  </div>
-                </AccordionContent>
-              </AccordionItem>
-
-              <AccordionItem value="sqft">
-                <AccordionTrigger>Square Footage</AccordionTrigger>
-                <AccordionContent>
-                  <div className="space-y-6">
-                    <div className="flex justify-between items-center">
-                      <span>{filters.minSqftDisplay}</span>
-                      <span>-</span>
-                      <span>{filters.maxSqftDisplay} sqft</span>
-                    </div>
-                    <Slider
-                      defaultValue={[0, 500000]}
-                      value={filters.squareFeet}
-                      min={0}
-                      max={500000}
-                      step={1000}
-                      onValueChange={handleSqftRangeChange}
-                    />
-                  </div>
-                </AccordionContent>
-              </AccordionItem>
-
-              <AccordionItem value="owner">
-                <AccordionTrigger>Owner ID</AccordionTrigger>
-                <AccordionContent>
-                  <Input
-                    type="text"
-                    value={filters.ownerId}
-                    onChange={(e) => handleFilterChange('ownerId', e.target.value)}
-                    placeholder="Enter owner ID"
-                  />
-                </AccordionContent>
-              </AccordionItem>
-            </Accordion>
-
-            <div className="flex space-x-2 pt-2">
-              <Button 
-                variant="outline" 
-                onClick={clearAllFilters}
-                className="flex-1 text-red-500 border-red-500 hover:bg-red-50"
-              >
-                Clear All
-              </Button>
-              <Button 
-                onClick={() => setShowMobileFilters(false)}
-                className="flex-1 bg-[#324c48] hover:bg-[#3f4f24]"
-              >
-                Apply Filters
-              </Button>
-            </div>
-          </div>
-        )}
-
-        {/* Active Filters */}
-        {activeFilters.length > 0 && (
-          <div className="flex flex-wrap gap-2 mt-2">
-            {activeFilters.map((filter, index) => (
-              <Badge 
-                key={index} 
-                variant="outline"
-                className="bg-[#f0f5f4] text-[#324c48] border-[#324c48] py-1 px-3 flex items-center gap-1"
-              >
-                {filter.label}
-                <button
-                  onClick={() => removeFilter(filter.type, filter.value)}
-                  className="ml-1 hover:text-red-500"
-                >
-                  <X className="h-3 w-3" />
-                </button>
-              </Badge>
-            ))}
-            
-            <Button 
-              variant="ghost" 
-              size="sm" 
-              onClick={clearAllFilters}
-              className="text-[#324c48] hover:text-red-500 hover:bg-red-50 text-xs h-6"
-            >
-              Clear all
-            </Button>
-          </div>
-        )}
+        {/* Properties Table Filter */}
+        <PropertiesTableFilter 
+          searchQuery={searchQuery}
+          setSearchQuery={setSearchQuery}
+          filters={filters}
+          setFilters={setFilters}
+          activeFilters={activeFilters}
+          clearAllFilters={clearAllFilters}
+          removeFilter={removeFilter}
+          formatNumber={formatNumber}
+          visibleColumns={visibleColumns}
+          setVisibleColumns={setVisibleColumns}
+          availableColumns={allAvailableColumns}
+        />
 
         {/* Results Count */}
         <div className="flex justify-between items-center">
           <p className="text-sm text-gray-600">
             {filteredData.length} {filteredData.length === 1 ? "result" : "results"} found
           </p>
+          <div className="text-sm text-gray-600">
+            {visibleColumns.length} columns visible
+          </div>
         </div>
 
         {/* Data Table */}
         <div className="bg-white rounded-lg overflow-hidden border border-gray-200">
-          <DataTable columns={columns} data={filteredData} />
+          <DataTable columns={dynamicColumns} data={filteredData} />
         </div>
       </div>
     </div>

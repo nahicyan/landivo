@@ -91,7 +91,7 @@ const Hero = () => {
             <div className="relative">
               <div className="absolute inset-0 bg-gradient-to-b from-[#FDF8F2] via-[#FDF8F2]/50 to-transparent"></div>
               <img
-                src="./banner1.jpg"
+                src="https://cdn.landivo.com/wp-content/uploads/2025/04/banner.jpg"
                 alt="Texas Land"
                 className="relative w-full object-cover rounded-sm"
               />

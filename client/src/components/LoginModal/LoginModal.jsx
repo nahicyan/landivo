@@ -84,7 +84,7 @@ const LoginModal = ({ onClose }) => {
         onClick={(e) => e.stopPropagation()}
       >
         <Box sx={{ display: "flex", justifyContent: "center", mb: 2 }}>
-          <img src="https://shinyhomes.net/wp-content/uploads/2025/02/Landivo.svg" alt="Landivo Logo" style={{ height: "48px" }} />
+          <img src="https://cdn.landivo.com/wp-content/uploads/2025/04/logo.svg" alt="Landivo Logo" style={{ height: "48px" }} />
         </Box>
         <Typography variant="h5" align="center" sx={{ fontWeight: 600, color: "#1f2937", mb: 2 }}>
           Welcome to Landivo

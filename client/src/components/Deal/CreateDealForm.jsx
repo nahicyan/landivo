@@ -83,20 +83,20 @@ export default function CreateDealForm() {
         if (name === "propertyId" && value) {
             const property = properties.find(p => p.id === value);
             if (property) {
-              // Format numbers as strings with commas
-              const formatNumber = (num) => {
-                if (num === undefined || num === null) return '';
-                return num.toLocaleString('en-US');
-              };
-              
-              setFormData(prev => ({
-                ...prev,
-                purchasePrice: formatNumber(property.purchasePrice),
-                salePrice: formatNumber(property.askingPrice),
-                appraisalValue: formatNumber(property.askingPrice)
-              }));
+                // Format numbers as strings with commas
+                const formatNumber = (num) => {
+                    if (num === undefined || num === null) return '';
+                    return num.toLocaleString('en-US');
+                };
+
+                setFormData(prev => ({
+                    ...prev,
+                    purchasePrice: formatNumber(property.purchasePrice),
+                    salePrice: formatNumber(property.askingPrice),
+                    appraisalValue: formatNumber(property.askingPrice)
+                }));
             }
-          }
+        }
     };
 
     // Handle date change
@@ -131,7 +131,7 @@ export default function CreateDealForm() {
         if (!value) return 0;
         // Convert to string first to ensure compatibility
         return parseFloat(String(value).replace(/,/g, ''));
-      };
+    };
 
 
     // Calculate loan amount and monthly payment
@@ -169,20 +169,20 @@ export default function CreateDealForm() {
         }
 
         try {
-                // Parse currency values to numbers
-                const dealData = {
-                  ...formData,
-                  purchasePrice: parseCurrency(formData.purchasePrice),
-                  salePrice: parseCurrency(formData.salePrice),
-                  downPayment: parseCurrency(formData.downPayment),
-                  monthlyPayment: parseCurrency(formData.monthlyPayment),
-                  closingCosts: parseCurrency(formData.closingCosts || 0),
-                  transferTaxes: parseCurrency(formData.transferTaxes || 0),
-                  appraisalValue: parseCurrency(formData.appraisalValue || 0),
-                  loanOriginationFee: parseCurrency(formData.loanOriginationFee || 0),
-                  interestRate: parseFloat(formData.interestRate),
-                  term: parseInt(formData.term),
-                };
+            // Parse currency values to numbers
+            const dealData = {
+                ...formData,
+                purchasePrice: parseCurrency(formData.purchasePrice),
+                salePrice: parseCurrency(formData.salePrice),
+                downPayment: parseCurrency(formData.downPayment),
+                monthlyPayment: parseCurrency(formData.monthlyPayment),
+                closingCosts: parseCurrency(formData.closingCosts || 0),
+                transferTaxes: parseCurrency(formData.transferTaxes || 0),
+                appraisalValue: parseCurrency(formData.appraisalValue || 0),
+                loanOriginationFee: parseCurrency(formData.loanOriginationFee || 0),
+                interestRate: parseFloat(formData.interestRate),
+                term: parseInt(formData.term),
+            };
             console.log("Submitting deal data:", dealData);
 
             // Create the deal
@@ -247,7 +247,7 @@ export default function CreateDealForm() {
                                     <SelectContent>
                                         {!propertiesLoading && properties && properties.map(property => (
                                             <SelectItem key={property.id} value={property.id}>
-                                                {property.title || property.streetAddress} - ${property.askingPrice?.toLocaleString()}
+                                                {property.streetAddress || ''}{property.city ? `, ${property.city}` : ''}{property.state ? `, ${property.state}` : ''}{property.zip ? ` - ${property.zip}` : ''}{" | Asking Price: "}{property.askingPrice ? `$${property.askingPrice.toLocaleString()}` : ''}
                                             </SelectItem>
                                         ))}
                                     </SelectContent>
