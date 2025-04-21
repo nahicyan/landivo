@@ -15,7 +15,8 @@ import {
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from '@/components/ui/button';
-import { Eye } from 'lucide-react';
+import { ArrowUpRight, ExternalLink, Handshake } from 'lucide-react';
+import { Badge } from "@/components/ui/badge";
 import { useNavigate } from 'react-router-dom';
 
 const BuyerOffersTable = () => {
@@ -33,30 +34,22 @@ const BuyerOffersTable = () => {
 
             try {
                 setLoading(true);
-
-                // Log the buyer ID for debugging
                 console.log("Fetching offers with buyer ID:", vipBuyerData.id);
 
-                // Validate the buyer ID is a string
                 if (typeof vipBuyerData.id !== 'string') {
                     console.error('Invalid buyer ID format:', vipBuyerData.id);
 
-                    // If ID is invalid, try to use the email as a fallback
                     if (vipBuyerData.email) {
                         console.log("Using email as fallback:", vipBuyerData.email);
-                        // Updated to use the new offer endpoint
                         const data = await getBuyerOffers({ email: vipBuyerData.email });
                         setOffers(data.offers || []);
                     } else {
                         setError("Invalid buyer ID format and no email available");
                     }
                 } else {
-                    // Use the ID directly if it's valid
-                    // Updated to use the new offer endpoint
-                    const data = await getBuyerOffers(vipBuyerData.id); // Pass just the ID string
+                    const data = await getBuyerOffers(vipBuyerData.id);
                     setOffers(data.offers || []);
 
-                    // Fetch property details for each offer
                     const propertyDetailsMap = {};
                     for (const offer of data.offers || []) {
                         try {
@@ -153,24 +146,27 @@ const BuyerOffersTable = () => {
                                         {formatDate(offer.timestamp)}
                                     </TableCell>
                                     <TableCell>
-                                        {(() => {
-                                            const status = offer.status || "Pending";
-                                            const colors = getStatusColors(status);
-                                            return (
-                                                <span className={`px-2 py-1 rounded-full text-xs font-medium ${colors.bg} ${colors.text}`}>
-                                                    {status}
-                                                </span>
-                                            );
-                                        })()}
+                                        {/* Improved status display */}
+                                        <Badge className={`
+                                            ${offer.offerStatus === "PENDING" ? "bg-amber-100 text-amber-800" : ""}
+                                            ${offer.offerStatus === "ACCEPTED" ? "bg-green-100 text-green-800" : ""}
+                                            ${offer.offerStatus === "REJECTED" ? "bg-red-100 text-red-800" : ""}
+                                            ${offer.offerStatus === "COUNTERED" ? "bg-blue-100 text-blue-800" : ""}
+                                            ${offer.offerStatus === "EXPIRED" ? "bg-gray-100 text-gray-800" : ""}
+                                            ${!offer.offerStatus ? "bg-amber-100 text-amber-800" : ""}
+                                        `}>
+                                            {offer.offerStatus || "PENDING"}
+                                        </Badge>
                                     </TableCell>
                                     <TableCell>
                                         <Button
-                                            variant="ghost"
+                                            variant="outline"
                                             size="sm"
                                             onClick={() => handleViewProperty(offer.propertyId)}
+                                            className="text-primary border-primary hover:bg-primary-100"
                                         >
-                                            <Eye className="h-4 w-4 mr-1" />
-                                            View
+                                            <Handshake className="h-4 w-4 mr-1" />
+                                            View Offer
                                         </Button>
                                     </TableCell>
                                 </TableRow>

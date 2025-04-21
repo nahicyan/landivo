@@ -117,8 +117,9 @@ const OffersTable = ({ offers, onOfferUpdated }) => {
     setIsDialogOpen(true);
   };
 
-  // Handle offer status update
-  const handleUpdateOfferStatus = async () => {
+// In OffersTable.jsx, update the handleUpdateOfferStatus function:
+
+const handleUpdateOfferStatus = async () => {
     if (!selectedOffer) return;
     
     setIsSubmitting(true);
@@ -134,9 +135,28 @@ const OffersTable = ({ offers, onOfferUpdated }) => {
         }
       }
       
+      // Map action type to correct status enum value
+      let statusValue;
+      switch(actionType) {
+        case "accept":
+          statusValue = "ACCEPTED";
+          break;
+        case "reject":
+          statusValue = "REJECTED";
+          break;
+        case "counter":
+          statusValue = "COUNTERED";
+          break;
+        case "expire":
+          statusValue = "EXPIRED";
+          break;
+        default:
+          statusValue = actionType.toUpperCase();
+      }
+      
       // Prepare request data
       const requestData = {
-        status: actionType.toUpperCase(),
+        status: statusValue,
         sysMessage: message,
       };
       
@@ -145,8 +165,8 @@ const OffersTable = ({ offers, onOfferUpdated }) => {
         requestData.counteredPrice = parseFloat(counterPrice.replace(/,/g, ""));
       }
       
-      // Make API request
-      await api.put(`/offer/${selectedOffer.id}/status`, requestData);
+      // Make API request - remove leading slash to avoid duplicate /api/api
+      await api.put(`offer/${selectedOffer.id}/status`, requestData);
       
       // Close dialog and notify
       setIsDialogOpen(false);
@@ -154,7 +174,11 @@ const OffersTable = ({ offers, onOfferUpdated }) => {
       
     } catch (error) {
       console.error("Error updating offer status:", error);
-      toast.error("Failed to update offer status");
+      if (error.response?.data?.message) {
+        toast.error(`Failed: ${error.response.data.message}`);
+      } else {
+        toast.error("Failed to update offer status");
+      }
     } finally {
       setIsSubmitting(false);
     }
@@ -244,12 +268,14 @@ const OffersTable = ({ offers, onOfferUpdated }) => {
                           </div>
                         </div>
                       </TableCell>
-                      <TableCell>
+                        <TableCell>
                         <div className="max-w-[200px] truncate cursor-pointer hover:text-blue-600" 
-                          onClick={() => handleViewProperty(offer.propertyId)}>
-                          {offer.property?.title || offer.property?.streetAddress || offer.propertyId}
+                            onClick={() => handleViewProperty(offer.propertyId)}>
+                            {offer.property?.streetAddress ? 
+                            `${offer.property.streetAddress}, ${offer.property.city || ''}` : 
+                            (offer.property?.title || offer.propertyId)}
                         </div>
-                      </TableCell>
+                    </TableCell>
                       <TableCell className="font-medium">
                         {formatCurrency(offer.offeredPrice)}
                       </TableCell>
@@ -343,8 +369,12 @@ const OffersTable = ({ offers, onOfferUpdated }) => {
                     Current Offer: <span className="font-medium">{formatCurrency(selectedOffer.offeredPrice)}</span>
                   </p>
                   <p>
-                    Property: <span className="font-medium">{selectedOffer.property?.title || selectedOffer.propertyId}</span>
-                  </p>
+                    Property: <span className="font-medium">
+                    {selectedOffer.property?.streetAddress ? 
+                    `${selectedOffer.property.streetAddress}, ${selectedOffer.property.city || ''}` : 
+                    (selectedOffer.property?.title || selectedOffer.propertyId)}
+                    </span>
+                    </p>
                 </div>
               )}
               {actionType === "accept" && "The buyer will be notified that their offer has been accepted."}
@@ -410,21 +440,25 @@ const OffersTable = ({ offers, onOfferUpdated }) => {
       {/* History Dialog */}
       <Dialog open={isHistoryOpen} onOpenChange={setIsHistoryOpen}>
         <DialogContent className="max-w-3xl max-h-[80vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>Offer History</DialogTitle>
+        <DialogHeader>
+         <DialogTitle>Offer History</DialogTitle>
             <DialogDescription>
-              {selectedOffer && (
+                {selectedOffer && (
                 <div className="py-2">
-                  <p>
-                    Property: <span className="font-medium">{selectedOffer.property?.title || selectedOffer.propertyId}</span>
-                  </p>
-                  <p>
-                    Buyer: <span className="font-medium">{selectedOffer.buyer?.firstName} {selectedOffer.buyer?.lastName}</span>
-                  </p>
+                <p>
+                Property: <span className="font-medium">
+                    {selectedOffer.property?.streetAddress ? 
+                    `${selectedOffer.property.streetAddress}, ${selectedOffer.property.city || ''}, ${selectedOffer.property.state || ''}` : 
+                    (selectedOffer.property?.title || selectedOffer.propertyId)}
+                </span>
+                </p>
+                <p>
+                Buyer: <span className="font-medium">{selectedOffer.buyer?.firstName} {selectedOffer.buyer?.lastName}</span>
+                </p>
                 </div>
-              )}
-            </DialogDescription>
-          </DialogHeader>
+                )}
+                </DialogDescription>
+            </DialogHeader>
 
           <div className="space-y-4 py-2">
             {selectedHistory.length === 0 ? (
