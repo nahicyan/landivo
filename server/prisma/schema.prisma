@@ -458,10 +458,11 @@ enum PaymentStatus {
 
 //---------------------- Display ----------------------//
 
-model DisplayList {
+model PropertyRow {
   id           String   @id @default(auto()) @map("_id") @db.ObjectId
   name         String?
-  listType     String?   // e.g. "featured", "homepage"
+  rowType      String?   // e.g. "featured", "homepage"
+  sort         String?   // Price, Date, 
   displayOrder String[] // Array of property IDs in order
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
