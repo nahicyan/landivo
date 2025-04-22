@@ -80,13 +80,12 @@ model Residency {
   // Track all modifications
   modificationHistory Json? // Array of modification events
   
+  //Deals
   deals     Deal[]
 
   // Property Details
-  // marketingOwnerId    Int?     This is the marketing ID, not changing as requested
   title              String
   featured           String?
-  featuredWeight     Int?
   description        String
   legalDescription   String?
   direction          String?
@@ -455,4 +454,15 @@ enum PaymentStatus {
   PAID
   LATE
   MISSED
+}
+
+//---------------------- Display ----------------------//
+
+model DisplayList {
+  id           String   @id @default(auto()) @map("_id") @db.ObjectId
+  name         String?
+  listType     String?   // e.g. "featured", "homepage"
+  displayOrder String[] // Array of property IDs in order
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
 }

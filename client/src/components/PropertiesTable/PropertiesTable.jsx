@@ -10,7 +10,9 @@ import {
   MoreHorizontal, 
   PencilIcon, 
   TrashIcon, 
-  Eye 
+  Eye,
+  ChevronDown,
+  ChevronUp
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -22,24 +24,32 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 export default function PropertiesTable({ propertyData }) {
   const { data, isError, isLoading } = useProperties();
   // Generic search query
   const [searchQuery, setSearchQuery] = useState("");
   const [activeFilters, setActiveFilters] = useState([]);
+  // Track expanded cells for rich text content
+  const [expandedCells, setExpandedCells] = useState({});
   
   // All available columns from schema
   const allAvailableColumns = [
-    { id: "title", name: "Title", accessor: "title" },
+    { id: "streetAddress", name: "Street Address", accessor: "streetAddress" },
+    { id: "title", name: "Title", accessor: "title", isRichText: true },
     { id: "status", name: "Status", accessor: "status" },
     { id: "location", name: "Location", accessor: (row) => `${row.city}, ${row.state}` },
     { id: "askingPrice", name: "Asking Price", accessor: "askingPrice" },
     { id: "area", name: "Area", accessor: "area" },
     { id: "ownerId", name: "Owner ID", accessor: "ownerId" },
     { id: "featured", name: "Featured", accessor: "featured" },
-    { id: "description", name: "Description", accessor: "description" },
-    { id: "streetAddress", name: "Street Address", accessor: "streetAddress" },
+    { id: "description", name: "Description", accessor: "description", isRichText: true },
     { id: "city", name: "City", accessor: "city" },
     { id: "county", name: "County", accessor: "county" },
     { id: "state", name: "State", accessor: "state" },
@@ -61,13 +71,14 @@ export default function PropertiesTable({ propertyData }) {
     { id: "mobileHomeFriendly", name: "Mobile Home Friendly", accessor: "mobileHomeFriendly" },
     { id: "hoaPoa", name: "HOA/POA", accessor: "hoaPoa" },
     { id: "hoaFee", name: "HOA Fee", accessor: "hoaFee" },
+    { id: "notes", name: "Notes", accessor: "notes", isRichText: true },
     { id: "createdAt", name: "Created At", accessor: "createdAt" },
     { id: "updatedAt", name: "Updated At", accessor: "updatedAt" },
   ];
 
   // Default visible columns
   const [visibleColumns, setVisibleColumns] = useState([
-    "title", "location", "askingPrice", "status", "area"
+    "streetAddress", "location", "askingPrice", "status", "area"
   ]);
   
   // Filter states
@@ -90,6 +101,65 @@ export default function PropertiesTable({ propertyData }) {
     return num.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
   };
 
+  // Helper function to toggle cell expansion
+  const toggleCellExpansion = (rowId, columnId) => {
+    const cellKey = `${rowId}-${columnId}`;
+    setExpandedCells(prev => ({
+      ...prev,
+      [cellKey]: !prev[cellKey]
+    }));
+  };
+
+  // Helper function to check if a cell is expanded
+  const isCellExpanded = (rowId, columnId) => {
+    const cellKey = `${rowId}-${columnId}`;
+    return !!expandedCells[cellKey];
+  };
+
+  // Helper function to render rich text content with truncation
+  const renderRichTextContent = (content, rowId, columnId, maxLength = 100) => {
+    if (!content) return <span className="text-gray-400">N/A</span>;
+    
+    const isExpanded = isCellExpanded(rowId, columnId);
+    const cellKey = `${rowId}-${columnId}`;
+    
+    // Strip HTML to get approximate text length for truncation decision
+    const textContent = content.replace(/<[^>]*>/g, '');
+    const needsTruncation = textContent.length > maxLength;
+    
+    // Create a safe version of the content for display
+    const displayContent = isExpanded || !needsTruncation ? 
+      content : 
+      content.substring(0, maxLength) + '...';
+    
+    return (
+      <div className="relative">
+        <div
+          className={`rich-text-cell ${isExpanded ? 'max-h-none' : 'max-h-24 overflow-hidden'}`}
+          dangerouslySetInnerHTML={{ __html: displayContent }}
+        />
+        
+        {needsTruncation && (
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={(e) => {
+              e.stopPropagation();
+              toggleCellExpansion(rowId, columnId);
+            }}
+            className="mt-1 text-xs text-blue-600 hover:text-blue-800 p-0 h-6"
+          >
+            {isExpanded ? (
+              <span className="flex items-center">Show less <ChevronUp className="ml-1 h-3 w-3" /></span>
+            ) : (
+              <span className="flex items-center">Show more <ChevronDown className="ml-1 h-3 w-3" /></span>
+            )}
+          </Button>
+        )}
+      </div>
+    );
+  };
+
   // Generate dynamic columns based on visibleColumns
   const dynamicColumns = useMemo(() => {
     // Always include actions column
@@ -106,9 +176,14 @@ export default function PropertiesTable({ propertyData }) {
               ? columnDef.accessor(row.original) 
               : row.original[columnDef.accessor];
             
+            // Handle rich text fields specially
+            if (columnDef.isRichText) {
+              return renderRichTextContent(value, row.id, columnDef.id);
+            }
+            
             // Format different types of data
             if (colId === 'askingPrice' || colId === 'minPrice' || colId === 'hoaFee') {
-              return value ? `${Number(value).toLocaleString()}` : 'N/A';
+              return value ? `$${Number(value).toLocaleString()}` : 'N/A';
             } else if (colId === 'sqft') {
               return value ? `${Number(value).toLocaleString()} sqft` : 'N/A';
             } else if (colId === 'acre') {
@@ -164,7 +239,7 @@ export default function PropertiesTable({ propertyData }) {
     ];
     
     return columns;
-  }, [visibleColumns]);
+  }, [visibleColumns, expandedCells]);
 
   // Parse filtered data
   const filteredData = useMemo(() => {
@@ -185,9 +260,14 @@ export default function PropertiesTable({ propertyData }) {
         property.county
       ];
       
-      const matchesSearchQuery = !searchQuery || searchFields.some(field => 
-        field && field.toString().toLowerCase().includes(searchQuery.toLowerCase())
-      );
+      const matchesSearchQuery = !searchQuery || searchFields.some(field => {
+        // Strip HTML for text search if field is rich text
+        if (field && typeof field === 'string' && field.includes('<')) {
+          const textContent = field.replace(/<[^>]*>/g, '');
+          return textContent.toLowerCase().includes(searchQuery.toLowerCase());
+        }
+        return field && field.toString().toLowerCase().includes(searchQuery.toLowerCase());
+      });
       
       // Advanced filters
       const matchesStatus = filters.status === "all" || property.status === filters.status;
@@ -312,6 +392,35 @@ export default function PropertiesTable({ propertyData }) {
     });
   };
 
+  // CSS for rich text cells
+  const richTextCellStyles = `
+    .rich-text-cell {
+      line-height: 1.5;
+      transition: max-height 0.3s ease-in-out;
+    }
+    
+    .rich-text-cell p {
+      margin-bottom: 0.5rem;
+    }
+    
+    .rich-text-cell h1, .rich-text-cell h2, .rich-text-cell h3, 
+    .rich-text-cell h4, .rich-text-cell h5, .rich-text-cell h6 {
+      margin-top: 1rem;
+      margin-bottom: 0.5rem;
+      font-weight: 600;
+    }
+    
+    .rich-text-cell ul, .rich-text-cell ol {
+      margin-left: 1.5rem;
+      margin-bottom: 0.5rem;
+    }
+    
+    .rich-text-cell a {
+      color: #3b82f6;
+      text-decoration: underline;
+    }
+  `;
+
   if (isError) {
     return (
       <div className="flex items-center justify-center h-[60vh]">
@@ -330,6 +439,9 @@ export default function PropertiesTable({ propertyData }) {
 
   return (
     <div className="w-full bg-[#FDF8F2] rounded-lg p-4 sm:p-6">
+      {/* Inject CSS for rich text styling */}
+      <style>{richTextCellStyles}</style>
+      
       <div className="space-y-4">
         {/* Properties Table Filter */}
         <PropertiesTableFilter 
