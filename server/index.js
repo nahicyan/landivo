@@ -20,6 +20,7 @@ import { buyerListRoute } from "./routes/buyerListRoute.js";
 import { jwtCheck, extractUserFromToken } from "./middlewares/authMiddleware.js";
 import { userManagementRoute } from "./routes/userManagementRoute.js";
 import { trackActivity } from "./middlewares/auditMiddleware.js";
+import { propertyRowRoute } from "./routes/propertyRowRoute.js";
 
 const app = express();
 const PORT = process.env.PORT || 8200;
@@ -75,6 +76,7 @@ app.use("/uploads", express.static(path.join(__dirname, "uploads")));
 app.use(trackActivity);
 app.use("/api/user", userManagementRoute);
 app.use("/api/residency", residencyRoute);
+app.use("/api/property-rows", propertyRowRoute);
 app.use("/api/buyer", buyerRoute);
 // Add the new offer route
 app.use("/api/offer", offerRoute);

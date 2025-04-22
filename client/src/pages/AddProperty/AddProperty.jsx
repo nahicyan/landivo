@@ -48,7 +48,7 @@ export default function AddProperty() {
     status: "",
     area: "",
     featured: "",
-    featuredWeight: "",
+    featuredPosition: 0, // New field to replace featuredWeight
 
     // Listing Details
     title: "",
@@ -238,6 +238,11 @@ export default function AddProperty() {
         } else {
           multipartForm.append(key, val);
         }
+      }
+
+      // Only include featuredPosition if the property is featured
+      if (formData.featured === "Featured") {
+        multipartForm.append("featuredPosition", formData.featuredPosition);
       }
 
       // If existing images

@@ -667,3 +667,50 @@ export const getUserAccountById = async (id) => {
     handleRequestError(error, "Failed to fetch user account");
   }
 };
+
+// Add to /client/src/utils/api.js
+
+/**
+ * Get property rows with optional filtering by row type
+ * @param {string} rowType - Optional row type to filter by (e.g., "featured")
+ * @returns {Promise<Array>} Property rows data
+ */
+export const getPropertyRows = async (rowType) => {
+  try {
+    const queryParams = rowType ? `?rowType=${encodeURIComponent(rowType)}` : '';
+    const response = await api.get(`/property-rows${queryParams}`);
+    return response.data;
+  } catch (error) {
+    console.error('Error fetching property rows:', error);
+    throw error;
+  }
+};
+
+/**
+ * Get a specific property row
+ * @param {string} id - Property row ID
+ * @returns {Promise<Object>} Property row data
+ */
+export const getPropertyRowById = async (id) => {
+  try {
+    const response = await api.get(`/property-rows/${id}`);
+    return response.data;
+  } catch (error) {
+    console.error(`Error fetching property row ${id}:`, error);
+    throw error;
+  }
+};
+
+/**
+ * Get the featured properties row with property details
+ * @returns {Promise<Object>} Featured property row with ordered properties
+ */
+export const getFeaturedPropertiesRow = async () => {
+  try {
+    const response = await api.get('/property-rows?rowType=featured');
+    return response.data;
+  } catch (error) {
+    console.error('Error fetching featured property row:', error);
+    throw error;
+  }
+};

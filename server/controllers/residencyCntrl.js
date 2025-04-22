@@ -1,11 +1,80 @@
 import asyncHandler from "express-async-handler";
 import { prisma } from '../config/prismaConfig.js';
 
+// Helper function to manage property display order
+const manageFeaturedDisplayOrder = async (propertyId, isFeatured, displayPosition) => {
+  try {
+    // Find or create PropertyRow for featured properties
+    let featuredRow = await prisma.propertyRow.findFirst({
+      where: { rowType: "featured" },
+    });
+    
+    // If no featured row exists and the property is featured, create one
+    if (!featuredRow && isFeatured) {
+      featuredRow = await prisma.propertyRow.create({
+        data: {
+          name: "Featured Properties",
+          rowType: "featured",
+          sort: "manual",
+          displayOrder: [propertyId],
+        },
+      });
+      console.log("Created new featured PropertyRow");
+      return;
+    }
+    
+    // If property is not featured, remove it from the display order
+    if (!isFeatured && featuredRow) {
+      // Remove property ID from displayOrder if present
+      const updatedOrder = featuredRow.displayOrder.filter(id => id !== propertyId);
+      
+      await prisma.propertyRow.update({
+        where: { id: featuredRow.id },
+        data: { displayOrder: updatedOrder },
+      });
+      console.log(`Removed property ${propertyId} from featured display order`);
+      return;
+    }
+    
+    // If property is featured but no row exists (edge case), just return
+    if (isFeatured && !featuredRow) {
+      console.warn("Failed to create featured row");
+      return;
+    }
+    
+    // At this point, property is featured and featuredRow exists
+    const currentOrder = [...featuredRow.displayOrder];
+    const currentPosition = currentOrder.indexOf(propertyId);
+    
+    // Remove the property from its current position if it exists
+    if (currentPosition !== -1) {
+      currentOrder.splice(currentPosition, 1);
+    }
+    
+    // Validate the desired position
+    const desiredPosition = displayPosition !== undefined ? 
+      Math.min(Math.max(0, displayPosition), currentOrder.length) : 
+      currentOrder.length; // Default to the end of the list
+    
+    // Insert at the desired position
+    currentOrder.splice(desiredPosition, 0, propertyId);
+    
+    // Update the PropertyRow with the new order
+    await prisma.propertyRow.update({
+      where: { id: featuredRow.id },
+      data: { displayOrder: currentOrder },
+    });
+    
+    console.log(`Updated featured display order for property ${propertyId} to position ${desiredPosition}`);
+  } catch (error) {
+    console.error('Error managing featured display order:', error);
+  }
+};
+
 export const createResidency = asyncHandler(async (req, res) => {
   const {
     ownerId,
     featured,
-    featuredWeight,
     apnOrPin,
     status,
     title,
@@ -123,8 +192,7 @@ export const createResidency = asyncHandler(async (req, res) => {
         },
         
         ownerId: ownerId ? parseInt(ownerId, 10) : null,
-        featured: featured ?? "No",
-        featuredWeight: featuredWeight ? parseInt(featuredWeight, 10) : null,
+        featured: featured ?? "Not Featured",
         apnOrPin,
         status: status ?? "Available",
         title,
@@ -200,6 +268,13 @@ export const createResidency = asyncHandler(async (req, res) => {
         modificationHistory: [],
       },
     });
+
+    // Handle featured status in PropertyRow if needed
+    if (residency) {
+      const isFeatured = featured === "Featured";
+      // Use featuredPosition from request body to determine display position
+      await manageFeaturedDisplayOrder(residency.id, isFeatured, req.body.featuredPosition);
+    }
 
     res.status(201).send({
       message: "Property Added Successfully",
@@ -304,7 +379,6 @@ export const updateResidency = asyncHandler(async (req, res) => {
 
     // Convert numeric fields
     if (restOfData.ownerId) restOfData.ownerId = parseInt(restOfData.ownerId, 10);
-    if (restOfData.featuredWeight) restOfData.featuredWeight = parseInt(restOfData.featuredWeight, 10);
     if (restOfData.latitude) restOfData.latitude = parseFloat(restOfData.latitude);
     if (restOfData.longitude) restOfData.longitude = parseFloat(restOfData.longitude);
     if (restOfData.sqft) restOfData.sqft = parseInt(restOfData.sqft, 10);
@@ -401,6 +475,16 @@ export const updateResidency = asyncHandler(async (req, res) => {
       data: updateData,
     });
 
+    // Handle featured status in PropertyRow
+    const isFeatured = restOfData.featured === "Featured";
+    const previousFeatured = currentProperty.featured === "Featured";
+    const featuredPosition = req.body.featuredPosition;
+
+    // Only update display order if featured status changed or position changed
+    if (isFeatured !== previousFeatured || (isFeatured && featuredPosition !== undefined)) {
+      await manageFeaturedDisplayOrder(id, isFeatured, featuredPosition);
+    }
+
     return res.status(200).json(updatedResidency);
   } catch (error) {
     console.error("Error updating residency:", error);
@@ -494,7 +578,7 @@ export const createResidencyWithMultipleFiles = asyncHandler(async (req, res) =>
       area,
       status,
       featured,
-      featuredWeight,
+      featuredPosition,
 
       // Listing Details
       title,
@@ -605,8 +689,7 @@ export const createResidencyWithMultipleFiles = asyncHandler(async (req, res) =>
         ownerId: ownerId ? parseInt(ownerId) : null,
         area,
         status,
-        featured: featured ?? "No",
-        featuredWeight: featuredWeight ? parseInt(featuredWeight, 10) : null,
+        featured: featured ?? "Not Featured",
     
         // Listing Details
         title,
@@ -685,6 +768,12 @@ export const createResidencyWithMultipleFiles = asyncHandler(async (req, res) =>
       },
     });
     
+    // Handle featured position if property is featured
+    if (residency && (featured === "Featured" || featured === "Yes")) {
+      const featuredPos = featuredPosition !== undefined ? parseInt(featuredPosition, 10) : undefined;
+      await manageFeaturedDisplayOrder(residency.id, true, featuredPos);
+    }
+    
     res.status(201).json({
       message: "Property added successfully",
       residency,
@@ -698,11 +787,54 @@ export const createResidencyWithMultipleFiles = asyncHandler(async (req, res) =>
   }
 });
 
-// export {
-//   createResidency,
-//   getAllResidencies,
-//   getResidency,
-//   updateResidency,
-//   getResidencyImages,
-//   createResidencyWithMultipleFiles
-// };
+// Get PropertyRows with optional filtering
+export const getPropertyRows = asyncHandler(async (req, res) => {
+  try {
+    const { rowType } = req.query;
+    
+    // Filter by row type if provided
+    const whereClause = rowType ? { rowType } : {};
+    
+    const propertyRows = await prisma.propertyRow.findMany({
+      where: whereClause,
+      orderBy: { updatedAt: 'desc' },
+    });
+    
+    // If requesting featured rows, also include property details
+    if (rowType === 'featured' && propertyRows.length > 0) {
+      const featuredRow = propertyRows[0];
+      
+      // Get property details for all IDs in the display order
+      const propertyDetails = await Promise.all(
+        featuredRow.displayOrder.map(async (propertyId) => {
+          try {
+            const property = await prisma.residency.findUnique({
+              where: { id: propertyId },
+              select: {
+                id: true,
+                title: true,
+                streetAddress: true,
+                city: true,
+                state: true,
+              },
+            });
+            return property || { id: propertyId, title: "Unknown Property" };
+          } catch (err) {
+            return { id: propertyId, title: "Unknown Property" };
+          }
+        })
+      );
+      
+      // Add property details to the response
+      return res.status(200).json({
+        ...featuredRow,
+        propertyDetails,
+      });
+    }
+    
+    res.status(200).json(propertyRows);
+  } catch (error) {
+    console.error("Error fetching property rows:", error);
+    res.status(500).json({ message: "Error fetching property rows", error: error.message });
+  }
+});

@@ -6,6 +6,7 @@ import { PuffLoader } from "react-spinners";
 import useProperties from "../../components/hooks/useProperties.js";
 import { DataTable } from "../DataTable/DataTable";
 import PropertiesTableFilter from "../PropertiesTableFilter/PropertiesTableFilter";
+import { QuickEditModal } from "@/components/PropertyManagement/QuickEditModal";
 import { 
   MoreHorizontal, 
   PencilIcon, 
@@ -32,12 +33,16 @@ import {
 } from "@/components/ui/tooltip";
 
 export default function PropertiesTable({ propertyData }) {
-  const { data, isError, isLoading } = useProperties();
+  const { data, isError, isLoading, refetch } = useProperties();
   // Generic search query
   const [searchQuery, setSearchQuery] = useState("");
   const [activeFilters, setActiveFilters] = useState([]);
   // Track expanded cells for rich text content
   const [expandedCells, setExpandedCells] = useState({});
+  
+  // For quick edit modal
+  const [selectedProperty, setSelectedProperty] = useState(null);
+  const [isQuickEditOpen, setIsQuickEditOpen] = useState(false);
   
   // All available columns from schema
   const allAvailableColumns = [
@@ -78,7 +83,7 @@ export default function PropertiesTable({ propertyData }) {
 
   // Default visible columns
   const [visibleColumns, setVisibleColumns] = useState([
-    "streetAddress", "location", "askingPrice", "status", "area"
+    "streetAddress", "location", "askingPrice", "status", "area", "featured"
   ]);
   
   // Filter states
@@ -99,6 +104,21 @@ export default function PropertiesTable({ propertyData }) {
   // Format numbers with commas
   const formatNumber = (num) => {
     return num.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+  };
+
+  // Handle quick edit
+  const handleQuickEdit = (property) => {
+    setSelectedProperty(property);
+    setIsQuickEditOpen(true);
+  };
+
+  // Handle quick edit save
+  const handleQuickEditSave = (editedData) => {
+    setIsQuickEditOpen(false);
+    // Refresh the data after edit
+    setTimeout(() => {
+      refetch();
+    }, 500);
   };
 
   // Helper function to toggle cell expansion
@@ -200,7 +220,9 @@ export default function PropertiesTable({ propertyData }) {
                 </Badge>
               );
             } else if (colId === 'featured') {
-              return value === 'Yes' ? 'Yes' : 'No';
+              return value === 'Featured' ? (
+                <Badge className="bg-yellow-100 text-yellow-800">Featured</Badge>
+              ) : 'No';
             } else if (colId === 'createdAt' || colId === 'updatedAt') {
               return value ? new Date(value).toLocaleDateString() : 'N/A';
             } else if (typeof value === 'boolean') {
@@ -228,8 +250,11 @@ export default function PropertiesTable({ propertyData }) {
                 <DropdownMenuItem onClick={() => window.open(`/properties/${row.original.id}`, '_blank')}>
                   <Eye className="mr-2 h-4 w-4" /> View
                 </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => handleQuickEdit(row.original)}>
+                  <PencilIcon className="mr-2 h-4 w-4" /> Quick Edit
+                </DropdownMenuItem>
                 <DropdownMenuItem onClick={() => window.open(`/admin/edit-property/${row.original.id}`, '_blank')}>
-                  <PencilIcon className="mr-2 h-4 w-4" /> Edit
+                  <PencilIcon className="mr-2 h-4 w-4" /> Full Edit
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
@@ -473,6 +498,16 @@ export default function PropertiesTable({ propertyData }) {
           <DataTable columns={dynamicColumns} data={filteredData} />
         </div>
       </div>
+
+      {/* Quick Edit Modal */}
+      {selectedProperty && (
+        <QuickEditModal
+          property={selectedProperty}
+          isOpen={isQuickEditOpen}
+          onClose={() => setIsQuickEditOpen(false)}
+          onSave={handleQuickEditSave}
+        />
+      )}
     </div>
   );
 }

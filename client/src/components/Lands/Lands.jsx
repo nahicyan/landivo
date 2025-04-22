@@ -8,6 +8,7 @@ import { useNavigate } from "react-router-dom";
 import { ChevronLeftIcon, ChevronRightIcon } from "@heroicons/react/24/solid";
 import PropertyCard from "../../components/PropertyCard/PropertyCard";
 import useProperties from "../../components/hooks/useProperties.js";
+import axios from "axios";
 
 // Simple variants for fade-up animation
 const fadeUp = {
@@ -23,12 +24,57 @@ export const Lands = () => {
   const { data, isError, isLoading } = useProperties();
   const navigate = useNavigate();
 
-  // NEW: Ref and state for Featured Properties scroll buttons
+  // State for featured properties
+  const [featuredProperties, setFeaturedProperties] = useState([]);
+  const [loadingFeatured, setLoadingFeatured] = useState(true);
+
+  // Ref and state for Featured Properties scroll buttons
   const featuredScrollRef = useRef(null);
   const [featuredScrollState, setFeaturedScrollState] = useState({
     showLeft: false,
     showRight: false,
   });
+
+  // Fetch featured properties with the new PropertyRow system
+  useEffect(() => {
+    const fetchFeaturedProperties = async () => {
+      if (!data || data.length === 0) return;
+      
+      setLoadingFeatured(true);
+      try {
+        // Fetch the featured PropertyRow to get the order
+        const response = await axios.get(`${import.meta.env.VITE_SERVER_URL}/api/property-rows?rowType=featured`);
+        
+        if (response.data && Array.isArray(response.data.displayOrder)) {
+          // Get the display order
+          const displayOrder = response.data.displayOrder;
+          
+          // Create a map of properties by ID for quick lookup
+          const propertiesMap = new Map(data.map(property => [property.id, property]));
+          
+          // Get properties in the correct order, filtering out any IDs that don't exist
+          const orderedProperties = displayOrder
+            .map(id => propertiesMap.get(id))
+            .filter(property => !!property);
+          
+          setFeaturedProperties(orderedProperties);
+        } else {
+          // Fallback to old method if no PropertyRow exists
+          const featured = data.filter(property => property.featured === "Featured");
+          setFeaturedProperties(featured);
+        }
+      } catch (error) {
+        console.error("Error fetching featured properties:", error);
+        // Fallback to filtering featured properties from data
+        const featured = data.filter(property => property.featured === "Featured");
+        setFeaturedProperties(featured);
+      } finally {
+        setLoadingFeatured(false);
+      }
+    };
+
+    fetchFeaturedProperties();
+  }, [data]);
 
   // Function to update scroll state for the featured container
   const updateFeaturedScrollState = () => {
@@ -47,7 +93,22 @@ export const Lands = () => {
     return () => {
       window.removeEventListener("resize", updateFeaturedScrollState);
     };
-  }, [data]);
+  }, [featuredProperties]);
+
+  // Scroll handlers for Featured Properties
+  const handleFeaturedScrollLeft = () => {
+    if (featuredScrollRef.current) {
+      featuredScrollRef.current.scrollBy({ left: -380, behavior: "smooth" });
+      setTimeout(updateFeaturedScrollState, 300);
+    }
+  };
+
+  const handleFeaturedScrollRight = () => {
+    if (featuredScrollRef.current) {
+      featuredScrollRef.current.scrollBy({ left: 380, behavior: "smooth" });
+      setTimeout(updateFeaturedScrollState, 300);
+    }
+  };
 
   if (isError) {
     return (
@@ -66,38 +127,6 @@ export const Lands = () => {
       </Box>
     );
   }
-
-  // Filter featured properties and group by featuredWeight
-  const featuredByWeight = data
-    .filter((property) => property.featured === "Featured")
-    .reduce((acc, property) => {
-      const weight = Number(property.featuredWeight);
-      // If no property for this weight or current property has a later updatedAt, update the group
-      if (!acc[weight] || new Date(property.updatedAt) > new Date(acc[weight].updatedAt)) {
-        acc[weight] = property;
-      }
-      return acc;
-    }, {});
-
-  // Convert the grouped properties into an array and sort them by weight in ascending order
-  const featuredProperties = Object.values(featuredByWeight).sort(
-    (a, b) => Number(a.featuredWeight) - Number(b.featuredWeight)
-  );
-
-  // NEW: Scroll handlers for Featured Properties
-  const handleFeaturedScrollLeft = () => {
-    if (featuredScrollRef.current) {
-      featuredScrollRef.current.scrollBy({ left: -380, behavior: "smooth" });
-      setTimeout(updateFeaturedScrollState, 300);
-    }
-  };
-
-  const handleFeaturedScrollRight = () => {
-    if (featuredScrollRef.current) {
-      featuredScrollRef.current.scrollBy({ left: 380, behavior: "smooth" });
-      setTimeout(updateFeaturedScrollState, 300);
-    }
-  };
 
   return (
     <>
@@ -222,7 +251,7 @@ export const Lands = () => {
                 </div>
               </div>
             </div>
-          </div>
+            </div>
         </div>
       </motion.section>
 
@@ -247,7 +276,7 @@ export const Lands = () => {
             </p>
           </div>
 
-          {/* NEW: Scrollable Container with left/right buttons */}
+          {/* Scrollable Container with left/right buttons */}
           <div className="relative">
             {/* Left Scroll Button */}
             {featuredScrollState.showLeft && (
@@ -259,22 +288,32 @@ export const Lands = () => {
               </button>
             )}
 
-            <div
-              className="px-2 py-4 overflow-y-auto overflow-x-hidden sm:overflow-x-auto sm:overflow-y-hidden no-scrollbar"
-              ref={featuredScrollRef}
-              onScroll={updateFeaturedScrollState}
-            >
-              <div className="flex flex-col sm:flex-row space-y-8 sm:space-y-0 sm:space-x-20">
-                {featuredProperties.map((property) => (
-                  <div
-                    key={property.id}
-                    className="w-72 flex-shrink-0 transition hover:scale-105"
-                  >
-                    <PropertyCard card={property} />
-                  </div>
-                ))}
+            {loadingFeatured ? (
+              <div className="flex justify-center p-12">
+                <PuffLoader size={60} color="#D4A017" />
               </div>
-            </div>
+            ) : featuredProperties.length > 0 ? (
+              <div
+                className="px-2 py-4 overflow-y-auto overflow-x-hidden sm:overflow-x-auto sm:overflow-y-hidden no-scrollbar"
+                ref={featuredScrollRef}
+                onScroll={updateFeaturedScrollState}
+              >
+                <div className="flex flex-col sm:flex-row space-y-8 sm:space-y-0 sm:space-x-20">
+                  {featuredProperties.map((property) => (
+                    <div
+                      key={property.id}
+                      className="w-72 flex-shrink-0 transition hover:scale-105"
+                    >
+                      <PropertyCard card={property} />
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ) : (
+              <div className="text-center py-10 text-gray-500">
+                No featured properties available at this time.
+              </div>
+            )}
 
             {/* Right Scroll Button */}
             {featuredScrollState.showRight && (
