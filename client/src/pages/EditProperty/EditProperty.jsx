@@ -1,43 +1,74 @@
-import React, { useState, useEffect, useContext } from "react";
-import axios from "axios";
+// client/src/pages/EditProperty/EditProperty.jsx
+import React, { useState, useEffect } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { textFieldStyle, sectionStyle, sectionTitleStyle, submitButtonStyle, FormControlWithSelect } from "../formStyles";
-import { Box, TextField, Typography, Button, Stack } from "@mui/material";
-import { UserContext } from "../../utils/UserContext";
-import ImageUploadPreview from "../../components/ImageUploadPreview/ImageUploadPreview";
-import RichTextEditor from "../../components/RichTextEditor/RichTextEditor";
-import { getProperty } from "@/utils/api";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
+import { getProperty, updateProperty } from "@/utils/api";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { motion, AnimatePresence } from "framer-motion";
+import { useAuth } from "@/components/hooks/useAuth";
+import { Loader2, Check, ChevronLeft, ChevronRight } from "lucide-react";
 
-const serverURL = import.meta.env.VITE_SERVER_URL;
+// Import subcomponents
+import SystemInfo from "@/components/AddProperty/SystemInfo";
+import ListingDetails from "@/components/AddProperty/ListingDetails";
+import Classification from "@/components/AddProperty/Classification";
+import Location from "@/components/AddProperty/Location";
+import Dimension from "@/components/AddProperty/Dimension";
+import Pricing from "@/components/AddProperty/Pricing";
+import Financing from "@/components/AddProperty/Financing";
+import Utilities from "@/components/AddProperty/Utilities";
+import MediaTags from "@/components/AddProperty/MediaTags";
 
-const EditProperty = () => {
+// Format number with commas for display
+const formatWithCommas = (value) => {
+  if (value === null || value === undefined || value === "") return "";
+  return value.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+};
+
+export default function EditProperty() {
   const navigate = useNavigate();
   const { propertyId } = useParams();
-  const { currentUser } = useContext(UserContext);
+  const { user } = useAuth();
 
-
-const [dialogOpen, setDialogOpen] = useState(false);
-const [dialogType, setDialogType] = useState("success"); // "success" or "error"
-const [dialogMessage, setDialogMessage] = useState("");
-
-  // Update the state key for images from "image" to "imageUrls"
+  const [step, setStep] = useState(0);
+  const [isLoading, setIsLoading] = useState(true);
+  const [loadingError, setLoadingError] = useState(null);
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [dialogMessage, setDialogMessage] = useState("");
+  const [dialogType, setDialogType] = useState("success");
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  
+  // Store raw numeric values separately to preserve full values
+  const [rawValues, setRawValues] = useState({});
+  
+  // Form data state with formatted display values
   const [formData, setFormData] = useState({
     ownerId: "",
-    userEmail: "",
+    status: "",
     area: "",
+    featured: "",
+    featuredPosition: 0,
     title: "",
     description: "",
-    direction: "",
+    notes: "",
     type: "",
+    landType: [],
     legalDescription: "",
     zoning: "",
     restrictions: "",
     mobileHomeFriendly: "",
     hoaPoa: "",
+    hoaPaymentTerms: "",
     hoaFee: "",
-    notes: "",
-    apnOrPin: "",
+    survey: "",
+    direction: "",
     streetAddress: "",
     city: "",
     county: "",
@@ -45,16 +76,33 @@ const [dialogMessage, setDialogMessage] = useState("");
     zip: "",
     latitude: "",
     longitude: "",
+    apnOrPin: "",
     landId: "",
     landIdLink: "",
     sqft: "",
     acre: "",
-    imageUrls: "", // Now using JSON-based imageUrls
     askingPrice: "",
     minPrice: "",
     disPrice: "",
     financing: "",
-    status: "",
+    tax: "",
+    hoaMonthly: "",
+    serviceFee: "",
+    term: "",
+    interestOne: "",
+    interestTwo: "",
+    interestThree: "",
+    monthlyPaymentOne: "",
+    monthlyPaymentTwo: "",
+    monthlyPaymentThree: "",
+    downPaymentOne: "",
+    downPaymentTwo: "",
+    downPaymentThree: "",
+    loanAmountOne: "",
+    loanAmountTwo: "",
+    loanAmountThree: "",
+    purchasePrice: "",
+    financedPrice: "",
     water: "",
     sewer: "",
     electric: "",
@@ -64,377 +112,495 @@ const [dialogMessage, setDialogMessage] = useState("");
     rtag: "",
   });
 
-  // State for new images (File objects) uploaded during edit.
-  const [newUploadedImages, setNewUploadedImages] = useState([]);
-  // State for existing images (as an array of relative URLs)
   const [existingImages, setExistingImages] = useState([]);
+  const [uploadedImages, setUploadedImages] = useState([]);
 
+  // Define numeric fields that need special handling
+  const numericFields = [
+    "sqft", "acre", "askingPrice", "minPrice", "disPrice", 
+    "hoaFee", "tax", "hoaMonthly", "serviceFee", "term",
+    "interestOne", "interestTwo", "interestThree", 
+    "monthlyPaymentOne", "monthlyPaymentTwo", "monthlyPaymentThree", 
+    "downPaymentOne", "downPaymentTwo", "downPaymentThree", 
+    "loanAmountOne", "loanAmountTwo", "loanAmountThree", 
+    "purchasePrice", "financedPrice"
+  ];
 
-  // **Load Existing Property Data** using API helper getProperty
+  // Fetch property data
   useEffect(() => {
-    if (propertyId) {
-      getProperty(propertyId)
-        .then((data) => {
-          setFormData({
-            ...data,
-            imageUrls: data.imageUrls ? data.imageUrls : [],
-          });
-          setExistingImages(data.imageUrls ? data.imageUrls : []);
-        })
-        .catch((err) => {
-          console.error("Error fetching property:", err);
-          alert("Error fetching property data");
+    const fetchPropertyData = async () => {
+      try {
+        setIsLoading(true);
+        setLoadingError(null);
+
+        const data = await getProperty(propertyId);
+        if (!data) throw new Error("Property not found");
+
+        // Process data for the form
+        const processedData = { ...data };
+        const rawDataValues = {};
+
+        // Format numeric fields with commas for display while preserving raw values
+        numericFields.forEach(field => {
+          if (processedData[field] !== undefined && processedData[field] !== null) {
+            // Store raw value for calculations and submission
+            rawDataValues[field] = processedData[field];
+            // Format with commas for display
+            processedData[field] = formatWithCommas(processedData[field]);
+          }
         });
-    }
+
+        // Handle landType field parsing - crucially important for Command component
+        try {
+          if (processedData.landType) {
+            if (typeof processedData.landType === 'string') {
+              // Parse JSON string
+              if (processedData.landType.startsWith('[')) {
+                processedData.landType = JSON.parse(processedData.landType);
+              } else {
+                processedData.landType = [processedData.landType];
+              }
+            } else if (!Array.isArray(processedData.landType)) {
+              processedData.landType = [processedData.landType];
+            }
+          } else {
+            processedData.landType = [];
+          }
+        } catch (e) {
+          console.error("Error parsing landType:", e);
+          processedData.landType = [];
+        }
+
+        // Handle existing images
+        let imageArray = [];
+        if (processedData.imageUrls) {
+          if (typeof processedData.imageUrls === 'string') {
+            try {
+              imageArray = JSON.parse(processedData.imageUrls);
+            } catch (e) {
+              console.error("Error parsing image URLs:", e);
+              imageArray = [];
+            }
+          } else if (Array.isArray(processedData.imageUrls)) {
+            imageArray = processedData.imageUrls;
+          }
+        }
+        
+        setExistingImages(imageArray);
+        delete processedData.imageUrls;
+        
+        setFormData(processedData);
+        setRawValues(rawDataValues);
+        setIsLoading(false);
+      } catch (error) {
+        console.error("Error fetching property:", error);
+        setLoadingError(error.message || "Failed to load property data");
+        setIsLoading(false);
+      }
+    };
+
+    if (propertyId) fetchPropertyData();
   }, [propertyId]);
-  
 
-  // **Set User Email from Session**
-  useEffect(() => {
-    if (currentUser?.email) {
-      setFormData((prev) => ({ ...prev, userEmail: currentUser.email }));
-    }
-  }, [currentUser]);
-
-  // **Handle Input Changes**
+  // Handle input changes
   const handleChange = (e) => {
     const { name, value } = e.target;
-    setFormData((prev) => {
-      let updated = { ...prev };
-
-      if (name === "ownerId") {
-        const parsedValue = parseInt(value, 10);
-        updated[name] = isNaN(parsedValue) ? "" : parsedValue;
-      } else if (["sqft", "askingPrice", "minPrice", "disPrice"].includes(name)) {
-        const numericValue = value.replace(/,/g, "");
-        const parsedValue = parseFloat(numericValue);
-        if (!isNaN(parsedValue)) {
-          updated[name] = parsedValue.toLocaleString("en-US");
-          if (name === "sqft") {
-            updated.acre = (parsedValue / 43560).toLocaleString("en-US", {
-              minimumFractionDigits: 2,
-              maximumFractionDigits: 2,
-            });
-          }
-        } else {
+    
+    if (numericFields.includes(name)) {
+      // For numeric fields, store raw value and display formatted value
+      const rawValue = value.replace(/,/g, "");
+      
+      setRawValues(prev => ({
+        ...prev,
+        [name]: rawValue === "" ? null : rawValue
+      }));
+      
+      setFormData(prev => {
+        const updated = { ...prev };
+        
+        if (rawValue === "") {
           updated[name] = "";
-          if (name === "sqft") updated.acre = "";
+        } else {
+          const numberVal = parseFloat(rawValue);
+          if (!isNaN(numberVal)) {
+            updated[name] = formatWithCommas(numberVal);
+            
+            // Special case for sqft to acre conversion
+            if (name === "sqft") {
+              const acreValue = numberVal / 43560;
+              updated.acre = formatWithCommas(acreValue.toFixed(2));
+              
+              setRawValues(prev => ({
+                ...prev,
+                acre: acreValue.toFixed(2)
+              }));
+            }
+          } else {
+            updated[name] = value;
+          }
         }
-      } else {
-        updated[name] = value;
-      }
-      return updated;
-    });
-  };
-
-  // **Handle Rich Text Fields**
-  const handleTitleChange = (value) => setFormData((prev) => ({ ...prev, title: value }));
-  const handleDescriptionChange = (value) => setFormData((prev) => ({ ...prev, description: value }));
-  const handleNotesChange = (value) => setFormData((prev) => ({ ...prev, notes: value }));
-
-  // **Handle Submit**
-  // Handle submit: build FormData and append:
-  // - "imageUrls" as JSON-stringified array of remaining existing images.
-  // - New files under "images".
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    const form = new FormData();
-
-    // Append all fields except imageUrls.
-    Object.entries(formData).forEach(([key, value]) => {
-      if (key !== "imageUrls") {
-        form.append(key, value);
-      }
-    });
-    // Append final list of existing image URLs.
-    form.append("imageUrls", JSON.stringify(existingImages));
-
-    // Append new image files.
-    if (newUploadedImages.length > 0) {
-      newUploadedImages.forEach((file) => {
-        form.append("images", file);
+        
+        return updated;
       });
-    }
-
-    try {
-      const response = await axios.put(
-        `${serverURL}/api/residency/update/${propertyId}`,
-        form,
-        { headers: { "Content-Type": "multipart/form-data" } }
-      );
-      console.log("Property updated successfully:", response.data);
-  
-      // Show success dialog
-      setDialogType("success");
-      setDialogMessage("Property updated successfully!");
-      setDialogOpen(true);
-  
-      // Wait for 1.5s and navigate to the property page
-      setTimeout(() => {
-        navigate(`/properties/${propertyId}`);
-      }, 1500);
-    } catch (err) {
-      console.error("Error updating property", err);
-  
-      // Show error dialog
-      setDialogType("error");
-      setDialogMessage("Failed to update property. Please try again.");
-      setDialogOpen(true);
-    }
-  };
-
-  const getInitialImages = () => {
-    if (!formData.imageUrls) {
-      console.log("No imageUrls found.");
-      return [];
-    }
-    if (typeof formData.imageUrls === "string") {
-      if (formData.imageUrls.trim().startsWith("[")) {
-        try {
-          const parsed = JSON.parse(formData.imageUrls);
-          console.log("Accessible imageUrls:", parsed);
-          return parsed;
-        } catch (err) {
-          console.error("Error parsing imageUrls:", err);
-          return [];
-        }
-      } else {
-        console.error("imageUrls is not valid JSON:", formData.imageUrls);
-        return [];
-      }
-    } else if (Array.isArray(formData.imageUrls)) {
-      console.log("Accessible imageUrls:", formData.imageUrls);
-      return formData.imageUrls;
     } else {
-      console.error("imageUrls is not in a valid JSON format:", formData.imageUrls);
-      return [];
+      // For non-numeric fields, just update normally
+      setFormData(prev => ({
+        ...prev,
+        [name]: value
+      }));
     }
   };
-  
 
-  return (
-    <Box
-      component="form"
-      onSubmit={handleSubmit}
-      sx={{
-        display: "flex",
-        flexDirection: "column",
-        gap: 4,
-        background: "#fff",
-        borderRadius: "20px",
-        boxShadow: "0 12px 24px rgba(0, 0, 0, 0.1)",
-        border: "1px solid rgba(200, 200, 200, 0.6)",
-        maxWidth: "1080px",
-        width: "95%",
-        mx: "auto",
-        p: 3,
-      }}
-    >
-      <Typography variant="h3" gutterBottom sx={{ color: "#2d2d2d", fontWeight: 700 }}>
-        Edit Property
-      </Typography>
-      {/* Display User Email */}
-      <Box sx={{ background: "#f0f0f0", p: 2, borderRadius: "12px", border: "1px solid rgba(200,200,200,0.6)" }}>
-        <Typography variant="body1" sx={{ fontWeight: 600, color: "#333" }}>
-          You are editing as:{" "}
-          {currentUser ? (
-            <Typography component="span" sx={{ fontWeight: 700, color: "#000" }}>
-              {currentUser.email}
-            </Typography>
-          ) : (
-            <Typography component="span" sx={{ color: "red" }}>
-              Not logged in
-            </Typography>
-          )}
-        </Typography>
-      </Box>
-      {/* System Information */}
-      <Box sx={sectionStyle}>
-        <Typography variant="h5" gutterBottom sx={sectionTitleStyle}>
-          System Information
-        </Typography>
-        <Stack direction={{ xs: "column", sm: "row" }} spacing={2}>
-          <TextField fullWidth label="Owner ID" name="ownerId" value={formData.ownerId} onChange={handleChange} sx={textFieldStyle} />
-          <FormControlWithSelect label="Status" name="status" value={formData.status} onChange={handleChange} options={["Available", "Pending", "Sold", "Not Available", "Testing"]} />
-          <FormControlWithSelect label="Area" name="area" value={formData.area} onChange={handleChange} options={["DFW", "Austin", "Houston", "San Antonio", "Other Areas"]} />
-        </Stack>
-      </Box>
-      {/* Listing Details */}
-      <Box sx={sectionStyle}>
-        <Typography variant="h5" gutterBottom sx={sectionTitleStyle}>
-          Listing Details
-        </Typography>
-        <Stack spacing={3}>
-          <Box sx={{ my: 4 }}>
-            <Typography variant="subtitle1" sx={{ mb: 1 }}>
-              Title
-            </Typography>
-            <RichTextEditor value={formData.title} onChange={handleTitleChange} placeholder="Enter property title..." />
-          </Box>
-          <Box sx={{ my: 4 }}>
-            <Typography variant="subtitle1" sx={{ mb: 1 }}>
-              Description
-            </Typography>
-            <RichTextEditor value={formData.description} onChange={handleDescriptionChange} placeholder="Enter property description with emojis..." />
-          </Box>
-          <Box sx={{ my: 4 }}>
-            <Typography variant="subtitle1" sx={{ mb: 1 }}>
-              Notes
-            </Typography>
-            <RichTextEditor value={formData.notes} onChange={handleNotesChange} placeholder="Enter any additional notes..." />
-          </Box>
-        </Stack>
-      </Box>
-      {/* Property Classification & Features */}
-      <Box sx={sectionStyle}>
-        <Typography variant="h5" gutterBottom sx={sectionTitleStyle}>
-          Property Classification & Features
-        </Typography>
-        <Stack direction={{ xs: "column", sm: "row" }} spacing={2}>
-          <TextField fullWidth label="Type" name="type" value="Land" disabled sx={textFieldStyle} />
-          <FormControlWithSelect label="Subtype" name="legalDescription" value={formData.legalDescription} onChange={handleChange} options={["Residential", "Agricultural", "Commercial", "Industrial", "Recreational", "Timberland", "Waterfront", "Vacant/Undeveloped", "Specialty"]} />
-          <FormControlWithSelect label="Zoning" name="zoning" value={formData.zoning} onChange={handleChange} options={["Residential", "Commercial", "Industrial", "Agricultural", "Mixed-Use", "Institutional", "Recreational", "Conservation"]} />
-          <FormControlWithSelect label="Restrictions" name="restrictions" value={formData.restrictions} onChange={handleChange} options={["No Known Restriction(s)", "Zoning", "Deed", "Environmental", "Easement", "Setback"]} />
-        </Stack>
-        <Stack direction={{ xs: "column", sm: "row" }} spacing={2} mt={2}>
-          <TextField fullWidth label="Direction" name="direction" value={formData.direction} onChange={handleChange} sx={textFieldStyle} />
-          <FormControlWithSelect label="Mobile Home Friendly" name="mobileHomeFriendly" value={formData.mobileHomeFriendly} onChange={handleChange} options={["Yes", "No", "Verify"]} />
-          <FormControlWithSelect label="HOA / POA" name="hoaPoa" value={formData.hoaPoa} onChange={handleChange} options={["Yes", "No"]} />
-        </Stack>
-        {formData.hoaPoa === "Yes" && (
-          <Box mt={2}>
-            <TextField fullWidth label="HOA / Deed / Development Info" name="hoaFee" value={formData.hoaFee} onChange={handleChange} sx={textFieldStyle} />
-          </Box>
-        )}
-      </Box>
-      {/* Location & Identification */}
-      <Box sx={sectionStyle}>
-        <Typography variant="h5" gutterBottom sx={sectionTitleStyle}>
-          Location & Identification
-        </Typography>
-        <Stack direction={{ xs: "column", sm: "row" }} spacing={2}>
-          <TextField fullWidth label="Street Address" name="streetAddress" value={formData.streetAddress} onChange={handleChange} sx={textFieldStyle} />
-          <TextField fullWidth label="City" name="city" value={formData.city} onChange={handleChange} sx={textFieldStyle} />
-          <TextField fullWidth label="County" name="county" value={formData.county} onChange={handleChange} sx={textFieldStyle} />
-          <TextField fullWidth label="State" name="state" value={formData.state} onChange={handleChange} sx={textFieldStyle} />
-        </Stack>
-        <Stack direction={{ xs: "column", sm: "row" }} spacing={2} mt={2}>
-          <TextField fullWidth label="ZIP" name="zip" value={formData.zip} onChange={handleChange} sx={textFieldStyle} />
-          <TextField fullWidth label="Latitude" name="latitude" value={formData.latitude} onChange={handleChange} sx={textFieldStyle} />
-          <TextField fullWidth label="Longitude" name="longitude" value={formData.longitude} onChange={handleChange} sx={textFieldStyle} />
-          <TextField fullWidth label="APN or PIN" name="apnOrPin" value={formData.apnOrPin} onChange={handleChange} sx={textFieldStyle} />
-        </Stack>
-        <Stack direction={{ xs: "column", sm: "row" }} spacing={2} mt={2}>
-          <FormControlWithSelect label="Land ID" name="landId" value={formData.landId} onChange={handleChange} options={["Available", "Not-Available"]} />
-          {formData.landId === "Available" && (
-            <TextField fullWidth label="Land ID Link" name="landIdLink" value={formData.landIdLink} onChange={handleChange} sx={textFieldStyle} />
-          )}
-        </Stack>
-      </Box>
-      {/* Property Size & Dimensions */}
-      <Box sx={sectionStyle}>
-        <Typography variant="h5" gutterBottom sx={sectionTitleStyle}>
-          Property Size & Dimensions
-        </Typography>
-        <Stack direction={{ xs: "column", sm: "row" }} spacing={2}>
-          <TextField fullWidth label="Square Footage (sqft)" name="sqft" value={formData.sqft} onChange={handleChange} sx={textFieldStyle} />
-          <TextField fullWidth label="Acre" name="acre" value={formData.acre} sx={textFieldStyle} disabled />
-        </Stack>
-      </Box>
-      {/* Pricing & Financial Information */}
-      <Box sx={sectionStyle}>
-        <Typography variant="h5" gutterBottom sx={sectionTitleStyle}>
-          Pricing & Financial Information
-        </Typography>
-        <Stack direction={{ xs: "column", sm: "row" }} spacing={2}>
-          <TextField fullWidth label="Asking Price" name="askingPrice" value={formData.askingPrice} onChange={handleChange} sx={textFieldStyle} />
-          <TextField fullWidth label="Minimum Price" name="minPrice" value={formData.minPrice} onChange={handleChange} sx={textFieldStyle} />
-          <TextField fullWidth label="Discount Price" name="disPrice" value={formData.disPrice} onChange={handleChange} sx={textFieldStyle} />
-          <FormControlWithSelect label="Financing" name="financing" value={formData.financing} onChange={handleChange} options={["Available", "Not-Available"]} />
-        </Stack>
-      </Box>
-      {/* Utilities, Infrastructure & Environmental Factors */}
-      <Box sx={sectionStyle}>
-        <Typography variant="h5" gutterBottom sx={sectionTitleStyle}>
-          Utilities, Infrastructure & Environmental Factors
-        </Typography>
-        <Stack direction={{ xs: "column", sm: "row" }} spacing={2}>
-          <FormControlWithSelect label="Water" name="water" value={formData.water} onChange={handleChange} options={["Available", "Unavailable", "Well Needed", "Unknown", "Active Well"]} />
-          <FormControlWithSelect label="Sewer" name="sewer" value={formData.sewer} onChange={handleChange} options={["Available", "Unavailable", "Septic Needed", "Unknown", "Active Septic"]} />
-          <FormControlWithSelect label="Electric" name="electric" value={formData.electric} onChange={handleChange} options={["Available", "Unavailable", "Unknown", "On Property"]} />
-          <FormControlWithSelect label="Road Condition" name="roadCondition" value={formData.roadCondition} onChange={handleChange} options={["Paved Road", "Dirt Road", "No Access", "Gravel"]} />
-        </Stack>
-        <Stack direction={{ xs: "column", sm: "row" }} spacing={2} mt={2}>
-          <FormControlWithSelect label="Floodplain" name="floodplain" value={formData.floodplain} onChange={handleChange} options={["Yes", "No", "100-Year Floodplain", "100-Year Floodway", "Coastal-100 Year Floodplain", "Coastal 100 Year Floodway", "100-Year Partial Floodplain", "500 Year-Floodplain", "Wetlands"]} />
-        </Stack>
-      </Box>
-      {/* Media & Tags */}
-      <Box sx={sectionStyle}>
-        <Typography variant="h5" gutterBottom sx={sectionTitleStyle}>
-          Media & Tags
-        </Typography>
-        <Stack direction={{ xs: "column", sm: "row" }} spacing={2}>
-          <TextField fullWidth label="Left Tag" name="ltag" value={formData.ltag} onChange={handleChange} sx={textFieldStyle} />
-          <TextField fullWidth label="Right Tag" name="rtag" value={formData.rtag} onChange={handleChange} sx={textFieldStyle} />
-        </Stack>
-        <ImageUploadPreview
-          existingImages={existingImages}
-          newImages={newUploadedImages}
-          onExistingChange={setExistingImages}
-          onNewChange={setNewUploadedImages}
+  // Handle form submission
+  const handleSubmitForm = async (e) => {
+    if (e) e.preventDefault();
+    setIsSubmitting(true);
+  
+    try {
+      const form = new FormData();
+      
+      // Only include fields that match the server's schema exactly
+      const validFields = [
+        // System Info
+        "ownerId", "status", "area", "featured", "featuredPosition",
+        
+        // Listing Details
+        "title", "description", "notes",
+        
+        // Classification
+        "type", "landType", "legalDescription", "zoning", "restrictions", 
+        "mobileHomeFriendly", "hoaPoa", "hoaPaymentTerms", "hoaFee", "survey",
+        
+        // Location
+        "direction", "streetAddress", "city", "county", "state", "zip",
+        "latitude", "longitude", "apnOrPin", "landId", "landIdLink",
+        
+        // Dimensions
+        "sqft", "acre",
+        
+        // Pricing
+        "askingPrice", "minPrice", "disPrice",
+        
+        // Financing
+        "financing", "tax", "hoaMonthly", "serviceFee", "term",
+        "interestOne", "interestTwo", "interestThree",
+        "monthlyPaymentOne", "monthlyPaymentTwo", "monthlyPaymentThree",
+        "downPaymentOne", "downPaymentTwo", "downPaymentThree",
+        "loanAmountOne", "loanAmountTwo", "loanAmountThree",
+        "purchasePrice", "financedPrice", // Ensure this is correct, not financingPrice
+        
+        // Utilities
+        "water", "sewer", "electric", "roadCondition", "floodplain",
+        
+        // Media
+        "ltag", "rtag"
+      ];
+      
+      // Process each valid field
+      validFields.forEach(field => {
+        if (field === "landType") {
+          const landTypeValue = formData[field];
+          const landTypeArray = Array.isArray(landTypeValue) ? landTypeValue : [];
+          form.append(field, JSON.stringify(landTypeArray));
+        }
+        else if (numericFields.includes(field)) {
+          const rawValue = rawValues[field];
+          form.append(field, rawValue === undefined || rawValue === "" ? null : rawValue);
+        }
+        else if (formData[field] !== undefined) {
+          form.append(field, formData[field]);
+        }
+      });
+      
+      // Append images
+      form.append("imageUrls", JSON.stringify(existingImages));
+      uploadedImages.forEach(file => form.append("images", file));
+  
+      await updateProperty(propertyId, form);
+      setDialogMessage("Property updated successfully!");
+      setDialogType("success");
+      setDialogOpen(true);
+    } catch (error) {
+      console.error("Error updating property:", error);
+      const errorMsg = error.response?.data?.message || error.message || "Unknown error";
+      setDialogMessage(`Failed to update property: ${errorMsg}`);
+      setDialogType("warning");
+      setDialogOpen(true);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleFormSubmit = (e) => e.preventDefault();
+  const nextStep = () => setStep(prev => Math.min(prev + 1, steps.length - 1));
+  const prevStep = () => setStep(prev => Math.max(prev - 1, 0));
+
+  // Define steps array with components
+  const steps = [
+    {
+      title: "System Info",
+      component: <SystemInfo formData={formData} handleChange={handleChange} />,
+    },
+    {
+      title: "Listing Details",
+      component: (
+        <ListingDetails
+          formData={formData}
+          handleTitleChange={(val) => setFormData(prev => ({ ...prev, title: val }))}
+          handleDescriptionChange={(val) => setFormData(prev => ({ ...prev, description: val }))}
+          handleNotesChange={(val) => setFormData(prev => ({ ...prev, notes: val }))}
         />
-      </Box>
-      {/* Submit Button */}
-      <Box textAlign="center" mt={4}>
-        <Button type="submit" variant="contained" sx={submitButtonStyle}>
-          Update
-        </Button>
-      </Box>
+      ),
+    },
+    {
+      title: "Classification",
+      component: <Classification formData={formData} handleChange={handleChange} />,
+    },
+    {
+      title: "Location",
+      component: (
+        <Location
+          formData={formData}
+          handleChange={handleChange}
+          setFormData={setFormData}
+        />
+      ),
+    },
+    {
+      title: "Dimensions",
+      component: <Dimension formData={formData} handleChange={handleChange} />,
+    },
+    {
+      title: "Pricing",
+      component: <Pricing formData={formData} handleChange={handleChange} />,
+    },
+    {
+      title: "Financing",
+      component: (
+        <Financing
+          formData={formData}
+          handleChange={handleChange}
+          updateFormData={(updatedData) => {
+            // Maintain raw values when updating from Financing component
+            const newFormData = { ...updatedData };
+            const newRawValues = { ...rawValues };
+            
+            numericFields.forEach(field => {
+              if (updatedData[field] !== undefined) {
+                const rawVal = typeof updatedData[field] === 'string' ? 
+                  updatedData[field].replace(/,/g, "") : updatedData[field];
+                  
+                newRawValues[field] = rawVal === "" ? null : rawVal;
+                newFormData[field] = formatWithCommas(rawVal);
+              }
+            });
+            
+            setRawValues(newRawValues);
+            setFormData(newFormData);
+          }}
+        />
+      ),
+    },
+    {
+      title: "Utilities",
+      component: <Utilities formData={formData} handleChange={handleChange} />,
+    },
+    {
+      title: "Media & Tags",
+      component: (
+        <MediaTags
+          formData={formData}
+          handleChange={handleChange}
+          uploadedImages={uploadedImages}
+          setUploadedImages={setUploadedImages}
+          existingImages={existingImages}
+          setExistingImages={setExistingImages}
+        />
+      ),
+    },
+  ];
 
-      {/* Dialog Notification */}
-<Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-  <DialogContent className="bg-[#FFF] text-[#050002] border border-[#405025]/30 shadow-lg">
-    <DialogHeader>
-      <DialogTitle className={dialogType === "success" ? "text-green-600" : "text-red-600"}>
-        {dialogType === "success" ? "Success" : "Warning"}
-      </DialogTitle>
-      <DialogDescription>{dialogMessage}</DialogDescription>
-    </DialogHeader>
-    <DialogFooter>
-      <Button onClick={() => setDialogOpen(false)} className="bg-[#324c48] text-[#FFF]">
-        Okay
-      </Button>
-    </DialogFooter>
-   </DialogContent>
-  </Dialog>
-    </Box>
-  
-
-  );
-};
-
-
-const InputField = ({ label, name, value, onChange, required = false, type = "text", multiple = false, options = [] }) => {
-  if (type === "file") {
+  // Step Indicator component
+  const StepIndicator = ({ currentStep }) => {
     return (
-      <div className="input-group">
-        <label>
-          {label}
-          {required && <span className="required">*</span>}
-        </label>
-        <input type="file" name={name} onChange={onChange} multiple={multiple} />
+      <div className="w-full flex items-center justify-between mb-8 px-2">
+        {steps.map((item, index) => {
+          const isActive = index === currentStep;
+          const isCompleted = index < currentStep;
+
+          return (
+            <React.Fragment key={index}>
+              <div className="flex flex-col items-center">
+                <div
+                  className={`w-8 h-8 flex items-center justify-center rounded-full border-2 ${
+                    isCompleted
+                      ? "border-green-500 bg-green-500 text-white"
+                      : isActive
+                      ? "border-blue-500 bg-blue-100 text-blue-700"
+                      : "border-gray-300 bg-white text-gray-500"
+                  }`}
+                >
+                  {isCompleted ? <Check className="w-4 h-4" /> : index + 1}
+                </div>
+                <span
+                  className={`text-xs mt-1 text-center ${
+                    isCompleted || isActive
+                      ? "font-semibold text-gray-900"
+                      : "text-gray-500"
+                  }`}
+                >
+                  {item.title}
+                </span>
+              </div>
+              {index < steps.length - 1 && (
+                <div className="w-full h-[2px] bg-gray-300 mx-1"></div>
+              )}
+            </React.Fragment>
+          );
+        })}
+      </div>
+    );
+  };
+
+  if (isLoading) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[70vh]">
+        <Loader2 className="w-12 h-12 text-[#324c48] animate-spin" />
+        <p className="mt-4 text-[#324c48] text-lg">Loading property data...</p>
       </div>
     );
   }
+
+  if (loadingError) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[70vh] p-6">
+        <div className="bg-red-50 border border-red-200 rounded-lg p-6 max-w-md w-full text-center">
+          <h2 className="text-red-700 text-xl font-semibold mb-2">Error Loading Property</h2>
+          <p className="text-red-600 mb-4">{loadingError}</p>
+          <div className="flex justify-center space-x-4">
+            <Button
+              onClick={() => navigate("/properties")}
+              className="bg-[#324c48] text-white hover:bg-[#253838]"
+            >
+              Back to Properties
+            </Button>
+            <Button
+              onClick={() => window.location.reload()}
+              className="bg-[#3f4f24] text-white hover:bg-[#2c3b18]"
+            >
+              Try Again
+            </Button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
-    <div className="input-group">
-      <label>
-        {label}
-        {required && <span className="required">*</span>}
-      </label>
-      <input type={type} name={name} value={value} onChange={onChange} required={required} />
+    <div className="max-w-6xl mx-auto p-6 space-y-6">
+      <div className="flex items-center justify-between">
+        <h1 className="text-2xl md:text-3xl font-bold text-[#324c48]">Edit Property</h1>
+        <Button
+          onClick={() => navigate(`/properties/${propertyId}`)}
+          variant="outline"
+          className="text-[#324c48] border-[#324c48]"
+        >
+          View Property
+        </Button>
+      </div>
+
+      <StepIndicator currentStep={step} />
+
+      <form onSubmit={handleFormSubmit} className="w-full">
+        <AnimatePresence mode="wait">
+          <motion.div
+            key={step}
+            initial={{ x: 50, opacity: 0 }}
+            animate={{ x: 0, opacity: 1 }}
+            exit={{ x: -50, opacity: 0 }}
+            transition={{ duration: 0.3 }}
+            className="bg-white p-6 border border-gray-200 rounded-xl shadow-lg max-w-5xl mx-auto min-h-[640px]"
+          >
+            {steps[step].component}
+          </motion.div>
+        </AnimatePresence>
+
+        <div className="flex items-center justify-between w-full mt-6 max-w-2xl mx-auto">
+          <div>
+            {step > 0 && (
+              <Button
+                type="button"
+                onClick={prevStep}
+                className="bg-gray-300 text-gray-800 hover:bg-gray-400 flex items-center"
+                disabled={isSubmitting}
+              >
+                <ChevronLeft className="w-4 h-4 mr-1" />
+                Previous
+              </Button>
+            )}
+          </div>
+
+          <div>
+            {step < steps.length - 1 ? (
+              <Button
+                type="button"
+                onClick={nextStep}
+                className="bg-[#324c48] text-white hover:bg-[#253838] flex items-center"
+              >
+                Next
+                <ChevronRight className="w-4 h-4 ml-1" />
+              </Button>
+            ) : (
+              <Button
+                type="button"
+                onClick={handleSubmitForm}
+                className="bg-green-600 text-white hover:bg-green-700 flex items-center"
+                disabled={isSubmitting}
+              >
+                {isSubmitting ? (
+                  <>
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    Updating...
+                  </>
+                ) : (
+                  <>
+                    Update Property
+                    <Check className="w-4 h-4 ml-2" />
+                  </>
+                )}
+              </Button>
+            )}
+          </div>
+        </div>
+      </form>
+
+      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+        <DialogContent className="bg-white text-gray-900 border border-gray-300 shadow-lg rounded-lg p-6 w-full max-w-md mx-auto">
+          <DialogHeader>
+            <DialogTitle
+              className={
+                dialogType === "success" ? "text-green-600" : "text-red-600"
+              }
+            >
+              {dialogType === "success" ? "Success" : "Warning"}
+            </DialogTitle>
+            <DialogDescription>{dialogMessage}</DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button
+              onClick={() => {
+                setDialogOpen(false);
+                if (dialogType === "success") {
+                  navigate(`/properties/${propertyId}`);
+                }
+              }}
+              className="bg-[#324c48] text-white hover:bg-[#253838]"
+            >
+              {dialogType === "success" ? "View Property" : "OK"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
-};
-
-export default EditProperty;
+}
