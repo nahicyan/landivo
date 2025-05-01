@@ -63,6 +63,21 @@ export default function Classification({ formData, handleChange }) {
           value: []
         }
       });
+    } else if (typeof formData.landType === 'string') {
+      // Try to parse the string if it looks like JSON
+      try {
+        const parsedLandType = JSON.parse(formData.landType);
+        setSelectedLandTypes(Array.isArray(parsedLandType) ? parsedLandType : [formData.landType]);
+      } catch (e) {
+        // If parsing fails, treat it as a single string value
+        setSelectedLandTypes([formData.landType]);
+      }
+    } else if (Array.isArray(formData.landType)) {
+      // If it's already an array, use it directly
+      setSelectedLandTypes(formData.landType);
+    } else {
+      // Fallback for any other type - create a single-item array
+      setSelectedLandTypes([String(formData.landType)]);
     }
   }, []);
 

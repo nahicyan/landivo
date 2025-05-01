@@ -150,24 +150,49 @@ export default function EditProperty() {
           }
         });
 
-        // Handle landType field parsing - crucially important for Command component
+        // Handle landType field parsing - with better error handling
         try {
           if (processedData.landType) {
+            // If it's a string that looks like a JSON array
             if (typeof processedData.landType === 'string') {
-              // Parse JSON string
-              if (processedData.landType.startsWith('[')) {
-                processedData.landType = JSON.parse(processedData.landType);
-              } else {
+              // First try parsing it as JSON
+              try {
+                const parsed = JSON.parse(processedData.landType);
+                processedData.landType = Array.isArray(parsed) ? parsed : [processedData.landType];
+              } catch (parseError) {
+                // If parsing fails, treat it as a single value
                 processedData.landType = [processedData.landType];
               }
-            } else if (!Array.isArray(processedData.landType)) {
-              processedData.landType = [processedData.landType];
+            } 
+            // If it's already an array, leave it alone
+            else if (Array.isArray(processedData.landType)) {
+              // Keep as is
+            } 
+            // Any other type, convert to string and wrap in array
+            else {
+              processedData.landType = [String(processedData.landType)];
             }
           } else {
             processedData.landType = [];
           }
+          
+          // Extra check to make sure we don't get stringified arrays displayed
+          // This handles the specific case shown in your screenshot
+          if (processedData.landType.length === 1 && 
+              typeof processedData.landType[0] === 'string' && 
+              processedData.landType[0].startsWith('[') && 
+              processedData.landType[0].endsWith(']')) {
+            try {
+              processedData.landType = JSON.parse(processedData.landType[0]);
+            } catch (e) {
+              // Keep original if parsing fails
+            }
+          }
+          
+          // Final check - log the result for debugging
+          console.log("Processed landType:", processedData.landType);
         } catch (e) {
-          console.error("Error parsing landType:", e);
+          console.error("Error processing landType:", e);
           processedData.landType = [];
         }
 
