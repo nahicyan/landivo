@@ -1,5 +1,3 @@
-"use client";
-
 import React from "react";
 import {
   Card,
@@ -9,59 +7,156 @@ import {
 } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Badge } from "@/components/ui/badge";
+import { Tag, Image as ImageIcon } from "lucide-react";
 import ImageUploadPreview from "@/components/ImageUploadPreview/ImageUploadPreview";
 
-export default function MediaTags({ formData, handleChange, uploadedImages, setUploadedImages }) {
+export default function MediaTags({
+  formData,
+  handleChange,
+  uploadedImages,
+  setUploadedImages,
+  existingImages = [],
+  setExistingImages = () => {},
+}) {
+  const hasExistingImages = Array.isArray(existingImages) && existingImages.length > 0;
+  const hasNewImages = Array.isArray(uploadedImages) && uploadedImages.length > 0;
+  const hasImages = hasExistingImages || hasNewImages;
+
   return (
     <Card className="border border-gray-200 shadow-sm rounded-lg">
-      <CardHeader>
-        <CardTitle className="text-2xl font-bold text-gray-800">
+      <CardHeader className="pb-2">
+        <CardTitle className="text-2xl font-bold text-gray-800 flex items-center">
+          <div className="p-1.5 rounded-full bg-primary/10 mr-3">
+            <ImageIcon className="h-6 w-6 text-primary" />
+          </div>
           Media & Tags
         </CardTitle>
       </CardHeader>
+
       <CardContent>
-        {/* Left Tag */}
-        <div className="mb-4">
-          <Label htmlFor="ltag" className="text-gray-700 font-semibold">
-            Left Tag
-          </Label>
-          <Input
-            id="ltag"
-            type="text"
-            name="ltag"
-            value={formData.ltag}
-            onChange={handleChange}
-            placeholder="Enter left tag"
-            className="border-gray-300 focus:border-[#324c48] focus:ring-1 focus:ring-[#324c48]"
-          />
-        </div>
+        <Tabs defaultValue="images" className="w-full">
+          <TabsList className="w-full mb-6">
+            <TabsTrigger value="images" className="flex items-center gap-2 flex-1">
+              <ImageIcon className="h-4 w-4" />
+              Images
+              {hasImages && (
+                <Badge variant="secondary" className="ml-1">
+                  {(existingImages?.length || 0) + (uploadedImages?.length || 0)}
+                </Badge>
+              )}
+            </TabsTrigger>
+            <TabsTrigger value="tags" className="flex items-center gap-2 flex-1">
+              <Tag className="h-4 w-4" />
+              Tags
+              {(formData.ltag || formData.rtag) && (
+                <Badge variant="secondary" className="ml-1">
+                  {[formData.ltag, formData.rtag].filter(Boolean).length}
+                </Badge>
+              )}
+            </TabsTrigger>
+          </TabsList>
 
-        {/* Right Tag */}
-        <div className="mb-4">
-          <Label htmlFor="rtag" className="text-gray-700 font-semibold">
-            Right Tag
-          </Label>
-          <Input
-            id="rtag"
-            type="text"
-            name="rtag"
-            value={formData.rtag}
-            onChange={handleChange}
-            placeholder="Enter right tag"
-            className="border-gray-300 focus:border-[#324c48] focus:ring-1 focus:ring-[#324c48]"
-          />
-        </div>
+          <TabsContent value="images" className="mt-0">
+            <div className="space-y-4">
+              <div className="p-1">
+                <ImageUploadPreview
+                  existingImages={existingImages}
+                  newImages={uploadedImages}
+                  onExistingChange={setExistingImages}
+                  onNewChange={setUploadedImages}
+                />
+              </div>
+            </div>
+          </TabsContent>
 
-        {/* Image Upload */}
-        <div>
-          <Label className="text-gray-700 font-semibold">Upload Images</Label>
-          <ImageUploadPreview
-            existingImages={[]}               // No pre-existing images when adding a property.
-            newImages={uploadedImages}
-            onExistingChange={() => {}}        // No-op since there are no existing images.
-            onNewChange={setUploadedImages}    // Use parent's state updater
-          />
-        </div>
+          <TabsContent value="tags" className="mt-0">
+            <div className="space-y-6">
+              {/* Preview of how tags will look */}
+              <div className="bg-gray-100 p-4 rounded-lg mb-6">
+                <p className="text-sm text-gray-500 mb-3">Tag Preview</p>
+                <div className="relative w-full h-40 bg-gray-200 rounded-lg overflow-hidden">
+                  {/* Property image placeholder */}
+                  <div className="absolute inset-0 flex items-center justify-center bg-gray-300">
+                    <ImageIcon className="h-16 w-16 text-gray-400" />
+                  </div>
+                  
+                  {/* Left tag */}
+                  {formData.ltag && (
+                    <div className="absolute top-3 left-3">
+                      <Badge variant="secondary" className="bg-primary text-white font-medium px-3 py-1">
+                        {formData.ltag}
+                      </Badge>
+                    </div>
+                  )}
+                  
+                  {/* Right tag */}
+                  {formData.rtag && (
+                    <div className="absolute top-3 right-3">
+                      <Badge className="bg-accent text-white font-medium px-3 py-1">
+                        {formData.rtag}
+                      </Badge>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Tags input fields - Horizontal layout */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {/* Left Tag */}
+                <div className="space-y-2">
+                  <Label htmlFor="ltag" className="text-gray-700">
+                    Left Tag
+                  </Label>
+                  <div className="relative">
+                    <Input
+                      id="ltag"
+                      name="ltag"
+                      type="text"
+                      value={formData.ltag || ""}
+                      onChange={handleChange}
+                      placeholder="e.g., Featured, Hot Deal"
+                      className="pl-9 border-gray-300 focus-visible:ring-primary"
+                      maxLength={20}
+                    />
+                    <div className="absolute left-2.5 top-2.5 text-gray-400">
+                      <Tag className="h-4 w-4" />
+                    </div>
+                  </div>
+                  <p className="text-xs text-gray-500">
+                    This tag appears on the left side of the property image
+                  </p>
+                </div>
+
+                {/* Right Tag */}
+                <div className="space-y-2">
+                  <Label htmlFor="rtag" className="text-gray-700">
+                    Right Tag
+                  </Label>
+                  <div className="relative">
+                    <Input
+                      id="rtag"
+                      name="rtag"
+                      type="text"
+                      value={formData.rtag || ""}
+                      onChange={handleChange}
+                      placeholder="e.g., New, Sale, Reduced"
+                      className="pl-9 border-gray-300 focus-visible:ring-primary"
+                      maxLength={20}
+                    />
+                    <div className="absolute left-2.5 top-2.5 text-gray-400">
+                      <Tag className="h-4 w-4" />
+                    </div>
+                  </div>
+                  <p className="text-xs text-gray-500">
+                    This tag appears on the right side of the property image
+                  </p>
+                </div>
+              </div>
+            </div>
+          </TabsContent>
+        </Tabs>
       </CardContent>
     </Card>
   );

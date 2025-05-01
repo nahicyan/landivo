@@ -445,25 +445,36 @@ export default function EditProperty() {
     },
   ];
 
-  // Step Indicator component
+  // Step Indicator component - UPDATED to make all steps clickable
   const StepIndicator = ({ currentStep }) => {
+    // Function to navigate directly to any step when clicked
+    const goToStep = (index) => {
+      // Allow navigation to any step
+      setStep(index);
+    };
+
     return (
       <div className="w-full flex items-center justify-between mb-8 px-2">
         {steps.map((item, index) => {
           const isActive = index === currentStep;
           const isCompleted = index < currentStep;
+          // All steps are now clickable
+          const isClickable = true;
 
           return (
             <React.Fragment key={index}>
-              <div className="flex flex-col items-center">
+              <div 
+                className="flex flex-col items-center cursor-pointer" 
+                onClick={() => goToStep(index)}
+              >
                 <div
-                  className={`w-8 h-8 flex items-center justify-center rounded-full border-2 ${
-                    isCompleted
-                      ? "border-green-500 bg-green-500 text-white"
+                  className={`w-8 h-8 flex items-center justify-center rounded-full border-2 
+                    ${isCompleted
+                      ? "border-green-500 bg-green-500 text-white hover:bg-green-600"
                       : isActive
-                      ? "border-blue-500 bg-blue-100 text-blue-700"
-                      : "border-gray-300 bg-white text-gray-500"
-                  }`}
+                      ? "border-blue-500 bg-blue-100 text-blue-700 hover:bg-blue-200"
+                      : "border-gray-300 bg-white text-gray-500 hover:border-gray-400 hover:bg-gray-100"
+                    } transition-colors duration-200`}
                 >
                   {isCompleted ? <Check className="w-4 h-4" /> : index + 1}
                 </div>
@@ -472,7 +483,7 @@ export default function EditProperty() {
                     isCompleted || isActive
                       ? "font-semibold text-gray-900"
                       : "text-gray-500"
-                  }`}
+                  } hover:text-gray-900`}
                 >
                   {item.title}
                 </span>

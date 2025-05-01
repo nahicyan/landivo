@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from "react";
 import { useAuth } from "@/components/hooks/useAuth";
 import { useUserProfileApi } from '@/utils/api';
+import { useLocation } from "react-router-dom";
 
 export default function UserSubmit() {
   // State for the database user
@@ -15,6 +16,10 @@ export default function UserSubmit() {
   
   // Use the API hook to get the authenticated getUserProfile function
   const { getUserProfile } = useUserProfileApi();
+
+  // Get the current URL path to determine if we're in edit mode
+  const location = useLocation();
+  const isEditing = location.pathname.includes("edit-property");
 
   // Load database user profile data - only once
   useEffect(() => {
@@ -60,7 +65,7 @@ export default function UserSubmit() {
   return (
     <div className="bg-[#f0f0f0] p-4 rounded-[12px] border border-[rgba(200,200,200,0.6)]">
       <p className="text-base font-semibold text-[#333]">
-        You are uploading as:{" "}
+        You are {isEditing ? "editing" : "uploading"} as:{" "}
         {isLoading ? (
           <span className="italic text-gray-500">Loading user info...</span>
         ) : (

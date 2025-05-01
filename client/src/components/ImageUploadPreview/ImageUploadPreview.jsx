@@ -1,117 +1,428 @@
-// ImageUploadPreview.jsx
-import React, { useState, useEffect } from "react";
+import React, { useState, useCallback, useEffect } from "react";
+import { useDropzone } from "react-dropzone";
+import { 
+  DndContext, 
+  closestCenter, 
+  KeyboardSensor, 
+  PointerSensor, 
+  useSensor, 
+  useSensors,
+  DragOverlay
+} from "@dnd-kit/core";
+import {
+  arrayMove,
+  SortableContext,
+  sortableKeyboardCoordinates,
+  rectSortingStrategy,
+  useSortable
+} from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
 
+import { Trash2, ImageIcon, Move, X } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
+
+// Sortable image item
+const SortableImage = ({ image, index, onDelete, type }) => {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging
+  } = useSortable({ 
+    id: image.id || `${type}-${index}`,
+    data: { type, index, image }
+  });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.4 : 1
+  };
+
+  const preview = type === 'existing' 
+    ? `${import.meta.env.VITE_SERVER_URL}/${image.path}`
+    : image.preview;
+
+  return (
+    <div 
+      ref={setNodeRef}
+      style={style}
+      className={cn(
+        "relative group aspect-square rounded-lg overflow-hidden border border-gray-200 bg-white shadow-sm",
+        isDragging ? "z-10 ring-2 ring-primary" : ""
+      )}
+    >
+      <img 
+        src={preview} 
+        alt={`Property image ${index + 1}`} 
+        className="w-full h-full object-cover"
+      />
+
+      <div className="absolute inset-0 bg-black/0 group-hover:bg-black/40 transition-all duration-200">
+        <div 
+          {...attributes} 
+          {...listeners}
+          className="absolute top-2 left-2 p-1.5 rounded-full bg-white/80 text-gray-700 opacity-0 group-hover:opacity-100 transition-opacity cursor-move"
+        >
+          <Move size={16} />
+        </div>
+
+        <button
+          type="button"
+          onClick={() => onDelete(index, type)}
+          className="absolute top-2 right-2 p-1.5 rounded-full bg-red-500 text-white opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-600"
+        >
+          <X size={16} />
+        </button>
+
+        {index === 0 && (
+          <div className="absolute bottom-2 left-1/2 transform -translate-x-1/2 text-xs font-medium px-2 py-1 bg-primary text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity">
+            Main Image
+          </div>
+        )}
+      </div>
+    </div>
+  );
+};
+
+// Draggable image for drag overlay
+const DraggableImage = ({ image }) => {
+  return (
+    <div className="relative aspect-square rounded-lg overflow-hidden border-2 border-primary bg-white shadow-md">
+      <img 
+        src={image.preview || `${import.meta.env.VITE_SERVER_URL}/${image.path}`}
+        alt="Dragging" 
+        className="w-full h-full object-cover"
+      />
+    </div>
+  );
+};
+
+// Main component
 const ImageUploadPreview = ({ 
   existingImages = [], 
   newImages = [], 
   onExistingChange, 
-  onNewChange 
+  onNewChange,
+  maxImages = 10
 }) => {
-  // Convert existing image paths to full URLs for preview.
-  const fullExistingUrls = existingImages.map(
-    (img) => `${import.meta.env.VITE_SERVER_URL}/${img}`
-  );
-
-  // For new images, create preview URLs from File objects.
-  const [newPreviews, setNewPreviews] = useState([]);
+  // Local state for existing images with IDs
+  const [existingItems, setExistingItems] = useState([]);
+  
+  // Initialize existing images with IDs when component mounts or existingImages changes
   useEffect(() => {
-    const previews = newImages.map(file => URL.createObjectURL(file));
-    setNewPreviews(previews);
+    setExistingItems(
+      existingImages.map((path, index) => ({
+        id: `existing-${index}`,
+        path,
+        index
+      }))
+    );
+  }, [existingImages]);
 
-    // Cleanup the object URLs when newImages change
+  // Local state for new images with previews
+  const [newItems, setNewItems] = useState([]);
+  
+  // Update new items when newImages change
+  useEffect(() => {
+    // Cleanup old previews to prevent memory leaks
+    newItems.forEach(item => {
+      if (item.preview && typeof item.preview === 'string') {
+        URL.revokeObjectURL(item.preview);
+      }
+    });
+    
+    // Create new previews
+    setNewItems(
+      newImages.map((file, index) => ({
+        id: `new-${index}`,
+        file,
+        preview: URL.createObjectURL(file),
+        index
+      }))
+    );
+    
+    // Cleanup function
     return () => {
-      previews.forEach(url => URL.revokeObjectURL(url));
+      newItems.forEach(item => {
+        if (item.preview && typeof item.preview === 'string') {
+          URL.revokeObjectURL(item.preview);
+        }
+      });
     };
   }, [newImages]);
 
-  const handleFileChange = (e) => {
-    const files = Array.from(e.target.files);
-    // Append new files to existing newImages
-    onNewChange([...newImages, ...files]);
+  // Active drag item state
+  const [activeId, setActiveId] = useState(null);
+  const [activeItem, setActiveItem] = useState(null);
+
+  // Drag sensors
+  const sensors = useSensors(
+    useSensor(PointerSensor, {
+      activationConstraint: {
+        distance: 5,
+      },
+    }),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    })
+  );
+
+  // Dropzone configuration
+  const onDrop = useCallback(acceptedFiles => {
+    // Check if adding these files would exceed maxImages
+    if (existingItems.length + newItems.length + acceptedFiles.length > maxImages) {
+      alert(`You can only upload a maximum of ${maxImages} images`);
+      return;
+    }
+    
+    // Process and add new files
+    const updatedNewImages = [...newImages, ...acceptedFiles];
+    onNewChange(updatedNewImages);
+  }, [existingItems.length, newItems.length, newImages, onNewChange, maxImages]);
+
+  const { getRootProps, getInputProps, isDragActive } = useDropzone({
+    onDrop,
+    accept: {
+      'image/*': []
+    },
+    maxSize: 5242880, // 5MB
+    disabled: existingItems.length + newItems.length >= maxImages
+  });
+
+  // Handle drag start
+  const handleDragStart = (event) => {
+    const { active } = event;
+    setActiveId(active.id);
+    
+    // Find the dragged item
+    const { data } = active;
+    setActiveItem(data.current.image);
   };
 
-  const handleDeleteExisting = (index) => {
-    const updated = [...existingImages];
-    updated.splice(index, 1);
-    onExistingChange(updated);
+  // Handle drag end
+  const handleDragEnd = (event) => {
+    const { active, over } = event;
+    
+    if (!over) {
+      setActiveId(null);
+      setActiveItem(null);
+      return;
+    }
+    
+    if (active.id !== over.id) {
+      // Get data about dragged and target items
+      const activeData = active.data.current;
+      const overData = over.data.current;
+      
+      // Only allow reordering within the same type (existing or new)
+      if (activeData.type === overData.type) {
+        if (activeData.type === 'existing') {
+          // Reorder existing images
+          setExistingItems(items => {
+            const oldIndex = activeData.index;
+            const newIndex = overData.index;
+            
+            const newArray = arrayMove(items, oldIndex, newIndex);
+            
+            // Update parent component
+            onExistingChange(newArray.map(item => item.path));
+            
+            return newArray;
+          });
+        } else {
+          // Reorder new images
+          setNewItems(items => {
+            const oldIndex = activeData.index;
+            const newIndex = overData.index;
+            
+            const newArray = arrayMove(items, oldIndex, newIndex);
+            
+            // Update parent component
+            onNewChange(newArray.map(item => item.file));
+            
+            return newArray;
+          });
+        }
+      }
+    }
+    
+    setActiveId(null);
+    setActiveItem(null);
   };
 
-  const handleDeleteNew = (index) => {
-    const updated = [...newImages];
-    updated.splice(index, 1);
-    onNewChange(updated);
+  // Delete an image
+  const handleDelete = (index, type) => {
+    if (type === 'existing') {
+      const updatedItems = [...existingItems];
+      updatedItems.splice(index, 1);
+      
+      setExistingItems(updatedItems);
+      onExistingChange(updatedItems.map(item => item.path));
+    } else {
+      // Revoke object URL before removing
+      if (newItems[index]?.preview) {
+        URL.revokeObjectURL(newItems[index].preview);
+      }
+      
+      const updatedItems = [...newItems];
+      updatedItems.splice(index, 1);
+      
+      setNewItems(updatedItems);
+      onNewChange(updatedItems.map(item => item.file));
+    }
   };
+
+  // Clear all images
+  const handleClearAll = () => {
+    // Cleanup object URLs
+    newItems.forEach(item => {
+      if (item.preview) {
+        URL.revokeObjectURL(item.preview);
+      }
+    });
+    
+    setExistingItems([]);
+    setNewItems([]);
+    onExistingChange([]);
+    onNewChange([]);
+  };
+
+  // Total image count
+  const totalImages = existingItems.length + newItems.length;
+  const canAddMore = totalImages < maxImages;
 
   return (
-    <div>
-      <input
-        type="file"
-        multiple
-        accept="image/*"
-        onChange={handleFileChange}
-      />
-      <div style={{ display: "flex", flexWrap: "wrap", marginTop: "10px" }}>
-        {/* Existing images */}
-        {fullExistingUrls.map((src, index) => (
-          <div
-            key={`existing-${index}`}
-            style={{ position: "relative", marginRight: "8px", marginBottom: "8px" }}
-          >
-            <img
-              src={src}
-              alt={`Existing Preview ${index}`}
-              style={{ width: "100px", height: "100px", objectFit: "cover" }}
-            />
-            <button
-              onClick={() => handleDeleteExisting(index)}
-              style={{
-                position: "absolute",
-                top: 0,
-                right: 0,
-                background: "red",
-                color: "white",
-                border: "none",
-                borderRadius: "50%",
-                width: "20px",
-                height: "20px",
-                cursor: "pointer",
-              }}
+    <div className="space-y-4">
+      {/* Upload controls */}
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <span className="text-sm text-gray-600 font-medium">
+          {totalImages} of {maxImages} images
+        </span>
+        
+        <div className="flex gap-2">
+          {totalImages > 0 && (
+            <Button 
+              type="button" 
+              variant="outline" 
+              size="sm"
+              onClick={handleClearAll}
+              className="text-red-500 border-red-200 hover:bg-red-50 hover:text-red-600"
             >
-              X
-            </button>
-          </div>
-        ))}
-        {/* New image previews */}
-        {newPreviews.map((src, index) => (
-          <div
-            key={`new-${index}`}
-            style={{ position: "relative", marginRight: "8px", marginBottom: "8px" }}
-          >
-            <img
-              src={src}
-              alt={`New Preview ${index}`}
-              style={{ width: "100px", height: "100px", objectFit: "cover" }}
-            />
-            <button
-              onClick={() => handleDeleteNew(index)}
-              style={{
-                position: "absolute",
-                top: 0,
-                right: 0,
-                background: "red",
-                color: "white",
-                border: "none",
-                borderRadius: "50%",
-                width: "20px",
-                height: "20px",
-                cursor: "pointer",
-              }}
-            >
-              X
-            </button>
-          </div>
-        ))}
+              <Trash2 className="h-4 w-4 mr-1" />
+              Clear All
+            </Button>
+          )}
+        </div>
       </div>
+
+      {/* Dropzone */}
+      <div
+        {...getRootProps()}
+        className={cn(
+          "border-2 border-dashed rounded-lg p-4 transition-all cursor-pointer",
+          isDragActive
+            ? "border-primary bg-primary/5"
+            : "border-gray-300 hover:border-primary/70",
+          !canAddMore && "opacity-50 cursor-not-allowed"
+        )}
+      >
+        <input {...getInputProps()} />
+        <div className="flex flex-col items-center justify-center py-4 text-center">
+          <ImageIcon className="h-12 w-12 text-gray-400 mb-2" />
+          {isDragActive ? (
+            <p className="font-medium text-primary">Drop the images here</p>
+          ) : (
+            <>
+              <p className="font-medium text-gray-700">
+                Drag & drop images here, or click to select
+              </p>
+              <p className="text-sm text-gray-500 mt-1">
+                {canAddMore
+                  ? `You can add ${maxImages - totalImages} more image${
+                      maxImages - totalImages !== 1 ? "s" : ""
+                    }`
+                  : "Maximum number of images reached"}
+              </p>
+            </>
+          )}
+        </div>
+      </div>
+
+      {/* Image grids with drag and drop */}
+      <DndContext
+        sensors={sensors}
+        collisionDetection={closestCenter}
+        onDragStart={handleDragStart}
+        onDragEnd={handleDragEnd}
+      >
+        {/* Display existing images if any */}
+        {existingItems.length > 0 && (
+          <div className="mt-6">
+            <h4 className="text-sm font-medium text-gray-700 mb-2">Existing Images</h4>
+            
+            <SortableContext
+              items={existingItems.map(item => item.id)}
+              strategy={rectSortingStrategy}
+            >
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
+                {existingItems.map((image, index) => (
+                  <SortableImage
+                    key={image.id}
+                    image={image}
+                    index={index}
+                    onDelete={handleDelete}
+                    type="existing"
+                  />
+                ))}
+              </div>
+            </SortableContext>
+          </div>
+        )}
+
+        {/* Display new images if any */}
+        {newItems.length > 0 && (
+          <div className="mt-6">
+            <h4 className="text-sm font-medium text-gray-700 mb-2">New Images</h4>
+            
+            <SortableContext
+              items={newItems.map(item => item.id)}
+              strategy={rectSortingStrategy}
+            >
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
+                {newItems.map((image, index) => (
+                  <SortableImage
+                    key={image.id}
+                    image={image}
+                    index={index}
+                    onDelete={handleDelete}
+                    type="new"
+                  />
+                ))}
+              </div>
+            </SortableContext>
+          </div>
+        )}
+        
+        {/* Dragging overlay */}
+        <DragOverlay adjustScale={true}>
+          {activeId ? (
+            <div className="h-24 w-24">
+              {activeItem && <DraggableImage image={activeItem} />}
+            </div>
+          ) : null}
+        </DragOverlay>
+      </DndContext>
+      
+      {/* Help text */}
+      {totalImages > 0 && (
+        <p className="text-xs text-gray-500 mt-2">
+          Drag to reorder images. The first image will be used as the main property image.
+        </p>
+      )}
     </div>
   );
 };
