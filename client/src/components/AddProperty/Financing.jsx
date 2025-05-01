@@ -32,10 +32,45 @@ export default function Financing({ formData, handleChange, updateFormData }) {
     setTempData(formData);
   }, [formData]);
 
+  // Initialize calculator data from formData
+  const prepareCalculatorData = (data) => {
+    // Make a deep copy of formData
+    const calculatorData = { ...data };
+    
+    // Initialize financingPrice if not set - use askingPrice as default
+    if (!calculatorData.financingPrice && calculatorData.askingPrice) {
+      calculatorData.financingPrice = calculatorData.askingPrice;
+    }
+    
+    // Ensure other required fields are initialized
+    if (!calculatorData.term) calculatorData.term = "180"; // Default to 15 years
+    if (!calculatorData.interestOne) calculatorData.interestOne = "4.99";
+    if (!calculatorData.interestTwo) calculatorData.interestTwo = "5.99";
+    if (!calculatorData.interestThree) calculatorData.interestThree = "6.99";
+    
+    // Initialize down payment percentages if not set
+    if (!calculatorData.downPaymentOnePercent) calculatorData.downPaymentOnePercent = "5";
+    if (!calculatorData.downPaymentTwoPercent) calculatorData.downPaymentTwoPercent = "10";
+    if (!calculatorData.downPaymentThreePercent) calculatorData.downPaymentThreePercent = "15";
+    
+    // Initialize down payment sliders if not set
+    if (!calculatorData.downPaymentOneSlider) calculatorData.downPaymentOneSlider = "5";
+    if (!calculatorData.downPaymentTwoSlider) calculatorData.downPaymentTwoSlider = "10";
+    if (!calculatorData.downPaymentThreeSlider) calculatorData.downPaymentThreeSlider = "15";
+    
+    // Initialize source fields if not set
+    if (!calculatorData.downPaymentOneSource) calculatorData.downPaymentOneSource = "selector";
+    if (!calculatorData.downPaymentTwoSource) calculatorData.downPaymentTwoSource = "selector";
+    if (!calculatorData.downPaymentThreeSource) calculatorData.downPaymentThreeSource = "selector";
+    
+    return calculatorData;
+  };
+
   // Open the modal and initialize tempData from parent's formData
   const openModalWithPlan = (type) => {
     setPlanType(type);
-    setTempData(formData);
+    // Initialize calculator data with proper defaults
+    setTempData(prepareCalculatorData(formData));
     setOpenModal(true);
   };
 

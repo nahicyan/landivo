@@ -519,7 +519,7 @@ export default function EditProperty() {
             animate={{ x: 0, opacity: 1 }}
             exit={{ x: -50, opacity: 0 }}
             transition={{ duration: 0.3 }}
-            className="bg-white p-6 border border-gray-200 rounded-xl shadow-lg max-w-5xl mx-auto min-h-[640px]"
+            className="bg-white p-6 border border-gray-200 rounded-xl shadow-lg max-w-2xl mx-auto min-h-[640px]"
           >
             {steps[step].component}
           </motion.div>
