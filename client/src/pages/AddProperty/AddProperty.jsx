@@ -1,5 +1,4 @@
-"use client";
-
+// client/src/pages/AddProperty/AddProperty.jsx
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { createResidencyWithFiles } from "@/utils/api";
@@ -12,13 +11,14 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { useAuth } from "@/components/hooks/useAuth"; // Import useAuth instead of UserContext
+import { useAuth } from "@/components/hooks/useAuth";
 import { motion, AnimatePresence } from "framer-motion";
 
 // Import subcomponents
 import SystemInfo from "@/components/AddProperty/SystemInfo";
 import ListingDetails from "@/components/AddProperty/ListingDetails";
 import Classification from "@/components/AddProperty/Classification";
+import ComparativeMarketAnalysis from "@/components/AddProperty/ComparativeMarketAnalysis";
 import Location from "@/components/AddProperty/Location";
 import Dimension from "@/components/AddProperty/Dimension";
 import Pricing from "@/components/AddProperty/Pricing";
@@ -31,7 +31,7 @@ import { Check } from "lucide-react";
 
 export default function AddProperty() {
   const navigate = useNavigate();
-  const { user } = useAuth(); // Use Auth hook instead of UserContext
+  const { user } = useAuth();
 
   // Current step index
   const [step, setStep] = useState(0);
@@ -48,7 +48,7 @@ export default function AddProperty() {
     status: "",
     area: "",
     featured: "",
-    featuredPosition: 0, // New field to replace featuredWeight
+    featuredPosition: 0,
 
     // Listing Details
     title: "",
@@ -66,6 +66,11 @@ export default function AddProperty() {
     hoaPaymentTerms: "",
     hoaFee: "",
     survey: "",
+
+    // CMA fields
+    hasCma: false,
+    cmaData: "",
+    cmaFilePath: "",
 
     // Address and Location
     direction: "",
@@ -125,6 +130,13 @@ export default function AddProperty() {
 
   // If you need to store images in the parent:
   const [uploadedImages, setUploadedImages] = useState([]);
+  // Add new state for CMA file
+  const [cmaFile, setCmaFile] = useState(null);
+
+  // Add handler for CMA file upload
+  const handleCmaFileUpload = (file) => {
+    setCmaFile(file);
+  };
 
   // Numeric fields formatting, etc.
   const handleChange = (e) => {
@@ -245,6 +257,15 @@ export default function AddProperty() {
         multipartForm.append("featuredPosition", formData.featuredPosition);
       }
 
+      // Add CMA fields
+      multipartForm.append("hasCma", formData.hasCma);
+      multipartForm.append("cmaData", formData.cmaData || "");
+      
+      // Append CMA file if available
+      if (cmaFile) {
+        multipartForm.append("cmaFile", cmaFile);
+      }
+
       // If existing images
       let existingImages = [];
       if (formData.imageUrls && formData.imageUrls.trim() !== "") {
@@ -317,6 +338,16 @@ export default function AddProperty() {
       title: "Classification",
       component: (
         <Classification formData={formData} handleChange={handleChange} />
+      ),
+    },
+    {
+      title: "Market Analysis",
+      component: (
+        <ComparativeMarketAnalysis 
+          formData={formData} 
+          handleChange={handleChange} 
+          handleCmaFileUpload={handleCmaFileUpload}
+        />
       ),
     },
     {

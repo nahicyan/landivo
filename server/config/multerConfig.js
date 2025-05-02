@@ -1,4 +1,5 @@
-// server/config/multerConfig.js
+// server/config/multerConfig.js - Update to handle PDF files
+
 import multer from "multer";
 import path from "path";
 import { fileURLToPath } from "url";
@@ -25,15 +26,53 @@ const storage = multer.diskStorage({
 // Export multer instance for multiple file support
 export const upload = multer({
   storage,
-  limits: { fileSize: 5 * 1024 * 1024 }, // Limit file size to 5MB per file
+  limits: { fileSize: 10 * 1024 * 1024 }, // Increased to 10MB to accommodate PDF files
   fileFilter: function (req, file, cb) {
-    // Accept only image files (jpg, jpeg, png, webp, gif)
-    const allowedTypes = /jpeg|jpg|png|webp|gif/;
-    const ext = path.extname(file.originalname).toLowerCase();
-    if (allowedTypes.test(ext)) {
-      cb(null, true);
+    if (file.fieldname === 'cmaFile') {
+      // For CMA files, only accept PDFs
+      const allowedTypes = /pdf/;
+      const ext = path.extname(file.originalname).toLowerCase();
+      if (allowedTypes.test(ext.substring(1))) {
+        cb(null, true);
+      } else {
+        cb(new Error("Only PDF files are allowed for CMA documents."));
+      }
     } else {
-      cb(new Error("Only image files are allowed (jpeg, jpg, png, webp, gif)."));
+      // For image files, accept only image formats (jpg, jpeg, png, webp, gif)
+      const allowedTypes = /jpeg|jpg|png|webp|gif/;
+      const ext = path.extname(file.originalname).toLowerCase();
+      if (allowedTypes.test(ext.substring(1))) {
+        cb(null, true);
+      } else {
+        cb(new Error("Only image files are allowed (jpeg, jpg, png, webp, gif)."));
+      }
+    }
+  },
+});
+
+// Specialized upload for handling both images and a single PDF file
+export const uploadWithPdf = multer({
+  storage,
+  limits: { fileSize: 10 * 1024 * 1024 }, // 10MB limit
+  fileFilter: function (req, file, cb) {
+    if (file.fieldname === 'cmaFile') {
+      // For CMA files, only accept PDFs
+      if (file.mimetype === 'application/pdf') {
+        cb(null, true);
+      } else {
+        cb(new Error("Only PDF files are allowed for CMA documents."));
+      }
+    } else if (file.fieldname === 'images') {
+      // For property images
+      const allowedTypes = /jpeg|jpg|png|webp|gif/;
+      const ext = path.extname(file.originalname).toLowerCase();
+      if (allowedTypes.test(ext.substring(1))) {
+        cb(null, true);
+      } else {
+        cb(new Error("Only image files are allowed for property images."));
+      }
+    } else {
+      cb(new Error("Unknown field name for file upload."));
     }
   },
 });

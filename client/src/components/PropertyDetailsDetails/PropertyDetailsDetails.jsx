@@ -28,6 +28,9 @@ import {
   DollarSign,
   Home,
   Info,
+  FileText,
+  Download,
+  BarChart,
 } from "lucide-react";
 import PropertyMap from "../PropertyMap/PropertyMap";
 import PaymentCalculatorFront from "@/components/PaymentCalculator/PaymentCalculatorFront";
@@ -267,6 +270,70 @@ export default function PropertyDetailsDetails({ propertyData }) {
             </AccordionContent>
           </AccordionItem>
         )}
+        
+        {/* CMA Section - only rendered when hasCma is true */}
+        {propertyData.hasCma && (
+          <Accordion
+            type="single"
+            collapsible
+            defaultValue="CMA" // Always open by default
+            className="mt-8 space-y-2"
+          >
+            <AccordionItem value="CMA" className="border-b border-[#c1d7d3]">
+              <AccordionTrigger className="flex items-center justify-between w-full text-left text-xl font-medium text-gray-800 tracking-tight">
+                <div className="flex items-center gap-2">
+                  <BarChart className="w-6 h-6 text-[#324c48]" />
+                  <span className="text-[#324c48] font-semibold">Comparative Market Analysis</span>
+                </div>
+              </AccordionTrigger>
+              <AccordionContent className="px-2 py-4">
+                <div className="bg-blue-50 border-l-4 border-blue-400 p-4 mb-4 rounded-r-lg">
+                  <p className="text-blue-800 text-sm">
+                    A comparative market analysis (CMA) shows how this property compares to similar
+                    properties in the area, helping you understand its market positioning.
+                  </p>
+                </div>
+
+                {/* CMA Content */}
+                {propertyData.cmaData && (
+                  <div 
+                    className="prose prose-sm max-w-none mb-6 text-gray-700" 
+                    dangerouslySetInnerHTML={{ __html: propertyData.cmaData }}
+                  />
+                )}
+
+                {/* CMA File Download */}
+                {propertyData.cmaFilePath && (
+                  <div className="mt-6 flex items-center">
+                    <div className="bg-gray-100 border border-gray-200 rounded-lg p-4 flex items-center space-x-4 w-full max-w-xl">
+                      <div className="bg-[#324c48]/10 p-3 rounded-full">
+                        <FileText className="h-6 w-6 text-[#324c48]" />
+                      </div>
+                      <div className="flex-1">
+                        <h4 className="text-gray-800 font-medium">CMA Document</h4>
+                        <p className="text-gray-500 text-sm">Detailed market analysis report (PDF)</p>
+                      </div>
+                      <Button
+                        className="bg-[#324c48] text-white hover:bg-[#263938] transition-colors"
+                        onClick={() => window.open(`${import.meta.env.VITE_SERVER_URL}/api/residency/${propertyData.id}/cma-document`, '_blank')}
+                      >
+                        <Download className="h-4 w-4 mr-2" />
+                        Download
+                      </Button>
+                    </div>
+                  </div>
+                )}
+                
+                {!propertyData.cmaData && !propertyData.cmaFilePath && (
+                  <p className="text-gray-500 italic">
+                    Comparative market analysis is available for this property. Please contact the agent for more details.
+                  </p>
+                )}
+              </AccordionContent>
+            </AccordionItem>
+          </Accordion>
+        )}
+        
         {propertyData.floodplain !== "No" && (
           <AccordionItem
             value="Enviromental Risk"

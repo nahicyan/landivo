@@ -1,5 +1,13 @@
+// server/controllers/residencyCntrl.js
 import asyncHandler from "express-async-handler";
 import { prisma } from '../config/prismaConfig.js';
+import path from "path";
+import fs from "fs";
+import { fileURLToPath } from "url";
+
+// For ESM compatibility
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 // Helper function to manage property display order
 const manageFeaturedDisplayOrder = async (propertyId, isFeatured, displayPosition) => {
@@ -145,6 +153,10 @@ export const createResidency = asyncHandler(async (req, res) => {
     ltag,
     rtag,
     landId,
+    
+    // CMA fields
+    hasCma,
+    cmaData
   } = req.body.data;
 
   try {
@@ -264,6 +276,11 @@ export const createResidency = asyncHandler(async (req, res) => {
         rtag: rtag ?? null,
         landId: landId ?? "Not-Available",
         
+        // CMA fields
+        hasCma: hasCma === "true" || hasCma === true,
+        cmaData: cmaData || null,
+        cmaFilePath: null, // Will be set by createResidencyWithMultipleFiles
+        
         // Initialize modification history as an empty array
         modificationHistory: [],
       },
@@ -353,8 +370,7 @@ export const updateResidency = asyncHandler(async (req, res) => {
   console.log("Received updateResidency request body:", req.body);
   try {
     const { id } = req.params;
-    let { imageUrls, viewCount, ...restOfData } = req.body;
-
+    let { imageUrls, viewCount, removeCmaFile, ...restOfData } = req.body;
     // Get the authenticated user's ID from the req object (set by middleware)
     const updatedById = req.userId;
     
@@ -428,13 +444,56 @@ export const updateResidency = asyncHandler(async (req, res) => {
 
     // Process newly uploaded images (if any) from multer
     let newImagePaths = [];
-    if (req.files && req.files.length > 0) {
+    if (req.files && req.files['images'] && req.files['images'].length > 0) {
       // Use relative path: "uploads/" + file.filename
-      newImagePaths = req.files.map((file) => "uploads/" + file.filename);
+      newImagePaths = req.files['images'].map((file) => "uploads/" + file.filename);
     }
 
     // Merge existing images with new image paths
     const finalImageUrls = [...finalExistingImages, ...newImagePaths];
+
+// Handle CMA fields
+if (restOfData.hasCma !== undefined) {
+  restOfData.hasCma = restOfData.hasCma === "true" || restOfData.hasCma === true;
+}
+
+// Handle CMA file management
+let cmaFilePath = currentProperty.cmaFilePath;
+
+// Check if we need to remove the existing CMA file
+if (req.body.removeCmaFile === "true") {
+  // Delete the physical file if it exists
+  if (currentProperty.cmaFilePath) {
+    const oldFilePath = path.join(__dirname, "../", currentProperty.cmaFilePath);
+    try {
+      if (fs.existsSync(oldFilePath)) {
+        fs.unlinkSync(oldFilePath);
+        console.log(`Deleted old CMA file: ${oldFilePath}`);
+      }
+    } catch (err) {
+      console.error(`Error deleting old CMA file: ${err.message}`);
+    }
+  }
+  // Set the path to null for database update
+  cmaFilePath = null;
+} 
+// Check if we're uploading a new CMA file
+else if (req.files && req.files['cmaFile'] && req.files['cmaFile'].length > 0) {
+  cmaFilePath = "uploads/" + req.files['cmaFile'][0].filename;
+  
+  // Delete the old file if it exists
+  if (currentProperty.cmaFilePath) {
+    const oldFilePath = path.join(__dirname, "../", currentProperty.cmaFilePath);
+    try {
+      if (fs.existsSync(oldFilePath)) {
+        fs.unlinkSync(oldFilePath);
+        console.log(`Deleted old CMA file: ${oldFilePath}`);
+      }
+    } catch (err) {
+      console.error(`Error deleting old CMA file: ${err.message}`);
+    }
+  }
+}
 
     // Create a modification record
     const modification = {
@@ -467,7 +526,8 @@ export const updateResidency = asyncHandler(async (req, res) => {
       ...restOfData,
       imageUrls: finalImageUrls,
       updatedBy: { connect: { id: updatedById } },
-      modificationHistory
+      modificationHistory,
+      cmaFilePath
     };
 
     const updatedResidency = await prisma.residency.update({
@@ -552,10 +612,16 @@ export const createResidencyWithMultipleFiles = asyncHandler(async (req, res) =>
       return res.status(401).json({ message: "Unauthorized. User not authenticated." });
     }
 
-    // Collect all uploaded file paths
+    // Collect all uploaded image files
     let imagePaths = [];
-    if (req.files && req.files.length > 0) {
-      imagePaths = req.files.map((file) => "uploads/" + file.filename);
+    if (req.files && req.files['images'] && req.files['images'].length > 0) {
+      imagePaths = req.files['images'].map((file) => "uploads/" + file.filename);
+    }
+
+    // Handle CMA file upload (single file)
+    let cmaFilePath = null;
+    if (req.files && req.files['cmaFile'] && req.files['cmaFile'].length > 0) {
+      cmaFilePath = "uploads/" + req.files['cmaFile'][0].filename;
     }
 
     // Process existing imageUrls from req.body (if any)
@@ -597,7 +663,8 @@ export const createResidencyWithMultipleFiles = asyncHandler(async (req, res) =>
       hoaPaymentTerms,
       survey,
 
-      // Location
+      // Address and Location
+      direction,
       streetAddress,
       city,
       county,
@@ -606,7 +673,6 @@ export const createResidencyWithMultipleFiles = asyncHandler(async (req, res) =>
       latitude,
       longitude,
       apnOrPin,
-      direction,
       landIdLink,
       landId,
 
@@ -614,7 +680,7 @@ export const createResidencyWithMultipleFiles = asyncHandler(async (req, res) =>
       sqft,
       acre,
 
-      // Pricing
+      // Pricing and Financing
       askingPrice,
       minPrice,
       disPrice,
@@ -640,7 +706,7 @@ export const createResidencyWithMultipleFiles = asyncHandler(async (req, res) =>
       purchasePrice,
       financedPrice,
 
-      // Utilities
+      // Utilities and Infrastructure
       water,
       sewer,
       electric,
@@ -650,6 +716,10 @@ export const createResidencyWithMultipleFiles = asyncHandler(async (req, res) =>
       //Media & Tags  
       ltag,
       rtag,
+      
+      // CMA fields
+      hasCma,
+      cmaData
     } = req.body;
 
     // Prepare landType as an array if it's provided
@@ -763,6 +833,11 @@ export const createResidencyWithMultipleFiles = asyncHandler(async (req, res) =>
         rtag: rtag ?? null,
         imageUrls: allImageUrls.length > 0 ? allImageUrls : null,
         
+        // CMA fields
+        hasCma: hasCma === "true" || hasCma === true,
+        cmaData: cmaData || null,
+        cmaFilePath: cmaFilePath,
+        
         // Initialize modification history as an empty array
         modificationHistory: [],
       },
@@ -836,5 +911,48 @@ export const getPropertyRows = asyncHandler(async (req, res) => {
   } catch (error) {
     console.error("Error fetching property rows:", error);
     res.status(500).json({ message: "Error fetching property rows", error: error.message });
+  }
+});
+
+/**
+ * Get CMA document for a specific property
+ * @param {Object} req - Express request object
+ * @param {Object} res - Express response object
+ */
+export const getCmaDocument = asyncHandler(async (req, res) => {
+  const { id } = req.params;
+
+  try {
+    // Find the property
+    const residency = await prisma.residency.findUnique({
+      where: { id },
+      select: { hasCma: true, cmaFilePath: true }
+    });
+
+    // Check if property exists and has a CMA document
+    if (!residency) {
+      return res.status(404).json({ message: "Property not found" });
+    }
+
+    if (!residency.hasCma || !residency.cmaFilePath) {
+      return res.status(404).json({ message: "No CMA document found for this property" });
+    }
+
+    // Construct the file path
+    const filePath = path.join(__dirname, '../', residency.cmaFilePath);
+
+    // Check if file exists
+    if (!fs.existsSync(filePath)) {
+      return res.status(404).json({ message: "CMA document file not found" });
+    }
+
+    // Send the file
+    res.sendFile(filePath);
+  } catch (error) {
+    console.error("Error fetching CMA document:", error);
+    res.status(500).json({
+      message: "Failed to retrieve CMA document",
+      error: error.message,
+    });
   }
 });

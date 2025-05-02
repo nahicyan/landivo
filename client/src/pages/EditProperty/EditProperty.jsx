@@ -19,6 +19,7 @@ import { Loader2, Check, ChevronLeft, ChevronRight } from "lucide-react";
 import SystemInfo from "@/components/AddProperty/SystemInfo";
 import ListingDetails from "@/components/AddProperty/ListingDetails";
 import Classification from "@/components/AddProperty/Classification";
+import ComparativeMarketAnalysis from "@/components/AddProperty/ComparativeMarketAnalysis";
 import Location from "@/components/AddProperty/Location";
 import Dimension from "@/components/AddProperty/Dimension";
 import Pricing from "@/components/AddProperty/Pricing";
@@ -47,6 +48,9 @@ export default function EditProperty() {
   
   // Store raw numeric values separately to preserve full values
   const [rawValues, setRawValues] = useState({});
+  
+  // New state for tracking CMA document removal
+  const [removeCmaFile, setRemoveCmaFile] = useState(false);
   
   // Form data state with formatted display values
   const [formData, setFormData] = useState({
@@ -110,10 +114,21 @@ export default function EditProperty() {
     floodplain: "",
     ltag: "",
     rtag: "",
+    // CMA fields
+    hasCma: false,
+    cmaData: "",
+    cmaFilePath: "",
   });
 
   const [existingImages, setExistingImages] = useState([]);
   const [uploadedImages, setUploadedImages] = useState([]);
+  // Add new state for CMA file
+  const [cmaFile, setCmaFile] = useState(null);
+
+  // Add handler for CMA file upload
+  const handleCmaFileUpload = (file) => {
+    setCmaFile(file);
+  };
 
   // Define numeric fields that need special handling
   const numericFields = [
@@ -214,6 +229,9 @@ export default function EditProperty() {
         setExistingImages(imageArray);
         delete processedData.imageUrls;
         
+        // Ensure hasCma is a boolean
+        processedData.hasCma = !!processedData.hasCma;
+        
         setFormData(processedData);
         setRawValues(rawDataValues);
         setIsLoading(false);
@@ -276,6 +294,16 @@ export default function EditProperty() {
     }
   };
 
+  // Handler for removing CMA file
+  const handleRemoveCmaFile = () => {
+    setRemoveCmaFile(true);
+    // Clear the cmaFilePath from form data to update the UI
+    setFormData(prev => ({
+      ...prev,
+      cmaFilePath: null
+    }));
+  };
+
   // Handle form submission
   const handleSubmitForm = async (e) => {
     if (e) e.preventDefault();
@@ -296,6 +324,9 @@ export default function EditProperty() {
         "type", "landType", "legalDescription", "zoning", "restrictions", 
         "mobileHomeFriendly", "hoaPoa", "hoaPaymentTerms", "hoaFee", "survey",
         
+        // CMA fields
+        "hasCma", "cmaData", "cmaFilePath",
+        
         // Location
         "direction", "streetAddress", "city", "county", "state", "zip",
         "latitude", "longitude", "apnOrPin", "landId", "landIdLink",
@@ -312,7 +343,7 @@ export default function EditProperty() {
         "monthlyPaymentOne", "monthlyPaymentTwo", "monthlyPaymentThree",
         "downPaymentOne", "downPaymentTwo", "downPaymentThree",
         "loanAmountOne", "loanAmountTwo", "loanAmountThree",
-        "purchasePrice", "financedPrice", // Ensure this is correct, not financingPrice
+        "purchasePrice", "financedPrice",
         
         // Utilities
         "water", "sewer", "electric", "roadCondition", "floodplain",
@@ -337,9 +368,19 @@ export default function EditProperty() {
         }
       });
       
+      // Add flag for removing CMA file if set
+      if (removeCmaFile) {
+        form.append("removeCmaFile", "true");
+      }
+      
       // Append images
       form.append("imageUrls", JSON.stringify(existingImages));
       uploadedImages.forEach(file => form.append("images", file));
+      
+      // Append CMA file if available
+      if (cmaFile) {
+        form.append("cmaFile", cmaFile);
+      }
   
       await updateProperty(propertyId, form);
       setDialogMessage("Property updated successfully!");
@@ -380,6 +421,18 @@ export default function EditProperty() {
     {
       title: "Classification",
       component: <Classification formData={formData} handleChange={handleChange} />,
+    },
+    {
+      title: "Market Analysis",
+      component: (
+        <ComparativeMarketAnalysis 
+          formData={formData} 
+          handleChange={handleChange} 
+          handleCmaFileUpload={handleCmaFileUpload}
+          handleRemoveCmaFile={handleRemoveCmaFile}
+          existingCmaFile={!!formData.cmaFilePath && !removeCmaFile}
+        />
+      ),
     },
     {
       title: "Location",

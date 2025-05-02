@@ -157,6 +157,11 @@ model Residency {
   landId    String
   viewCount Int?    @default(0) // View count for unique views
 
+    // CMA fields
+  hasCma         Boolean  @default(false)
+  cmaData        String?
+  cmaFilePath    String?
+
   // Timestamps
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
