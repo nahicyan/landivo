@@ -126,10 +126,13 @@ export default function AddProperty() {
     ltag: "",
     rtag: "",
     imageUrls: "",
+    videoUrls: "", // Add videoUrls field
   });
 
-  // If you need to store images in the parent:
+  // Media state
   const [uploadedImages, setUploadedImages] = useState([]);
+  // Add new state for videos
+  const [uploadedVideos, setUploadedVideos] = useState([]);
   // Add new state for CMA file
   const [cmaFile, setCmaFile] = useState(null);
 
@@ -236,7 +239,7 @@ export default function AddProperty() {
 
       const multipartForm = new FormData();
       for (let key in formData) {
-        if (key === "imageUrls") continue; // skip imageUrls here
+        if (key === "imageUrls" || key === "videoUrls") continue; // skip imageUrls and videoUrls here
         
         let val = formData[key];
         
@@ -278,8 +281,23 @@ export default function AddProperty() {
       }
       multipartForm.append("imageUrls", JSON.stringify(existingImages));
 
+      // If existing videos
+      let existingVideos = [];
+      if (formData.videoUrls && formData.videoUrls.trim() !== "") {
+        try {
+          existingVideos = JSON.parse(formData.videoUrls);
+          if (!Array.isArray(existingVideos)) existingVideos = [];
+        } catch (err) {
+          existingVideos = [];
+        }
+      }
+      multipartForm.append("videoUrls", JSON.stringify(existingVideos));
+
       // Append newly uploaded files
       uploadedImages.forEach((file) => multipartForm.append("images", file));
+      
+      // Append newly uploaded videos
+      uploadedVideos.forEach((file) => multipartForm.append("videos", file));
 
       await createResidencyWithFiles(multipartForm);
 
@@ -390,6 +408,8 @@ export default function AddProperty() {
           handleChange={handleChange}
           uploadedImages={uploadedImages}
           setUploadedImages={setUploadedImages}
+          uploadedVideos={uploadedVideos}
+          setUploadedVideos={setUploadedVideos}
         />
       ),
     },

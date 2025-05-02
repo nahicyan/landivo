@@ -1,3 +1,4 @@
+// client/src/components/AddProperty/MediaTags.jsx
 import React from "react";
 import {
   Card,
@@ -9,8 +10,9 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
-import { Tag, Image as ImageIcon } from "lucide-react";
+import { Tag, Image as ImageIcon, Video as VideoIcon } from "lucide-react";
 import ImageUploadPreview from "@/components/ImageUploadPreview/ImageUploadPreview";
+import VideoUploadPreview from "@/components/VideoUploadPreview/VideoUploadPreview";
 
 export default function MediaTags({
   formData,
@@ -19,10 +21,18 @@ export default function MediaTags({
   setUploadedImages,
   existingImages = [],
   setExistingImages = () => {},
+  uploadedVideos,
+  setUploadedVideos,
+  existingVideos = [],
+  setExistingVideos = () => {},
 }) {
   const hasExistingImages = Array.isArray(existingImages) && existingImages.length > 0;
   const hasNewImages = Array.isArray(uploadedImages) && uploadedImages.length > 0;
   const hasImages = hasExistingImages || hasNewImages;
+  
+  const hasExistingVideos = Array.isArray(existingVideos) && existingVideos.length > 0;
+  const hasNewVideos = Array.isArray(uploadedVideos) && uploadedVideos.length > 0;
+  const hasVideos = hasExistingVideos || hasNewVideos;
 
   return (
     <Card className="border border-gray-200 shadow-sm rounded-lg">
@@ -47,6 +57,15 @@ export default function MediaTags({
                 </Badge>
               )}
             </TabsTrigger>
+            <TabsTrigger value="videos" className="flex items-center gap-2 flex-1">
+              <VideoIcon className="h-4 w-4" />
+              Videos
+              {hasVideos && (
+                <Badge variant="secondary" className="ml-1">
+                  {(existingVideos?.length || 0) + (uploadedVideos?.length || 0)}
+                </Badge>
+              )}
+            </TabsTrigger>
             <TabsTrigger value="tags" className="flex items-center gap-2 flex-1">
               <Tag className="h-4 w-4" />
               Tags
@@ -66,6 +85,19 @@ export default function MediaTags({
                   newImages={uploadedImages}
                   onExistingChange={setExistingImages}
                   onNewChange={setUploadedImages}
+                />
+              </div>
+            </div>
+          </TabsContent>
+          
+          <TabsContent value="videos" className="mt-0">
+            <div className="space-y-4">
+              <div className="p-1">
+                <VideoUploadPreview
+                  existingVideos={existingVideos}
+                  newVideos={uploadedVideos}
+                  onExistingChange={setExistingVideos}
+                  onNewChange={setUploadedVideos}
                 />
               </div>
             </div>

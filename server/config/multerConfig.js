@@ -1,5 +1,4 @@
-// server/config/multerConfig.js - Update to handle PDF files
-
+// server/config/multerConfig.js - Update to handle video files
 import multer from "multer";
 import path from "path";
 import { fileURLToPath } from "url";
@@ -23,37 +22,10 @@ const storage = multer.diskStorage({
   },
 });
 
-// Export multer instance for multiple file support
-export const upload = multer({
+// Export multer instance with support for Media
+export const uploadWithMedia = multer({
   storage,
-  limits: { fileSize: 10 * 1024 * 1024 }, // Increased to 10MB to accommodate PDF files
-  fileFilter: function (req, file, cb) {
-    if (file.fieldname === 'cmaFile') {
-      // For CMA files, only accept PDFs
-      const allowedTypes = /pdf/;
-      const ext = path.extname(file.originalname).toLowerCase();
-      if (allowedTypes.test(ext.substring(1))) {
-        cb(null, true);
-      } else {
-        cb(new Error("Only PDF files are allowed for CMA documents."));
-      }
-    } else {
-      // For image files, accept only image formats (jpg, jpeg, png, webp, gif)
-      const allowedTypes = /jpeg|jpg|png|webp|gif/;
-      const ext = path.extname(file.originalname).toLowerCase();
-      if (allowedTypes.test(ext.substring(1))) {
-        cb(null, true);
-      } else {
-        cb(new Error("Only image files are allowed (jpeg, jpg, png, webp, gif)."));
-      }
-    }
-  },
-});
-
-// Specialized upload for handling both images and a single PDF file
-export const uploadWithPdf = multer({
-  storage,
-  limits: { fileSize: 10 * 1024 * 1024 }, // 10MB limit
+  limits: { fileSize: 100 * 1024 * 1024 }, // 100MB limit for video files
   fileFilter: function (req, file, cb) {
     if (file.fieldname === 'cmaFile') {
       // For CMA files, only accept PDFs
@@ -70,6 +42,15 @@ export const uploadWithPdf = multer({
         cb(null, true);
       } else {
         cb(new Error("Only image files are allowed for property images."));
+      }
+    } else if (file.fieldname === 'videos') {
+      // For property videos
+      const allowedTypes = /mp4|mov|avi|webm|mkv/;
+      const ext = path.extname(file.originalname).toLowerCase();
+      if (allowedTypes.test(ext.substring(1))) {
+        cb(null, true);
+      } else {
+        cb(new Error("Only video files (MP4, MOV, AVI, WebM, MKV) are allowed."));
       }
     } else {
       cb(new Error("Unknown field name for file upload."));

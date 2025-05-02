@@ -370,7 +370,7 @@ export const updateResidency = asyncHandler(async (req, res) => {
   console.log("Received updateResidency request body:", req.body);
   try {
     const { id } = req.params;
-    let { imageUrls, viewCount, removeCmaFile, ...restOfData } = req.body;
+    let { imageUrls, videoUrls, viewCount, removeCmaFile, ...restOfData } = req.body;
     // Get the authenticated user's ID from the req object (set by middleware)
     const updatedById = req.userId;
     
@@ -442,15 +442,38 @@ export const updateResidency = asyncHandler(async (req, res) => {
       }
     }
 
+    // Process the "videoUrls" field (expected as JSON-stringified array)
+    let finalExistingVideos = [];
+    if (videoUrls) {
+      try {
+        finalExistingVideos = JSON.parse(videoUrls);
+        if (!Array.isArray(finalExistingVideos)) {
+          finalExistingVideos = [];
+        }
+      } catch (error) {
+        finalExistingVideos = [];
+      }
+    }
+
     // Process newly uploaded images (if any) from multer
     let newImagePaths = [];
     if (req.files && req.files['images'] && req.files['images'].length > 0) {
       // Use relative path: "uploads/" + file.filename
       newImagePaths = req.files['images'].map((file) => "uploads/" + file.filename);
     }
+    
+    // Process newly uploaded videos (if any) from multer
+    let newVideoPaths = [];
+    if (req.files && req.files['videos'] && req.files['videos'].length > 0) {
+      // Use relative path: "uploads/" + file.filename
+      newVideoPaths = req.files['videos'].map((file) => "uploads/" + file.filename);
+    }
 
     // Merge existing images with new image paths
     const finalImageUrls = [...finalExistingImages, ...newImagePaths];
+    
+    // Merge existing videos with new video paths
+    const finalVideoUrls = [...finalExistingVideos, ...newVideoPaths];
 
 // Handle CMA fields
 if (restOfData.hasCma !== undefined) {
@@ -525,6 +548,7 @@ else if (req.files && req.files['cmaFile'] && req.files['cmaFile'].length > 0) {
     const updateData = {
       ...restOfData,
       imageUrls: finalImageUrls,
+      videoUrls: finalVideoUrls,
       updatedBy: { connect: { id: updatedById } },
       modificationHistory,
       cmaFilePath
@@ -601,6 +625,32 @@ export const getResidencyImages = asyncHandler(async (req, res) => {
   }
 });
 
+// Get Property Videos
+export const getResidencyVideos = asyncHandler(async (req, res) => {
+  const { id } = req.params;
+
+  try {
+    const residency = await prisma.residency.findUnique({
+      where: { id },
+    });
+
+    if (!residency || !residency.videoUrls) {
+      return res.status(404).json({ message: "No videos found for this residency" });
+    }
+
+    res.status(200).json({
+      message: "Videos retrieved successfully",
+      videos: residency.videoUrls,
+    });
+  } catch (error) {
+    console.error("Error fetching residency videos:", error);
+    res.status(500).json({
+      message: "Failed to retrieve videos",
+      error: error.message,
+    });
+  }
+});
+
 // Create Property with Multiple Files
 export const createResidencyWithMultipleFiles = asyncHandler(async (req, res) => {
   console.log("This is creation request body: ", req.body);
@@ -616,6 +666,12 @@ export const createResidencyWithMultipleFiles = asyncHandler(async (req, res) =>
     let imagePaths = [];
     if (req.files && req.files['images'] && req.files['images'].length > 0) {
       imagePaths = req.files['images'].map((file) => "uploads/" + file.filename);
+    }
+    
+    // Collect all uploaded video files
+    let videoPaths = [];
+    if (req.files && req.files['videos'] && req.files['videos'].length > 0) {
+      videoPaths = req.files['videos'].map((file) => "uploads/" + file.filename);
     }
 
     // Handle CMA file upload (single file)
@@ -634,8 +690,23 @@ export const createResidencyWithMultipleFiles = asyncHandler(async (req, res) =>
         existingImages = [];
       }
     }
+    
+    // Process existing videoUrls from req.body (if any)
+    let existingVideos = [];
+    if (req.body.videoUrls) {
+      try {
+        existingVideos = JSON.parse(req.body.videoUrls);
+        if (!Array.isArray(existingVideos)) existingVideos = [];
+      } catch (err) {
+        existingVideos = [];
+      }
+    }
+    
     // Merge existing images with the new image paths
     const allImageUrls = [...existingImages, ...imagePaths];
+    
+    // Merge existing videos with the new video paths
+    const allVideoUrls = [...existingVideos, ...videoPaths];
 
     // Destructure the fields from req.body
     const {
@@ -744,7 +815,7 @@ export const createResidencyWithMultipleFiles = asyncHandler(async (req, res) =>
       }
     }
 
-    // Create the residency with the array of image URLs stored in "imageUrls"
+    // Create the residency with the array of image URLs and video URLs stored
     const residency = await prisma.residency.create({
       data: {
         // Connect to the creating user
@@ -832,6 +903,7 @@ export const createResidencyWithMultipleFiles = asyncHandler(async (req, res) =>
         ltag: ltag ?? null,
         rtag: rtag ?? null,
         imageUrls: allImageUrls.length > 0 ? allImageUrls : null,
+        videoUrls: allVideoUrls.length > 0 ? allVideoUrls : null,
         
         // CMA fields
         hasCma: hasCma === "true" || hasCma === true,

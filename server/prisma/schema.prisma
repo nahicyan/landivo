@@ -117,6 +117,7 @@ model Residency {
   sqft      Int
   acre      Float?
   imageUrls Json?
+  videoUrls Json? 
 
   // Pricing
   askingPrice Float

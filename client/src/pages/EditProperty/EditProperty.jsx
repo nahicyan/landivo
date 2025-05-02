@@ -120,8 +120,12 @@ export default function EditProperty() {
     cmaFilePath: "",
   });
 
+  // Media state
   const [existingImages, setExistingImages] = useState([]);
   const [uploadedImages, setUploadedImages] = useState([]);
+  // New state for videos
+  const [existingVideos, setExistingVideos] = useState([]);
+  const [uploadedVideos, setUploadedVideos] = useState([]);
   // Add new state for CMA file
   const [cmaFile, setCmaFile] = useState(null);
 
@@ -225,9 +229,25 @@ export default function EditProperty() {
             imageArray = processedData.imageUrls;
           }
         }
-        
         setExistingImages(imageArray);
         delete processedData.imageUrls;
+        
+        // Handle existing videos
+        let videoArray = [];
+        if (processedData.videoUrls) {
+          if (typeof processedData.videoUrls === 'string') {
+            try {
+              videoArray = JSON.parse(processedData.videoUrls);
+            } catch (e) {
+              console.error("Error parsing video URLs:", e);
+              videoArray = [];
+            }
+          } else if (Array.isArray(processedData.videoUrls)) {
+            videoArray = processedData.videoUrls;
+          }
+        }
+        setExistingVideos(videoArray);
+        delete processedData.videoUrls;
         
         // Ensure hasCma is a boolean
         processedData.hasCma = !!processedData.hasCma;
@@ -377,6 +397,10 @@ export default function EditProperty() {
       form.append("imageUrls", JSON.stringify(existingImages));
       uploadedImages.forEach(file => form.append("images", file));
       
+      // Append videos
+      form.append("videoUrls", JSON.stringify(existingVideos));
+      uploadedVideos.forEach(file => form.append("videos", file));
+      
       // Append CMA file if available
       if (cmaFile) {
         form.append("cmaFile", cmaFile);
@@ -493,6 +517,10 @@ export default function EditProperty() {
           setUploadedImages={setUploadedImages}
           existingImages={existingImages}
           setExistingImages={setExistingImages}
+          uploadedVideos={uploadedVideos}
+          setUploadedVideos={setUploadedVideos}
+          existingVideos={existingVideos}
+          setExistingVideos={setExistingVideos}
         />
       ),
     },
