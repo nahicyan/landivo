@@ -19,26 +19,17 @@ export default function ComparativeMarketAnalysis({
   handleChange, 
   handleCmaFileUpload,
   handleRemoveCmaFile,
+  handleCmaDataChange,
   existingCmaFile
 }) {
   const [pdfFile, setPdfFile] = useState(null);
-  
+
   // Handle CMA toggle
   const handleCmaToggle = (checked) => {
-    handleChange({ 
-      target: { 
-        name: "hasCma", 
-        value: checked 
-      } 
-    });
-  };
-
-  // Handle CMA data (rich text)
-  const handleCmaDataChange = (value) => {
     handleChange({
       target: {
-        name: "cmaData",
-        value: value
+        name: "hasCma",
+        value: checked
       }
     });
   };
@@ -52,13 +43,13 @@ export default function ComparativeMarketAnalysis({
         alert('Please upload a PDF file');
         return;
       }
-      
+
       // Check file size (limit to 10MB)
       if (file.size > 10 * 1024 * 1024) {
         alert('File size should not exceed 10MB');
         return;
       }
-      
+
       setPdfFile(file);
       handleCmaFileUpload(file);
     }
@@ -68,7 +59,7 @@ export default function ComparativeMarketAnalysis({
   const handleRemoveFile = () => {
     setPdfFile(null);
     handleCmaFileUpload(null);
-    
+
     // Reset the file input
     const fileInput = document.getElementById('cma-file-input');
     if (fileInput) fileInput.value = '';
@@ -122,7 +113,7 @@ export default function ComparativeMarketAnalysis({
               <Label className="text-base font-semibold text-gray-700">
                 Upload CMA Document (PDF)
               </Label>
-              
+
               {/* File input and selected file display */}
               <div className="w-full p-4 border-2 border-dashed border-gray-300 rounded-lg bg-gray-50 transition-all hover:bg-gray-100">
                 {pdfFile ? (
@@ -141,9 +132,9 @@ export default function ComparativeMarketAnalysis({
                         PDF
                       </Badge>
                     </div>
-                    <Button 
+                    <Button
                       type="button"
-                      variant="ghost" 
+                      variant="ghost"
                       size="sm"
                       onClick={handleRemoveFile}
                       className="text-red-500 hover:text-red-700 hover:bg-red-50"
@@ -169,17 +160,17 @@ export default function ComparativeMarketAnalysis({
                     >
                       Select File
                     </Button>
-                    <input 
+                    <input
                       id="cma-file-input"
-                      type="file" 
-                      accept=".pdf" 
+                      type="file"
+                      accept=".pdf"
                       onChange={handleFileChange}
-                      className="hidden" 
+                      className="hidden"
                     />
                   </div>
                 )}
               </div>
-              
+
               {formData.cmaFilePath && !pdfFile && (
                 <div className="mt-2 flex items-center justify-between py-2 px-3 bg-blue-50 border border-blue-100 rounded-md">
                   <p className="text-xs text-blue-600 flex items-center">
@@ -187,9 +178,9 @@ export default function ComparativeMarketAnalysis({
                     Existing CMA document is attached
                   </p>
                   {handleRemoveCmaFile && (
-                    <Button 
+                    <Button
                       type="button"
-                      variant="ghost" 
+                      variant="ghost"
                       size="sm"
                       onClick={handleRemoveCmaFile}
                       className="text-red-500 hover:text-red-700 hover:bg-red-50"
@@ -199,7 +190,7 @@ export default function ComparativeMarketAnalysis({
                   )}
                 </div>
               )}
-              
+
               <p className="text-xs text-gray-500">
                 Upload a PDF document containing the full comparative market analysis report.
               </p>

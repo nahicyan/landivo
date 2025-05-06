@@ -262,7 +262,6 @@ export default function AddProperty() {
 
       // Add CMA fields
       multipartForm.append("hasCma", formData.hasCma);
-      multipartForm.append("cmaData", formData.cmaData || "");
       
       // Append CMA file if available
       if (cmaFile) {
@@ -397,6 +396,9 @@ export default function AddProperty() {
           formData={formData} 
           handleChange={handleChange} 
           handleCmaFileUpload={handleCmaFileUpload}
+          handleCmaDataChange={(val) => 
+            setFormData((prev) => ({ ...prev, cmaData: val }))
+          }
         />
       ),
     },

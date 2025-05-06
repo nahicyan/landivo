@@ -504,6 +504,9 @@ export default function EditProperty() {
           handleCmaFileUpload={handleCmaFileUpload}
           handleRemoveCmaFile={handleRemoveCmaFile}
           existingCmaFile={!!formData.cmaFilePath && !removeCmaFile}
+          handleCmaDataChange={(val) => 
+            setFormData((prev) => ({ ...prev, cmaData: val }))
+          }
         />
       ),
     },
