@@ -359,16 +359,6 @@ export default function AddProperty() {
       ),
     },
     {
-      title: "Market Analysis",
-      component: (
-        <ComparativeMarketAnalysis 
-          formData={formData} 
-          handleChange={handleChange} 
-          handleCmaFileUpload={handleCmaFileUpload}
-        />
-      ),
-    },
-    {
       title: "Location",
       component: (
         <Location
@@ -380,7 +370,7 @@ export default function AddProperty() {
     },
     {
       title: "Dimensions",
-      component: <Dimension formData={formData} handleChange={handleChange} />,
+      component: <Dimension formData={formData} handleChange={handleChange} setFormData={setFormData} />,
     },
     {
       title: "Pricing",
@@ -399,6 +389,16 @@ export default function AddProperty() {
     {
       title: "Utilities",
       component: <Utilities formData={formData} handleChange={handleChange} />,
+    },
+    {
+      title: "Market Analysis",
+      component: (
+        <ComparativeMarketAnalysis 
+          formData={formData} 
+          handleChange={handleChange} 
+          handleCmaFileUpload={handleCmaFileUpload}
+        />
+      ),
     },
     {
       title: "Media & Tags",

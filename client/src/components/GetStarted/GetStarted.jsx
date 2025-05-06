@@ -35,7 +35,11 @@ const GetStarted = () => {
     }
     
     // If email is valid, navigate to subscription page
-    navigate(`/subscription?email=${encodeURIComponent(email)}`);
+    // navigate(`/subscription?email=${encodeURIComponent(email)}`);
+    // Temporary - Direct Navigate to VIP Signup 
+    
+    navigate(`/vip-signup?email=${encodeURIComponent(email)}`);
+
   };
 
   const handleDialogSubmit = () => {
@@ -51,7 +55,10 @@ const GetStarted = () => {
 
     setShowDialog(false);
     // Navigate to subscription page
-    navigate(`/subscription?email=${encodeURIComponent(email)}`);
+    // navigate(`/subscription?email=${encodeURIComponent(email)}`);
+
+    // Temporary - Direct Navigate to VIP Signup 
+    navigate(`/vip-signup?email=${encodeURIComponent(email)}`);
   };
 
   return (

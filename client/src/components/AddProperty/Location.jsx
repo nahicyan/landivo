@@ -16,7 +16,7 @@ export default function Location({ formData, handleChange, setFormData }) {
       setFormData({ ...formData, [name]: checked });
     }
   };
-  
+
 
   return (
     <Card className="border border-gray-200 shadow-md rounded-lg w-full">
@@ -141,6 +141,21 @@ export default function Location({ formData, handleChange, setFormData }) {
               className="mt-1"
             />
           </div>
+        </div>
+        {/* Direction Field */}
+        <div className="flex flex-col">
+          <Label htmlFor="direction" className="text-sm font-semibold text-gray-700">
+            Direction
+          </Label>
+          <Input
+            id="direction"
+            type="text"
+            name="direction"
+            value={formData.direction || ""}
+            onChange={handleChange}
+            placeholder="Enter property direction"
+            className="mt-1"
+          />
         </div>
 
         {/* APN or PIN */}

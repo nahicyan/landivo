@@ -447,18 +447,6 @@ export default function EditProperty() {
       component: <Classification formData={formData} handleChange={handleChange} />,
     },
     {
-      title: "Market Analysis",
-      component: (
-        <ComparativeMarketAnalysis 
-          formData={formData} 
-          handleChange={handleChange} 
-          handleCmaFileUpload={handleCmaFileUpload}
-          handleRemoveCmaFile={handleRemoveCmaFile}
-          existingCmaFile={!!formData.cmaFilePath && !removeCmaFile}
-        />
-      ),
-    },
-    {
       title: "Location",
       component: (
         <Location
@@ -506,6 +494,18 @@ export default function EditProperty() {
     {
       title: "Utilities",
       component: <Utilities formData={formData} handleChange={handleChange} />,
+    },
+    {
+      title: "Market Analysis",
+      component: (
+        <ComparativeMarketAnalysis 
+          formData={formData} 
+          handleChange={handleChange} 
+          handleCmaFileUpload={handleCmaFileUpload}
+          handleRemoveCmaFile={handleRemoveCmaFile}
+          existingCmaFile={!!formData.cmaFilePath && !removeCmaFile}
+        />
+      ),
     },
     {
       title: "Media & Tags",

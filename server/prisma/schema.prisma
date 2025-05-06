@@ -68,9 +68,6 @@ model ActivityLog {
 model Residency {
   id        String @id @default(auto()) @map("_id") @db.ObjectId
   
-  // Owner relationship changed to use userId instead of email
-  ownerId   Int?
-  
   // Audit fields
   createdById  String  @db.ObjectId
   createdBy    User    @relation("CreatedByRelation", fields: [createdById], references: [id])
@@ -82,27 +79,28 @@ model Residency {
   
   //Deals
   deals     Deal[]
-
-  // Property Details
-  title              String
+  
+  // 1. System Information
+  ownerId            Int?
+  area               String
+  status             String
   featured           String?
+
+  // 2. Listing Details
+  title              String
   description        String
-  legalDescription   String?
-  direction          String?
-  status             String?
-  type               String?
-  landType           String[]
-  zoning             String?
-  restrictions       String?
-  mobileHomeFriendly String?
-  hoaPoa             String?
-  hoaFee             Float?
-  hoaPaymentTerms    String?
-  survey             String?
   notes              String?
 
-  // Address and Location
-  apnOrPin      String  @unique // APN/PIN must be unique
+  // 3. Property Classification
+  type               String?
+  landType           String[]
+  zoning             String
+  restrictions       String?
+  survey             String?
+  legalDescription   String?
+  mobileHomeFriendly String?
+
+  //4. Location & Identification
   streetAddress String
   city          String
   county        String
@@ -110,23 +108,26 @@ model Residency {
   zip           String
   latitude      Float // Latitude for geolocation
   longitude     Float // Longitude for geolocation
-  area          String
+  apnOrPin      String  @unique // APN/PIN must be unique
+  direction     String?
+  landId        String
   landIdLink    String?
 
-  // Physical Attributes
-  sqft      Int
-  acre      Float?
-  imageUrls Json?
-  videoUrls Json? 
+  //5. Property Size & Dimensions
+  sqft      Int?
+  acre      Float
 
-  // Pricing
-  askingPrice Float
-  minPrice    Float
-  disPrice    Float?
+//6. Pricing
+  askingPrice   Float
+  minPrice      Float
+  disPrice      Float
+  hoaPoa        String
+  hoaFee        Float?
+  hoaPaymentTerms String?
+  tax           Float?
 
-  // Financing & Pricing Calculations
-  financing           String?
-  tax                 Float?
+//7. Financing & Pricing Calculations
+  financing           String
   serviceFee          Float?
   term                Int?
   hoaMonthly          Float?
@@ -145,23 +146,26 @@ model Residency {
   purchasePrice       Float?
   financedPrice       Float?
 
-  // Utilities and Infrastructure
+  // 8. Utilities and Infrastructure
   water         String?
   sewer         String?
   electric      String?
   roadCondition String?
   floodplain    String?
 
-  // Miscellaneous
-  ltag      String?
-  rtag      String?
-  landId    String
-  viewCount Int?    @default(0) // View count for unique views
-
-    // CMA fields
+  //9. CMA fields
   hasCma         Boolean  @default(false)
   cmaData        String?
   cmaFilePath    String?
+
+  //10. Media & Tags
+  imageUrls Json?
+  videoUrls Json?
+  ltag      String?
+  rtag      String?
+
+  // Miscellaneous
+  viewCount Int?    @default(0) // View count for unique views
 
   // Timestamps
   createdAt DateTime @default(now())
@@ -217,7 +221,7 @@ model Buyer {
   email          String          @unique
   phone          String?         @unique
   buyerType      BuyerType?
-  firstName      String
+  firstName      String?
   lastName       String?
   source         String?
   preferredAreas String[]
