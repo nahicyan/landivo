@@ -27,7 +27,6 @@ import Financing from "./pages/Financing/Financing";
 import AboutUs from "./pages/AboutUs/AboutUs";
 import Support from "./pages/Support/Support";
 import Admin from "./pages/Admin/Admin";
-import CreateUser from "./pages/CreateUser/CreateUser";
 import ScrollToTop from "./components/ScrollToTop/ScrollToTop";
 import Sell from "./pages/Sell/Sell";
 import Qualify from "./pages/Qualify/Qualify";
@@ -58,7 +57,6 @@ import { PERMISSIONS } from "./utils/permissions";
 import { ActivityTrackingProvider } from "./components/ActivityTracking/ActivityTrackingProvider";
 import { useApiAuthInterceptor } from "./utils/apiInterceptor";
 import AdminProperties from "./pages/AdminProperties/AdminProperties";
-
 import "react-toastify/dist/ReactToastify.css";
 
 const queryClient = new QueryClient({
@@ -123,10 +121,6 @@ function App() {
                             }
                           />
                           <Route path="/qualify" element={<Qualify />} />
-                          <Route
-                            path="/CreateUservbtwP44jbX0FKKYUdHBGGCcYqenvNlYdH1Sj7K1dSD3kRo1Pib5VXQWb59a7CkQZ4DiQuu5r1t9I0uXVUbYjvvj4E1djRIkXRh40Uvbz2jSz6PZKguOjGhi7avF1b"
-                            element={<CreateUser />}
-                          />
                         </Route>
 
                         {/* Admin routes - using permissions instead of roles */}
