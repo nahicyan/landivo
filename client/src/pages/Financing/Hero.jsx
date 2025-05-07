@@ -65,7 +65,7 @@ export default function HeroSection() {
             {/* 1) TOP CARD (spans 2 columns): Farmland aerial image + tags */}
             <div className="relative col-span-1 rounded-xl bg-gray-100 md:col-span-2 overflow-hidden">
               <img
-                src="./finance.jpg"
+                src="https://cdn.landivo.com/wp-content/uploads/2025/04/finance.jpg"
                 className="w-full object-cover"
                 style={{ aspectRatio: "16 / 9" }} // Adjust this ratio as needed
               />

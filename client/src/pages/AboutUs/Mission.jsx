@@ -45,7 +45,7 @@ export default function Mission() {
           <Card className="flex h-full w-full max-w-lg items-center justify-center rounded-2xl bg-white p-2 shadow-md">
             {/* Larger Image */}
             <img
-              src="./Mission.jpg"
+              src="https://cdn.landivo.com/wp-content/uploads/2025/04/Mission.jpg"
               alt="Land illustration"
               className="h-auto w-full max-w-md md:max-w-lg object-contain rounded-xl"
             />

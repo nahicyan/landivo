@@ -32,7 +32,7 @@ export default function MainContent() {
             {/* Right Column: Image (fully inside the card) */}
             <div>
               <img
-                src="./mainfinance.jpg"
+                src="https://cdn.landivo.com/wp-content/uploads/2025/04/mainfinance.jpg"
                 alt="Land financing example"
                 className="h-full w-full object-cover rounded-lg shadow-lg"
               />

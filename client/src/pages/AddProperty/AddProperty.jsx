@@ -13,6 +13,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/components/hooks/useAuth";
 import { motion, AnimatePresence } from "framer-motion";
+import { AlertCircle, Check, Loader2 } from "lucide-react";
 
 // Import subcomponents
 import SystemInfo from "@/components/AddProperty/SystemInfo";
@@ -26,20 +27,24 @@ import Financing from "@/components/AddProperty/Financing";
 import Utilities from "@/components/AddProperty/Utilities";
 import MediaTags from "@/components/AddProperty/MediaTags";
 
-// OPTIONAL: A small icon for completed steps (from Lucide)
-import { Check } from "lucide-react";
-
 export default function AddProperty() {
   const navigate = useNavigate();
   const { user } = useAuth();
 
   // Current step index
   const [step, setStep] = useState(0);
+  
+  // Loading state for submission
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Dialog state for alert after submission
   const [dialogOpen, setDialogOpen] = useState(false);
   const [dialogMessage, setDialogMessage] = useState("");
   const [dialogType, setDialogType] = useState("success"); // "success" or "warning"
+  
+  // State for validation errors
+  const [formErrors, setFormErrors] = useState({});
+  const [showValidationAlert, setShowValidationAlert] = useState(false);
 
   // Form data state
   const [formData, setFormData] = useState({
@@ -47,7 +52,7 @@ export default function AddProperty() {
     ownerId: "",
     status: "",
     area: "",
-    featured: "",
+    featured: "Not Featured",
     featuredPosition: 0,
 
     // Listing Details
@@ -56,13 +61,13 @@ export default function AddProperty() {
     notes: "",
 
     // Classification
-    type: "",
-    landType: [], // Now an array
+    type: "Land", // Default value
+    landType: [],
     legalDescription: "",
     zoning: "",
     restrictions: "",
     mobileHomeFriendly: "",
-    hoaPoa: "",
+    hoaPoa: "No", // Default value
     hoaPaymentTerms: "",
     hoaFee: "",
     survey: "",
@@ -95,7 +100,7 @@ export default function AddProperty() {
     disPrice: "",
 
     // Financing and Payment Calculation
-    financing: "",
+    financing: "Not-Available", // Default value
     tax: "",
     hoaMonthly: "",
     serviceFee: "35",
@@ -120,21 +125,78 @@ export default function AddProperty() {
     sewer: "",
     electric: "",
     roadCondition: "",
-    floodplain: "",
+    floodplain: "No", // Default value
 
     //Media & Tags
     ltag: "",
-    rtag: "",
-    imageUrls: "",
-    videoUrls: "", // Add videoUrls field
+    rtag: ""
   });
 
   // Media state
   const [uploadedImages, setUploadedImages] = useState([]);
-  // Add new state for videos
   const [uploadedVideos, setUploadedVideos] = useState([]);
-  // Add new state for CMA file
   const [cmaFile, setCmaFile] = useState(null);
+
+  // Required fields for each step (based on Prisma schema without ?)
+  const requiredFieldsByStep = {
+    0: ["status", "area"], // System Info
+    1: ["title", "description"], // Listing Details
+    2: ["type", "landType", "zoning"], // Classification
+    3: ["streetAddress", "city", "state", "zip", "latitude", "longitude", "apnOrPin" ], // Location
+    4: ["sqft"], // Dimensions
+    5: ["askingPrice","minPrice","disPrice","hoaPoa"], // Pricing
+    6: ["financing"],
+    7: ["water", "sewer", "electric", "roadCondition", "floodplain"] // Utilities
+  };
+
+
+  // Validation function for the current step
+  const validateStep = (stepIndex) => {
+    const currentRequiredFields = requiredFieldsByStep[stepIndex] || [];
+    const errors = {};
+    let isValid = true;
+
+    currentRequiredFields.forEach(field => {
+      // Handle rich text fields
+      if (field === 'title' || field === 'description') {
+        const textContent = formData[field]?.replace(/<[^>]*>/g, '')?.trim();
+        if (!textContent) {
+          errors[field] = 'This field is required';
+          isValid = false;
+        }
+      } 
+      // Handle array fields
+      else if (field === 'landType') {
+        if (!Array.isArray(formData[field]) || formData[field].length === 0) {
+          errors[field] = 'At least one land type is required';
+          isValid = false;
+        }
+      }
+      // Handle numeric fields
+      else if (['sqft', 'askingPrice', 'minPrice'].includes(field)) {
+        const numValue = formData[field]?.toString().replace(/,/g, '');
+        if (!numValue || isNaN(parseFloat(numValue))) {
+          errors[field] = 'This field is required';
+          isValid = false;
+        }
+      }
+      // Handle regular string fields
+      else if (!formData[field] || formData[field].toString().trim() === '') {
+        errors[field] = 'This field is required';
+        isValid = false;
+      }
+    });
+
+    return { valid: isValid, errors };
+  };
+
+  // Helper function to check if rich text is empty
+  const isRichTextEmpty = (value) => {
+    if (!value) return true;
+    // Remove HTML tags and check if anything remains
+    const textOnly = value.replace(/<[^>]*>/g, '').trim();
+    return !textOnly;
+  };
 
   // Add handler for CMA file upload
   const handleCmaFileUpload = (file) => {
@@ -144,6 +206,16 @@ export default function AddProperty() {
   // Numeric fields formatting, etc.
   const handleChange = (e) => {
     const { name, value } = e.target;
+    
+    // Clear validation error when field is edited
+    if (formErrors[name]) {
+      setFormErrors(prev => {
+        const updated = { ...prev };
+        delete updated[name];
+        return updated;
+      });
+    }
+    
     setFormData((prev) => {
       const updated = { ...prev };
       const numericFields = [
@@ -161,7 +233,6 @@ export default function AddProperty() {
         "tax",
         "hoaMonthly",
         "serviceFee",
-        //"term",
         "interestOne",
         "interestTwo",
         "interestThree",
@@ -203,7 +274,39 @@ export default function AddProperty() {
   // Handle form submission
   const handleSubmitForm = async (e) => {
     if (e) e.preventDefault();
+    
+    // Validate the final step
+    const finalValidation = validateStep(step);
+    if (!finalValidation.valid) {
+      setFormErrors(finalValidation.errors);
+      setShowValidationAlert(true);
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+      return;
+    }
+    
+    // Validate all steps to make sure everything is filled
+    let allValid = true;
+    let allErrors = {};
 
+    Object.keys(requiredFieldsByStep).forEach(stepIdx => {
+      const validation = validateStep(parseInt(stepIdx));
+      if (!validation.valid) {
+        allValid = false;
+        allErrors = { ...allErrors, ...validation.errors };
+      }
+    });
+
+    if (!allValid) {
+      setFormErrors(allErrors);
+      setShowValidationAlert(true);
+      setDialogMessage("Please complete all required fields before submitting");
+      setDialogType("warning");
+      setDialogOpen(true);
+      return;
+    }
+
+    setIsSubmitting(true);
+    
     try {
       const numericFields = [
         // Physical Attributes
@@ -220,7 +323,6 @@ export default function AddProperty() {
         "tax",
         "hoaMonthly",
         "serviceFee",
-        //"term",
         "interestOne",
         "interestTwo",
         "interestThree",
@@ -265,37 +367,15 @@ export default function AddProperty() {
         multipartForm.append("cmaFile", cmaFile);
       }
 
-      // If existing images
-      let existingImages = [];
-      if (formData.imageUrls && formData.imageUrls.trim() !== "") {
-        try {
-          existingImages = JSON.parse(formData.imageUrls);
-          if (!Array.isArray(existingImages)) existingImages = [];
-        } catch (err) {
-          existingImages = [];
-        }
-      }
-      multipartForm.append("imageUrls", JSON.stringify(existingImages));
-
-      // If existing videos
-      let existingVideos = [];
-      if (formData.videoUrls && formData.videoUrls.trim() !== "") {
-        try {
-          existingVideos = JSON.parse(formData.videoUrls);
-          if (!Array.isArray(existingVideos)) existingVideos = [];
-        } catch (err) {
-          existingVideos = [];
-        }
-      }
-      multipartForm.append("videoUrls", JSON.stringify(existingVideos));
+      // Append empty array for image URLs
+      multipartForm.append("imageUrls", JSON.stringify([]));
+      multipartForm.append("videoUrls", JSON.stringify([]));
 
       // Append newly uploaded files
       uploadedImages.forEach((file) => multipartForm.append("images", file));
-      
-      // Append newly uploaded videos
       uploadedVideos.forEach((file) => multipartForm.append("videos", file));
 
-      await createResidencyWithFiles(multipartForm);
+      const result = await createResidencyWithFiles(multipartForm);
 
       setDialogMessage("Property added successfully!");
       setDialogType("success");
@@ -311,6 +391,8 @@ export default function AddProperty() {
       setDialogMessage(`Failed to create property: ${errorMsg}`);
       setDialogType("warning");
       setDialogOpen(true);
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -320,38 +402,67 @@ export default function AddProperty() {
     // Form submission is handled explicitly by buttons
   };
 
-  // Steps navigation
-  const nextStep = () =>
-    setStep((prev) => Math.min(prev + 1, steps.length - 1));
-  const prevStep = () => setStep((prev) => Math.max(prev - 1, 0));
+  // Steps navigation with validation
+  const nextStep = () => {
+    const validation = validateStep(step);
+    
+    if (validation.valid) {
+      // Clear errors when validation passes
+      setFormErrors({});
+      setShowValidationAlert(false);
+      setStep(prev => Math.min(prev + 1, steps.length - 1));
+    } else {
+      // Update errors state to show validation messages
+      setFormErrors(validation.errors);
+      setShowValidationAlert(true);
+      
+      // Scroll to the top to show validation alert
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+  };
+  
+  const prevStep = () => setStep(prev => Math.max(prev - 1, 0));
 
   // Define steps array with all necessary props passed to each component
   const steps = [
     {
       title: "System Info",
-      component: <SystemInfo formData={formData} handleChange={handleChange} />,
+      component: <SystemInfo formData={formData} handleChange={handleChange} errors={formErrors} />,
     },
     {
       title: "Listing Details",
       component: (
         <ListingDetails
           formData={formData}
-          handleTitleChange={(val) =>
-            setFormData((prev) => ({ ...prev, title: val }))
-          }
-          handleDescriptionChange={(val) =>
-            setFormData((prev) => ({ ...prev, description: val }))
-          }
-          handleNotesChange={(val) =>
-            setFormData((prev) => ({ ...prev, notes: val }))
-          }
+          errors={formErrors}
+          handleTitleChange={(val) => {
+            if (formErrors.title) {
+              setFormErrors(prev => {
+                const updated = { ...prev };
+                delete updated.title;
+                return updated;
+              });
+            }
+            setFormData(prev => ({ ...prev, title: val }));
+          }}
+          handleDescriptionChange={(val) => {
+            if (formErrors.description) {
+              setFormErrors(prev => {
+                const updated = { ...prev };
+                delete updated.description;
+                return updated;
+              });
+            }
+            setFormData(prev => ({ ...prev, description: val }));
+          }}
+          handleNotesChange={(val) => setFormData(prev => ({ ...prev, notes: val }))}
         />
       ),
     },
     {
       title: "Classification",
       component: (
-        <Classification formData={formData} handleChange={handleChange} />
+        <Classification formData={formData} handleChange={handleChange} errors={formErrors} />
       ),
     },
     {
@@ -361,16 +472,30 @@ export default function AddProperty() {
           formData={formData}
           handleChange={handleChange}
           setFormData={setFormData}
+          errors={formErrors}
         />
       ),
     },
     {
       title: "Dimensions",
-      component: <Dimension formData={formData} handleChange={handleChange} setFormData={setFormData} />,
+      component: (
+        <Dimension 
+          formData={formData} 
+          handleChange={handleChange} 
+          setFormData={setFormData}
+          errors={formErrors}
+        />
+      ),
     },
     {
       title: "Pricing",
-      component: <Pricing formData={formData} handleChange={handleChange} />,
+      component: (
+        <Pricing 
+          formData={formData} 
+          handleChange={handleChange}
+          errors={formErrors}
+        />
+      ),
     },
     {
       title: "Financing",
@@ -378,13 +503,30 @@ export default function AddProperty() {
         <Financing
           formData={formData}
           handleChange={handleChange}
-          updateFormData={(updatedData) => setFormData(updatedData)}
+          updateFormData={(updatedData) => {
+            // Clear any financing related errors when updating form data
+            const updatedErrors = { ...formErrors };
+            Object.keys(updatedErrors).forEach(key => {
+              if (['financing', 'term', 'interestOne'].includes(key)) {
+                delete updatedErrors[key];
+              }
+            });
+            setFormErrors(updatedErrors);
+            setFormData(updatedData);
+          }}
+          errors={formErrors}
         />
       ),
     },
     {
       title: "Utilities",
-      component: <Utilities formData={formData} handleChange={handleChange} />,
+      component: (
+        <Utilities 
+          formData={formData} 
+          handleChange={handleChange}
+          errors={formErrors}
+        />
+      ),
     },
     {
       title: "Market Analysis",
@@ -396,6 +538,7 @@ export default function AddProperty() {
           handleCmaDataChange={(val) => 
             setFormData((prev) => ({ ...prev, cmaData: val }))
           }
+          errors={formErrors}
         />
       ),
     },
@@ -409,44 +552,50 @@ export default function AddProperty() {
           setUploadedImages={setUploadedImages}
           uploadedVideos={uploadedVideos}
           setUploadedVideos={setUploadedVideos}
+          errors={formErrors}
         />
       ),
     },
   ];
 
-  // Improved Step Indicator - Display all steps without scrolling
+  // Step Indicator component
   const StepIndicator = ({ currentStep }) => {
     return (
       <div className="w-full flex items-center justify-between mb-8 px-2">
         {steps.map((item, index) => {
           const isActive = index === currentStep;
           const isCompleted = index < currentStep;
+          const hasErrors = Object.keys(requiredFieldsByStep[index] || {}).some(
+            field => Object.keys(formErrors).includes(field)
+          );
 
           return (
             <React.Fragment key={index}>
               {/* Circle with number or check */}
               <div className="flex flex-col items-center">
                 <div
-                  className={
-                    "w-8 h-8 flex items-center justify-center rounded-full border-2 " +
-                    (isCompleted
-                      ? "border-green-500 bg-green-500 text-white"
-                      : isActive
-                      ? "border-blue-500 bg-blue-100 text-blue-700"
-                      : "border-gray-300 bg-white text-gray-500")
-                  }
+                  className={`w-8 h-8 flex items-center justify-center rounded-full border-2 ${
+                    hasErrors 
+                      ? "border-red-500 bg-red-100 text-red-700"
+                      : isCompleted
+                        ? "border-green-500 bg-green-500 text-white"
+                        : isActive
+                          ? "border-blue-500 bg-blue-100 text-blue-700"
+                          : "border-gray-300 bg-white text-gray-500"
+                  }`}
                 >
                   {isCompleted ? <Check className="w-4 h-4" /> : index + 1}
                 </div>
 
                 {/* Step title - shown underneath in small text */}
                 <span
-                  className={
-                    "text-xs mt-1 text-center " +
-                    (isCompleted || isActive
-                      ? "font-semibold text-gray-900"
-                      : "text-gray-500")
-                  }
+                  className={`text-xs mt-1 text-center ${
+                    hasErrors
+                      ? "font-semibold text-red-600"
+                      : isCompleted || isActive
+                        ? "font-semibold text-gray-900"
+                        : "text-gray-500"
+                  }`}
                 >
                   {item.title}
                 </span>
@@ -465,8 +614,37 @@ export default function AddProperty() {
 
   return (
     <div className="max-w-6xl mx-auto p-6 space-y-6">
+      <h1 className="text-2xl md:text-3xl font-bold text-[#324c48] text-center mb-4">
+        Add New Property
+      </h1>
+      
       {/* Step Indicator */}
       <StepIndicator currentStep={step} />
+
+      {/* Validation Alert */}
+      {showValidationAlert && Object.keys(formErrors).length > 0 && (
+        <div className="bg-red-50 border-l-4 border-red-500 p-4 mb-4 rounded-r-md">
+          <div className="flex items-start">
+            <div className="flex-shrink-0">
+              <AlertCircle className="h-5 w-5 text-red-500" aria-hidden="true" />
+            </div>
+            <div className="ml-3">
+              <h3 className="text-sm font-medium text-red-800">
+                Please complete all required fields
+              </h3>
+              <div className="mt-2 text-sm text-red-700">
+                <ul className="list-disc pl-5 space-y-1">
+                  {Object.keys(formErrors).map((field) => (
+                    <li key={field}>
+                      {field.charAt(0).toUpperCase() + field.slice(1).replace(/([A-Z])/g, ' $1')} is required
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Form with explicit onSubmit handler to prevent default behavior */}
       <form onSubmit={handleFormSubmit} className="w-full">
@@ -492,8 +670,12 @@ export default function AddProperty() {
               <Button
                 type="button"
                 onClick={prevStep}
-                className="bg-gray-300 text-gray-800 px-4 py-2 rounded-md"
+                className="bg-gray-300 text-gray-800 px-4 py-2 rounded-md flex items-center"
+                disabled={isSubmitting}
               >
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                </svg>
                 Previous
               </Button>
             )}
@@ -505,17 +687,33 @@ export default function AddProperty() {
               <Button
                 type="button"
                 onClick={nextStep}
-                className="bg-[#324c48] text-white px-4 py-2 rounded-md"
+                className="bg-[#324c48] text-white px-4 py-2 rounded-md flex items-center"
               >
                 Next
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 ml-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                </svg>
               </Button>
             ) : (
               <Button
-                type="button" // Make this a button not a submit
-                onClick={handleSubmitForm} // Use our explicit submit handler
-                className="bg-green-600 text-white px-4 py-2 rounded-md"
+                type="button"
+                onClick={handleSubmitForm}
+                className="bg-green-600 text-white px-4 py-2 rounded-md flex items-center"
+                disabled={isSubmitting}
               >
-                Submit
+                {isSubmitting ? (
+                  <>
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    Submitting...
+                  </>
+                ) : (
+                  <>
+                    Submit
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 ml-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                    </svg>
+                  </>
+                )}
               </Button>
             )}
           </div>

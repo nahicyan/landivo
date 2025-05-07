@@ -158,7 +158,7 @@ export const Lands = () => {
                               rounded-lg shadow-md overflow-hidden 
                               transition-transform transform hover:-translate-y-1 hover:shadow-xl">
                 <img
-                  src="./dfw.jpg"
+                  src="https://cdn.landivo.com/wp-content/uploads/2025/04/DFW.png"
                   alt="DFW"
                   className="w-full h-full object-cover"
                 />
@@ -179,7 +179,7 @@ export const Lands = () => {
                               rounded-lg shadow-md overflow-hidden 
                               transition-transform transform hover:-translate-y-1 hover:shadow-xl">
                 <img
-                  src="./austin.jpg"
+                  src="https://cdn.landivo.com/wp-content/uploads/2025/04/Austin.png"
                   alt="Austin"
                   className="w-full h-full object-cover"
                 />
@@ -199,7 +199,7 @@ export const Lands = () => {
                               rounded-lg shadow-md overflow-hidden 
                               transition-transform transform hover:-translate-y-1 hover:shadow-xl">
                 <img
-                  src="./houston.jpg"
+                  src="https://cdn.landivo.com/wp-content/uploads/2025/04/Houstin.png"
                   alt="Houston"
                   className="w-full h-full object-cover"
                 />
@@ -219,7 +219,7 @@ export const Lands = () => {
                               rounded-lg shadow-md overflow-hidden 
                               transition-transform transform hover:-translate-y-1 hover:shadow-xl">
                 <img
-                  src="./sanantonio.jpg"
+                  src="https://cdn.landivo.com/wp-content/uploads/2025/04/SanAntonio.png"
                   alt="San Antonio"
                   className="w-full h-full object-cover"
                 />
@@ -235,11 +235,11 @@ export const Lands = () => {
             {/* Others */}
             <div className="flex flex-col items-center">
               <h3 className="text-xl font-light mb-2 text-[#324c48]">Others</h3>
-              <div className="relative group w-full aspect-w-16 aspect-h-10 
+              <div className="relative group w-full aspect-square
                               rounded-lg shadow-md overflow-hidden 
                               transition-transform transform hover:-translate-y-1 hover:shadow-xl">
                 <img
-                  src="./others.jpg"
+                  src="https://cdn.landivo.com/wp-content/uploads/2025/04/others.jpg"
                   alt="Others"
                   className="w-full h-full object-cover"
                 />
