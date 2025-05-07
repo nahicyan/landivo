@@ -56,9 +56,7 @@ import { Auth0ProviderWithNavigate } from "./components/Auth0/Auth0Provider";
 import { PermissionsProvider } from "./components/Auth0/PermissionsContext";
 import { PERMISSIONS } from "./utils/permissions";
 import { ActivityTrackingProvider } from "./components/ActivityTracking/ActivityTrackingProvider";
-// Import our API interceptor hook
 import { useApiAuthInterceptor } from "./utils/apiInterceptor";
-// Import AdminProperties page
 import AdminProperties from "./pages/AdminProperties/AdminProperties";
 
 import "react-toastify/dist/ReactToastify.css";
@@ -87,11 +85,8 @@ function App() {
           <BrowserRouter>
             <Auth0ProviderWithNavigate>
               <PermissionsProvider>
-                {/* Add the ApiAuthProvider to automatically attach tokens to requests */}
                 <ApiAuthProvider>
-                  {/* Add VipBuyerProvider to make VIP status available throughout the app */}
                   <VipBuyerProvider>
-                    {/* Wrap with ActivityTrackingProvider to enable tracking for VIP buyers */}
                     <ActivityTrackingProvider>
                       <ScrollToTop />
                       <ProfileWarning />
@@ -101,10 +96,8 @@ function App() {
                           <Route path="/" element={<Site />} />
                           <Route path="/properties">
                             <Route index element={<Properties />} />
-                            {/* Use PropertyWithTracking instead of the original Property */}
                             <Route path=":propertyId" element={<PropertyWithTracking />} />
                             <Route path=":propertyId/offers" element={<OfferTable />} />
-                            {/* Qualification route - security disabled */}
                             <Route path=":propertyId/qualify" element={<Qualify />} />
                           </Route>
                           <Route path="/sell" element={<Sell />} />
@@ -129,7 +122,6 @@ function App() {
                               </ProtectedRoute>
                             }
                           />
-                          {/* Qualification route - security disabled */}
                           <Route path="/qualify" element={<Qualify />} />
                           <Route
                             path="/CreateUservbtwP44jbX0FKKYUdHBGGCcYqenvNlYdH1Sj7K1dSD3kRo1Pib5VXQWb59a7CkQZ4DiQuu5r1t9I0uXVUbYjvvj4E1djRIkXRh40Uvbz2jSz6PZKguOjGhi7avF1b"
@@ -154,30 +146,17 @@ function App() {
                           <Route path="add-property" element={<AddProperty />} />
                           <Route path="edit-property/:propertyId" element={<EditProperty />} />
                           <Route path="offers" element={<AdminOffer />} />
-
-                          
-                          {/* New Properties Management Route */}
-                          {/* <Route
-                            path="properties"
-                            element={
-                              <ProtectedRoute
-                                requiredPermissions={[PERMISSIONS.READ_PROPERTIES]}
-                                fallbackToRoles={true}
-                                allowedRoles={['Admin']}
-                              >
-                                <AdminProperties />
-                              </ProtectedRoute>
-                            }
-                          /> */}
                           <Route path="properties" element={<AdminProperties />} />
                           
-                          {/* Testing Deals */}
+                          {/* Deals */}
                           <Route path="deals" element={<AdminDeals />} />
                           <Route path="deals/list" element={<DealsList />} />
                           <Route path="deals/create" element={<CreateDealForm />} />
                           <Route path="deals/:id" element={<DealDetail />} />
                           <Route path="deals/:id/payments" element={<PaymentList />} />
                           <Route path="deals/:id/summary" element={<DealFinancialSummary />} />
+                          
+                          {/* Users */}
                           <Route
                             path="users"
                             element={
@@ -202,6 +181,8 @@ function App() {
                               </ProtectedRoute>
                             }
                           />
+                          
+                          {/* Buyers */}
                           <Route
                             path="buyers"
                             element={
@@ -274,10 +255,8 @@ function App() {
                               </ProtectedRoute>
                             }
                           />
-                          {/* Qualification dashboard - security disabled */}
+                          {/* Qualification dashboard */}
                           <Route path="financing" element={<AdminFinancing />} />
-                          
-                          {/* Financing applications - security disabled */}
                           <Route path="financing/applications" element={<OfferTable />} />
                         </Route>
 
@@ -294,7 +273,6 @@ function App() {
                             </ProtectedRoute>
                           }
                         >
-
                         </Route>
                       </Routes>
                     </ActivityTrackingProvider>

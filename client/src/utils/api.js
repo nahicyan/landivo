@@ -1,3 +1,5 @@
+// client/src/utils/api.js
+
 import axios from 'axios';
 import dayjs from 'dayjs';
 import { toast } from 'react-toastify';
@@ -13,58 +15,6 @@ export const api = axios.create({
 const handleRequestError = (error, message) => {
   console.error(`${message}:`, error);
   throw error;
-};
-
-// Example function to check session status
-export const checkSession = async () => {
-  try {
-    const response = await axios.get(`${import.meta.env.VITE_SERVER_URL}/auth/test-session`, {
-      withCredentials: true,
-    });
-    console.log("Session response:", response.data);
-    return response.data;
-  } catch (error) {
-    handleRequestError(error, "Session failed");
-  }
-};
-
-// Login function using session-based authentication
-export const loginUser = async (loginData) => {
-  try {
-    const response = await api.post('/user/login', loginData, {
-      withCredentials: true, // This ensures cookies are sent and received
-    });
-    console.log("Login response:", response.data);
-    return response.data;
-  } catch (error) {
-    console.error("Login failed:", error);
-    throw error;
-  }
-};
-
-
-// Logout function to end session
-export const logoutUser = async () => {
-  try {
-    // Use the 'api' instance which is configured with baseURL "${import.meta.env.VITE_SERVER_URL}/api"
-    // Adjust the endpoint path if needed (e.g., if logout route is at /auth/logout)
-    const response = await api.get('/auth/logout');
-    console.log("Logout successful:", response.data);
-    return response.data;
-  } catch (error) {
-    handleRequestError(error, "Logout failed");
-  }
-};
-
-// Register a new user
-export const registerUser = async (registerData) => {
-  try {
-    const response = await api.post('/user/register', registerData);
-    console.log("Registration response:", response.data);
-    return response.data;
-  } catch (error) {
-    handleRequestError(error, "Registration failed");
-  }
 };
 
 // Get all properties
@@ -166,7 +116,7 @@ export const getBuyerOffers = async (params) => {
   }
 };
 
-// New
+// New function to create residency with files
 export const createResidencyWithFiles = async (formData) => {
   try {
     const response = await api.post('/residency/createWithFile', formData, {
@@ -177,7 +127,6 @@ export const createResidencyWithFiles = async (formData) => {
     handleRequestError(error, "Failed to create property with files");
   }
 };
-
 
 // Submit qualification data
 export const submitQualification = async (qualificationData) => {
@@ -214,6 +163,7 @@ export const getAllQualifications = async (page = 1, limit = 10, filters = {}) =
     handleRequestError(error, "Failed to fetch qualifications");
   }
 };
+
 // Create A VIP Buyer
 export const createVipBuyer = async (buyerData) => {
   try {
@@ -225,7 +175,6 @@ export const createVipBuyer = async (buyerData) => {
 };
 
 // 9. API Client Function for User Detail
-
 export const getUserById = async (id) => {
   try {
     const response = await api.get(`/user/${id}`);
@@ -330,8 +279,6 @@ export const getBuyerActivity = async (buyerId, options = {}) => {
     handleRequestError(error, "Failed to fetch buyer activity");
   }
 };
-
-
 
 /**
  * Get a summary of buyer activity
@@ -451,7 +398,6 @@ export const sendEmailToList = async (listId, emailData) => {
 
 
 // Create a new deal
-
 export const createDeal = async (dealData) => {
   try {
     console.log("Creating deal with data:", JSON.stringify(dealData, null, 2));
@@ -574,43 +520,6 @@ export function useUserProfileApi() {
 }
 
 /**
- * Get user profile from database 
- * @returns {Promise<Object>} User profile data
- */
-export const getUserProfile = async () => {
-  try {
-    // This function requires authentication, so we need to get the token
-    // from the Auth0 provider - but since this isn't a React component, this
-    // will not work correctly. This is why we need the hook approach above.
-    console.warn("getUserProfile should be called from within a component using useUserProfileApi()");
-    
-    const response = await api.get('/user/profile');
-    return response.data;
-  } catch (error) {
-    handleRequestError(error, "Failed to fetch user profile");
-  }
-};
-
-/**
- * Update user profile information
- * @param {Object} profileData - User profile data to update
- * @returns {Promise<Object>} Updated user data
- */
-export const updateUserProfile = async (profileData) => {
-  try {
-    // This function requires authentication, so we need to get the token
-    // from the Auth0 provider - but since this isn't a React component, this
-    // will not work correctly. This is why we need the hook approach above.
-    console.warn("updateUserProfile should be called from within a component using useUserProfileApi()");
-    
-    const response = await api.put('/user/profile', profileData);
-    return response.data;
-  } catch (error) {
-    handleRequestError(error, "Failed to update user profile");
-  }
-};
-
-/**
  * Check if user exists in database by Auth0 ID
  * @param {string} auth0Id - Auth0 user ID
  * @returns {Promise<Object|null>} User object or null if not found
@@ -667,8 +576,6 @@ export const getUserAccountById = async (id) => {
     handleRequestError(error, "Failed to fetch user account");
   }
 };
-
-// Add to /client/src/utils/api.js
 
 /**
  * Get property rows with optional filtering by row type
