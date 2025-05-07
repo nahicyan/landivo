@@ -13,7 +13,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { motion, AnimatePresence } from "framer-motion";
 import { useAuth } from "@/components/hooks/useAuth";
-import { Loader2, Check, ChevronLeft, ChevronRight } from "lucide-react";
+import { Loader2, Check, ChevronLeft, ChevronRight, AlertCircle } from "lucide-react";
 
 // Import subcomponents
 import SystemInfo from "@/components/AddProperty/SystemInfo";
@@ -45,6 +45,10 @@ export default function EditProperty() {
   const [dialogMessage, setDialogMessage] = useState("");
   const [dialogType, setDialogType] = useState("success");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  
+  // State for validation
+  const [formErrors, setFormErrors] = useState({});
+  const [showValidationAlert, setShowValidationAlert] = useState(false);
   
   // Store raw numeric values separately to preserve full values
   const [rawValues, setRawValues] = useState({});
@@ -119,6 +123,50 @@ export default function EditProperty() {
     cmaData: "",
     cmaFilePath: "",
   });
+
+  // Required fields for each step (based on Prisma schema without ?)
+  const requiredFieldsByStep = {
+    0: ["status", "area"], // System Info
+    1: ["title", "description"], // Listing Details
+    2: ["type"], // Classification
+    3: ["streetAddress", "city", "state", "zip"], // Location
+    4: ["sqft"], // Dimensions
+    5: ["askingPrice"], // Pricing
+    7: ["water", "sewer", "electric", "roadCondition", "floodplain"] // Utilities
+  };
+
+  // Validation function for the current step
+  const validateStep = (stepIndex) => {
+    const currentRequiredFields = requiredFieldsByStep[stepIndex] || [];
+    const errors = {};
+    let isValid = true;
+
+    currentRequiredFields.forEach(field => {
+      // Handle rich text fields
+      if (field === 'title' || field === 'description') {
+        const textContent = formData[field]?.replace(/<[^>]*>/g, '')?.trim();
+        if (!textContent) {
+          errors[field] = 'This field is required';
+          isValid = false;
+        }
+      } 
+      // Handle numeric fields
+      else if (['sqft', 'askingPrice', 'minPrice'].includes(field)) {
+        const numValue = formData[field]?.toString().replace(/,/g, '');
+        if (!numValue || isNaN(parseFloat(numValue))) {
+          errors[field] = 'This field is required';
+          isValid = false;
+        }
+      }
+      // Handle regular string fields
+      else if (!formData[field] || formData[field].toString().trim() === '') {
+        errors[field] = 'This field is required';
+        isValid = false;
+      }
+    });
+
+    return { valid: isValid, errors };
+  };
 
   // Media state
   const [existingImages, setExistingImages] = useState([]);
@@ -211,9 +259,6 @@ export default function EditProperty() {
               // Keep original if parsing fails
             }
           }
-          
-          // Final check - log the result for debugging
-          console.log("Processed landType:", processedData.landType);
         } catch (e) {
           console.error("Error processing landType:", e);
           processedData.landType = [];
@@ -273,6 +318,15 @@ export default function EditProperty() {
   const handleChange = (e) => {
     const { name, value } = e.target;
     
+    // Clear validation error when field is edited
+    if (formErrors[name]) {
+      setFormErrors(prev => {
+        const updated = { ...prev };
+        delete updated[name];
+        return updated;
+      });
+    }
+    
     if (numericFields.includes(name)) {
       // For numeric fields, store raw value and display formatted value
       const rawValue = value.replace(/,/g, "");
@@ -331,6 +385,37 @@ export default function EditProperty() {
   // Handle form submission
   const handleSubmitForm = async (e) => {
     if (e) e.preventDefault();
+    
+    // Validate the final step
+    const finalValidation = validateStep(step);
+    if (!finalValidation.valid) {
+      setFormErrors(finalValidation.errors);
+      setShowValidationAlert(true);
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+      return;
+    }
+    
+    // Validate all steps to make sure everything is filled
+    let allValid = true;
+    let allErrors = {};
+
+    Object.keys(requiredFieldsByStep).forEach(stepIdx => {
+      const validation = validateStep(parseInt(stepIdx));
+      if (!validation.valid) {
+        allValid = false;
+        allErrors = { ...allErrors, ...validation.errors };
+      }
+    });
+
+    if (!allValid) {
+      setFormErrors(allErrors);
+      setShowValidationAlert(true);
+      setDialogMessage("Please complete all required fields before submitting");
+      setDialogType("warning");
+      setDialogOpen(true);
+      return;
+    }
+    
     setIsSubmitting(true);
   
     try {
@@ -426,29 +511,67 @@ export default function EditProperty() {
   };
 
   const handleFormSubmit = (e) => e.preventDefault();
-  const nextStep = () => setStep(prev => Math.min(prev + 1, steps.length - 1));
+  
+  // Steps navigation with validation
+  const nextStep = () => {
+    const validation = validateStep(step);
+    
+    if (validation.valid) {
+      // Clear errors when validation passes
+      setFormErrors({});
+      setShowValidationAlert(false);
+      setStep(prev => Math.min(prev + 1, steps.length - 1));
+    } else {
+      // Update errors state to show validation messages
+      setFormErrors(validation.errors);
+      setShowValidationAlert(true);
+      
+      // Scroll to the top to show validation alert
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+  };
+  
   const prevStep = () => setStep(prev => Math.max(prev - 1, 0));
 
   // Define steps array with components
   const steps = [
     {
       title: "System Info",
-      component: <SystemInfo formData={formData} handleChange={handleChange} />,
+      component: <SystemInfo formData={formData} handleChange={handleChange} errors={formErrors} />,
     },
     {
       title: "Listing Details",
       component: (
         <ListingDetails
           formData={formData}
-          handleTitleChange={(val) => setFormData(prev => ({ ...prev, title: val }))}
-          handleDescriptionChange={(val) => setFormData(prev => ({ ...prev, description: val }))}
+          errors={formErrors}
+          handleTitleChange={(val) => {
+            if (formErrors.title) {
+              setFormErrors(prev => {
+                const updated = { ...prev };
+                delete updated.title;
+                return updated;
+              });
+            }
+            setFormData(prev => ({ ...prev, title: val }));
+          }}
+          handleDescriptionChange={(val) => {
+            if (formErrors.description) {
+              setFormErrors(prev => {
+                const updated = { ...prev };
+                delete updated.description;
+                return updated;
+              });
+            }
+            setFormData(prev => ({ ...prev, description: val }));
+          }}
           handleNotesChange={(val) => setFormData(prev => ({ ...prev, notes: val }))}
         />
       ),
     },
     {
       title: "Classification",
-      component: <Classification formData={formData} handleChange={handleChange} />,
+      component: <Classification formData={formData} handleChange={handleChange} errors={formErrors} />,
     },
     {
       title: "Location",
@@ -457,16 +580,17 @@ export default function EditProperty() {
           formData={formData}
           handleChange={handleChange}
           setFormData={setFormData}
+          errors={formErrors}
         />
       ),
     },
     {
       title: "Dimensions",
-      component: <Dimension formData={formData} handleChange={handleChange} />,
+      component: <Dimension formData={formData} handleChange={handleChange} setFormData={setFormData} errors={formErrors} />,
     },
     {
       title: "Pricing",
-      component: <Pricing formData={formData} handleChange={handleChange} />,
+      component: <Pricing formData={formData} handleChange={handleChange} errors={formErrors} />,
     },
     {
       title: "Financing",
@@ -492,12 +616,13 @@ export default function EditProperty() {
             setRawValues(newRawValues);
             setFormData(newFormData);
           }}
+          errors={formErrors}
         />
       ),
     },
     {
       title: "Utilities",
-      component: <Utilities formData={formData} handleChange={handleChange} />,
+      component: <Utilities formData={formData} handleChange={handleChange} errors={formErrors} />,
     },
     {
       title: "Market Analysis",
@@ -511,6 +636,7 @@ export default function EditProperty() {
           handleCmaDataChange={(val) => 
             setFormData((prev) => ({ ...prev, cmaData: val }))
           }
+          errors={formErrors}
         />
       ),
     },
@@ -528,12 +654,13 @@ export default function EditProperty() {
           setUploadedVideos={setUploadedVideos}
           existingVideos={existingVideos}
           setExistingVideos={setExistingVideos}
+          errors={formErrors}
         />
       ),
     },
   ];
 
-  // Step Indicator component - UPDATED to make all steps clickable
+  // Step Indicator component - UPDATED to make all steps clickable and show validation errors
   const StepIndicator = ({ currentStep }) => {
     // Function to navigate directly to any step when clicked
     const goToStep = (index) => {
@@ -546,8 +673,8 @@ export default function EditProperty() {
         {steps.map((item, index) => {
           const isActive = index === currentStep;
           const isCompleted = index < currentStep;
-          // All steps are now clickable
-          const isClickable = true;
+          const hasErrors = requiredFieldsByStep[index] && 
+            requiredFieldsByStep[index].some(field => Object.keys(formErrors).includes(field));
 
           return (
             <React.Fragment key={index}>
@@ -557,20 +684,24 @@ export default function EditProperty() {
               >
                 <div
                   className={`w-8 h-8 flex items-center justify-center rounded-full border-2 
-                    ${isCompleted
-                      ? "border-green-500 bg-green-500 text-white hover:bg-green-600"
-                      : isActive
-                      ? "border-blue-500 bg-blue-100 text-blue-700 hover:bg-blue-200"
-                      : "border-gray-300 bg-white text-gray-500 hover:border-gray-400 hover:bg-gray-100"
+                    ${hasErrors
+                      ? "border-red-500 bg-red-100 text-red-700"
+                      : isCompleted
+                        ? "border-green-500 bg-green-500 text-white hover:bg-green-600"
+                        : isActive
+                          ? "border-blue-500 bg-blue-100 text-blue-700 hover:bg-blue-200"
+                          : "border-gray-300 bg-white text-gray-500 hover:border-gray-400 hover:bg-gray-100"
                     } transition-colors duration-200`}
                 >
                   {isCompleted ? <Check className="w-4 h-4" /> : index + 1}
                 </div>
                 <span
                   className={`text-xs mt-1 text-center ${
-                    isCompleted || isActive
-                      ? "font-semibold text-gray-900"
-                      : "text-gray-500"
+                    hasErrors
+                      ? "font-semibold text-red-600"
+                      : isCompleted || isActive
+                        ? "font-semibold text-gray-900"
+                        : "text-gray-500"
                   } hover:text-gray-900`}
                 >
                   {item.title}
@@ -634,6 +765,31 @@ export default function EditProperty() {
       </div>
 
       <StepIndicator currentStep={step} />
+
+      {/* Validation Alert */}
+      {showValidationAlert && Object.keys(formErrors).length > 0 && (
+        <div className="bg-red-50 border-l-4 border-red-500 p-4 mb-4 rounded-r-md">
+          <div className="flex items-start">
+            <div className="flex-shrink-0">
+              <AlertCircle className="h-5 w-5 text-red-500" aria-hidden="true" />
+            </div>
+            <div className="ml-3">
+              <h3 className="text-sm font-medium text-red-800">
+                Please complete all required fields
+              </h3>
+              <div className="mt-2 text-sm text-red-700">
+                <ul className="list-disc pl-5 space-y-1">
+                  {Object.keys(formErrors).map((field) => (
+                    <li key={field}>
+                      {field.charAt(0).toUpperCase() + field.slice(1).replace(/([A-Z])/g, ' $1')} is required
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       <form onSubmit={handleFormSubmit} className="w-full">
         <AnimatePresence mode="wait">
