@@ -4,19 +4,17 @@ import React from "react";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Select, SelectTrigger, SelectContent, SelectItem, SelectValue } from "@/components/ui/select";
 import AddressAutocomplete from "@/components/AddressAutocomplete/AddressAutocomplete";
 
 export default function Location({ formData, handleChange, setFormData }) {
-  // A helper to handle checkboxes (if not already in handleChange)
-  const handleCheckboxChange = (e) => {
-    const { name, checked } = e.target;
-    if (name === "landId") {
-      setFormData({ ...formData, [name]: checked ? "included" : false });
-    } else {
-      setFormData({ ...formData, [name]: checked });
-    }
+  // Handle landId selection
+  const handleLandIdChange = (value) => {
+    setFormData({
+      ...formData,
+      landId: value === "Available" // true if Available, false if Not Available
+    });
   };
-
 
   return (
     <Card className="border border-gray-200 shadow-md rounded-lg w-full">
@@ -142,6 +140,7 @@ export default function Location({ formData, handleChange, setFormData }) {
             />
           </div>
         </div>
+        
         {/* Direction Field */}
         <div className="flex flex-col">
           <Label htmlFor="direction" className="text-sm font-semibold text-gray-700">
@@ -174,23 +173,32 @@ export default function Location({ formData, handleChange, setFormData }) {
           />
         </div>
 
-        {/* New Row: Land ID Checkbox and Land ID Link Field */}
-        <div className="space-y-2">
-          <div className="flex items-center">
-            <input
-              type="checkbox"
-              name="landId"
-              checked={formData.landId || false}
-              onChange={handleCheckboxChange}
-              className="mr-2"
-            />
-            <Label className="text-sm font-semibold text-gray-700">
-              Include Land ID
+        {/* Land ID and Link Field - Side by Side */}
+        <div className="sm:grid sm:grid-cols-2 sm:gap-4">
+          {/* Land ID dropdown - 50% */}
+          <div className="flex flex-col mb-2 sm:mb-0">
+            <Label htmlFor="landId" className="text-sm font-semibold text-gray-700 mb-1">
+              Land ID Availability
             </Label>
+            <Select
+              value={formData.landId ? "Available" : "Not Available"}
+              onValueChange={handleLandIdChange}
+              defaultValue="Not Available"
+            >
+              <SelectTrigger className="w-full">
+                <SelectValue placeholder="Not Available" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="Available">Available</SelectItem>
+                <SelectItem value="Not Available">Not Available</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
+          
+          {/* Land ID Link - 50%, only shown when landId is true */}
           {formData.landId && (
             <div className="flex flex-col">
-              <Label htmlFor="landIdLink" className="text-sm font-semibold text-gray-700">
+              <Label htmlFor="landIdLink" className="text-sm font-semibold text-gray-700 mb-1">
                 Land ID Link
               </Label>
               <Input
@@ -200,7 +208,6 @@ export default function Location({ formData, handleChange, setFormData }) {
                 value={formData.landIdLink || ""}
                 onChange={handleChange}
                 placeholder="Enter Land ID Link"
-                className="mt-1"
               />
             </div>
           )}

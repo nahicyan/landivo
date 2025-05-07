@@ -87,7 +87,7 @@ export default function AddProperty() {
     latitude: "",
     longitude: "",
     apnOrPin: "",
-    landId: "",
+    landId: false,
     landIdLink: "",
 
     // Dimensions
@@ -142,7 +142,7 @@ export default function AddProperty() {
     0: ["status", "area"], // System Info
     1: ["title", "description"], // Listing Details
     2: ["type", "landType", "zoning"], // Classification
-    3: ["streetAddress", "city", "state", "zip", "latitude", "longitude", "apnOrPin" ], // Location
+    3: ["streetAddress", "city", "state", "zip", "latitude", "longitude", "apnOrPin"], // Location
     4: ["sqft"], // Dimensions
     5: ["askingPrice","minPrice","disPrice","hoaPoa"], // Pricing
     6: ["financing"],

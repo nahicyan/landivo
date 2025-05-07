@@ -184,7 +184,7 @@ export default function PropertyCarousel({ propertyData }) {
 
   // Render the land ID component
   const renderLandId = () => {
-    if (propertyData.landIdLink) {
+    if (propertyData.landId) {
       const embeddedLink = propertyData.landIdLink.replace("/share/", "/embed/");
       return (
         <iframe 
@@ -209,7 +209,7 @@ export default function PropertyCarousel({ propertyData }) {
   const hasImages = images.length > 0;
   const hasVideos = videos.length > 0;
   const hasMap = true; // Always show map option
-  const hasLandId = !!propertyData.landIdLink;
+  const hasLandId = !!propertyData.landId;
 
   // Show a fallback message if no content is available
   if (!hasImages && !hasVideos && !hasLandId) {

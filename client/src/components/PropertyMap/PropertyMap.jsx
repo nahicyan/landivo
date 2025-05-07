@@ -13,7 +13,7 @@ export default function PropertyMap({ propertyData }) {
   return (
     <Card className="border-none shadow-none bg-transparent">
       <CardContent className="relative w-full p-0">
-        {propertyData.landId === "included" ? (
+        {propertyData.landId ? (
           <div className="relative w-full aspect-[3/2]">
             <iframe
               loading="lazy"

@@ -274,7 +274,7 @@ export const createResidency = asyncHandler(async (req, res) => {
         // Miscellaneous
         ltag: ltag ?? null,
         rtag: rtag ?? null,
-        landId: landId ?? "Not-Available",
+        landId: landId === true || landId === "true" || landId === "included",
         
         // CMA fields
         hasCma: hasCma === "true" || hasCma === true,
@@ -454,6 +454,14 @@ export const updateResidency = asyncHandler(async (req, res) => {
         finalExistingVideos = [];
       }
     }
+
+    // Boolean Conversion
+  
+if (restOfData.landId !== undefined) {
+  restOfData.landId = restOfData.landId === true || 
+                    restOfData.landId === "true" || 
+                    restOfData.landId === "included";
+}
 
     // Process newly uploaded images (if any) from multer
     let newImagePaths = [];
@@ -860,7 +868,7 @@ export const createResidencyWithMultipleFiles = asyncHandler(async (req, res) =>
         apnOrPin,
         direction: direction ?? null,
         landIdLink: landIdLink ?? null,
-        landId: landId ?? "Not-Available",
+        landId: landId === true || landId === "true" || landId === "included",
     
         // Dimensions
         sqft: parseInt(sqft),

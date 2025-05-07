@@ -194,6 +194,10 @@ export default function EditProperty() {
           } else {
             processedData.landType = [];
           }
+          //LandId Conversion
+          processedData.landId = processedData.landId === true || 
+          processedData.landId === "true" || 
+          processedData.landId === "included";
           
           // Extra check to make sure we don't get stringified arrays displayed
           // This handles the specific case shown in your screenshot

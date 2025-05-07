@@ -110,7 +110,7 @@ model Residency {
   longitude     Float // Longitude for geolocation
   apnOrPin      String  @unique // APN/PIN must be unique
   direction     String?
-  landId        String
+  landId        Boolean @default(false)
   landIdLink    String?
 
   //5. Property Size & Dimensions
