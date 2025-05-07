@@ -20,6 +20,7 @@ router.get("/allresd", getAllResidencies);
 router.get("/:id", getResidency);
 router.get("/:id/image", getResidencyImages);
 router.get("/:id/video", getResidencyVideos); // New endpoint for videos
+router.get("/:id/cma-document", getCmaDocument);
 
 // Protected routes with updated uploadWithMedia middleware
 router.post(
