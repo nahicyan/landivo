@@ -1,7 +1,6 @@
 // server/routes/residencyRoute.js
 import express from 'express';
 import { 
-    createResidency, 
     getAllResidencies, 
     getResidency, 
     updateResidency, 
