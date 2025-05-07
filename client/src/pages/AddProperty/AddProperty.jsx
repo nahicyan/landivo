@@ -259,9 +259,6 @@ export default function AddProperty() {
       if (formData.featured === "Featured") {
         multipartForm.append("featuredPosition", formData.featuredPosition);
       }
-
-      // Add CMA fields
-      multipartForm.append("hasCma", formData.hasCma);
       
       // Append CMA file if available
       if (cmaFile) {
