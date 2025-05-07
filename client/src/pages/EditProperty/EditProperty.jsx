@@ -128,12 +128,14 @@ export default function EditProperty() {
   const requiredFieldsByStep = {
     0: ["status", "area"], // System Info
     1: ["title", "description"], // Listing Details
-    2: ["type"], // Classification
-    3: ["streetAddress", "city", "state", "zip"], // Location
+    2: ["type", "landType", "zoning"], // Classification
+    3: ["streetAddress", "city", "state", "zip", "latitude", "longitude", "apnOrPin"], // Location
     4: ["sqft"], // Dimensions
-    5: ["askingPrice"], // Pricing
+    5: ["askingPrice","minPrice","disPrice","hoaPoa"], // Pricing
+    6: ["financing"],
     7: ["water", "sewer", "electric", "roadCondition", "floodplain"] // Utilities
   };
+
 
   // Validation function for the current step
   const validateStep = (stepIndex) => {
@@ -244,8 +246,7 @@ export default function EditProperty() {
           }
           //LandId Conversion
           processedData.landId = processedData.landId === true || 
-          processedData.landId === "true" || 
-          processedData.landId === "included";
+          processedData.landId === "true";
           
           // Extra check to make sure we don't get stringified arrays displayed
           // This handles the specific case shown in your screenshot
