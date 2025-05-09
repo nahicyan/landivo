@@ -9,6 +9,65 @@ import { fileURLToPath } from "url";
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
+// Add this new function for handling multiple property rows
+const managePropertyRowsDisplayOrder = async (propertyId, propertyRows) => {
+  try {
+    if (!propertyRows || !Array.isArray(propertyRows) || propertyRows.length === 0) {
+      console.log("No property rows to manage");
+      return;
+    }
+    
+    // Process each row in the propertyRows array
+    for (const rowSelection of propertyRows) {
+      const { rowId, position } = rowSelection;
+      
+      if (!rowId) {
+        console.warn("Invalid row ID provided");
+        continue;
+      }
+      
+      // Find the specified row
+      const row = await prisma.propertyRow.findUnique({
+        where: { id: rowId }
+      });
+      
+      if (!row) {
+        console.warn(`Property row with ID ${rowId} not found`);
+        continue;
+      }
+      
+      // Get the current display order
+      const currentOrder = [...(row.displayOrder || [])];
+      
+      // Check if the property is already in the row
+      const currentPosition = currentOrder.indexOf(propertyId);
+      
+      // Remove the property from its current position if it exists
+      if (currentPosition !== -1) {
+        currentOrder.splice(currentPosition, 1);
+      }
+      
+      // Validate the desired position
+      const desiredPosition = position !== undefined ? 
+        Math.min(Math.max(0, position), currentOrder.length) : 
+        currentOrder.length; // Default to the end of the list
+      
+      // Insert at the desired position
+      currentOrder.splice(desiredPosition, 0, propertyId);
+      
+      // Update the PropertyRow with the new order
+      await prisma.propertyRow.update({
+        where: { id: rowId },
+        data: { displayOrder: currentOrder }
+      });
+      
+      console.log(`Updated display order for property ${propertyId} in row ${rowId} to position ${desiredPosition}`);
+    }
+  } catch (error) {
+    console.error('Error managing property rows display order:', error);
+  }
+};
+
 // Helper function to manage property display order
 const manageFeaturedDisplayOrder = async (propertyId, isFeatured, displayPosition) => {
   try {
@@ -17,18 +76,26 @@ const manageFeaturedDisplayOrder = async (propertyId, isFeatured, displayPositio
       where: { rowType: "featured" },
     });
     
-    // If no featured row exists and the property is featured, create one
+    // If no featured row exists and the property is featured, create one with proper name and sort
     if (!featuredRow && isFeatured) {
-      featuredRow = await prisma.propertyRow.create({
-        data: {
-          name: "Featured Properties",
-          rowType: "featured",
-          sort: "manual",
-          displayOrder: [propertyId],
-        },
+      // No longer hardcoding "Featured Properties" - use the row from SystemInfo
+      const existingRows = await prisma.propertyRow.findMany({
+        where: { rowType: "featured" }
       });
-      console.log("Created new featured PropertyRow");
-      return;
+      
+      if (existingRows.length === 0) {
+        // Create a default one only if no row exists 
+        featuredRow = await prisma.propertyRow.create({
+          data: {
+            name: "Featured Properties", 
+            rowType: "featured",
+            sort: "manual",
+            displayOrder: [propertyId],
+          },
+        });
+        console.log("Created new featured PropertyRow");
+        return;
+      }
     }
     
     // If property is not featured, remove it from the display order
@@ -231,12 +298,11 @@ export const updateResidency = asyncHandler(async (req, res) => {
     }
 
     // Boolean Conversion
-  
-if (restOfData.landId !== undefined) {
-  restOfData.landId = restOfData.landId === true || 
-                    restOfData.landId === "true" || 
-                    restOfData.landId === "included";
-}
+    if (restOfData.landId !== undefined) {
+      restOfData.landId = restOfData.landId === true || 
+                        restOfData.landId === "true" || 
+                        restOfData.landId === "included";
+    }
 
     // Process newly uploaded images (if any) from multer
     let newImagePaths = [];
@@ -258,48 +324,48 @@ if (restOfData.landId !== undefined) {
     // Merge existing videos with new video paths
     const finalVideoUrls = [...finalExistingVideos, ...newVideoPaths];
 
-// Handle CMA fields
-if (restOfData.hasCma !== undefined) {
-  restOfData.hasCma = restOfData.hasCma === "true" || restOfData.hasCma === true;
-}
-
-// Handle CMA file management
-let cmaFilePath = currentProperty.cmaFilePath;
-
-// Check if we need to remove the existing CMA file
-if (req.body.removeCmaFile === "true") {
-  // Delete the physical file if it exists
-  if (currentProperty.cmaFilePath) {
-    const oldFilePath = path.join(__dirname, "../", currentProperty.cmaFilePath);
-    try {
-      if (fs.existsSync(oldFilePath)) {
-        fs.unlinkSync(oldFilePath);
-        console.log(`Deleted old CMA file: ${oldFilePath}`);
-      }
-    } catch (err) {
-      console.error(`Error deleting old CMA file: ${err.message}`);
+    // Handle CMA fields
+    if (restOfData.hasCma !== undefined) {
+      restOfData.hasCma = restOfData.hasCma === "true" || restOfData.hasCma === true;
     }
-  }
-  // Set the path to null for database update
-  cmaFilePath = null;
-} 
-// Check if we're uploading a new CMA file
-else if (req.files && req.files['cmaFile'] && req.files['cmaFile'].length > 0) {
-  cmaFilePath = "uploads/" + req.files['cmaFile'][0].filename;
-  
-  // Delete the old file if it exists
-  if (currentProperty.cmaFilePath) {
-    const oldFilePath = path.join(__dirname, "../", currentProperty.cmaFilePath);
-    try {
-      if (fs.existsSync(oldFilePath)) {
-        fs.unlinkSync(oldFilePath);
-        console.log(`Deleted old CMA file: ${oldFilePath}`);
+
+    // Handle CMA file management
+    let cmaFilePath = currentProperty.cmaFilePath;
+
+    // Check if we need to remove the existing CMA file
+    if (req.body.removeCmaFile === "true") {
+      // Delete the physical file if it exists
+      if (currentProperty.cmaFilePath) {
+        const oldFilePath = path.join(__dirname, "../", currentProperty.cmaFilePath);
+        try {
+          if (fs.existsSync(oldFilePath)) {
+            fs.unlinkSync(oldFilePath);
+            console.log(`Deleted old CMA file: ${oldFilePath}`);
+          }
+        } catch (err) {
+          console.error(`Error deleting old CMA file: ${err.message}`);
+        }
       }
-    } catch (err) {
-      console.error(`Error deleting old CMA file: ${err.message}`);
+      // Set the path to null for database update
+      cmaFilePath = null;
+    } 
+    // Check if we're uploading a new CMA file
+    else if (req.files && req.files['cmaFile'] && req.files['cmaFile'].length > 0) {
+      cmaFilePath = "uploads/" + req.files['cmaFile'][0].filename;
+      
+      // Delete the old file if it exists
+      if (currentProperty.cmaFilePath) {
+        const oldFilePath = path.join(__dirname, "../", currentProperty.cmaFilePath);
+        try {
+          if (fs.existsSync(oldFilePath)) {
+            fs.unlinkSync(oldFilePath);
+            console.log(`Deleted old CMA file: ${oldFilePath}`);
+          }
+        } catch (err) {
+          console.error(`Error deleting old CMA file: ${err.message}`);
+        }
+      }
     }
-  }
-}
 
     // Create a modification record
     const modification = {
@@ -342,14 +408,31 @@ else if (req.files && req.files['cmaFile'] && req.files['cmaFile'].length > 0) {
       data: updateData,
     });
 
-    // Handle featured status in PropertyRow
-    const isFeatured = restOfData.featured === "Featured";
-    const previousFeatured = currentProperty.featured === "Featured";
-    const featuredPosition = req.body.featuredPosition;
+    // Handle property rows if provided
+    let propertyRows = [];
+    if (req.body.propertyRows) {
+      try {
+        propertyRows = typeof req.body.propertyRows === 'string' 
+          ? JSON.parse(req.body.propertyRows) 
+          : req.body.propertyRows;
+      } catch (error) {
+        console.error("Error parsing propertyRows:", error);
+      }
+    }
+    
+    if (propertyRows.length > 0) {
+      await managePropertyRowsDisplayOrder(id, propertyRows);
+    }
+    // For backward compatibility
+    else {
+      const isFeatured = restOfData.featured === "Featured";
+      const previousFeatured = currentProperty.featured === "Featured";
+      const featuredPosition = req.body.featuredPosition;
 
-    // Only update display order if featured status changed or position changed
-    if (isFeatured !== previousFeatured || (isFeatured && featuredPosition !== undefined)) {
-      await manageFeaturedDisplayOrder(id, isFeatured, featuredPosition);
+      // Only update display order if featured status changed or position changed
+      if (isFeatured !== previousFeatured || (isFeatured && featuredPosition !== undefined)) {
+        await manageFeaturedDisplayOrder(id, isFeatured, featuredPosition);
+      }
     }
 
     return res.status(200).json(updatedResidency);
@@ -698,8 +781,23 @@ export const createResidencyWithMultipleFiles = asyncHandler(async (req, res) =>
       },
     });
     
-    // Handle featured position if property is featured
-    if (residency && (featured === "Featured" || featured === "Yes")) {
+    // Handle property rows if provided
+    let propertyRows = [];
+    if (req.body.propertyRows) {
+      try {
+        propertyRows = typeof req.body.propertyRows === 'string' 
+          ? JSON.parse(req.body.propertyRows) 
+          : req.body.propertyRows;
+      } catch (error) {
+        console.error("Error parsing propertyRows:", error);
+      }
+    }
+    
+    if (propertyRows.length > 0) {
+      await managePropertyRowsDisplayOrder(residency.id, propertyRows);
+    }
+    // For backward compatibility
+    else if (residency && (featured === "Featured" || featured === "Yes")) {
       const featuredPos = featuredPosition !== undefined ? parseInt(featuredPosition, 10) : undefined;
       await manageFeaturedDisplayOrder(residency.id, true, featuredPos);
     }

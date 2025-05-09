@@ -58,6 +58,7 @@ app.use("/api/buyer", buyerActivityRoute);
 app.use("/api/qualification", qualificationRoute);
 app.use("/api/buyer-lists", buyerListRoute);
 app.use("/api/deal", dealRoute);
+app.use("/api/property-rows", propertyRowRoute);
 
 // Auth test route
 app.get("/auth/test-jwt", jwtCheck, extractUserFromToken, (req, res) => {

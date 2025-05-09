@@ -1,12 +1,24 @@
 // server/routes/propertyRowRoute.js
 import express from "express";
-import { getPropertyRows } from "../controllers/residencyCntrl.js";
+import { 
+  getPropertyRows, 
+  getPropertyRowById,
+  createPropertyRow,
+  updatePropertyRow,
+  deletePropertyRow
+} from "../controllers/propertyRowCntrl.js"; // Use a dedicated controller file
+
 const router = express.Router();
 
 // Get property rows - public for reading featured properties
 router.get("/", getPropertyRows);
 
-// Admin route without authentication middleware
-router.get("/admin", getPropertyRows);
+// Get a specific property row
+router.get("/:id", getPropertyRowById);
+
+// Admin routes - in a real app, these should have authentication
+router.post("/", createPropertyRow);
+router.put("/:id", updatePropertyRow);
+router.delete("/:id", deletePropertyRow);
 
 export { router as propertyRowRoute };

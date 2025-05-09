@@ -7,6 +7,8 @@ import PropertiesTable from "@/components/PropertiesTable/PropertiesTable";
 import { QuickEditModal } from "@/components/PropertyManagement/QuickEditModal";
 import PropertyStats from "@/components/PropertyManagement/PropertyStats";
 import { PropertyFilters } from "@/components/PropertyManagement/PropertyFilters";
+import { PropertyRowManager } from "@/components/PropertyManagement/PropertyRowManager";
+import { FeaturedPropertiesManager } from "@/components/PropertyManagement/FeaturedPropertiesManager";
 
 // UI Components
 import { Button } from "@/components/ui/button";
@@ -20,6 +22,12 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import {
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger
+} from "@/components/ui/tabs";
+import {
   Plus,
   FileEdit,
   Trash2,
@@ -27,7 +35,11 @@ import {
   MapPin,
   DollarSign,
   PencilLine,
-  Eye
+  Eye,
+  BarChart3,
+  ListFilter,
+  Rows,
+  ArrowLeftRight
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -42,6 +54,7 @@ export default function AdminProperties() {
   const navigate = useNavigate();
   const [selectedProperty, setSelectedProperty] = useState(null);
   const [isQuickEditOpen, setIsQuickEditOpen] = useState(false);
+  const [activeTab, setActiveTab] = useState("properties");
   
   // Fetch properties
   const { data, isLoading, isError, refetch } = useQuery(
@@ -66,7 +79,7 @@ export default function AdminProperties() {
     const available = properties.filter(p => p.status === "Available").length;
     const pending = properties.filter(p => p.status === "Pending").length;
     const sold = properties.filter(p => p.status === "Sold").length;
-    const featured = properties.filter(p => p.featured === "Yes").length;
+    const featured = properties.filter(p => p.featured === "Yes" || p.featured === "Featured").length;
     
     // Calculate average price
     let totalPrice = 0;
@@ -150,19 +163,78 @@ export default function AdminProperties() {
           </Button>
         </div>
 
-        {/* Stats Section */}
-        {isLoading ? (
-          <div className="flex justify-center p-12">
-            <PuffLoader size={60} color="#3f4f24" />
-          </div>
-        ) : (
-          <PropertyStats stats={stats} />
-        )}
-        {/* Full Properties Table */}
-        <div className="mt-8">
-          <h2 className="text-xl font-bold text-[#324c48] mb-4">Advanced Property Management</h2>
-          <PropertiesTable />
-        </div>
+        {/* Tabs Navigation */}
+        <Tabs
+          defaultValue="properties"
+          value={activeTab}
+          onValueChange={setActiveTab}
+          className="w-full"
+        >
+          <TabsList className="mb-6">
+            <TabsTrigger value="properties" className="flex items-center">
+              <ListFilter className="h-4 w-4 mr-2" />
+              All Properties
+            </TabsTrigger>
+            <TabsTrigger value="rows" className="flex items-center">
+              <Rows className="h-4 w-4 mr-2" />
+              Property Rows
+            </TabsTrigger>
+            <TabsTrigger value="featured" className="flex items-center">
+              <ArrowLeftRight className="h-4 w-4 mr-2" />
+              Featured Properties
+            </TabsTrigger>
+            <TabsTrigger value="analytics" className="flex items-center">
+              <BarChart3 className="h-4 w-4 mr-2" />
+              Analytics
+            </TabsTrigger>
+          </TabsList>
+
+          {/* Properties Tab */}
+          <TabsContent value="properties">
+            {/* Stats Section */}
+            {isLoading ? (
+              <div className="flex justify-center p-12">
+                <PuffLoader size={60} color="#3f4f24" />
+              </div>
+            ) : (
+              <PropertyStats stats={stats} />
+            )}
+
+            {/* Full Properties Table */}
+            <div className="mt-8">
+              <h2 className="text-xl font-bold text-[#324c48] mb-4">Advanced Property Management</h2>
+              <PropertiesTable />
+            </div>
+          </TabsContent>
+
+          {/* Property Rows Tab */}
+          <TabsContent value="rows">
+            <div className="space-y-6">
+              <h2 className="text-xl font-bold text-[#324c48] mb-4">Property Rows Management</h2>
+              <p className="text-gray-500">
+                Create and manage property display rows such as featured, homepage, and promotional sections.
+              </p>
+              <PropertyRowManager />
+            </div>
+          </TabsContent>
+
+          {/* Featured Properties Tab */}
+          <TabsContent value="featured">
+            <div className="space-y-6">
+              <h2 className="text-xl font-bold text-[#324c48] mb-4">Featured Properties Management</h2>
+              <p className="text-gray-500">
+                Manage the display order of featured properties and other property rows.
+              </p>
+              <FeaturedPropertiesManager />
+            </div>
+          </TabsContent>
+
+          {/* Analytics Tab */}
+          <TabsContent value="analytics">
+            <PropertyStats stats={stats} />
+            {/* Additional analytics components could go here */}
+          </TabsContent>
+        </Tabs>
 
         {/* Quick Edit Modal */}
         {isQuickEditOpen && selectedProperty && (
