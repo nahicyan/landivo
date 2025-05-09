@@ -149,7 +149,6 @@ export default function AddProperty() {
     7: ["water", "sewer", "electric", "roadCondition", "floodplain"] // Utilities
   };
 
-
   // Validation function for the current step
   const validateStep = (stepIndex) => {
     const currentRequiredFields = requiredFieldsByStep[stepIndex] || [];
@@ -219,10 +218,8 @@ export default function AddProperty() {
     setFormData((prev) => {
       const updated = { ...prev };
       const numericFields = [
-        // Physical Attributes
-        "sqft",
-        "acre",
-
+        // Skip sqft and acre as they are now handled in Dimension.jsx
+        
         // Pricing and Financing
         "askingPrice",
         "minPrice",
@@ -254,15 +251,8 @@ export default function AddProperty() {
         const numberVal = parseFloat(noCommas);
         if (!isNaN(numberVal)) {
           updated[name] = numberVal.toLocaleString("en-US");
-          if (name === "sqft") {
-            updated.acre = (numberVal / 43560).toLocaleString("en-US", {
-              minimumFractionDigits: 2,
-              maximumFractionDigits: 2,
-            });
-          }
         } else {
           updated[name] = "";
-          if (name === "sqft") updated.acre = "";
         }
       } else {
         updated[name] = value;
