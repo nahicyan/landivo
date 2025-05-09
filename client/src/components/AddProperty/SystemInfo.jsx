@@ -11,229 +11,151 @@ import {
 } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
-import { Select, SelectTrigger, SelectContent, SelectItem, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
-import { X, Plus } from "lucide-react";
+import { 
+  Select, 
+  SelectTrigger, 
+  SelectContent, 
+  SelectItem, 
+  SelectValue 
+} from "@/components/ui/select";
+import { 
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
 import UserSubmit from "@/components/AddProperty/UserSubmit"; 
+import { Plus, X, ChevronDown } from "lucide-react";
 import axios from "axios";
 
-export default function SystemInfoCard({ formData, handleChange, errors }) {
-  const [featuredPositionOptions, setFeaturedPositionOptions] = useState([]);
-  const [isLoadingPositions, setIsLoadingPositions] = useState(false);
+export default function SystemInfoCard({ formData, handleChange }) {
   const [propertyRows, setPropertyRows] = useState([]);
   const [isLoadingRows, setIsLoadingRows] = useState(false);
+  const [showFeaturedDialog, setShowFeaturedDialog] = useState(false);
   
-  // New state for handling multiple row selections
-  const [selectedRows, setSelectedRows] = useState([]);
+  // State for managing property rows
+  const [selectedRowEntries, setSelectedRowEntries] = useState([]);
   const [currentRowSelection, setCurrentRowSelection] = useState({
     rowId: "",
+    rowName: "",
     position: 0
   });
 
-  // Function to format property address properly
-  const formatPropertyAddress = (property) => {
-    if (!property.streetAddress) return "Unknown Address";
-    
-    let address = property.streetAddress;
-    if (property.city) address += `, ${property.city}`;
-    if (property.state) address += `, ${property.state}`;
-    if (property.zip) address += ` - ${property.zip}`;
-    
-    return address;
-  };
+  // State for row properties (to show in dropdown)
+  const [rowProperties, setRowProperties] = useState([]);
+  const [loadingRowProperties, setLoadingRowProperties] = useState(false);
 
   // Fetch all property rows when component mounts
   useEffect(() => {
-    const fetchPropertyRows = async () => {
-      setIsLoadingRows(true);
-      try {
-        const response = await axios.get(`${import.meta.env.VITE_SERVER_URL}/api/property-rows`);
-        setPropertyRows(response.data);
-      } catch (error) {
-        console.error("Error fetching property rows:", error);
-      } finally {
-        setIsLoadingRows(false);
-      }
-    };
-
     fetchPropertyRows();
   }, []);
 
-  // Fetch featured property row when component mounts
-  useEffect(() => {
-    const fetchFeaturedRow = async () => {
-      if (formData.featured !== "Featured") return;
-      
-      setIsLoadingPositions(true);
-      try {
-        const response = await axios.get(`${import.meta.env.VITE_SERVER_URL}/api/property-rows?rowType=featured`);
-        
-        if (response.data && response.data.propertyDetails) {
-          // Create options with position numbers and property addresses
-          const options = response.data.propertyDetails.map((property, index) => ({
-            position: index,
-            label: `${index + 1}. ${formatPropertyAddress(property)}`,
-            propertyId: property.id
-          }));
-          
-          // Add an option for the end of the list
-          options.push({
-            position: options.length,
-            label: `${options.length + 1}. End of list`,
-            propertyId: null
-          });
-          
-          setFeaturedPositionOptions(options);
-        } else {
-          // If no featured row exists yet, just offer position 1
-          setFeaturedPositionOptions([
-            { position: 0, label: "1. First featured property", propertyId: null }
-          ]);
-        }
-      } catch (error) {
-        console.error("Error fetching featured property row:", error);
-        setFeaturedPositionOptions([
-          { position: 0, label: "1. First featured property", propertyId: null }
-        ]);
-      } finally {
-        setIsLoadingPositions(false);
-      }
-    };
-
-    fetchFeaturedRow();
-  }, [formData.featured]);
-
-  // Handle when featured status changes
-  const handleFeaturedChange = (value) => {
-    handleChange({ target: { name: "featured", value } });
-    
-    // If changing to featured, fetch position options
-    if (value === "Featured") {
-      const fetchFeaturedRow = async () => {
-        setIsLoadingPositions(true);
-        try {
-          const response = await axios.get(`${import.meta.env.VITE_SERVER_URL}/api/property-rows?rowType=featured`);
-          
-          if (response.data && response.data.propertyDetails) {
-            // Create options with position numbers and property addresses
-            const options = response.data.propertyDetails.map((property, index) => ({
-              position: index,
-              label: `${index + 1}. ${formatPropertyAddress(property)}`,
-              propertyId: property.id
-            }));
-            
-            // Add an option for the end of the list
-            options.push({
-              position: options.length,
-              label: `${options.length + 1}. End of list`,
-              propertyId: null
-            });
-            
-            setFeaturedPositionOptions(options);
-          } else {
-            // If no featured row exists yet, just offer position 1
-            setFeaturedPositionOptions([
-              { position: 0, label: "1. First featured property", propertyId: null }
-            ]);
-          }
-        } catch (error) {
-          console.error("Error fetching featured property row:", error);
-          setFeaturedPositionOptions([
-            { position: 0, label: "1. First featured property", propertyId: null }
-          ]);
-        } finally {
-          setIsLoadingPositions(false);
-        }
-      };
-      
-      fetchFeaturedRow();
-    }
-  };
-
-  // Handle when a row is selected
-  const handleRowSelection = (rowId) => {
-    setCurrentRowSelection(prev => ({ ...prev, rowId }));
-    
-    // Fetch position options for the selected row
-    if (rowId) {
-      fetchPositionOptions(rowId);
-    }
-  };
-
-  // Fetch position options for a selected row
-  const fetchPositionOptions = async (rowId) => {
+  const fetchPropertyRows = async () => {
     setIsLoadingRows(true);
     try {
-      const response = await axios.get(`${import.meta.env.VITE_SERVER_URL}/api/property-rows/${rowId}`);
-      
-      if (response.data && response.data.displayOrder) {
-        // Reset position to 0 (first position)
-        setCurrentRowSelection(prev => ({ ...prev, position: 0 }));
-      }
+      const response = await axios.get(`${import.meta.env.VITE_SERVER_URL}/api/property-rows`);
+      setPropertyRows(response.data || []);
     } catch (error) {
-      console.error("Error fetching row details:", error);
+      console.error("Error fetching property rows:", error);
     } finally {
       setIsLoadingRows(false);
     }
   };
 
-  // Add current row selection to the list of selected rows
-  const addRowSelection = () => {
-    if (!currentRowSelection.rowId) return;
+  // Fetch properties in the selected row to show position options
+  const fetchRowProperties = async (rowId) => {
+    if (!rowId) return;
     
-    // Find the row details
-    const selectedRow = propertyRows.find(row => row.id === currentRowSelection.rowId);
-    if (!selectedRow) return;
-    
-    // Check if this row is already selected
-    const existingRowIndex = selectedRows.findIndex(r => r.rowId === currentRowSelection.rowId);
-    
-    if (existingRowIndex >= 0) {
-      // Update existing selection
-      const updatedRows = [...selectedRows];
-      updatedRows[existingRowIndex] = {
-        ...currentRowSelection,
-        rowName: selectedRow.name || selectedRow.rowType || "Unknown Row"
-      };
-      setSelectedRows(updatedRows);
-    } else {
-      // Add new selection
-      setSelectedRows(prev => [...prev, {
-        ...currentRowSelection,
-        rowName: selectedRow.name || selectedRow.rowType || "Unknown Row"
-      }]);
+    setLoadingRowProperties(true);
+    try {
+      const response = await axios.get(`${import.meta.env.VITE_SERVER_URL}/api/property-rows/${rowId}`);
+      
+      if (response.data && response.data.propertyDetails) {
+        setRowProperties(response.data.propertyDetails);
+      } else {
+        setRowProperties([]);
+      }
+    } catch (error) {
+      console.error("Error fetching row properties:", error);
+      setRowProperties([]);
+    } finally {
+      setLoadingRowProperties(false);
     }
+  };
+
+  // Handle row selection
+  const handleRowSelect = (rowId) => {
+    // Find the row name
+    const selectedRow = propertyRows.find(row => row.id === rowId);
+    const rowName = selectedRow ? (selectedRow.name || selectedRow.rowType || "Unnamed Row") : "";
     
-    // Reset current selection
     setCurrentRowSelection({
-      rowId: "",
-      position: 0
+      ...currentRowSelection,
+      rowId,
+      rowName
     });
     
-    // Update form data with the selected rows
+    // Fetch properties in this row
+    fetchRowProperties(rowId);
+  };
+
+  // Add current row selection to the list
+  const addRowToSelection = () => {
+    if (!currentRowSelection.rowId) return;
+    
+    // Check if row already exists
+    const exists = selectedRowEntries.some(entry => entry.rowId === currentRowSelection.rowId);
+    
+    if (!exists) {
+      const newEntry = {
+        ...currentRowSelection
+      };
+      
+      setSelectedRowEntries(prev => [...prev, newEntry]);
+      
+      // Update the form data with selected rows
+      updateFormDataWithRows([...selectedRowEntries, newEntry]);
+    }
+    
+    // Reset selection
+    setCurrentRowSelection({
+      rowId: "",
+      rowName: "",
+      position: 0
+    });
+  };
+
+  // Remove a row from selection
+  const removeRowFromSelection = (rowId) => {
+    const updatedEntries = selectedRowEntries.filter(entry => entry.rowId !== rowId);
+    setSelectedRowEntries(updatedEntries);
+    
+    // Update form data
+    updateFormDataWithRows(updatedEntries);
+  };
+
+  // Update form data with selected rows
+  const updateFormDataWithRows = (entries) => {
     handleChange({
       target: {
         name: "propertyRows",
-        value: [...selectedRows, {
-          ...currentRowSelection,
-          rowName: selectedRow.name || selectedRow.rowType || "Unknown Row"
-        }]
+        value: entries
       }
     });
   };
 
-  // Remove a row from the selected rows
-  const removeRowSelection = (rowId) => {
-    const updatedRows = selectedRows.filter(row => row.rowId !== rowId);
-    setSelectedRows(updatedRows);
+  // Format property address for display
+  const formatPropertyAddress = (property) => {
+    if (!property) return "Unknown Address";
     
-    // Update form data
-    handleChange({
-      target: {
-        name: "propertyRows",
-        value: updatedRows
-      }
-    });
+    let address = property.streetAddress || "";
+    if (property.city) address += property.city ? `, ${property.city}` : "";
+    if (property.state) address += property.state ? `, ${property.state}` : "";
+    if (property.zip) address += property.zip ? ` - ${property.zip}` : "";
+    
+    return address || "Unknown Address";
   };
 
   return (
@@ -251,7 +173,7 @@ export default function SystemInfoCard({ formData, handleChange, errors }) {
 
         {/* Owner ID */}
         <div className="flex flex-col space-y-1">
-          <Label htmlFor="ownerId" className={`text-gray-700 font-semibold ${errors.ownerId ? "text-red-500" : ""}`}>
+          <Label htmlFor="ownerId" className="text-gray-700 font-semibold">
             Owner ID
           </Label>
           <Input
@@ -260,14 +182,12 @@ export default function SystemInfoCard({ formData, handleChange, errors }) {
             value={formData.ownerId}
             onChange={handleChange}
             placeholder="Enter Owner ID"
-            className={errors.ownerId ? "border-red-500" : ""}
           />
-          {errors.ownerId && <p className="text-red-500 text-xs mt-1">{errors.ownerId}</p>}
         </div>
 
         {/* Area Selection */}
         <div className="flex flex-col space-y-1">
-          <Label htmlFor="area" className={`text-gray-700 font-semibold ${errors.area ? "text-red-500" : ""}`}>
+          <Label htmlFor="area" className="text-gray-700 font-semibold">
             Area
           </Label>
           <Select
@@ -275,7 +195,7 @@ export default function SystemInfoCard({ formData, handleChange, errors }) {
             value={formData.area}
             onValueChange={(value) => handleChange({ target: { name: "area", value } })}
           >
-            <SelectTrigger className={`w-full border-gray-300 focus:border-[#324c48] focus:ring-1 focus:ring-[#324c48] ${errors.area ? "border-red-500" : ""}`}>
+            <SelectTrigger className="w-full border-gray-300 focus:border-[#324c48] focus:ring-1 focus:ring-[#324c48]">
               <SelectValue placeholder="Select Area" />
             </SelectTrigger>
             <SelectContent>
@@ -286,12 +206,11 @@ export default function SystemInfoCard({ formData, handleChange, errors }) {
               <SelectItem value="Other Areas">Other Areas</SelectItem>
             </SelectContent>
           </Select>
-          {errors.area && <p className="text-red-500 text-xs mt-1">{errors.area}</p>}
         </div>
 
         {/* Status Selection */}
         <div className="flex flex-col space-y-1">
-          <Label htmlFor="status" className={`text-gray-700 font-semibold ${errors.status ? "text-red-500" : ""}`}>
+          <Label htmlFor="status" className="text-gray-700 font-semibold">
             Status
           </Label>
           <Select
@@ -299,7 +218,7 @@ export default function SystemInfoCard({ formData, handleChange, errors }) {
             value={formData.status}
             onValueChange={(value) => handleChange({ target: { name: "status", value } })}
           >
-            <SelectTrigger className={`w-full border-gray-300 focus:border-[#324c48] focus:ring-1 focus:ring-[#324c48] ${errors.status ? "border-red-500" : ""}`}>
+            <SelectTrigger className="w-full border-gray-300 focus:border-[#324c48] focus:ring-1 focus:ring-[#324c48]">
               <SelectValue placeholder="Select Status" />
             </SelectTrigger>
             <SelectContent>
@@ -310,7 +229,6 @@ export default function SystemInfoCard({ formData, handleChange, errors }) {
               <SelectItem value="Testing">Testing</SelectItem>
             </SelectContent>
           </Select>
-          {errors.status && <p className="text-red-500 text-xs mt-1">{errors.status}</p>}
         </div>
 
         {/* Featured Selection */}
@@ -321,7 +239,7 @@ export default function SystemInfoCard({ formData, handleChange, errors }) {
           <Select
             name="featured"
             value={formData.featured}
-            onValueChange={handleFeaturedChange}
+            onValueChange={(value) => handleChange({ target: { name: "featured", value } })}
           >
             <SelectTrigger className="w-full border-gray-300 focus:border-[#324c48] focus:ring-1 focus:ring-[#324c48]">
               <SelectValue placeholder="Select Featured Status" />
@@ -333,76 +251,65 @@ export default function SystemInfoCard({ formData, handleChange, errors }) {
           </Select>
         </div>
 
-        {/* Featured Position Selection - Only show if property is featured */}
+        {/* Add to Featured Lists button - Only show if property is featured */}
         {formData.featured === "Featured" && (
-          <div className="flex flex-col space-y-1">
-            <Label htmlFor="featuredPosition" className="text-gray-700 font-semibold">
-              Featured Position
-            </Label>
-            <Select
-              name="featuredPosition"
-              value={formData.featuredPosition !== undefined ? formData.featuredPosition.toString() : ""}
-              onValueChange={(value) => handleChange({ target: { name: "featuredPosition", value: parseInt(value, 10) } })}
-              disabled={isLoadingPositions}
+          <div className="pt-2">
+            <Button 
+              type="button" 
+              onClick={() => setShowFeaturedDialog(true)}
+              className="w-full bg-[#324c48] hover:bg-[#3f4f24] text-white"
             >
-              <SelectTrigger className="w-full border-gray-300 focus:border-[#324c48] focus:ring-1 focus:ring-[#324c48]">
-                <SelectValue placeholder={isLoadingPositions ? "Loading positions..." : "Select position"} />
-              </SelectTrigger>
-              <SelectContent>
-                {featuredPositionOptions.map((option) => (
-                  <SelectItem key={option.position} value={option.position.toString()}>
-                    {option.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <p className="text-xs text-gray-500 mt-1">
-              Select where this property should appear in the featured properties list.
-            </p>
+              <Plus className="w-4 h-4 mr-2" /> Add to Featured Lists
+            </Button>
+            
+            {/* Show selected rows */}
+            {selectedRowEntries.length > 0 && (
+              <div className="mt-4 space-y-2">
+                <Label className="text-gray-700">Selected Featured Lists:</Label>
+                <div className="space-y-2">
+                  {selectedRowEntries.map((entry, index) => (
+                    <div 
+                      key={index}
+                      className="flex items-center justify-between bg-[#f0f5f4] p-2 rounded-md"
+                    >
+                      <div>
+                        <span className="font-medium text-[#324c48]">{entry.rowName}</span>
+                        <span className="text-sm text-gray-500 ml-2">- Position: {entry.position + 1}</span>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => removeRowFromSelection(entry.rowId)}
+                        className="text-red-500 hover:text-red-700"
+                      >
+                        <X className="w-4 h-4" />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
         )}
+      </CardContent>
 
-        {/* Property Rows Section */}
-        <div className="border rounded-md p-4 space-y-4">
-          <h3 className="font-semibold text-[#324c48]">Add to Property Rows</h3>
+      {/* Featured Lists Dialog */}
+      <Dialog open={showFeaturedDialog} onOpenChange={setShowFeaturedDialog}>
+        <DialogContent className="sm:max-w-[600px]">
+          <DialogHeader>
+            <DialogTitle>Add to Featured Lists</DialogTitle>
+          </DialogHeader>
           
-          {/* Display currently selected rows */}
-          {selectedRows.length > 0 && (
-            <div className="space-y-2 mb-4">
-              <Label className="text-gray-700">Selected Rows:</Label>
-              <div className="flex flex-wrap gap-2">
-                {selectedRows.map((row, index) => (
-                  <div 
-                    key={index} 
-                    className="flex items-center gap-2 bg-[#f0f5f4] text-[#324c48] px-3 py-1 rounded-md"
-                  >
-                    <span className="text-sm">{row.rowName} (Position: {row.position + 1})</span>
-                    <button
-                      type="button"
-                      onClick={() => removeRowSelection(row.rowId)}
-                      className="text-red-500 hover:text-red-700"
-                    >
-                      <X className="h-4 w-4" />
-                    </button>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-          
-          {/* Row selection */}
-          <div className="grid grid-cols-3 gap-4">
-            <div className="col-span-3 sm:col-span-1">
-              <Label htmlFor="row-selection" className="text-gray-700">
-                Select Row
-              </Label>
+          <div className="grid grid-cols-2 gap-4 py-4">
+            {/* Row Selection */}
+            <div className="space-y-2">
+              <Label htmlFor="row-list">Featured List</Label>
               <Select
                 value={currentRowSelection.rowId}
-                onValueChange={handleRowSelection}
+                onValueChange={handleRowSelect}
                 disabled={isLoadingRows}
               >
                 <SelectTrigger className="w-full">
-                  <SelectValue placeholder="Select a row" />
+                  <SelectValue placeholder={isLoadingRows ? "Loading lists..." : "Select a list"} />
                 </SelectTrigger>
                 <SelectContent>
                   {propertyRows.map(row => (
@@ -414,36 +321,63 @@ export default function SystemInfoCard({ formData, handleChange, errors }) {
               </Select>
             </div>
             
-            <div className="col-span-3 sm:col-span-1">
-              <Label htmlFor="position-selection" className="text-gray-700">
-                Position
-              </Label>
-              <Input
-                type="number"
-                min="0"
-                value={currentRowSelection.position}
-                onChange={(e) => setCurrentRowSelection(prev => ({ 
-                  ...prev, 
-                  position: parseInt(e.target.value) || 0 
+            {/* Position Selection */}
+            <div className="space-y-2">
+              <Label htmlFor="position">Position</Label>
+              <Select
+                value={currentRowSelection.position?.toString()}
+                onValueChange={(value) => setCurrentRowSelection(prev => ({
+                  ...prev,
+                  position: parseInt(value, 10)
                 }))}
-                disabled={!currentRowSelection.rowId || isLoadingRows}
-                className="w-full"
-              />
-            </div>
-            
-            <div className="col-span-3 sm:col-span-1 flex items-end">
-              <Button
-                type="button"
-                onClick={addRowSelection}
-                disabled={!currentRowSelection.rowId || isLoadingRows}
-                className="bg-[#324c48] hover:bg-[#3f4f24] w-full sm:w-auto"
+                disabled={!currentRowSelection.rowId || loadingRowProperties}
               >
-                <Plus className="h-4 w-4 mr-2" /> Add to Row
-              </Button>
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder={loadingRowProperties ? "Loading..." : "Select position"} />
+                </SelectTrigger>
+                <SelectContent>
+                  {/* Show positions equivalent to row length + 1 */}
+                  {[...Array(rowProperties.length + 1)].map((_, index) => (
+                    <SelectItem key={index} value={index.toString()}>
+                      {index + 1}. {index < rowProperties.length ? 
+                        `After ${rowProperties[index].title}` : 
+                        "End of list"}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
           </div>
-        </div>
-      </CardContent>
+          
+          {/* Properties in selected row */}
+          {currentRowSelection.rowId && rowProperties.length > 0 && (
+            <div className="py-2">
+              <h4 className="text-sm font-medium mb-2">Current Properties in List:</h4>
+              <div className="max-h-[200px] overflow-y-auto border rounded-md p-2 space-y-1">
+                {rowProperties.map((property, index) => (
+                  <div key={property.id} className="text-sm py-1 border-b last:border-0">
+                    <span className="font-medium">{index + 1}. {property.title}</span>
+                    <p className="text-gray-500 text-xs">{formatPropertyAddress(property)}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+          
+          <DialogFooter className="flex justify-between items-center">
+            <Button variant="outline" onClick={() => setShowFeaturedDialog(false)}>
+              Cancel
+            </Button>
+            <Button
+              onClick={addRowToSelection}
+              disabled={!currentRowSelection.rowId}
+              className="bg-[#324c48] hover:bg-[#3f4f24]"
+            >
+              Add to List
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </Card>
   );
 }

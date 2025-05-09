@@ -9,7 +9,7 @@ import { fileURLToPath } from "url";
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-// Add this new function for handling multiple property rows
+// Helper function to manage multiple property rows
 const managePropertyRowsDisplayOrder = async (propertyId, propertyRows) => {
   try {
     if (!propertyRows || !Array.isArray(propertyRows) || propertyRows.length === 0) {
@@ -76,9 +76,9 @@ const manageFeaturedDisplayOrder = async (propertyId, isFeatured, displayPositio
       where: { rowType: "featured" },
     });
     
-    // If no featured row exists and the property is featured, create one with proper name and sort
+    // If no featured row exists and the property is featured, create one
     if (!featuredRow && isFeatured) {
-      // No longer hardcoding "Featured Properties" - use the row from SystemInfo
+      // Check if there are any rows with rowType "featured" before creating
       const existingRows = await prisma.propertyRow.findMany({
         where: { rowType: "featured" }
       });
@@ -212,7 +212,7 @@ export const updateResidency = asyncHandler(async (req, res) => {
   console.log("Received updateResidency request body:", req.body);
   try {
     const { id } = req.params;
-    let { imageUrls, videoUrls, viewCount, removeCmaFile, ...restOfData } = req.body;
+    let { imageUrls, videoUrls, viewCount, removeCmaFile, propertyRows, ...restOfData } = req.body;
     // Get the authenticated user's ID from the req object (set by middleware)
     const updatedById = req.userId;
     
@@ -409,25 +409,26 @@ export const updateResidency = asyncHandler(async (req, res) => {
     });
 
     // Handle property rows if provided
-    let propertyRows = [];
-    if (req.body.propertyRows) {
+    let parsedPropertyRows = [];
+    if (propertyRows) {
       try {
-        propertyRows = typeof req.body.propertyRows === 'string' 
-          ? JSON.parse(req.body.propertyRows) 
-          : req.body.propertyRows;
+        parsedPropertyRows = typeof propertyRows === 'string' 
+          ? JSON.parse(propertyRows) 
+          : propertyRows;
       } catch (error) {
         console.error("Error parsing propertyRows:", error);
       }
     }
     
-    if (propertyRows.length > 0) {
-      await managePropertyRowsDisplayOrder(id, propertyRows);
+    if (Array.isArray(parsedPropertyRows) && parsedPropertyRows.length > 0) {
+      await managePropertyRowsDisplayOrder(id, parsedPropertyRows);
     }
     // For backward compatibility
     else {
       const isFeatured = restOfData.featured === "Featured";
       const previousFeatured = currentProperty.featured === "Featured";
-      const featuredPosition = req.body.featuredPosition;
+      const featuredPosition = req.body.featuredPosition !== undefined ? 
+                               parseInt(req.body.featuredPosition, 10) : undefined;
 
       // Only update display order if featured status changed or position changed
       if (isFeatured !== previousFeatured || (isFeatured && featuredPosition !== undefined)) {
@@ -582,6 +583,7 @@ export const createResidencyWithMultipleFiles = asyncHandler(async (req, res) =>
       status,
       featured,
       featuredPosition,
+      propertyRows,
 
       // Listing Details
       title,
@@ -782,19 +784,19 @@ export const createResidencyWithMultipleFiles = asyncHandler(async (req, res) =>
     });
     
     // Handle property rows if provided
-    let propertyRows = [];
-    if (req.body.propertyRows) {
+    let parsedPropertyRows = [];
+    if (propertyRows) {
       try {
-        propertyRows = typeof req.body.propertyRows === 'string' 
-          ? JSON.parse(req.body.propertyRows) 
-          : req.body.propertyRows;
+        parsedPropertyRows = typeof propertyRows === 'string' 
+          ? JSON.parse(propertyRows) 
+          : propertyRows;
       } catch (error) {
         console.error("Error parsing propertyRows:", error);
       }
     }
     
-    if (propertyRows.length > 0) {
-      await managePropertyRowsDisplayOrder(residency.id, propertyRows);
+    if (Array.isArray(parsedPropertyRows) && parsedPropertyRows.length > 0) {
+      await managePropertyRowsDisplayOrder(residency.id, parsedPropertyRows);
     }
     // For backward compatibility
     else if (residency && (featured === "Featured" || featured === "Yes")) {
@@ -818,46 +820,56 @@ export const createResidencyWithMultipleFiles = asyncHandler(async (req, res) =>
 // Get PropertyRows with optional filtering
 export const getPropertyRows = asyncHandler(async (req, res) => {
   try {
-    const { rowType } = req.query;
+    const { rowType, rowId } = req.query;
     
-    // Filter by row type if provided
-    const whereClause = rowType ? { rowType } : {};
+    // Filter by row type or specific row ID
+    let whereClause = {};
+    if (rowType) {
+      whereClause.rowType = rowType;
+    }
+    if (rowId) {
+      whereClause.id = rowId;
+    }
     
     const propertyRows = await prisma.propertyRow.findMany({
       where: whereClause,
       orderBy: { updatedAt: 'desc' },
     });
     
-    // If requesting featured rows, also include property details
-    if (rowType === 'featured' && propertyRows.length > 0) {
-      const featuredRow = propertyRows[0];
+    // If requesting a specific row ID or featured rows, also include property details
+    if ((rowType === 'featured' || rowId) && propertyRows.length > 0) {
+      const targetRow = rowId ? propertyRows.find(row => row.id === rowId) : propertyRows[0];
       
-      // Get property details for all IDs in the display order
-      const propertyDetails = await Promise.all(
-        featuredRow.displayOrder.map(async (propertyId) => {
-          try {
-            const property = await prisma.residency.findUnique({
-              where: { id: propertyId },
-              select: {
-                id: true,
-                title: true,
-                streetAddress: true,
-                city: true,
-                state: true,
-              },
-            });
-            return property || { id: propertyId, title: "Unknown Property" };
-          } catch (err) {
-            return { id: propertyId, title: "Unknown Property" };
-          }
-        })
-      );
-      
-      // Add property details to the response
-      return res.status(200).json({
-        ...featuredRow,
-        propertyDetails,
-      });
+      if (targetRow && targetRow.displayOrder && targetRow.displayOrder.length > 0) {
+        // Get property details for all IDs in the display order
+        const propertyDetails = await Promise.all(
+          targetRow.displayOrder.map(async (propertyId) => {
+            try {
+              const property = await prisma.residency.findUnique({
+                where: { id: propertyId },
+                select: {
+                  id: true,
+                  title: true,
+                  streetAddress: true,
+                  city: true,
+                  state: true,
+                  askingPrice: true,
+                  imageUrls: true
+                },
+              });
+              return property || { id: propertyId, title: "Unknown Property" };
+            } catch (err) {
+              return { id: propertyId, title: "Unknown Property" };
+            }
+          })
+        );
+        
+        // Add property details to the response
+        return res.status(200).json({
+          ...targetRow,
+          propertyDetails,
+        });
+      }
     }
     
     res.status(200).json(propertyRows);
