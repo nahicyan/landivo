@@ -212,7 +212,7 @@ export const updateResidency = asyncHandler(async (req, res) => {
   console.log("Received updateResidency request body:", req.body);
   try {
     const { id } = req.params;
-    let { imageUrls, videoUrls, viewCount, removeCmaFile, propertyRows, ...restOfData } = req.body;
+    let { imageUrls, videoUrls, viewCount, removeCmaFile, propertyRows, featuredPosition, ...restOfData } = req.body;
     // Get the authenticated user's ID from the req object (set by middleware)
     const updatedById = req.userId;
     
@@ -408,32 +408,77 @@ export const updateResidency = asyncHandler(async (req, res) => {
       data: updateData,
     });
 
-    // Handle property rows if provided
+    // Handle property rows data
     let parsedPropertyRows = [];
     if (propertyRows) {
       try {
-        parsedPropertyRows = typeof propertyRows === 'string' 
-          ? JSON.parse(propertyRows) 
-          : propertyRows;
+        // Handle different formats for propertyRows data
+        if (typeof propertyRows === 'string') {
+          // Handle malformed [object Object] string
+          if (propertyRows === '[object Object]' || 
+              propertyRows.startsWith('[object Object]')) {
+            
+            console.log("Received malformed propertyRows data. Attempting to extract from selected rows data.");
+            
+            // Try to recover using featuredPosition array if available
+            if (featuredPosition && (
+                Array.isArray(featuredPosition) || 
+                typeof featuredPosition === 'string')) {
+              
+              const positions = Array.isArray(featuredPosition) ? 
+                featuredPosition : 
+                [featuredPosition];
+              
+              // Get featured row information from database
+              const featuredRows = await prisma.propertyRow.findMany({
+                where: { rowType: "featured" }
+              });
+              
+              if (featuredRows.length > 0) {
+                parsedPropertyRows = featuredRows.map((row, index) => {
+                  return {
+                    rowId: row.id,
+                    position: parseInt(positions[index] || 0, 10)
+                  };
+                });
+              }
+            }
+          }
+          // Try standard JSON parsing
+          else {
+            try {
+              parsedPropertyRows = JSON.parse(propertyRows);
+            } catch (e) {
+              console.error("Error parsing propertyRows JSON:", e);
+              // Fallback to empty array
+              parsedPropertyRows = [];
+            }
+          }
+        } 
+        // If already an object/array, use directly
+        else if (typeof propertyRows === 'object') {
+          parsedPropertyRows = Array.isArray(propertyRows) ? 
+            propertyRows : [propertyRows];
+        }
       } catch (error) {
         console.error("Error parsing propertyRows:", error);
       }
     }
     
-    if (Array.isArray(parsedPropertyRows) && parsedPropertyRows.length > 0) {
+    // Update property rows if we have valid data
+    if (Array.isArray(parsedPropertyRows) && parsedPropertyRows.length > 0 &&
+        parsedPropertyRows.some(row => row && row.rowId)) {
       await managePropertyRowsDisplayOrder(id, parsedPropertyRows);
     }
-    // For backward compatibility
-    else {
-      const isFeatured = restOfData.featured === "Featured";
-      const previousFeatured = currentProperty.featured === "Featured";
-      const featuredPosition = req.body.featuredPosition !== undefined ? 
-                               parseInt(req.body.featuredPosition, 10) : undefined;
-
-      // Only update display order if featured status changed or position changed
-      if (isFeatured !== previousFeatured || (isFeatured && featuredPosition !== undefined)) {
-        await manageFeaturedDisplayOrder(id, isFeatured, featuredPosition);
-      }
+    // For backward compatibility - ONLY IF NO VALID PROPERTY ROWS
+    else if (restOfData.featured === "Featured" || restOfData.featured === "Yes") {
+      const featPos = featuredPosition !== undefined ? 
+                      (Array.isArray(featuredPosition) ? 
+                       parseInt(featuredPosition[0], 10) : 
+                       parseInt(featuredPosition, 10)) : 
+                      undefined;
+      
+      await manageFeaturedDisplayOrder(id, true, featPos);
     }
 
     return res.status(200).json(updatedResidency);
@@ -661,7 +706,7 @@ export const createResidencyWithMultipleFiles = asyncHandler(async (req, res) =>
       cmaData
     } = req.body;
 
-    // Prepare landType as an array if it's provided
+    // Prepare landType as an array
     let landTypeArray = [];
     if (landType) {
       try {
@@ -783,25 +828,77 @@ export const createResidencyWithMultipleFiles = asyncHandler(async (req, res) =>
       },
     });
     
-    // Handle property rows if provided
+    // Handle property rows data
     let parsedPropertyRows = [];
     if (propertyRows) {
       try {
-        parsedPropertyRows = typeof propertyRows === 'string' 
-          ? JSON.parse(propertyRows) 
-          : propertyRows;
+        // Handle different formats for propertyRows data
+        if (typeof propertyRows === 'string') {
+          // Handle malformed [object Object] string
+          if (propertyRows === '[object Object]' || 
+              propertyRows.startsWith('[object Object]')) {
+            
+            console.log("Received malformed propertyRows data. Attempting to extract from featuredPosition array.");
+            
+            // Try to recover using featuredPosition array if available
+            if (featuredPosition && (
+                Array.isArray(featuredPosition) || 
+                typeof featuredPosition === 'string')) {
+              
+              const positions = Array.isArray(featuredPosition) ? 
+                featuredPosition : 
+                [featuredPosition];
+              
+              // Get featured row information from database
+              const featuredRows = await prisma.propertyRow.findMany({
+                where: { rowType: "featured" }
+              });
+              
+              if (featuredRows.length > 0) {
+                parsedPropertyRows = featuredRows.map((row, index) => {
+                  return {
+                    rowId: row.id,
+                    position: parseInt(positions[index] || 0, 10)
+                  };
+                });
+              }
+            }
+          }
+          // Try standard JSON parsing
+          else {
+            try {
+              parsedPropertyRows = JSON.parse(propertyRows);
+            } catch (e) {
+              console.error("Error parsing propertyRows JSON:", e);
+              // Fallback to empty array
+              parsedPropertyRows = [];
+            }
+          }
+        } 
+        // If already an object/array, use directly
+        else if (typeof propertyRows === 'object') {
+          parsedPropertyRows = Array.isArray(propertyRows) ? 
+            propertyRows : [propertyRows];
+        }
       } catch (error) {
         console.error("Error parsing propertyRows:", error);
       }
     }
     
-    if (Array.isArray(parsedPropertyRows) && parsedPropertyRows.length > 0) {
+    // Update property rows if we have valid data
+    if (Array.isArray(parsedPropertyRows) && parsedPropertyRows.length > 0 &&
+        parsedPropertyRows.some(row => row && row.rowId)) {
       await managePropertyRowsDisplayOrder(residency.id, parsedPropertyRows);
     }
-    // For backward compatibility
+    // For backward compatibility - ONLY IF NO VALID PROPERTY ROWS
     else if (residency && (featured === "Featured" || featured === "Yes")) {
-      const featuredPos = featuredPosition !== undefined ? parseInt(featuredPosition, 10) : undefined;
-      await manageFeaturedDisplayOrder(residency.id, true, featuredPos);
+      const featPos = featuredPosition !== undefined ? 
+                       (Array.isArray(featuredPosition) ? 
+                        parseInt(featuredPosition[0], 10) : 
+                        parseInt(featuredPosition, 10)) : 
+                       undefined;
+      
+      await manageFeaturedDisplayOrder(residency.id, true, featPos);
     }
     
     res.status(201).json({

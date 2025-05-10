@@ -1,6 +1,6 @@
 // components/PropertyManagement/FeaturedPropertiesManager.jsx
 import React, { useState, useEffect } from "react";
-import { getPropertyRows, updateProperty } from "@/utils/api";
+import { getPropertyRows } from "@/utils/api";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -10,6 +10,7 @@ import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, us
 import { SortableContext, verticalListSortingStrategy, useSortable, arrayMove } from "@dnd-kit/sortable";
 import { restrictToVerticalAxis } from "@dnd-kit/modifiers";
 import { CSS } from "@dnd-kit/utilities";
+import axios from 'axios';
 
 // Sortable item component
 const SortableItem = ({id, title, address, position}) => {

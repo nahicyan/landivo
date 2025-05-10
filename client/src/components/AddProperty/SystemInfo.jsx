@@ -136,12 +136,12 @@ export default function SystemInfoCard({ formData, handleChange }) {
     updateFormDataWithRows(updatedEntries);
   };
 
-  // Update form data with selected rows
+  // Update form data with selected rows - FIXED VERSION WITH JSON.stringify
   const updateFormDataWithRows = (entries) => {
     handleChange({
       target: {
         name: "propertyRows",
-        value: entries
+        value: JSON.stringify(entries) // Properly stringify the array
       }
     });
   };
