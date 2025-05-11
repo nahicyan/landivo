@@ -27,13 +27,14 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import UserSubmit from "@/components/AddProperty/UserSubmit"; 
-import { Plus, X, ChevronDown } from "lucide-react";
+import { Plus, X, ChevronDown, Loader2 } from "lucide-react";
 import axios from "axios";
 
-export default function SystemInfoCard({ formData, handleChange }) {
+export default function SystemInfoCard({ formData, handleChange, errors }) {
   const [propertyRows, setPropertyRows] = useState([]);
   const [isLoadingRows, setIsLoadingRows] = useState(false);
   const [showFeaturedDialog, setShowFeaturedDialog] = useState(false);
+  const [loadingPropertyRows, setLoadingPropertyRows] = useState(false);
   
   // State for managing property rows
   const [selectedRowEntries, setSelectedRowEntries] = useState([]);
@@ -45,12 +46,29 @@ export default function SystemInfoCard({ formData, handleChange }) {
 
   // State for row properties (to show in dropdown)
   const [rowProperties, setRowProperties] = useState([]);
+  const [allRowProperties, setAllRowProperties] = useState([]); // Store full list including current property
   const [loadingRowProperties, setLoadingRowProperties] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
+
+  // Detect if we're in edit mode
+  useEffect(() => {
+    if (formData.id) {
+      setIsEditing(true);
+    }
+  }, [formData.id]);
 
   // Fetch all property rows when component mounts
   useEffect(() => {
     fetchPropertyRows();
   }, []);
+  
+  // If we're editing a property, load its existing row associations
+  useEffect(() => {
+    if (formData.id) {
+      // We're in edit mode, fetch the property's row associations
+      fetchPropertyRowAssociations(formData.id);
+    }
+  }, [formData.id]);
 
   const fetchPropertyRows = async () => {
     setIsLoadingRows(true);
@@ -63,6 +81,44 @@ export default function SystemInfoCard({ formData, handleChange }) {
       setIsLoadingRows(false);
     }
   };
+  
+  const fetchPropertyRowAssociations = async (propertyId) => {
+    if (!propertyId) return;
+    
+    setLoadingPropertyRows(true);
+    try {
+      // Find which rows include this property
+      const response = await axios.get(`${import.meta.env.VITE_SERVER_URL}/api/property-rows`);
+      const rows = response.data || [];
+      
+      const propertyAssociations = [];
+      
+      // Look through each row to find if it includes the property
+      for (const row of rows) {
+        if (row.displayOrder && Array.isArray(row.displayOrder) && row.displayOrder.includes(propertyId)) {
+          // Found property in this row
+          propertyAssociations.push({
+            rowId: row.id,
+            rowName: row.name || row.rowType || "Unnamed Row",
+            position: row.displayOrder.indexOf(propertyId)
+          });
+        }
+      }
+      
+      // Set the selected rows
+      setSelectedRowEntries(propertyAssociations);
+      
+      // Update form data with selected rows
+      if (propertyAssociations.length > 0) {
+        updateFormDataWithRows(propertyAssociations);
+      }
+      
+    } catch (error) {
+      console.error("Error fetching property row associations:", error);
+    } finally {
+      setLoadingPropertyRows(false);
+    }
+  };
 
   // Fetch properties in the selected row to show position options
   const fetchRowProperties = async (rowId) => {
@@ -73,13 +129,25 @@ export default function SystemInfoCard({ formData, handleChange }) {
       const response = await axios.get(`${import.meta.env.VITE_SERVER_URL}/api/property-rows/${rowId}`);
       
       if (response.data && response.data.propertyDetails) {
-        setRowProperties(response.data.propertyDetails);
+        // Store complete list of properties in this row
+        const allProperties = response.data.propertyDetails || [];
+        setAllRowProperties(allProperties);
+        
+        // Filter out the current property if we're in edit mode
+        let filteredProperties = allProperties;
+        if (formData.id) {
+          filteredProperties = allProperties.filter(p => p.id !== formData.id);
+        }
+        
+        setRowProperties(filteredProperties);
       } else {
         setRowProperties([]);
+        setAllRowProperties([]);
       }
     } catch (error) {
       console.error("Error fetching row properties:", error);
       setRowProperties([]);
+      setAllRowProperties([]);
     } finally {
       setLoadingRowProperties(false);
     }
@@ -91,10 +159,15 @@ export default function SystemInfoCard({ formData, handleChange }) {
     const selectedRow = propertyRows.find(row => row.id === rowId);
     const rowName = selectedRow ? (selectedRow.name || selectedRow.rowType || "Unnamed Row") : "";
     
+    // Check if this property is already in this row (for edit mode)
+    const existingEntry = selectedRowEntries.find(entry => entry.rowId === rowId);
+    
     setCurrentRowSelection({
       ...currentRowSelection,
       rowId,
-      rowName
+      rowName,
+      // If we're editing and already in this row, use the existing position
+      position: existingEntry ? existingEntry.position : 0
     });
     
     // Fetch properties in this row
@@ -108,16 +181,25 @@ export default function SystemInfoCard({ formData, handleChange }) {
     // Check if row already exists
     const exists = selectedRowEntries.some(entry => entry.rowId === currentRowSelection.rowId);
     
-    if (!exists) {
-      const newEntry = {
-        ...currentRowSelection
-      };
-      
-      setSelectedRowEntries(prev => [...prev, newEntry]);
-      
-      // Update the form data with selected rows
-      updateFormDataWithRows([...selectedRowEntries, newEntry]);
+    if (exists) {
+      // If it exists, update the position
+      const updatedEntries = selectedRowEntries.map(entry => 
+        entry.rowId === currentRowSelection.rowId 
+          ? { ...entry, position: currentRowSelection.position }
+          : entry
+      );
+      setSelectedRowEntries(updatedEntries);
+      updateFormDataWithRows(updatedEntries);
+    } else {
+      // Add new entry
+      const newEntry = { ...currentRowSelection };
+      const updatedEntries = [...selectedRowEntries, newEntry];
+      setSelectedRowEntries(updatedEntries);
+      updateFormDataWithRows(updatedEntries);
     }
+    
+    // Close the dialog after adding
+    setShowFeaturedDialog(false);
     
     // Reset selection
     setCurrentRowSelection({
@@ -129,21 +211,44 @@ export default function SystemInfoCard({ formData, handleChange }) {
 
   // Remove a row from selection
   const removeRowFromSelection = (rowId) => {
+    // First make sure this is a valid operation
+    if (!rowId || !selectedRowEntries.some(entry => entry.rowId === rowId)) {
+      return;
+    }
+    
+    // Create a new array without the specified row
     const updatedEntries = selectedRowEntries.filter(entry => entry.rowId !== rowId);
+    
+    // Update the state
     setSelectedRowEntries(updatedEntries);
     
-    // Update form data
+    // Update form data with the new list
     updateFormDataWithRows(updatedEntries);
+    
+    console.log(`Removed property from row ${rowId}. Updated entries:`, updatedEntries);
   };
 
-  // Update form data with selected rows - FIXED VERSION WITH JSON.stringify
+  // Update form data with selected rows - ensure proper JSON stringify
   const updateFormDataWithRows = (entries) => {
+    // Make sure entries is an array
+    const dataToStore = Array.isArray(entries) ? entries : [];
+    
+    // Use a clean object for each entry to avoid circular references
+    const cleanedEntries = dataToStore.map(entry => ({
+      rowId: entry.rowId,
+      rowName: entry.rowName,
+      position: entry.position
+    }));
+    
+    // Store as a properly JSON-stringified array
     handleChange({
       target: {
         name: "propertyRows",
-        value: JSON.stringify(entries) // Properly stringify the array
+        value: JSON.stringify(cleanedEntries)
       }
     });
+    
+    console.log("Updated form data with rows:", cleanedEntries);
   };
 
   // Format property address for display
@@ -156,6 +261,34 @@ export default function SystemInfoCard({ formData, handleChange }) {
     if (property.zip) address += property.zip ? ` - ${property.zip}` : "";
     
     return address || "Unknown Address";
+  };
+
+  // Generate position options for the selected row
+  const generatePositionOptions = () => {
+    // If no properties in the row, just show "1. First position"
+    if (rowProperties.length === 0) {
+      return [
+        <SelectItem key={0} value="0">
+          1. First position
+        </SelectItem>
+      ];
+    }
+
+    // Generate before options for each property
+    const beforeOptions = rowProperties.map((property, index) => (
+      <SelectItem key={index} value={index.toString()}>
+        {index + 1}. Before {property.title || formatPropertyAddress(property)}
+      </SelectItem>
+    ));
+
+    // Add "End of list" option
+    beforeOptions.push(
+      <SelectItem key={rowProperties.length} value={rowProperties.length.toString()}>
+        {rowProperties.length + 1}. End of list
+      </SelectItem>
+    );
+
+    return beforeOptions;
   };
 
   return (
@@ -182,7 +315,11 @@ export default function SystemInfoCard({ formData, handleChange }) {
             value={formData.ownerId}
             onChange={handleChange}
             placeholder="Enter Owner ID"
+            className={errors && errors.ownerId ? "border-red-500" : ""}
           />
+          {errors && errors.ownerId && (
+            <span className="text-red-500 text-sm">{errors.ownerId}</span>
+          )}
         </div>
 
         {/* Area Selection */}
@@ -195,7 +332,9 @@ export default function SystemInfoCard({ formData, handleChange }) {
             value={formData.area}
             onValueChange={(value) => handleChange({ target: { name: "area", value } })}
           >
-            <SelectTrigger className="w-full border-gray-300 focus:border-[#324c48] focus:ring-1 focus:ring-[#324c48]">
+            <SelectTrigger 
+              className={`w-full border-gray-300 focus:border-[#324c48] focus:ring-1 focus:ring-[#324c48] ${errors && errors.area ? "border-red-500" : ""}`}
+            >
               <SelectValue placeholder="Select Area" />
             </SelectTrigger>
             <SelectContent>
@@ -206,6 +345,9 @@ export default function SystemInfoCard({ formData, handleChange }) {
               <SelectItem value="Other Areas">Other Areas</SelectItem>
             </SelectContent>
           </Select>
+          {errors && errors.area && (
+            <span className="text-red-500 text-sm">{errors.area}</span>
+          )}
         </div>
 
         {/* Status Selection */}
@@ -218,7 +360,9 @@ export default function SystemInfoCard({ formData, handleChange }) {
             value={formData.status}
             onValueChange={(value) => handleChange({ target: { name: "status", value } })}
           >
-            <SelectTrigger className="w-full border-gray-300 focus:border-[#324c48] focus:ring-1 focus:ring-[#324c48]">
+            <SelectTrigger 
+              className={`w-full border-gray-300 focus:border-[#324c48] focus:ring-1 focus:ring-[#324c48] ${errors && errors.status ? "border-red-500" : ""}`}
+            >
               <SelectValue placeholder="Select Status" />
             </SelectTrigger>
             <SelectContent>
@@ -229,6 +373,9 @@ export default function SystemInfoCard({ formData, handleChange }) {
               <SelectItem value="Testing">Testing</SelectItem>
             </SelectContent>
           </Select>
+          {errors && errors.status && (
+            <span className="text-red-500 text-sm">{errors.status}</span>
+          )}
         </div>
 
         {/* Featured Selection */}
@@ -262,10 +409,20 @@ export default function SystemInfoCard({ formData, handleChange }) {
               <Plus className="w-4 h-4 mr-2" /> Add to Featured Lists
             </Button>
             
+            {/* Loading indicator when fetching property row associations */}
+            {loadingPropertyRows && (
+              <div className="flex justify-center items-center p-4">
+                <Loader2 className="h-5 w-5 text-[#324c48] animate-spin mr-2" />
+                <span>Loading property lists...</span>
+              </div>
+            )}
+            
             {/* Show selected rows */}
             {selectedRowEntries.length > 0 && (
               <div className="mt-4 space-y-2">
-                <Label className="text-gray-700">Selected Featured Lists:</Label>
+                <Label className="text-gray-700">
+                  {isEditing ? "Property is in these lists:" : "Selected Featured Lists:"}
+                </Label>
                 <div className="space-y-2">
                   {selectedRowEntries.map((entry, index) => (
                     <div 
@@ -280,6 +437,7 @@ export default function SystemInfoCard({ formData, handleChange }) {
                         type="button"
                         onClick={() => removeRowFromSelection(entry.rowId)}
                         className="text-red-500 hover:text-red-700"
+                        aria-label={`Remove from ${entry.rowName}`}
                       >
                         <X className="w-4 h-4" />
                       </button>
@@ -321,7 +479,7 @@ export default function SystemInfoCard({ formData, handleChange }) {
               </Select>
             </div>
             
-            {/* Position Selection - FIXED to show "Before" instead of "After" */}
+            {/* Position Selection */}
             <div className="space-y-2">
               <Label htmlFor="position">Position</Label>
               <Select
@@ -336,30 +494,42 @@ export default function SystemInfoCard({ formData, handleChange }) {
                   <SelectValue placeholder={loadingRowProperties ? "Loading..." : "Select position"} />
                 </SelectTrigger>
                 <SelectContent>
-                  {/* Show positions with "Before" text instead of "After" */}
-                  {[...Array(rowProperties.length + 1)].map((_, index) => (
-                    <SelectItem key={index} value={index.toString()}>
-                      {index + 1}. {index < rowProperties.length ? 
-                        `Before ${formatPropertyAddress(rowProperties[index])}` : 
-                        "End of list"}
-                    </SelectItem>
-                  ))}
+                  {generatePositionOptions()}
                 </SelectContent>
               </Select>
             </div>
           </div>
           
-          {/* Properties in selected row - UPDATED to show address instead of title */}
+          {/* Properties in selected row */}
           {currentRowSelection.rowId && rowProperties.length > 0 && (
             <div className="py-2">
               <h4 className="text-sm font-medium mb-2">Current Properties in List:</h4>
               <div className="max-h-[200px] overflow-y-auto border rounded-md p-2 space-y-1">
                 {rowProperties.map((property, index) => (
                   <div key={property.id} className="text-sm py-1 border-b last:border-0">
-                    <span className="font-medium">{index + 1}. {formatPropertyAddress(property)}</span>
+                    <span className="font-medium">{index + 1}. {property.title || formatPropertyAddress(property)}</span>
                   </div>
                 ))}
               </div>
+            </div>
+          )}
+          
+          {/* Current property's row selection status */}
+          {isEditing && currentRowSelection.rowId && (
+            <div className="py-2">
+              {selectedRowEntries.some(entry => entry.rowId === currentRowSelection.rowId) ? (
+                <div className="bg-yellow-50 p-3 rounded-md border border-yellow-200">
+                  <p className="text-sm text-yellow-800">
+                    This property is already in this list. Adding again will update its position.
+                  </p>
+                </div>
+              ) : (
+                <div className="bg-blue-50 p-3 rounded-md border border-blue-200">
+                  <p className="text-sm text-blue-800">
+                    Adding the property to this list at the selected position.
+                  </p>
+                </div>
+              )}
             </div>
           )}
           
@@ -372,7 +542,8 @@ export default function SystemInfoCard({ formData, handleChange }) {
               disabled={!currentRowSelection.rowId}
               className="bg-[#324c48] hover:bg-[#3f4f24]"
             >
-              Add to List
+              {selectedRowEntries.some(entry => entry.rowId === currentRowSelection.rowId) ? 
+                "Update Position" : "Add to List"}
             </Button>
           </DialogFooter>
         </DialogContent>
