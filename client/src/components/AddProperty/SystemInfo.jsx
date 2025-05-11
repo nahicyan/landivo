@@ -321,7 +321,7 @@ export default function SystemInfoCard({ formData, handleChange }) {
               </Select>
             </div>
             
-            {/* Position Selection */}
+            {/* Position Selection - FIXED to show "Before" instead of "After" */}
             <div className="space-y-2">
               <Label htmlFor="position">Position</Label>
               <Select
@@ -336,11 +336,11 @@ export default function SystemInfoCard({ formData, handleChange }) {
                   <SelectValue placeholder={loadingRowProperties ? "Loading..." : "Select position"} />
                 </SelectTrigger>
                 <SelectContent>
-                  {/* Show positions equivalent to row length + 1 */}
+                  {/* Show positions with "Before" text instead of "After" */}
                   {[...Array(rowProperties.length + 1)].map((_, index) => (
                     <SelectItem key={index} value={index.toString()}>
                       {index + 1}. {index < rowProperties.length ? 
-                        `After ${rowProperties[index].title}` : 
+                        `Before ${formatPropertyAddress(rowProperties[index])}` : 
                         "End of list"}
                     </SelectItem>
                   ))}
@@ -349,15 +349,14 @@ export default function SystemInfoCard({ formData, handleChange }) {
             </div>
           </div>
           
-          {/* Properties in selected row */}
+          {/* Properties in selected row - UPDATED to show address instead of title */}
           {currentRowSelection.rowId && rowProperties.length > 0 && (
             <div className="py-2">
               <h4 className="text-sm font-medium mb-2">Current Properties in List:</h4>
               <div className="max-h-[200px] overflow-y-auto border rounded-md p-2 space-y-1">
                 {rowProperties.map((property, index) => (
                   <div key={property.id} className="text-sm py-1 border-b last:border-0">
-                    <span className="font-medium">{index + 1}. {property.title}</span>
-                    <p className="text-gray-500 text-xs">{formatPropertyAddress(property)}</p>
+                    <span className="font-medium">{index + 1}. {formatPropertyAddress(property)}</span>
                   </div>
                 ))}
               </div>
