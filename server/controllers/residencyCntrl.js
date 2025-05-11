@@ -71,32 +71,10 @@ const managePropertyRowsDisplayOrder = async (propertyId, propertyRows) => {
 // Helper function to manage property display order
 const manageFeaturedDisplayOrder = async (propertyId, isFeatured, displayPosition) => {
   try {
-    // Find or create PropertyRow for featured properties
+    // Find PropertyRow for featured properties
     let featuredRow = await prisma.propertyRow.findFirst({
       where: { rowType: "featured" },
     });
-    
-    // If no featured row exists and the property is featured, create one
-    if (!featuredRow && isFeatured) {
-      // Check if there are any rows with rowType "featured" before creating
-      const existingRows = await prisma.propertyRow.findMany({
-        where: { rowType: "featured" }
-      });
-      
-      if (existingRows.length === 0) {
-        // Create a default one only if no row exists 
-        featuredRow = await prisma.propertyRow.create({
-          data: {
-            name: "Featured Properties", 
-            rowType: "featured",
-            sort: "manual",
-            displayOrder: [propertyId],
-          },
-        });
-        console.log("Created new featured PropertyRow");
-        return;
-      }
-    }
     
     // If property is not featured, remove it from the display order
     if (!isFeatured && featuredRow) {
