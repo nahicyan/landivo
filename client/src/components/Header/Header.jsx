@@ -13,9 +13,11 @@ import {
   NavigationMenuItem,
   NavigationMenuList,
   NavigationMenuLink,
+  NavigationMenuContent,
+  NavigationMenuTrigger,
 } from "@/components/ui/navigation-menu";
 import { Sheet, SheetTrigger, SheetContent } from "@/components/ui/sheet";
-import { Menu, X, User, LogOut, Settings } from "lucide-react";
+import { Menu, X, User, LogOut, Settings, ChevronDown } from "lucide-react";
 import { useAuth } from '@/components/hooks/useAuth';
 import { usePermissions } from '@/components/Auth0/PermissionsContext';
 import PermissionGuard from '@/components/Auth0/PermissionGuard';
@@ -109,6 +111,16 @@ const Header = () => {
     return user?.email || 'User';
   };
 
+  // Area navigation items for dropdown
+  const areaItems = [
+    { name: "All Properties", path: "/properties" },
+    { name: "Dallas Fort Worth", path: "/DFW" },
+    { name: "Austin", path: "/Austin" },
+    { name: "Houston", path: "/Houston" },
+    { name: "San Antonio", path: "/SanAntonio" },
+    { name: "Other Lands", path: "/OtherLands" },
+  ];
+
   return (
     <header className="sticky top-0 z-50 bg-[#FDF8F2] border-b border-[#e3a04f] shadow-md">
       <div className="px-4 mx-auto max-w-7xl sm:px-6 lg:px-8">
@@ -141,20 +153,35 @@ const Header = () => {
                 className="bg-[#FDF8F2] border-r border-[#e3a04f]"
               >
                 <div className="space-y-4">
-                  {/* Standard navigation items */}
+                  {/* Properties dropdown for mobile */}
+                  <div className="space-y-2">
+                    <p className="text-lg font-medium text-[#324c48]">Properties</p>
+                    {areaItems.map((item) => (
+                      <Link
+                        key={item.path}
+                        to={item.path}
+                        className="block pl-4 text-base text-[#324c48] hover:text-[#D4A017]"
+                        onClick={() => setMobileMenuOpen(false)}
+                      >
+                        {item.name}
+                      </Link>
+                    ))}
+                  </div>
+
+                  {/* Other navigation items */}
                   {[
-                    "Properties",
-                    "Sell",
-                    "Financing",
-                    "About Us",
-                    "Support",
+                    { name: "Sell", path: "/sell" },
+                    { name: "Financing", path: "/financing" },
+                    { name: "About Us", path: "/about-us" },
+                    { name: "Support", path: "/support" },
                   ].map((item) => (
                     <Link
-                      key={item}
-                      to={`/${item.toLowerCase().replace(/\s/g, "-")}`}
+                      key={item.name}
+                      to={item.path}
                       className="block text-lg font-medium text-[#324c48] hover:text-[#D4A017]"
+                      onClick={() => setMobileMenuOpen(false)}
                     >
-                      {item}
+                      {item.name}
                     </Link>
                   ))}
                   
@@ -168,6 +195,7 @@ const Header = () => {
                           <Link 
                             to="/admin"
                             className="block text-lg font-medium text-[#324c48] hover:text-[#D4A017]"
+                            onClick={() => setMobileMenuOpen(false)}
                           >
                             Admin Dashboard
                           </Link>
@@ -177,6 +205,7 @@ const Header = () => {
                           <Link 
                             to="/admin/add-property"
                             className="block text-lg font-medium text-[#324c48] hover:text-[#D4A017] mt-2"
+                            onClick={() => setMobileMenuOpen(false)}
                           >
                             Add Property
                           </Link>
@@ -212,8 +241,55 @@ const Header = () => {
           <div className="hidden lg:flex lg:items-center lg:ml-auto lg:space-x-8">
             <NavigationMenu>
               <NavigationMenuList className="flex space-x-6">
+                {/* Properties with dropdown */}
+                <NavigationMenuItem>
+                  <NavigationMenuTrigger className="text-base font-medium text-[#324c48] hover:text-[#D4A017] transition bg-transparent">
+                    Properties
+                  </NavigationMenuTrigger>
+                  <NavigationMenuContent>
+                    <div className="grid w-[400px] gap-3 p-4 md:w-[500px] bg-[#FDF8F2] border border-[#e3a04f]/20 rounded-lg shadow-lg">
+                      <div className="row-span-3">
+                        <NavigationMenuLink asChild>
+                          
+                          <a  className="flex h-full w-full select-none flex-col justify-end rounded-md bg-gradient-to-b from-[#3f4f24]/10 to-[#3f4f24]/20 p-6 no-underline outline-none focus:shadow-md"
+                            href="/properties"
+                          >
+                            <div className="mb-2 mt-4 text-lg font-medium text-[#3f4f24]">
+                              All Properties
+                            </div>
+                            <p className="text-sm leading-tight text-[#324c48]">
+                              Explore all available land properties across Texas
+                            </p>
+                          </a>
+                        </NavigationMenuLink>
+                      </div>
+                      <div className="grid gap-2">
+                        {areaItems.slice(1).map((item) => (
+                          <NavigationMenuLink key={item.path} asChild>
+                            <Link
+                              to={item.path}
+                              className="block select-none space-y-1 rounded-md p-3 leading-none no-underline outline-none transition-colors hover:bg-[#e3a04f]/10 hover:text-[#D4A017] focus:bg-[#e3a04f]/10 focus:text-[#D4A017]"
+                            >
+                              <div className="text-sm font-medium leading-none text-[#324c48]">
+                                {item.name}
+                              </div>
+                              <p className="line-clamp-2 text-sm leading-snug text-[#324c48]/80">
+                                {item.name === "Dallas Fort Worth" && "Discover land opportunities in the DFW metroplex"}
+                                {item.name === "Austin" && "Find prime land in the Austin area"}
+                                {item.name === "Houston" && "Explore properties in Greater Houston"}
+                                {item.name === "San Antonio" && "Browse land in San Antonio region"}
+                                {item.name === "Other Lands" && "Discover unique properties elsewhere in Texas"}
+                              </p>
+                            </Link>
+                          </NavigationMenuLink>
+                        ))}
+                      </div>
+                    </div>
+                  </NavigationMenuContent>
+                </NavigationMenuItem>
+
+                {/* Other navigation items */}
                 {[
-                  { name: "Properties", path: "/properties" },
                   { name: "Sell", path: "/sell" },
                   { name: "Financing", path: "/financing" },
                   { name: "About Us", path: "/about-us" },
