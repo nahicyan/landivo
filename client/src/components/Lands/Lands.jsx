@@ -24,7 +24,7 @@ export const Lands = () => {
   const { data, isError, isLoading } = useProperties();
   const navigate = useNavigate();
 
-  // State for featured properties
+  // State for homepage featured properties
   const [featuredProperties, setFeaturedProperties] = useState([]);
   const [loadingFeatured, setLoadingFeatured] = useState(true);
 
@@ -35,15 +35,15 @@ export const Lands = () => {
     showRight: false,
   });
 
-  // Fetch featured properties with the new PropertyRow system
+  // Fetch homepage featured properties
   useEffect(() => {
     const fetchFeaturedProperties = async () => {
       if (!data || data.length === 0) return;
       
       setLoadingFeatured(true);
       try {
-        // Fetch the featured PropertyRow to get the order
-        const response = await axios.get(`${import.meta.env.VITE_SERVER_URL}/api/property-rows?rowType=featured`);
+        // Fetch the homepage PropertyRow to get the order
+        const response = await axios.get(`${import.meta.env.VITE_SERVER_URL}/api/property-rows?rowType=homepage`);
         
         if (response.data && Array.isArray(response.data.displayOrder)) {
           // Get the display order
@@ -53,18 +53,19 @@ export const Lands = () => {
           const propertiesMap = new Map(data.map(property => [property.id, property]));
           
           // Get properties in the correct order, filtering out any IDs that don't exist
+          // AND only include properties that have featured: "Featured"
           const orderedProperties = displayOrder
             .map(id => propertiesMap.get(id))
-            .filter(property => !!property);
+            .filter(property => !!property && property.featured === "Featured");
           
           setFeaturedProperties(orderedProperties);
         } else {
-          // Fallback to old method if no PropertyRow exists
+          // Fallback to filtering just featured properties from all data
           const featured = data.filter(property => property.featured === "Featured");
           setFeaturedProperties(featured);
         }
       } catch (error) {
-        console.error("Error fetching featured properties:", error);
+        console.error("Error fetching homepage properties:", error);
         // Fallback to filtering featured properties from data
         const featured = data.filter(property => property.featured === "Featured");
         setFeaturedProperties(featured);
@@ -328,8 +329,8 @@ export const Lands = () => {
 
           {/* Browse All Properties Button */}
           <div className="mt-8 flex justify-end">
-            <a
-              href="/properties"
+            
+            <a href="/properties"
               className="inline-block bg-[#324c48] text-white font-semibold py-2 px-6 rounded-md shadow hover:bg-[#3f4f24] transition-colors"
             >
               Browse All Properties

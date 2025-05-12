@@ -261,9 +261,10 @@ const updateFormDataWithRows = (entries) => {
     if (!property) return "Unknown Address";
     
     let address = property.streetAddress || "";
-    if (property.city) address += property.city ? `, ${property.city}` : "";
-    if (property.state) address += property.state ? `, ${property.state}` : "";
-    if (property.zip) address += property.zip ? ` - ${property.zip}` : "";
+    if (property.city) address += `, ${property.city}`;
+    if (property.state && property.zip) address += `, ${property.state}-${property.zip}`;
+    else if (property.state) address += `, ${property.state}`;
+    else if (property.zip) address += `, ${property.zip}`;
     
     return address || "Unknown Address";
   };
@@ -282,7 +283,7 @@ const updateFormDataWithRows = (entries) => {
     // Generate before options for each property
     const beforeOptions = rowProperties.map((property, index) => (
       <SelectItem key={index} value={index.toString()}>
-        {index + 1}. Before {property.title || formatPropertyAddress(property)}
+        {index + 1}. Before {formatPropertyAddress(property)}
       </SelectItem>
     ));
 
@@ -512,7 +513,7 @@ const updateFormDataWithRows = (entries) => {
               <div className="max-h-[200px] overflow-y-auto border rounded-md p-2 space-y-1">
                 {rowProperties.map((property, index) => (
                   <div key={property.id} className="text-sm py-1 border-b last:border-0">
-                    <span className="font-medium">{index + 1}. {property.title || formatPropertyAddress(property)}</span>
+                    <span className="font-medium">{index + 1}. {formatPropertyAddress(property)}</span>
                   </div>
                 ))}
               </div>
