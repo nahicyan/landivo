@@ -57,6 +57,7 @@ import { PERMISSIONS } from "./utils/permissions";
 import { ActivityTrackingProvider } from "./components/ActivityTracking/ActivityTrackingProvider";
 import { useApiAuthInterceptor } from "./utils/apiInterceptor";
 import AdminProperties from "./pages/AdminProperties/AdminProperties";
+import AdminSettings from "./pages/AdminSettings/AdminSettings";
 import "react-toastify/dist/ReactToastify.css";
 
 const queryClient = new QueryClient({
@@ -141,7 +142,7 @@ function App() {
                           <Route path="edit-property/:propertyId" element={<EditProperty />} />
                           <Route path="offers" element={<AdminOffer />} />
                           <Route path="properties" element={<AdminProperties />} />
-                          
+
                           {/* Deals */}
                           <Route path="deals" element={<AdminDeals />} />
                           <Route path="deals/list" element={<DealsList />} />
@@ -149,7 +150,9 @@ function App() {
                           <Route path="deals/:id" element={<DealDetail />} />
                           <Route path="deals/:id/payments" element={<PaymentList />} />
                           <Route path="deals/:id/summary" element={<DealFinancialSummary />} />
-                          
+
+
+
                           {/* Users */}
                           <Route
                             path="users"
@@ -175,7 +178,7 @@ function App() {
                               </ProtectedRoute>
                             }
                           />
-                          
+
                           {/* Buyers */}
                           <Route
                             path="buyers"
@@ -252,6 +255,9 @@ function App() {
                           {/* Qualification dashboard */}
                           <Route path="financing" element={<AdminFinancing />} />
                           <Route path="financing/applications" element={<OfferTable />} />
+
+                          {/* Settings */}
+                          <Route path="settings" element={<AdminSettings/>}/>
                         </Route>
 
                         {/* Agent routes - using permissions instead of roles */}

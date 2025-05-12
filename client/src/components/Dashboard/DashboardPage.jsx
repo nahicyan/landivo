@@ -40,7 +40,7 @@ export default function DashboardPage() {
           <h1 className="text-3xl font-bold text-[#324c48] tracking-tight">Dashboard</h1>
           <p className="text-muted-foreground">Welcome to your Landivo admin dashboard.</p>
         </div>
-        <div className="flex flex-col sm:flex-row gap-2">
+        {/* <div className="flex flex-col sm:flex-row gap-2">
           <CalendarDateRangePicker
             dateRange={dateRange}
             setDateRange={setDateRange}
@@ -53,7 +53,7 @@ export default function DashboardPage() {
             <RefreshCw className="mr-2 h-4 w-4" />
             Refresh
           </Button>
-        </div>
+        </div> */}
       </div>
 
       <Tabs defaultValue="overview" className="space-y-4">

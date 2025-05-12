@@ -1,203 +1,237 @@
 // client/src/components/Layout/AdminLayout.jsx
 import React, { useState } from "react";
-import { Outlet, Link, useLocation, useNavigate } from "react-router-dom";
+import { Outlet, Link, useLocation } from "react-router-dom";
 import Header from "../Header/Header";
 import Footer from "../Footer/Footer";
-import {
-  Drawer,
-  List,
-  ListItem,
-  ListItemIcon,
-  ListItemText,
-  IconButton,
-  Typography,
-  Box,
-  Divider,
-} from "@mui/material";
-import {
-  Menu as MenuIcon,
-  Home as HomeIcon,
-  Business as BusinessIcon,
-  People as PeopleIcon,
-  Person as PersonIcon,
-  Assessment as AssessmentIcon,
-  ViewList as ViewListIcon,
-  Add as AddIcon,
-  // Import more appropriate icons for Deals
-  AttachMoney as AttachMoneyIcon,  // Add this icon
-  Receipt as ReceiptIcon,           // Add this icon (optional alternative)
-  Description as DescriptionIcon    // Add this icon (optional alternative)
-} from "@mui/icons-material";
+import { cn } from "@/lib/utils";
+import { Button } from "@/components/ui/button";
+import { Separator } from "@/components/ui/separator";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { 
+  ChevronLeft,
+  Home,
+  Building,
+  Users,
+  User,
+  BarChart,
+  ListChecks,
+  DollarSign,
+  Settings,
+  LogOut,
+  Bell,
+  ChevronRight,
+  HelpCircle
+} from "lucide-react";
 
-// Drawer width for the sidebar
-const drawerWidth = 240;
+const sidebarWidth = 300;
 
 export default function AdminLayout() {
-  const [open, setOpen] = useState(true);
+  const [collapsed, setCollapsed] = useState(false);
   const location = useLocation();
 
-  const handleDrawerToggle = () => {
-    setOpen(!open);
+  const handleSidebarToggle = () => {
+    setCollapsed(!collapsed);
   };
 
-  // Admin navigation items
-  const menuItems = [
-    { text: "Dashboard", icon: <HomeIcon />, path: "/admin" },
-    { text: "Properties", icon: <BusinessIcon />, path: "/admin/properties" },
-    // { text: "Add Property", icon: <AddIcon />, path: "/admin/add-property" },
-    { text: "Users", icon: <PeopleIcon />, path: "/admin/users" },
-    { text: "Deals", icon: <AttachMoneyIcon />, path: "/admin/deals" },
-    { text: "Offers", icon: <AttachMoneyIcon />, path: "/admin/offers" },
-    { text: "Buyers", icon: <PersonIcon />, path: "/admin/buyers" },
-    { text: "Email Lists", icon: <ViewListIcon />, path: "/admin/buyer-lists" },
-    { text: "Financing Applications", icon: <AssessmentIcon />, path: "/admin/financing" },
+  // Admin navigation items with category grouping
+  const menuCategories = [
+    {
+      name: "Overview",
+      items: [
+        { text: "Dashboard", icon: <Home className="h-5 w-5" />, path: "/admin", badge: 3 }
+      ]
+    },
+    {
+      name: "Management",
+      items: [
+        { text: "Properties", icon: <Building className="h-5 w-5" />, path: "/admin/properties" },
+        { text: "Users", icon: <Users className="h-5 w-5" />, path: "/admin/users" },
+        { text: "Buyers", icon: <User className="h-5 w-5" />, path: "/admin/buyers" },
+      ]
+    },
+    {
+      name: "Transactions",
+      items: [
+        { text: "Deals", icon: <DollarSign className="h-5 w-5" />, path: "/admin/deals", badge: 2 },
+        { text: "Offers", icon: <DollarSign className="h-5 w-5" />, path: "/admin/offers", badge: 5 },
+      ]
+    },
+    {
+      name: "Communications",
+      items: [
+        { text: "Email Lists", icon: <ListChecks className="h-5 w-5" />, path: "/admin/buyer-lists" },
+      ]
+    },
+    {
+      name: "Applications",
+      items: [
+        { text: "Financing", icon: <BarChart className="h-5 w-5" />, path: "/admin/financing" },
+      ]
+    },
+    {
+      name: "System",
+      items: [
+        { text: "Settings", icon: <Settings className="h-5 w-5" />, path: "/admin/settings" },
+        { text: "Help", icon: <HelpCircle className="h-5 w-5" />, path: "/admin/help" },
+      ]
+    },
   ];
 
   return (
     <div className="bg-[#FDF8F2] text-[#333] min-h-screen flex flex-col">
       {/* Header section */}
-      <header className="sticky top-0 z-50 w-full bg-[#FDF8F2]">
+      <header className="sticky top-0 z-50 w-full bg-gradient-to-r from-[#FDF8F2] to-[#f4f7ee] shadow-sm border-b border-[#324c48]/10">
         <Header />
       </header>
 
       <div className="flex flex-grow">
-        {/* Admin Sidebar */}
-        <Drawer
-          variant="permanent"
-          sx={{
-            width: drawerWidth,
-            flexShrink: 0,
-            [`& .MuiDrawer-paper`]: {
-              width: drawerWidth,
-              boxSizing: "border-box",
-              backgroundColor: "#f5f5f5",
-              borderRight: "1px solid #e0e0e0",
-              marginTop: "80px", 
-            },
-          }}
-          open={open}
+        {/* Premium Admin Sidebar */}
+        <aside 
+          className={cn(
+            "h-[calc(100vh-80px)] border-r border-[#324c48]/20 bg-gradient-to-b from-[#fcfaf6] to-[#f1f6ea] shadow-lg transition-all duration-300 ease-in-out relative",
+            collapsed ? "w-20" : `w-[${sidebarWidth}px]`
+          )}
+          style={{ marginTop: "80px" }}
         >
-          <Box sx={{ display: "flex", alignItems: "center", padding: "8px 16px" }}>
-            <IconButton onClick={handleDrawerToggle}>
-              <MenuIcon />
-            </IconButton>
-            <Typography variant="h6" sx={{ ml: 2 }}>Admin</Typography>
-          </Box>
+          <div className="flex items-center justify-between p-6 bg-gradient-to-r from-[#324c48]/15 to-[#324c48]/5">
+            <div className={cn(
+              "flex items-center space-x-3 transition-opacity duration-300",
+              collapsed ? "opacity-0" : "opacity-100"
+            )}>
+              <div className="h-10 w-10 rounded-lg bg-gradient-to-br from-[#324c48] to-[#546930] flex items-center justify-center shadow-md">
+                <Building className="h-6 w-6 text-white" />
+              </div>
+              <h2 className="font-bold text-xl text-[#324c48] tracking-tight">
+                Landivo
+              </h2>
+            </div>
+            <Button 
+              variant="ghost" 
+              size="icon" 
+              onClick={handleSidebarToggle}
+              className="h-10 w-10 rounded-full bg-white/80 shadow-md hover:bg-[#324c48]/10 transition-all hover:shadow-lg"
+            >
+              {collapsed ? 
+                <ChevronRight className="h-5 w-5 text-[#324c48]" /> : 
+                <ChevronLeft className="h-5 w-5 text-[#324c48]" />
+              }
+            </Button>
+          </div>
           
-          <Divider />
+          <div className={cn(
+            "flex items-center justify-between px-6 py-4",
+            collapsed && "justify-center"
+          )}>
+            <div className={cn(
+              "flex items-center space-x-3",
+              collapsed && "hidden"
+            )}>
+              <div className="h-10 w-10 rounded-full bg-[#546930]/15 flex items-center justify-center">
+                <User className="h-5 w-5 text-[#546930]" />
+              </div>
+              <div>
+                <p className="font-semibold text-[#324c48]">Admin User</p>
+                <p className="text-xs text-[#324c48]/70">Administrator</p>
+              </div>
+            </div>
+            
+            <Button
+              variant="ghost" 
+              size="icon"
+              className={cn(
+                "h-9 w-9 rounded-full bg-[#D4A017]/15 hover:bg-[#D4A017]/25 transition-all",
+                !collapsed && "relative"
+              )}
+            >
+              <Bell className="h-5 w-5 text-[#D4A017]" />
+              <span className="absolute top-0 right-0 h-4 w-4 rounded-full bg-red-500 text-[10px] text-white flex items-center justify-center">
+                3
+              </span>
+            </Button>
+          </div>
           
-          <List>
-            {menuItems.map((item) => (
-              <React.Fragment key={item.text}>
-                <ListItem
-                  button
-                  component={Link}
-                  to={item.path}
-                  selected={location.pathname === item.path || 
-                            (item.path !== '/admin' && location.pathname.startsWith(item.path))}
-                  sx={{
-                    "&.Mui-selected": {
-                      backgroundColor: "#e8efdc",
-                      borderLeft: "4px solid #3f4f24",
-                      "&:hover": {
-                        backgroundColor: "#e8efdc",
-                      },
-                    },
-                    "&:hover": {
-                      backgroundColor: "#f4f7ee",
-                    },
-                  }}
-                >
-                  <ListItemIcon 
-                    sx={{ 
-                      color: (location.pathname === item.path || 
-                            (item.path !== '/admin' && location.pathname.startsWith(item.path))) 
-                            ? "#3f4f24" : "#757575" 
-                    }}
-                  >
-                    {item.icon}
-                  </ListItemIcon>
-                  <ListItemText 
-                    primary={item.text} 
-                    sx={{ 
-                      color: (location.pathname === item.path || 
-                            (item.path !== '/admin' && location.pathname.startsWith(item.path))) 
-                            ? "#3f4f24" : "#424242",
-                      "& .MuiTypography-root": { 
-                        fontWeight: (location.pathname === item.path || 
-                                  (item.path !== '/admin' && location.pathname.startsWith(item.path))) 
-                                  ? "bold" : "normal" 
-                      }
-                    }}
-                  />
-                </ListItem>
-                
-                {/* Display sub-items if any and if parent is selected */}
-                {item.subItems && item.path !== '/admin' && location.pathname.startsWith(item.path) && (
-                  <List disablePadding>
-                    {item.subItems.map((subItem) => (
-                      <ListItem
-                        button
-                        key={subItem.text}
-                        component={Link}
-                        to={subItem.path}
-                        selected={location.pathname === subItem.path}
-                        sx={{
-                          pl: 4,
-                          "&.Mui-selected": {
-                            backgroundColor: "#e8efdc",
-                            "&:hover": {
-                              backgroundColor: "#e8efdc",
-                            },
-                          },
-                          "&:hover": {
-                            backgroundColor: "#f4f7ee",
-                          },
-                        }}
+          <ScrollArea className="h-[calc(100vh-240px)] px-4">
+            <div className="py-4 space-y-6">
+              {menuCategories.map((category, index) => (
+                <div key={index} className="space-y-1">
+                  {!collapsed && (
+                    <h3 className="text-xs font-bold uppercase tracking-wider text-[#324c48]/60 ml-4 mb-2">
+                      {category.name}
+                    </h3>
+                  )}
+                  
+                  {category.items.map((item) => {
+                    const isActive = location.pathname === item.path || 
+                      (item.path !== '/admin' && location.pathname.startsWith(item.path));
+                    
+                    return (
+                      <Link 
+                        key={item.text}
+                        to={item.path}
+                        className={cn(
+                          "group flex items-center py-3 px-4 text-md font-medium rounded-xl transition-all duration-200",
+                          isActive 
+                            ? "bg-gradient-to-r from-[#546930]/25 to-[#546930]/15 text-[#324c48] shadow-md" 
+                            : "hover:bg-[#324c48]/10 text-[#324c48]/80 hover:shadow-sm"
+                        )}
                       >
-                        <ListItemIcon 
-                          sx={{ 
-                            color: location.pathname === subItem.path ? "#3f4f24" : "#757575",
-                            minWidth: '35px' 
-                          }}
-                        >
-                          {subItem.icon}
-                        </ListItemIcon>
-                        <ListItemText 
-                          primary={subItem.text} 
-                          sx={{ 
-                            color: location.pathname === subItem.path ? "#3f4f24" : "#424242",
-                            "& .MuiTypography-root": { 
-                              fontWeight: location.pathname === subItem.path ? "bold" : "normal",
-                              fontSize: '0.9rem'
-                            }
-                          }}
-                        />
-                      </ListItem>
-                    ))}
-                  </List>
-                )}
-              </React.Fragment>
-            ))}
-          </List>
-        </Drawer>
+                        <div className={cn(
+                          "flex h-9 w-9 items-center justify-center rounded-lg transition-all mr-3",
+                          isActive
+                            ? "bg-gradient-to-br from-[#546930] to-[#324c48] text-white shadow-md"
+                            : "bg-[#324c48]/10 text-[#324c48] group-hover:bg-[#324c48]/20"
+                        )}>
+                          {item.icon}
+                        </div>
+                        
+                        <span className={cn(
+                          "transition-all flex-1",
+                          collapsed ? "opacity-0 w-0" : "opacity-100",
+                          isActive ? "font-bold" : ""
+                        )}>
+                          {item.text}
+                        </span>
+                        
+                        {item.badge && !collapsed && (
+                          <span className="h-6 min-w-6 rounded-full bg-[#D4A017] px-1.5 flex items-center justify-center text-xs font-bold text-white">
+                            {item.badge}
+                          </span>
+                        )}
+                      </Link>
+                    );
+                  })}
+                  
+                  {!collapsed && index < menuCategories.length - 1 && (
+                    <Separator className="my-4 opacity-30" />
+                  )}
+                </div>
+              ))}
+            </div>
+          </ScrollArea>
+          
+          {!collapsed && (
+            <div className="absolute bottom-0 w-full p-4 border-t border-[#324c48]/10 bg-gradient-to-t from-[#f1f6ea] to-transparent">
+              <Button
+                variant="ghost"
+                className="w-full text-[#324c48]/80 hover:text-[#324c48] hover:bg-[#324c48]/10 py-3 rounded-xl flex items-center justify-start pl-4"
+              >
+                <LogOut className="h-5 w-5 mr-3" />
+                <span>Log Out</span>
+              </Button>
+            </div>
+          )}
+        </aside>
 
         {/* Main Content Area */}
-        <Box
-          component="main"
-          sx={{
-            flexGrow: 1,
-            padding: 3,
-            backgroundColor: "#fff",
-            minHeight: "calc(100vh - 160px)", // Adjust for Header and Footer
-          }}
-        >
-          <Outlet />
-        </Box>
+        <main className="flex-grow bg-gradient-to-b from-white to-[#f4f7ee]/50 p-8 min-h-[calc(100vh-160px)] shadow-inner">
+          <div className="bg-white rounded-xl shadow-sm p-6 min-h-[calc(100vh-220px)] border border-[#324c48]/5">
+            <Outlet />
+          </div>
+        </main>
       </div>
 
       {/* Footer section */}
-      <footer className="bg-[#EFE8DE]">
+      <footer className="bg-gradient-to-r from-[#EFE8DE] to-[#f4f7ee] shadow-inner border-t border-[#324c48]/10">
         <Footer />
       </footer>
     </div>
