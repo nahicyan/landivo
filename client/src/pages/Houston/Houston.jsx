@@ -4,26 +4,29 @@
 
 import React, { useState, useRef, useEffect } from "react";
 import { PuffLoader } from "react-spinners";
-import { MagnifyingGlassIcon } from "@heroicons/react/24/outline";
 import { ChevronLeftIcon, ChevronRightIcon } from "@heroicons/react/24/solid";
 import useProperties from "../../components/hooks/useProperties.js";
 import PropertyCard from "@/components/PropertyCard/PropertyCard";
 import SearchAreaWithTracking from "@/components/SearchArea/SearchAreaWithTracking";
 import { Button } from "@/components/ui/button";
+import axios from "axios";
 
 export default function HoustonProperty() {
   const { data, isError, isLoading } = useProperties();
-  // Use areaQuery for both tracking and filtering
   const [areaQuery, setAreaQuery] = useState("");
   const scrollRef = useRef(null);
+  const featuredScrollRef = useRef(null);
+  
+  // State for scrolling
+  const [scrollState, setScrollState] = useState({ showLeft: false, showRight: false });
+  const [featuredScrollState, setFeaturedScrollState] = useState({ showLeft: false, showRight: false });
+  
+  // State for featured properties
+  const [featuredProperties, setFeaturedProperties] = useState([]);
+  const [featuredPropertyIds, setFeaturedPropertyIds] = useState([]);
+  const [loadingFeatured, setLoadingFeatured] = useState(true);
 
-  // State to track whether there is scrollable content on the left/right
-  const [scrollState, setScrollState] = useState({
-    showLeft: false,
-    showRight: false,
-  });
-
-  // Function to update the scrollState based on the container's measurements
+  // Update scroll states
   const updateScrollState = () => {
     if (scrollRef.current) {
       const { scrollLeft, clientWidth, scrollWidth } = scrollRef.current;
@@ -33,33 +36,100 @@ export default function HoustonProperty() {
       });
     }
   };
+  
+  const updateFeaturedScrollState = () => {
+    if (featuredScrollRef.current) {
+      const { scrollLeft, clientWidth, scrollWidth } = featuredScrollRef.current;
+      setFeaturedScrollState({
+        showLeft: scrollLeft > 0,
+        showRight: scrollLeft + clientWidth < scrollWidth,
+      });
+    }
+  };
 
-  // Check scroll state on mount and on window resize
+  // Add event listeners
   useEffect(() => {
     updateScrollState();
-    window.addEventListener("resize", updateScrollState);
+    updateFeaturedScrollState();
+    window.addEventListener("resize", () => {
+      updateScrollState();
+      updateFeaturedScrollState();
+    });
     return () => {
       window.removeEventListener("resize", updateScrollState);
+      window.removeEventListener("resize", updateFeaturedScrollState);
     };
   }, [data]);
 
-  // Update scroll state when filtered results change
   useEffect(() => {
     updateScrollState();
   }, [areaQuery]);
+  
+ // Fetch featured properties from the Houston row
+useEffect(() => {
+  if (!data || data.length === 0) return;
+  
+  const fetchHoustonRow = async () => {
+    setLoadingFeatured(true);
+    try {
+      const response = await axios.get(`${import.meta.env.VITE_SERVER_URL}/api/property-rows?rowType=Houston`);
+      
+      console.log("Houston row API response:", response.data);
+      
+      // Check if we have an array response with at least one row
+      if (Array.isArray(response.data) && response.data.length > 0) {
+        // Find the Houston row
+        const houstonRow = response.data.find(row => row.rowType === "Houston");
+        
+        if (houstonRow && Array.isArray(houstonRow.displayOrder) && houstonRow.displayOrder.length > 0) {
+          // Get the IDs from the displayOrder array
+          const orderedIds = houstonRow.displayOrder;
+          console.log("Property IDs in Houston row:", orderedIds);
+          
+          // Create a map for faster property lookup
+          const propertiesMap = new Map(data.map(p => [p.id, p]));
+          
+          // Get properties in order, filtering for featured properties in Houston
+          const orderedProperties = orderedIds
+            .map(id => propertiesMap.get(id))
+            .filter(property => property && property.featured === "Featured" && property.area === "Houston");
+          
+          console.log("Final featured properties:", orderedProperties);
+          
+          setFeaturedProperties(orderedProperties);
+          setFeaturedPropertyIds(orderedProperties.map(property => property.id));
+        } else {
+          console.log("No displayOrder array in Houston row");
+          setFeaturedProperties([]);
+          setFeaturedPropertyIds([]);
+        }
+      } else {
+        console.log("No Houston row found in response");
+        setFeaturedProperties([]);
+        setFeaturedPropertyIds([]);
+      }
+    } catch (error) {
+      console.error("Error fetching Houston row properties:", error);
+      setFeaturedProperties([]);
+      setFeaturedPropertyIds([]);
+    } finally {
+      setLoadingFeatured(false);
+      setTimeout(updateFeaturedScrollState, 100);
+    }
+  };
 
-  // Error State
+  fetchHoustonRow();
+}, [data]);
+
+  // Error and Loading states
   if (isError) {
     return (
       <div className="flex items-center justify-center h-[60vh]">
-        <h2 className="text-red-600 text-xl font-semibold">
-          Error fetching properties.
-        </h2>
+        <h2 className="text-red-600 text-xl font-semibold">Error fetching properties.</h2>
       </div>
     );
   }
 
-  // Loading State
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-[60vh]">
@@ -68,82 +138,78 @@ export default function HoustonProperty() {
     );
   }
 
-  // Filter properties to only include those in "Houston"
-  const HoustonProperties = data.filter(
-    (property) => property.area === "Houston"
+  // Filter properties
+  const houstonProperties = data.filter(property => property.area === "Houston");
+  
+  // Explicitly exclude the featured property IDs from regular properties
+  const nonFeaturedHoustonProperties = houstonProperties.filter(
+    property => !featuredPropertyIds.includes(property.id)
   );
 
-  // Apply search filter to Houston properties
-  const filteredHoustonProperties = HoustonProperties.filter(
-    (property) => {
-      const query = areaQuery.toLowerCase();
-      if (!query) return true; // If no query, return all Houston properties
-      
-      return (
-        property.title?.toLowerCase().includes(query) ||
-        property.streetAddress?.toLowerCase().includes(query) ||
-        property.state?.toLowerCase().includes(query) ||
-        property.zip?.toLowerCase().includes(query) ||
-        property.area?.toLowerCase().includes(query) ||
-        property.apnOrPin?.toLowerCase().includes(query) ||
-        property.ltag?.toLowerCase().includes(query) ||
-        property.rtag?.toLowerCase().includes(query) ||
-        property.city?.toLowerCase().includes(query) ||
-        property.county?.toLowerCase().includes(query)
-      );
+  // Apply search filter to non-featured Houston properties
+  const filteredHoustonProperties = nonFeaturedHoustonProperties.filter(property => {
+    const query = areaQuery.toLowerCase();
+    if (!query) return true;
+    
+    return (
+      property.title?.toLowerCase().includes(query) ||
+      property.streetAddress?.toLowerCase().includes(query) ||
+      property.state?.toLowerCase().includes(query) ||
+      property.zip?.toLowerCase().includes(query) ||
+      property.area?.toLowerCase().includes(query) ||
+      property.apnOrPin?.toLowerCase().includes(query) ||
+      property.ltag?.toLowerCase().includes(query) ||
+      property.rtag?.toLowerCase().includes(query) ||
+      property.city?.toLowerCase().includes(query) ||
+      property.county?.toLowerCase().includes(query)
+    );
+  });
+
+  // Apply search filter to all properties EXCEPT featured Houston properties
+  const filteredAllProperties = data.filter(property => {
+    // Skip featured Houston properties
+    if (featuredPropertyIds.includes(property.id)) {
+      return false;
     }
-  );
+    
+    const query = areaQuery.toLowerCase();
+    if (!query) return true;
+    
+    return (
+      property.title?.toLowerCase().includes(query) ||
+      property.streetAddress?.toLowerCase().includes(query) ||
+      property.state?.toLowerCase().includes(query) ||
+      property.zip?.toLowerCase().includes(query) ||
+      property.area?.toLowerCase().includes(query) ||
+      property.apnOrPin?.toLowerCase().includes(query) ||
+      property.ltag?.toLowerCase().includes(query) ||
+      property.rtag?.toLowerCase().includes(query) ||
+      property.city?.toLowerCase().includes(query) ||
+      property.county?.toLowerCase().includes(query)
+    );
+  });
 
-  // Apply search filter to all properties (for fallback case)
-  const filteredAllProperties = data.filter(
-    (property) => {
-      const query = areaQuery.toLowerCase();
-      if (!query) return true; // If no query, return all properties
-      
-      return (
-        property.title?.toLowerCase().includes(query) ||
-        property.streetAddress?.toLowerCase().includes(query) ||
-        property.state?.toLowerCase().includes(query) ||
-        property.zip?.toLowerCase().includes(query) ||
-        property.area?.toLowerCase().includes(query) ||
-        property.apnOrPin?.toLowerCase().includes(query) ||
-        property.ltag?.toLowerCase().includes(query) ||
-        property.rtag?.toLowerCase().includes(query) ||
-        property.city?.toLowerCase().includes(query) ||
-        property.county?.toLowerCase().includes(query)
-      );
-    }
-  );
-
-  // Set the current area for the tracking component
+  // Set current area and determine which properties to display
   const currentArea = "Houston";
+  const displayProperties = filteredHoustonProperties.length > 0
+    ? filteredHoustonProperties
+    : filteredAllProperties;
 
-  // Determine which properties to display:
-  // 1. If filtered Houston properties exist, show them
-  // 2. If no Houston properties (or no matching filtered ones), show filtered all properties
-  const displayProperties =
-    filteredHoustonProperties.length > 0
-      ? filteredHoustonProperties
-      : filteredAllProperties;
+  // Set header text and subtitle
+  const headerText = featuredProperties.length > 0 
+    ? "Other Properties" 
+    : (filteredHoustonProperties.length > 0 ? "Properties in Houston" : "All Properties");
 
-  // Set header text based on whether we're showing just "Houston" or all properties
-  const headerText =
-    filteredHoustonProperties.length > 0
-      ? "Properties in Houston"
-      : "All Properties";
-
-  // Determine subtitle text
   const subtitleText = filteredHoustonProperties.length > 0
     ? "Browse through properties available in Houston."
-    : HoustonProperties.length > 0 
+    : nonFeaturedHoustonProperties.length > 0 
       ? `No Houston properties match "${areaQuery}". Showing all matching properties instead.`
       : "Sorry! We sold through everything in Houston! Maybe you would be interested in these properties:";
 
-  // Handlers for horizontal scrolling
+  // Scroll handlers
   const handleScrollLeft = () => {
     if (scrollRef.current) {
       scrollRef.current.scrollBy({ left: -380, behavior: "smooth" });
-      // Update state after a short delay for smooth scrolling
       setTimeout(updateScrollState, 300);
     }
   };
@@ -154,16 +220,30 @@ export default function HoustonProperty() {
       setTimeout(updateScrollState, 300);
     }
   };
+  
+  const handleFeaturedScrollLeft = () => {
+    if (featuredScrollRef.current) {
+      featuredScrollRef.current.scrollBy({ left: -380, behavior: "smooth" });
+      setTimeout(updateFeaturedScrollState, 300);
+    }
+  };
+
+  const handleFeaturedScrollRight = () => {
+    if (featuredScrollRef.current) {
+      featuredScrollRef.current.scrollBy({ left: 380, behavior: "smooth" });
+      setTimeout(updateFeaturedScrollState, 300);
+    }
+  };
 
   return (
     <div className="bg-[#FDF8F2] min-h-screen py-12 text-[#4b5b4d]">
       <div className="max-w-screen-xl mx-auto px-4">
         {/* Title, Subtitle & Search */}
         <div className="mb-10 text-center">
-          <h1 className="text-3xl sm:text-4xl font-bold mb-4">{headerText}</h1>
-          <p className="text-lg mb-6">
-            {subtitleText}
-          </p>
+          <h1 className="text-3xl sm:text-4xl font-bold mb-4">
+            {featuredProperties.length > 0 ? "Properties in Houston" : headerText}
+          </h1>
+          <p className="text-lg mb-6">{subtitleText}</p>
           <SearchAreaWithTracking
             query={areaQuery}
             setQuery={setAreaQuery}
@@ -172,11 +252,73 @@ export default function HoustonProperty() {
             filteredData={filteredHoustonProperties}
           />
         </div>
+        
+        {/* Featured Properties in Houston */}
+        {loadingFeatured ? (
+          <div className="flex justify-center items-center h-40">
+            <PuffLoader size={50} color="#D4A017" />
+          </div>
+        ) : featuredProperties.length > 0 && (
+          <div className="mb-12">
+            <div className="text-center mb-6">
+              <h2 className="text-2xl sm:text-3xl font-bold mb-2">Featured Properties in Houston</h2>
+              <div className="mx-auto w-16 h-1 bg-[#D4A017] mb-3"></div>
+              <p className="text-[#324c48]/80">Our top picks in the Houston area</p>
+            </div>
+            
+            <div className="relative">
+              {featuredScrollState.showLeft && (
+                <button
+                  onClick={handleFeaturedScrollLeft}
+                  className="hidden sm:block sm:absolute -left-6 top-1/2 -translate-y-1/2 z-10 bg-white border rounded-full p-3 shadow-md hover:shadow-lg"
+                >
+                  <ChevronLeftIcon className="w-6 h-6" />
+                </button>
+              )}
 
+              <div
+                className="px-2 py-4 overflow-y-auto overflow-x-hidden sm:overflow-x-auto sm:overflow-y-hidden no-scrollbar"
+                ref={featuredScrollRef}
+                onScroll={updateFeaturedScrollState}
+              >
+                <div className="flex flex-col sm:flex-row space-y-8 sm:space-y-0 sm:space-x-20">
+                  {featuredProperties.map((card) => (
+                    <div
+                      key={card.id}
+                      className="w-72 flex-shrink-0 transition hover:scale-105"
+                    >
+                      <PropertyCard card={card} />
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {featuredScrollState.showRight && (
+                <button
+                  onClick={handleFeaturedScrollRight}
+                  className="hidden sm:block sm:absolute -right-6 top-1/2 -translate-y-1/2 z-10 bg-white border rounded-full p-3 shadow-md hover:shadow-lg"
+                >
+                  <ChevronRightIcon className="w-6 h-6" />
+                </button>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* Separating Line */}
+        <hr className="my-8 border-t border-[#4b5b4d]/20" />
+
+        {/* Other Properties heading */}
+        {featuredProperties.length > 0 && displayProperties.length > 0 && (
+          <div className="text-center mb-6">
+            <h2 className="text-2xl sm:text-3xl font-bold mb-2">{headerText}</h2>
+            <div className="mx-auto w-16 h-1 bg-[#324c48] mb-3"></div>
+          </div>
+        )}
+
+        {/* Regular Properties */}
         {displayProperties.length > 0 ? (
-          // Display properties in a horizontal slider (on desktop; vertical on mobile)
           <div className="relative">
-            {/* Left Scroll Button: Only appears if there's content to scroll left */}
             {scrollState.showLeft && (
               <button
                 onClick={handleScrollLeft}
@@ -186,7 +328,6 @@ export default function HoustonProperty() {
               </button>
             )}
 
-            {/* Scrollable Container */}
             <div
               className="px-2 py-4 overflow-y-auto overflow-x-hidden sm:overflow-x-auto sm:overflow-y-hidden no-scrollbar"
               ref={scrollRef}
@@ -204,7 +345,6 @@ export default function HoustonProperty() {
               </div>
             </div>
 
-            {/* Right Scroll Button: Only appears if there's content to scroll right */}
             {scrollState.showRight && (
               <button
                 onClick={handleScrollRight}
