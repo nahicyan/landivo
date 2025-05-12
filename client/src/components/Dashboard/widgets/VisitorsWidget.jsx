@@ -1,47 +1,19 @@
 // client/src/components/Dashboard/widgets/VisitorsWidget.jsx
 
 import React from "react";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { LineChart, AreaChart } from "@/components/ui/charts"; // You'll need to create these components
+import { 
+  TrendingUp,
+  Construction,
+  BarChart3,
+  Clock,
+  Users,
+  MousePointer
+} from "lucide-react";
 
 export default function VisitorsWidget({ isLoading, dateRange }) {
-  // Sample data
-  const visitorData = [
-    { date: "Apr 1", visitors: 1240 },
-    { date: "Apr 2", visitors: 1350 },
-    { date: "Apr 3", visitors: 1480 },
-    { date: "Apr 4", visitors: 1390 },
-    { date: "Apr 5", visitors: 1590 },
-    { date: "Apr 6", visitors: 1720 },
-    { date: "Apr 7", visitors: 1630 },
-    { date: "Apr 8", visitors: 1820 },
-    { date: "Apr 9", visitors: 1960 },
-    { date: "Apr 10", visitors: 2100 },
-    { date: "Apr 11", visitors: 2240 },
-    { date: "Apr 12", visitors: 2380 },
-    { date: "Apr 13", visitors: 2520 },
-    { date: "Apr 14", visitors: 2650 },
-  ];
-
-  const conversionData = [
-    { date: "Apr 1", rate: 2.1 },
-    { date: "Apr 2", rate: 2.3 },
-    { date: "Apr 3", rate: 2.5 },
-    { date: "Apr 4", rate: 2.2 },
-    { date: "Apr 5", rate: 2.6 },
-    { date: "Apr 6", rate: 2.8 },
-    { date: "Apr 7", rate: 3.1 },
-    { date: "Apr 8", rate: 3.0 },
-    { date: "Apr 9", rate: 3.2 },
-    { date: "Apr 10", rate: 3.5 },
-    { date: "Apr 11", rate: 3.8 },
-    { date: "Apr 12", rate: 3.6 },
-    { date: "Apr 13", rate: 3.9 },
-    { date: "Apr 14", rate: 4.2 },
-  ];
-
   return (
     <Card className="overflow-hidden">
       <CardHeader>
@@ -51,96 +23,66 @@ export default function VisitorsWidget({ isLoading, dateRange }) {
         </CardDescription>
       </CardHeader>
       <CardContent className="p-0 pb-4">
-        <Tabs defaultValue="visitors">
-          <TabsList className="mx-4 mb-4">
-            <TabsTrigger value="visitors">Visitors</TabsTrigger>
-            <TabsTrigger value="conversion">Conversion</TabsTrigger>
-            <TabsTrigger value="sources">Sources</TabsTrigger>
-          </TabsList>
-          
-          <div className="h-[400px] w-full flex flex-col"> {/* Fixed height container */}
-            <TabsContent value="visitors" className="h-full mt-0 data-[state=active]:flex-1">
-              {isLoading ? (
-                <div className="p-4">
-                  <Skeleton className="h-[300px] w-full" />
-                </div>
-              ) : (
-                <div className="px-4 h-full">
-                  <div className="h-[300px] w-full mb-4">
-                    <AreaChart 
-                      data={visitorData} 
-                      index="date"
-                      categories={["visitors"]}
-                      colors={["#324c48"]}
-                      valueFormatter={(value) => value.toLocaleString()}
-                    />
-                  </div>
-                  <div className="mt-4 grid grid-cols-3 gap-4">
-                    <div className="bg-[#f0f5f4] p-3 rounded-lg">
-                      <p className="text-xs text-gray-500">Total Visitors</p>
-                      <p className="text-xl font-bold text-[#324c48]">27,842</p>
-                    </div>
-                    <div className="bg-[#f4f7ee] p-3 rounded-lg">
-                      <p className="text-xs text-gray-500">Avg. Daily</p>
-                      <p className="text-xl font-bold text-[#3f4f24]">1,986</p>
-                    </div>
-                    <div className="bg-[#fcf7e8] p-3 rounded-lg">
-                      <p className="text-xs text-gray-500">Growth</p>
-                      <p className="text-xl font-bold text-[#D4A017]">+18.3%</p>
-                    </div>
-                  </div>
-                </div>
-              )}
-            </TabsContent>
-            
-            <TabsContent value="conversion" className="h-full mt-0 data-[state=active]:flex-1">
-              {isLoading ? (
-                <div className="p-4">
-                  <Skeleton className="h-[300px] w-full" />
-                </div>
-              ) : (
-                <div className="px-4 h-full">
-                  <div className="h-[300px] w-full mb-4">
-                    <LineChart 
-                      data={conversionData} 
-                      index="date"
-                      categories={["rate"]}
-                      colors={["#D4A017"]}
-                      valueFormatter={(value) => `${value.toFixed(1)}%`}
-                    />
-                  </div>
-                  <div className="mt-4 grid grid-cols-3 gap-4">
-                    <div className="bg-[#fcf7e8] p-3 rounded-lg">
-                      <p className="text-xs text-gray-500">Avg. Conversion</p>
-                      <p className="text-xl font-bold text-[#D4A017]">3.2%</p>
-                    </div>
-                    <div className="bg-[#f0f5f4] p-3 rounded-lg">
-                      <p className="text-xs text-gray-500">Leads Generated</p>
-                      <p className="text-xl font-bold text-[#324c48]">892</p>
-                    </div>
-                    <div className="bg-[#f4f7ee] p-3 rounded-lg">
-                      <p className="text-xs text-gray-500">Improvement</p>
-                      <p className="text-xl font-bold text-[#3f4f24]">+0.8%</p>
-                    </div>
-                  </div>
-                </div>
-              )}
-            </TabsContent>
-            
-            <TabsContent value="sources" className="h-full mt-0 data-[state=active]:flex-1">
-              {isLoading ? (
-                <div className="p-4">
-                  <Skeleton className="h-[300px] w-full" />
-                </div>
-              ) : (
-                <div className="h-full px-4 flex items-center justify-center">
-                  <p className="text-center">Traffic sources visualization will appear here</p>
-                </div>
-              )}
-            </TabsContent>
+        {isLoading ? (
+          <div className="p-4">
+            <Skeleton className="h-[300px] w-full" />
+            <div className="mt-4 grid grid-cols-3 gap-4">
+              <Skeleton className="h-16 w-full" />
+              <Skeleton className="h-16 w-full" />
+              <Skeleton className="h-16 w-full" />
+            </div>
           </div>
-        </Tabs>
+        ) : (
+          <div className="flex flex-col items-center justify-center py-16 px-4 bg-gray-50 rounded-lg border-2 border-dashed border-gray-200 mx-4">
+            <div className="flex items-center justify-center w-16 h-16 bg-blue-100 rounded-full mb-4">
+              <Construction className="h-8 w-8 text-blue-600" />
+            </div>
+            
+            <h3 className="text-lg font-semibold text-gray-900 mb-2">
+              Under Development
+            </h3>
+            
+            <p className="text-center text-gray-600 mb-4 max-w-md">
+              The visitor analytics module is currently being developed and will be available soon.
+            </p>
+            
+            <div className="flex items-center text-sm text-gray-500 mb-6">
+              <Clock className="h-4 w-4 mr-1" />
+              <span>Expected completion: Q2 2025</span>
+            </div>
+            
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 text-center">
+              <div className="flex flex-col items-center">
+                <Users className="h-8 w-8 text-blue-500 mb-2" />
+                <span className="text-sm font-medium">Visitor Tracking</span>
+                <span className="text-xs text-gray-500 mt-1">Real-time analytics</span>
+              </div>
+              
+              <div className="flex flex-col items-center">
+                <BarChart3 className="h-8 w-8 text-green-500 mb-2" />
+                <span className="text-sm font-medium">Conversion Rates</span>
+                <span className="text-xs text-gray-500 mt-1">Track performance</span>
+              </div>
+              
+              <div className="flex flex-col items-center">
+                <MousePointer className="h-8 w-8 text-purple-500 mb-2" />
+                <span className="text-sm font-medium">Traffic Sources</span>
+                <span className="text-xs text-gray-500 mt-1">Source attribution</span>
+              </div>
+            </div>
+          </div>
+        )}
       </CardContent>
+      <CardFooter className="border-t pt-4">
+        <Button 
+          className="w-full" 
+          disabled
+          variant="outline"
+        >
+          <TrendingUp className="mr-2 h-4 w-4" />
+          Coming Soon
+        </Button>
+      </CardFooter>
     </Card>
   );
 }
