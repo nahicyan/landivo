@@ -63,6 +63,7 @@ export default function EditProperty() {
     area: "",
     featured: "",
     featuredPosition: 0,
+    propertyRows: "", // Add explicit property for property rows
     title: "",
     description: "",
     notes: "",
@@ -383,7 +384,7 @@ export default function EditProperty() {
     }));
   };
 
-  // Handle form submission
+  // Handle form submission - FIXED VERSION WITH PROPERTY ROWS
   const handleSubmitForm = async (e) => {
     if (e) e.preventDefault();
     
@@ -418,9 +419,15 @@ export default function EditProperty() {
     }
     
     setIsSubmitting(true);
-  
+
     try {
+      // Create a FormData object for file uploads
       const form = new FormData();
+      
+      // Process propertyRows specially if it exists
+      if (formData.propertyRows) {
+        form.append("propertyRows", formData.propertyRows);
+      }
       
       // Only include fields that match the server's schema exactly
       const validFields = [
@@ -496,7 +503,9 @@ export default function EditProperty() {
         form.append("cmaFile", cmaFile);
       }
   
+      console.log("Submitting update for property:", propertyId);
       await updateProperty(propertyId, form);
+      
       setDialogMessage("Property updated successfully!");
       setDialogType("success");
       setDialogOpen(true);

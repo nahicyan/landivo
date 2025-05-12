@@ -228,28 +228,33 @@ export default function SystemInfoCard({ formData, handleChange, errors }) {
     console.log(`Removed property from row ${rowId}. Updated entries:`, updatedEntries);
   };
 
-  // Update form data with selected rows - ensure proper JSON stringify
-  const updateFormDataWithRows = (entries) => {
-    // Make sure entries is an array
-    const dataToStore = Array.isArray(entries) ? entries : [];
-    
-    // Use a clean object for each entry to avoid circular references
-    const cleanedEntries = dataToStore.map(entry => ({
-      rowId: entry.rowId,
-      rowName: entry.rowName,
-      position: entry.position
-    }));
-    
-    // Store as a properly JSON-stringified array
-    handleChange({
-      target: {
-        name: "propertyRows",
-        value: JSON.stringify(cleanedEntries)
-      }
-    });
-    
-    console.log("Updated form data with rows:", cleanedEntries);
-  };
+// In SystemInfo.jsx, modify the updateFormDataWithRows function:
+
+const updateFormDataWithRows = (entries) => {
+  // Make sure entries is an array
+  const dataToStore = Array.isArray(entries) ? entries : [];
+  
+  // Use a clean object for each entry to avoid circular references
+  const cleanedEntries = dataToStore.map(entry => ({
+    rowId: entry.rowId,
+    rowName: entry.rowName,
+    position: entry.position
+  }));
+  
+  // Convert to string with explicit JSON.stringify
+  const jsonString = JSON.stringify(cleanedEntries);
+  
+  // Store using handleChange to update parent component state
+  handleChange({
+    target: {
+      name: "propertyRows",
+      value: jsonString
+    }
+  });
+  
+  console.log("Updated form data with rows:", cleanedEntries);
+  console.log("JSON string for propertyRows:", jsonString);
+};
 
   // Format property address for display
   const formatPropertyAddress = (property) => {
