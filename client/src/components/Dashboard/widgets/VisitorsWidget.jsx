@@ -43,90 +43,102 @@ export default function VisitorsWidget({ isLoading, dateRange }) {
   ];
 
   return (
-    <Card>
+    <Card className="overflow-hidden">
       <CardHeader>
         <CardTitle>Website Traffic</CardTitle>
         <CardDescription>
           Monitor visitor analytics and conversion rates
         </CardDescription>
       </CardHeader>
-      <CardContent>
+      <CardContent className="p-0 pb-4">
         <Tabs defaultValue="visitors">
-          <TabsList className="mb-4">
+          <TabsList className="mx-4 mb-4">
             <TabsTrigger value="visitors">Visitors</TabsTrigger>
             <TabsTrigger value="conversion">Conversion</TabsTrigger>
             <TabsTrigger value="sources">Sources</TabsTrigger>
           </TabsList>
           
-          <TabsContent value="visitors">
-            {isLoading ? (
-              <Skeleton className="h-[300px] w-full" />
-            ) : (
-              <div className="h-[300px]">
-                <AreaChart 
-                  data={visitorData} 
-                  index="date"
-                  categories={["visitors"]}
-                  colors={["#324c48"]}
-                  valueFormatter={(value) => value.toLocaleString()}
-                />
-                <div className="mt-4 grid grid-cols-3 gap-4">
-                  <div className="bg-[#f0f5f4] p-3 rounded-lg">
-                    <p className="text-xs text-gray-500">Total Visitors</p>
-                    <p className="text-xl font-bold text-[#324c48]">27,842</p>
+          <div className="h-[400px] w-full flex flex-col"> {/* Fixed height container */}
+            <TabsContent value="visitors" className="h-full mt-0 data-[state=active]:flex-1">
+              {isLoading ? (
+                <div className="p-4">
+                  <Skeleton className="h-[300px] w-full" />
+                </div>
+              ) : (
+                <div className="px-4 h-full">
+                  <div className="h-[300px] w-full mb-4">
+                    <AreaChart 
+                      data={visitorData} 
+                      index="date"
+                      categories={["visitors"]}
+                      colors={["#324c48"]}
+                      valueFormatter={(value) => value.toLocaleString()}
+                    />
                   </div>
-                  <div className="bg-[#f4f7ee] p-3 rounded-lg">
-                    <p className="text-xs text-gray-500">Avg. Daily</p>
-                    <p className="text-xl font-bold text-[#3f4f24]">1,986</p>
-                  </div>
-                  <div className="bg-[#fcf7e8] p-3 rounded-lg">
-                    <p className="text-xs text-gray-500">Growth</p>
-                    <p className="text-xl font-bold text-[#D4A017]">+18.3%</p>
+                  <div className="mt-4 grid grid-cols-3 gap-4">
+                    <div className="bg-[#f0f5f4] p-3 rounded-lg">
+                      <p className="text-xs text-gray-500">Total Visitors</p>
+                      <p className="text-xl font-bold text-[#324c48]">27,842</p>
+                    </div>
+                    <div className="bg-[#f4f7ee] p-3 rounded-lg">
+                      <p className="text-xs text-gray-500">Avg. Daily</p>
+                      <p className="text-xl font-bold text-[#3f4f24]">1,986</p>
+                    </div>
+                    <div className="bg-[#fcf7e8] p-3 rounded-lg">
+                      <p className="text-xs text-gray-500">Growth</p>
+                      <p className="text-xl font-bold text-[#D4A017]">+18.3%</p>
+                    </div>
                   </div>
                 </div>
-              </div>
-            )}
-          </TabsContent>
-          
-          <TabsContent value="conversion">
-            {isLoading ? (
-              <Skeleton className="h-[300px] w-full" />
-            ) : (
-              <div className="h-[300px]">
-                <LineChart 
-                  data={conversionData} 
-                  index="date"
-                  categories={["rate"]}
-                  colors={["#D4A017"]}
-                  valueFormatter={(value) => `${value.toFixed(1)}%`}
-                />
-                <div className="mt-4 grid grid-cols-3 gap-4">
-                  <div className="bg-[#fcf7e8] p-3 rounded-lg">
-                    <p className="text-xs text-gray-500">Avg. Conversion</p>
-                    <p className="text-xl font-bold text-[#D4A017]">3.2%</p>
+              )}
+            </TabsContent>
+            
+            <TabsContent value="conversion" className="h-full mt-0 data-[state=active]:flex-1">
+              {isLoading ? (
+                <div className="p-4">
+                  <Skeleton className="h-[300px] w-full" />
+                </div>
+              ) : (
+                <div className="px-4 h-full">
+                  <div className="h-[300px] w-full mb-4">
+                    <LineChart 
+                      data={conversionData} 
+                      index="date"
+                      categories={["rate"]}
+                      colors={["#D4A017"]}
+                      valueFormatter={(value) => `${value.toFixed(1)}%`}
+                    />
                   </div>
-                  <div className="bg-[#f0f5f4] p-3 rounded-lg">
-                    <p className="text-xs text-gray-500">Leads Generated</p>
-                    <p className="text-xl font-bold text-[#324c48]">892</p>
-                  </div>
-                  <div className="bg-[#f4f7ee] p-3 rounded-lg">
-                    <p className="text-xs text-gray-500">Improvement</p>
-                    <p className="text-xl font-bold text-[#3f4f24]">+0.8%</p>
+                  <div className="mt-4 grid grid-cols-3 gap-4">
+                    <div className="bg-[#fcf7e8] p-3 rounded-lg">
+                      <p className="text-xs text-gray-500">Avg. Conversion</p>
+                      <p className="text-xl font-bold text-[#D4A017]">3.2%</p>
+                    </div>
+                    <div className="bg-[#f0f5f4] p-3 rounded-lg">
+                      <p className="text-xs text-gray-500">Leads Generated</p>
+                      <p className="text-xl font-bold text-[#324c48]">892</p>
+                    </div>
+                    <div className="bg-[#f4f7ee] p-3 rounded-lg">
+                      <p className="text-xs text-gray-500">Improvement</p>
+                      <p className="text-xl font-bold text-[#3f4f24]">+0.8%</p>
+                    </div>
                   </div>
                 </div>
-              </div>
-            )}
-          </TabsContent>
-          
-          <TabsContent value="sources">
-            {isLoading ? (
-              <Skeleton className="h-[300px] w-full" />
-            ) : (
-              <div className="h-[300px]">
-                <p className="text-center py-12">Traffic sources visualization will appear here</p>
-              </div>
-            )}
-          </TabsContent>
+              )}
+            </TabsContent>
+            
+            <TabsContent value="sources" className="h-full mt-0 data-[state=active]:flex-1">
+              {isLoading ? (
+                <div className="p-4">
+                  <Skeleton className="h-[300px] w-full" />
+                </div>
+              ) : (
+                <div className="h-full px-4 flex items-center justify-center">
+                  <p className="text-center">Traffic sources visualization will appear here</p>
+                </div>
+              )}
+            </TabsContent>
+          </div>
         </Tabs>
       </CardContent>
     </Card>

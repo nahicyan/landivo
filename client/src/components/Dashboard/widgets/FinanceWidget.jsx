@@ -39,82 +39,94 @@ export default function FinanceWidget({ isLoading, dateRange, fullSize = false }
   ];
 
   return (
-    <Card className={fullSize ? "col-span-full" : ""}>
+    <Card className={`${fullSize ? "col-span-full" : ""} overflow-hidden`}>
       <CardHeader>
         <CardTitle>Financial Performance</CardTitle>
         <CardDescription>
           Track revenue, profits, and sales performance over time
         </CardDescription>
       </CardHeader>
-      <CardContent>
+      <CardContent className="p-0 pb-4">
         <Tabs defaultValue="revenue">
-          <TabsList className="mb-4">
+          <TabsList className="mx-4 mb-4">
             <TabsTrigger value="revenue">Revenue</TabsTrigger>
-            <TabsTrigger value="asset">Asset</TabsTrigger>
+            <TabsTrigger value="profit">Profit</TabsTrigger>
             <TabsTrigger value="sales">Sales</TabsTrigger>
           </TabsList>
           
-          <TabsContent value="revenue">
-            {isLoading ? (
-              <Skeleton className="h-[300px] w-full" />
-            ) : (
-              <div className="h-[300px]">
-                <LineChart 
-                  data={revenueData} 
-                  index="name"
-                  categories={["value"]}
-                  colors={["#3f4f24"]}
-                  valueFormatter={(value) => `$${(value/1000).toFixed(1)}k`}
-                />
-                <div className="mt-4 grid grid-cols-2 gap-4">
-                  <div className="bg-[#f4f7ee] p-4 rounded-lg">
-                    <p className="text-sm text-gray-500">Total Revenue</p>
-                    <p className="text-2xl font-bold text-[#3f4f24]">$748,000</p>
+          <div className="h-[400px] w-full flex flex-col"> {/* Fixed height container */}
+            <TabsContent value="revenue" className="h-full mt-0 data-[state=active]:flex-1">
+              {isLoading ? (
+                <div className="p-4">
+                  <Skeleton className="h-[300px] w-full" />
+                </div>
+              ) : (
+                <div className="px-4 h-full">
+                  <div className="h-[300px] w-full mb-4">
+                    <LineChart 
+                      data={revenueData} 
+                      index="name"
+                      categories={["value"]}
+                      colors={["#3f4f24"]}
+                      valueFormatter={(value) => `$${(value/1000).toFixed(1)}k`}
+                    />
                   </div>
-                  <div className="bg-[#f0f5f4] p-4 rounded-lg">
-                    <p className="text-sm text-gray-500">Growth</p>
-                    <p className="text-2xl font-bold text-[#324c48]">+24.6%</p>
+                  <div className="mt-4 grid grid-cols-2 gap-4">
+                    <div className="bg-[#f4f7ee] p-4 rounded-lg">
+                      <p className="text-sm text-gray-500">Total Revenue</p>
+                      <p className="text-2xl font-bold text-[#3f4f24]">$748,000</p>
+                    </div>
+                    <div className="bg-[#f0f5f4] p-4 rounded-lg">
+                      <p className="text-sm text-gray-500">Growth</p>
+                      <p className="text-2xl font-bold text-[#324c48]">+24.6%</p>
+                    </div>
                   </div>
                 </div>
-              </div>
-            )}
-          </TabsContent>
-          
-          <TabsContent value="profit">
-            {isLoading ? (
-              <Skeleton className="h-[300px] w-full" />
-            ) : (
-              <div className="h-[300px]">
-                <BarChart 
-                  data={profitData} 
-                  index="name"
-                  categories={["value"]}
-                  colors={["#D4A017"]}
-                  valueFormatter={(value) => `$${(value/1000).toFixed(1)}k`}
-                />
-                <div className="mt-4 grid grid-cols-2 gap-4">
-                  <div className="bg-[#fcf7e8] p-4 rounded-lg">
-                    <p className="text-sm text-gray-500">Total Profit</p>
-                    <p className="text-2xl font-bold text-[#D4A017]">$361,000</p>
+              )}
+            </TabsContent>
+            
+            <TabsContent value="profit" className="h-full mt-0 data-[state=active]:flex-1">
+              {isLoading ? (
+                <div className="p-4">
+                  <Skeleton className="h-[300px] w-full" />
+                </div>
+              ) : (
+                <div className="px-4 h-full">
+                  <div className="h-[300px] w-full mb-4">
+                    <BarChart 
+                      data={profitData} 
+                      index="name"
+                      categories={["value"]}
+                      colors={["#D4A017"]}
+                      valueFormatter={(value) => `$${(value/1000).toFixed(1)}k`}
+                    />
                   </div>
-                  <div className="bg-[#f4f7ee] p-4 rounded-lg">
-                    <p className="text-sm text-gray-500">Profit Margin</p>
-                    <p className="text-2xl font-bold text-[#3f4f24]">48.2%</p>
+                  <div className="mt-4 grid grid-cols-2 gap-4">
+                    <div className="bg-[#fcf7e8] p-4 rounded-lg">
+                      <p className="text-sm text-gray-500">Total Profit</p>
+                      <p className="text-2xl font-bold text-[#D4A017]">$361,000</p>
+                    </div>
+                    <div className="bg-[#f4f7ee] p-4 rounded-lg">
+                      <p className="text-sm text-gray-500">Profit Margin</p>
+                      <p className="text-2xl font-bold text-[#3f4f24]">48.2%</p>
+                    </div>
                   </div>
                 </div>
-              </div>
-            )}
-          </TabsContent>
-          
-          <TabsContent value="sales">
-            {isLoading ? (
-              <Skeleton className="h-[300px] w-full" />
-            ) : (
-              <div className="h-[300px]">
-                <p className="text-center py-12">Sales data visualization will appear here</p>
-              </div>
-            )}
-          </TabsContent>
+              )}
+            </TabsContent>
+            
+            <TabsContent value="sales" className="h-full mt-0 data-[state=active]:flex-1">
+              {isLoading ? (
+                <div className="p-4">
+                  <Skeleton className="h-[300px] w-full" />
+                </div>
+              ) : (
+                <div className="h-full px-4 flex items-center justify-center">
+                  <p className="text-center">Sales data visualization will appear here</p>
+                </div>
+              )}
+            </TabsContent>
+          </div>
         </Tabs>
       </CardContent>
     </Card>

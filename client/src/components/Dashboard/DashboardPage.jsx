@@ -13,7 +13,6 @@ import DealsWidget from "./widgets/DealsWidget";
 import StatCards from "./widgets/StatCards";
 import FinanceWidget from "./widgets/FinanceWidget";
 import ActivityWidget from "./widgets/ActivityWidget";
-// import OffersWidget from "./widgets/OffersWidget";
 import PropertiesWidget from "./widgets/PropertiesWidget";
 import BuyersWidget from "./widgets/BuyersWidget";
 import BuyerListsWidget from "./widgets/BuyerListsWidget";
@@ -65,38 +64,50 @@ export default function DashboardPage() {
           <TabsTrigger value="properties">Properties</TabsTrigger>
         </TabsList>
         
-        <TabsContent value="overview" className="space-y-4">
+        <TabsContent value="overview" className="space-y-8">
+          {/* Stats cards at the top */}
           <StatCards isLoading={isLoading} />
           
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <FinanceWidget isLoading={isLoading} dateRange={dateRange} />
-            <VisitorsWidget isLoading={isLoading} dateRange={dateRange} />
+          {/* Chart widgets with clear spacing */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+            <div className="w-full">
+              <FinanceWidget isLoading={isLoading} dateRange={dateRange} />
+            </div>
+            <div className="w-full">
+              <VisitorsWidget isLoading={isLoading} dateRange={dateRange} />
+            </div>
           </div>
           
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-            <DealsWidget isLoading={isLoading} />
-            <ActivityWidget isLoading={isLoading} />
-            {/* <OffersWidget isLoading={isLoading} /> */}
-            <PropertiesWidget isLoading={isLoading} />
+          {/* Bottom row widgets with clear separation */}
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 pt-8 mt-8">
+            <div className="w-full">
+              <DealsWidget isLoading={isLoading} />
+            </div>
+            <div className="w-full">
+              <ActivityWidget isLoading={isLoading} />
+            </div>
+            <div className="w-full">
+              <PropertiesWidget isLoading={isLoading} />
+            </div>
           </div>
         </TabsContent>
         
-        <TabsContent value="finance" className="space-y-4">
-          <div className="grid grid-cols-1 gap-4">
+        <TabsContent value="finance" className="space-y-8">
+          <div className="grid grid-cols-1 gap-8">
             <FinanceWidget isLoading={isLoading} dateRange={dateRange} fullSize />
             <QualificationsWidget isLoading={isLoading} />
           </div>
         </TabsContent>
         
-        <TabsContent value="buyers" className="space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <TabsContent value="buyers" className="space-y-8">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
             <BuyersWidget isLoading={isLoading} fullSize />
             <BuyerListsWidget isLoading={isLoading} />
           </div>
           <EmailReportWidget isLoading={isLoading} />
         </TabsContent>
         
-        <TabsContent value="properties" className="space-y-4">
+        <TabsContent value="properties" className="space-y-8">
           <PropertiesWidget isLoading={isLoading} fullSize />
         </TabsContent>
       </Tabs>
