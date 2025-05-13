@@ -58,6 +58,7 @@ import { ActivityTrackingProvider } from "./components/ActivityTracking/Activity
 import { useApiAuthInterceptor } from "./utils/apiInterceptor";
 import AdminProperties from "./pages/AdminProperties/AdminProperties";
 import AdminSettings from "./pages/AdminSettings/AdminSettings";
+import AdminHelp from "./pages/AdminHelp/AdminHelp";
 import "react-toastify/dist/ReactToastify.css";
 
 const queryClient = new QueryClient({
@@ -258,7 +259,16 @@ function App() {
 
                           {/* Settings */}
                           <Route path="settings" element={<AdminSettings/>}/>
-                        </Route>
+
+
+                          {/* Help */}
+                          <Route path="help" element={<AdminHelp/>}/>
+
+
+                          </Route>
+
+
+
 
                         {/* Agent routes - using permissions instead of roles */}
                         <Route

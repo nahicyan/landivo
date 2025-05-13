@@ -17,13 +17,9 @@ import {
   ListChecks,
   DollarSign,
   Settings,
-  LogOut,
-  Bell,
   ChevronRight,
   HelpCircle
 } from "lucide-react";
-
-const sidebarWidth = 300;
 
 export default function AdminLayout() {
   const [collapsed, setCollapsed] = useState(false);
@@ -38,7 +34,7 @@ export default function AdminLayout() {
     {
       name: "Overview",
       items: [
-        { text: "Dashboard", icon: <Home className="h-5 w-5" />, path: "/admin", badge: 3 }
+        { text: "Dashboard", icon: <Home className="h-5 w-5" />, path: "/admin" }
       ]
     },
     {
@@ -52,8 +48,8 @@ export default function AdminLayout() {
     {
       name: "Transactions",
       items: [
-        { text: "Deals", icon: <DollarSign className="h-5 w-5" />, path: "/admin/deals", badge: 2 },
-        { text: "Offers", icon: <DollarSign className="h-5 w-5" />, path: "/admin/offers", badge: 5 },
+        { text: "Deals", icon: <DollarSign className="h-5 w-5" />, path: "/admin/deals" },
+        { text: "Offers", icon: <DollarSign className="h-5 w-5" />, path: "/admin/offers" },
       ]
     },
     {
@@ -85,75 +81,45 @@ export default function AdminLayout() {
       </header>
 
       <div className="flex flex-grow">
-        {/* Premium Admin Sidebar */}
+        {/* Sidebar - fixed width when collapsed */}
         <aside 
           className={cn(
-            "h-[calc(100vh-80px)] border-r border-[#324c48]/20 bg-gradient-to-b from-[#fcfaf6] to-[#f1f6ea] shadow-lg transition-all duration-300 ease-in-out relative",
-            collapsed ? "w-20" : `w-[${sidebarWidth}px]`
+            "h-[calc(100vh-80px)] border-r border-[#324c48]/20 bg-gradient-to-b from-[#fcfaf6] to-[#f1f6ea] shadow-lg transition-all duration-300 ease-in-out fixed z-10",
+            collapsed ? "w-16" : "w-64" // Fixed widths for both states
           )}
           style={{ marginTop: "80px" }}
         >
-          <div className="flex items-center justify-between p-6 bg-gradient-to-r from-[#324c48]/15 to-[#324c48]/5">
-            <div className={cn(
-              "flex items-center space-x-3 transition-opacity duration-300",
-              collapsed ? "opacity-0" : "opacity-100"
-            )}>
-              <div className="h-10 w-10 rounded-lg bg-gradient-to-br from-[#324c48] to-[#546930] flex items-center justify-center shadow-md">
-                <Building className="h-6 w-6 text-white" />
+          <div className="flex items-center justify-between p-4 bg-gradient-to-r from-[#324c48]/15 to-[#324c48]/5">
+            {!collapsed && (
+              <div className="flex items-center space-x-3">
+                <div className="h-8 w-8 rounded-lg bg-gradient-to-br from-[#324c48] to-[#546930] flex items-center justify-center shadow-md">
+                  <Building className="h-5 w-5 text-white" />
+                </div>
+                <h2 className="font-bold text-lg text-[#324c48] tracking-tight">
+                  Landivo
+                </h2>
               </div>
-              <h2 className="font-bold text-xl text-[#324c48] tracking-tight">
-                Landivo
-              </h2>
-            </div>
+            )}
             <Button 
               variant="ghost" 
               size="icon" 
               onClick={handleSidebarToggle}
-              className="h-10 w-10 rounded-full bg-white/80 shadow-md hover:bg-[#324c48]/10 transition-all hover:shadow-lg"
+              className={cn(
+                "h-8 w-8 rounded-full bg-white/80 shadow-md hover:bg-[#324c48]/10 transition-all hover:shadow-lg",
+                collapsed && "mx-auto"
+              )}
             >
               {collapsed ? 
-                <ChevronRight className="h-5 w-5 text-[#324c48]" /> : 
-                <ChevronLeft className="h-5 w-5 text-[#324c48]" />
+                <ChevronRight className="h-4 w-4 text-[#324c48]" /> : 
+                <ChevronLeft className="h-4 w-4 text-[#324c48]" />
               }
             </Button>
           </div>
           
-          <div className={cn(
-            "flex items-center justify-between px-6 py-4",
-            collapsed && "justify-center"
-          )}>
-            <div className={cn(
-              "flex items-center space-x-3",
-              collapsed && "hidden"
-            )}>
-              <div className="h-10 w-10 rounded-full bg-[#546930]/15 flex items-center justify-center">
-                <User className="h-5 w-5 text-[#546930]" />
-              </div>
-              <div>
-                <p className="font-semibold text-[#324c48]">Admin User</p>
-                <p className="text-xs text-[#324c48]/70">Administrator</p>
-              </div>
-            </div>
-            
-            <Button
-              variant="ghost" 
-              size="icon"
-              className={cn(
-                "h-9 w-9 rounded-full bg-[#D4A017]/15 hover:bg-[#D4A017]/25 transition-all",
-                !collapsed && "relative"
-              )}
-            >
-              <Bell className="h-5 w-5 text-[#D4A017]" />
-              <span className="absolute top-0 right-0 h-4 w-4 rounded-full bg-red-500 text-[10px] text-white flex items-center justify-center">
-                3
-              </span>
-            </Button>
-          </div>
-          
-          <ScrollArea className="h-[calc(100vh-240px)] px-4">
-            <div className="py-4 space-y-6">
+          <ScrollArea className="h-[calc(100vh-120px)]">
+            <div className="py-4">
               {menuCategories.map((category, index) => (
-                <div key={index} className="space-y-1">
+                <div key={index} className="mb-4">
                   {!collapsed && (
                     <h3 className="text-xs font-bold uppercase tracking-wider text-[#324c48]/60 ml-4 mb-2">
                       {category.name}
@@ -168,33 +134,30 @@ export default function AdminLayout() {
                       <Link 
                         key={item.text}
                         to={item.path}
+                        title={collapsed ? item.text : undefined}
                         className={cn(
-                          "group flex items-center py-3 px-4 text-md font-medium rounded-xl transition-all duration-200",
+                          "flex items-center py-2 px-3 text-sm font-medium transition-all duration-200 my-1 mx-2 rounded-lg",
                           isActive 
-                            ? "bg-gradient-to-r from-[#546930]/25 to-[#546930]/15 text-[#324c48] shadow-md" 
-                            : "hover:bg-[#324c48]/10 text-[#324c48]/80 hover:shadow-sm"
+                            ? "bg-gradient-to-r from-[#546930]/25 to-[#546930]/15 text-[#324c48] shadow-sm" 
+                            : "hover:bg-[#324c48]/10 text-[#324c48]/80"
                         )}
                       >
                         <div className={cn(
-                          "flex h-9 w-9 items-center justify-center rounded-lg transition-all mr-3",
+                          "flex items-center justify-center rounded-lg transition-all",
+                          collapsed ? "h-8 w-8 mx-auto" : "h-7 w-7 mr-3",
                           isActive
-                            ? "bg-gradient-to-br from-[#546930] to-[#324c48] text-white shadow-md"
-                            : "bg-[#324c48]/10 text-[#324c48] group-hover:bg-[#324c48]/20"
+                            ? "bg-gradient-to-br from-[#546930] to-[#324c48] text-white shadow-sm"
+                            : "bg-[#324c48]/10 text-[#324c48]"
                         )}>
                           {item.icon}
                         </div>
                         
-                        <span className={cn(
-                          "transition-all flex-1",
-                          collapsed ? "opacity-0 w-0" : "opacity-100",
-                          isActive ? "font-bold" : ""
-                        )}>
-                          {item.text}
-                        </span>
-                        
-                        {item.badge && !collapsed && (
-                          <span className="h-6 min-w-6 rounded-full bg-[#D4A017] px-1.5 flex items-center justify-center text-xs font-bold text-white">
-                            {item.badge}
+                        {!collapsed && (
+                          <span className={cn(
+                            "transition-all",
+                            isActive ? "font-bold" : ""
+                          )}>
+                            {item.text}
                           </span>
                         )}
                       </Link>
@@ -202,28 +165,19 @@ export default function AdminLayout() {
                   })}
                   
                   {!collapsed && index < menuCategories.length - 1 && (
-                    <Separator className="my-4 opacity-30" />
+                    <Separator className="my-4 mx-4 opacity-30" />
                   )}
                 </div>
               ))}
             </div>
           </ScrollArea>
-          
-          {!collapsed && (
-            <div className="absolute bottom-0 w-full p-4 border-t border-[#324c48]/10 bg-gradient-to-t from-[#f1f6ea] to-transparent">
-              <Button
-                variant="ghost"
-                className="w-full text-[#324c48]/80 hover:text-[#324c48] hover:bg-[#324c48]/10 py-3 rounded-xl flex items-center justify-start pl-4"
-              >
-                <LogOut className="h-5 w-5 mr-3" />
-                <span>Log Out</span>
-              </Button>
-            </div>
-          )}
         </aside>
 
-        {/* Main Content Area */}
-        <main className="flex-grow bg-gradient-to-b from-white to-[#f4f7ee]/50 p-8 min-h-[calc(100vh-160px)] shadow-inner">
+        {/* Main Content Area - with left margin to account for fixed sidebar */}
+        <main className={cn(
+          "flex-grow bg-gradient-to-b from-white to-[#f4f7ee]/50 min-h-[calc(100vh-160px)] transition-all duration-300",
+          collapsed ? "ml-16 p-6" : "ml-64 p-8"
+        )}>
           <div className="bg-white rounded-xl shadow-sm p-6 min-h-[calc(100vh-220px)] border border-[#324c48]/5">
             <Outlet />
           </div>
