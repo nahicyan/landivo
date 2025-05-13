@@ -68,10 +68,10 @@ export default function PropertiesWidget({ isLoading: externalLoading = false, f
 
   return (
     <Card className={fullSize ? "col-span-full" : ""}>
-      <CardHeader className="flex flex-row items-center justify-between pb-2">
+      <CardHeader className="flex flex-col sm:flex-row items-start sm:items-center justify-between pb-2 space-y-2 sm:space-y-0">
         <div>
-          <CardTitle>Recent Properties</CardTitle>
-          <CardDescription>
+          <CardTitle className="text-base sm:text-lg">Recent Properties</CardTitle>
+          <CardDescription className="text-xs sm:text-sm">
             Latest property listings and performance metrics
           </CardDescription>
         </div>
@@ -79,37 +79,40 @@ export default function PropertiesWidget({ isLoading: externalLoading = false, f
           variant="outline" 
           size="sm"
           onClick={() => navigate("/properties")}
+          className="h-8 self-end sm:self-auto"
         >
           <Eye className="mr-2 h-4 w-4" />
-          View All
+          <span className="text-xs sm:text-sm">View All</span>
         </Button>
       </CardHeader>
-      <CardContent>
+      <CardContent className="px-2 sm:px-4">
         {isLoading ? (
-          Array(4).fill(0).map((_, idx) => (
-            <div key={idx} className="flex items-center gap-3 mb-4 pb-4 border-b">
-              <Skeleton className="h-16 w-16 rounded-md" />
-              <div className="flex-1">
-                <Skeleton className="h-4 w-[150px] mb-2" />
-                <Skeleton className="h-3 w-[200px] mb-2" />
-                <Skeleton className="h-3 w-[100px]" />
+          <div className="space-y-3">
+            {Array(4).fill(0).map((_, idx) => (
+              <div key={idx} className="flex items-center gap-2 p-2 mb-2 border rounded-md">
+                <Skeleton className="h-14 w-14 sm:h-16 sm:w-16 rounded-md flex-shrink-0" />
+                <div className="flex-1">
+                  <Skeleton className="h-4 w-[150px] mb-2" />
+                  <Skeleton className="h-3 w-full mb-2" />
+                  <Skeleton className="h-3 w-[100px]" />
+                </div>
+                <Skeleton className="h-8 w-[80px] flex-shrink-0" />
               </div>
-              <Skeleton className="h-8 w-[80px]" />
-            </div>
-          ))
+            ))}
+          </div>
         ) : error ? (
           <div className="text-center py-4 text-red-500">
             Error loading properties. Please try again later.
           </div>
         ) : properties && properties.length > 0 ? (
-          <div className="space-y-3">
+          <div className="space-y-2 sm:space-y-3">
             {properties.map((property) => (
               <div 
                 key={property.id} 
-                className="flex items-center gap-3 p-2 rounded-lg hover:bg-muted transition-colors cursor-pointer"
+                className="flex items-center gap-2 p-2 rounded-lg hover:bg-muted transition-colors cursor-pointer"
                 onClick={() => navigate(`/properties/${property.id}`)}
               >
-                <div className="relative h-16 w-16 rounded-md overflow-hidden flex-shrink-0">
+                <div className="relative h-14 w-14 sm:h-16 sm:w-16 rounded-md overflow-hidden flex-shrink-0">
                   <img 
                     src={getImageUrl(property)} 
                     alt={property.title || "Property"} 
@@ -119,31 +122,31 @@ export default function PropertiesWidget({ isLoading: externalLoading = false, f
                 <div className="flex-1 min-w-0">
                   {/* Render title as rich text */}
                   <p 
-                    className="text-sm font-medium leading-none"
+                    className="text-sm font-medium line-clamp-1"
                     dangerouslySetInnerHTML={{ __html: property.title || "Untitled Property" }}
                   />
                   <p className="text-xs text-muted-foreground truncate">
                     {property.streetAddress}, {property.city}, {property.state} {property.zip}
                   </p>
-                  <div className="flex items-center gap-2 mt-1">
-                    <Badge className={getStatusClass(property.status)}>
+                  <div className="flex flex-wrap items-center gap-1 mt-1">
+                    <Badge className={`${getStatusClass(property.status)} text-xs`}>
                       {property.status || "Status Unknown"}
                     </Badge>
                     {(property.featured === "Yes" || property.featured === "Featured") && (
-                      <Badge className="bg-accent-50 text-accent-800 border-accent-200">
+                      <Badge className="bg-accent-50 text-accent-800 border-accent-200 text-xs">
                         Featured
                       </Badge>
                     )}
-                    <span className="text-xs text-muted-foreground">
+                    <span className="text-[10px] sm:text-xs text-muted-foreground ml-1">
                       {property.views || 0} views
                     </span>
-                    <span className="text-xs text-muted-foreground">
+                    <span className="text-[10px] sm:text-xs text-muted-foreground ml-1">
                       {property.numOffers || 0} offers
                     </span>
                   </div>
                 </div>
-                <div className="text-right">
-                  <p className="text-sm font-medium">${formatPrice(property.askingPrice || 0)}</p>
+                <div className="text-right flex-shrink-0">
+                  <p className="text-sm font-medium whitespace-nowrap">${formatPrice(property.askingPrice || 0)}</p>
                 </div>
               </div>
             ))}
@@ -154,11 +157,12 @@ export default function PropertiesWidget({ isLoading: externalLoading = false, f
           </div>
         )}
       </CardContent>
-      <CardFooter className="flex justify-between pt-2 border-t">
+      <CardFooter className="flex flex-col xs:flex-row gap-2 justify-between pt-2 border-t px-2 sm:px-4">
         <Button 
           variant="outline" 
           size="sm"
           onClick={() => navigate("/admin/add-property")}
+          className="w-full xs:w-auto text-xs sm:text-sm"
         >
           <Plus className="mr-2 h-4 w-4" />
           Add Property
@@ -168,6 +172,7 @@ export default function PropertiesWidget({ isLoading: externalLoading = false, f
           variant="outline"
           size="sm"
           onClick={() => navigate("/properties")}
+          className="w-full xs:w-auto text-xs sm:text-sm"
         >
           <Home className="mr-2 h-4 w-4" />
           All Properties

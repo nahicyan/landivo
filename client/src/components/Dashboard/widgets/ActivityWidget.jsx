@@ -260,34 +260,8 @@ const ActivityWidget = () => {
         counts.total = allActivities.length;
         setActivityCounts(counts);
         
-        // Sort by timestamp (newest first) and limit to 5 total per type
-        // First sort all activities by timestamp
+        // Sort all activities by timestamp (newest first)
         allActivities.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
-        
-        // Get top 5 for each type to ensure we have content for tabs
-        const topPropertyViews = allActivities
-          .filter(act => act.type === 'property_view')
-          .slice(0, 5);
-          
-        const topSearches = allActivities
-          .filter(act => act.type === 'search')
-          .slice(0, 5);
-          
-        const topOffers = allActivities
-          .filter(act => act.type === 'offer')
-          .slice(0, 5);
-          
-        const topPageVisits = allActivities
-          .filter(act => act.type === 'page_visit')
-          .slice(0, 5);
-          
-        const topClicks = allActivities
-          .filter(act => act.type === 'click')
-          .slice(0, 5);
-        
-        // Combine all for the "All" tab, but limit to 5 total
-        const sortedActivities = allActivities
-          .slice(0, 5);
         
         setActivities(allActivities);
         setError(null);
@@ -398,10 +372,14 @@ const ActivityWidget = () => {
   // Loading skeleton
   if (loading) {
     return (
-      <Card>
+      <Card className="overflow-hidden">
         <CardHeader className="pb-2">
-          <CardTitle className="text-lg">Recent Buyer Activity</CardTitle>
-          <CardDescription>Loading activity feed...</CardDescription>
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
+            <div>
+              <CardTitle className="text-base sm:text-lg">Recent Buyer Activity</CardTitle>
+              <CardDescription className="text-xs sm:text-sm">Loading activity feed...</CardDescription>
+            </div>
+          </div>
         </CardHeader>
         <CardContent>
           <div className="space-y-3">
@@ -423,10 +401,14 @@ const ActivityWidget = () => {
   // Error state
   if (error) {
     return (
-      <Card>
+      <Card className="overflow-hidden">
         <CardHeader className="pb-2">
-          <CardTitle className="text-lg">Recent Buyer Activity</CardTitle>
-          <CardDescription className="text-red-500">{error}</CardDescription>
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
+            <div>
+              <CardTitle className="text-base sm:text-lg">Recent Buyer Activity</CardTitle>
+              <CardDescription className="text-xs sm:text-sm text-red-500">{error}</CardDescription>
+            </div>
+          </div>
         </CardHeader>
         <CardContent className="text-center">
           <Button 
@@ -434,6 +416,7 @@ const ActivityWidget = () => {
             onClick={handleRefresh}
             size="sm"
             disabled={refreshing}
+            className="mx-auto"
           >
             {refreshing ? 
               <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : 
@@ -447,63 +430,65 @@ const ActivityWidget = () => {
   }
 
   return (
-    <Card>
+    <Card className="overflow-hidden">
       <CardHeader className="pb-2 bg-[#f0f5f4] border-b">
-        <div className="flex justify-between items-start">
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
           <div>
-            <CardTitle className="text-lg">Recent Buyer Activity</CardTitle>
-            <CardDescription>Latest interactions from VIP buyers</CardDescription>
+            <CardTitle className="text-base sm:text-lg">Recent Buyer Activity</CardTitle>
+            <CardDescription className="text-xs sm:text-sm">Latest interactions from VIP buyers</CardDescription>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 self-end sm:self-auto mt-2 sm:mt-0">
             <Button
               variant="ghost"
               size="icon"
               onClick={handleRefresh}
               disabled={refreshing}
-              className="h-8 w-8"
+              className="h-8 w-8 flex-shrink-0"
             >
               <RefreshCw className={`h-4 w-4 ${refreshing ? 'animate-spin' : ''}`} />
             </Button>
-            <Tabs defaultValue="all" value={activeTab} onValueChange={setActiveTab} className="w-fit">
-              <TabsList className="bg-white">
-                <TabsTrigger value="all" className="text-xs">
-                  All
-                  {activityCounts.total > 0 && (
-                    <Badge variant="secondary" className="ml-1 h-5 w-5 p-0 text-[10px] flex items-center justify-center">
-                      {activityCounts.total}
-                    </Badge>
-                  )}
-                </TabsTrigger>
-                <TabsTrigger value="property_view" className="text-xs">
-                  Views
-                  {activityCounts.property_view > 0 && (
-                    <Badge variant="secondary" className="ml-1 h-5 w-5 p-0 text-[10px] flex items-center justify-center">
-                      {activityCounts.property_view}
-                    </Badge>
-                  )}
-                </TabsTrigger>
-                <TabsTrigger value="search" className="text-xs">
-                  Searches
-                  {activityCounts.search > 0 && (
-                    <Badge variant="secondary" className="ml-1 h-5 w-5 p-0 text-[10px] flex items-center justify-center">
-                      {activityCounts.search}
-                    </Badge>
-                  )}
-                </TabsTrigger>
-                <TabsTrigger value="offer" className="text-xs">
-                  Offers
-                  {activityCounts.offer > 0 && (
-                    <Badge variant="secondary" className="ml-1 h-5 w-5 p-0 text-[10px] flex items-center justify-center">
-                      {activityCounts.offer}
-                    </Badge>
-                  )}
-                </TabsTrigger>
-              </TabsList>
-            </Tabs>
+            <div className="w-full sm:w-auto">
+              <Tabs defaultValue="all" value={activeTab} onValueChange={setActiveTab} className="w-fit">
+                <TabsList className="bg-white h-8 p-1">
+                  <TabsTrigger value="all" className="text-xs px-2 h-6">
+                    All
+                    {activityCounts.total > 0 && (
+                      <Badge variant="secondary" className="ml-1 h-4 w-4 p-0 text-[10px] flex items-center justify-center">
+                        {activityCounts.total}
+                      </Badge>
+                    )}
+                  </TabsTrigger>
+                  <TabsTrigger value="property_view" className="text-xs px-2 h-6">
+                    Views
+                    {activityCounts.property_view > 0 && (
+                      <Badge variant="secondary" className="ml-1 h-4 w-4 p-0 text-[10px] flex items-center justify-center">
+                        {activityCounts.property_view}
+                      </Badge>
+                    )}
+                  </TabsTrigger>
+                  <TabsTrigger value="search" className="text-xs px-2 h-6">
+                    Searches
+                    {activityCounts.search > 0 && (
+                      <Badge variant="secondary" className="ml-1 h-4 w-4 p-0 text-[10px] flex items-center justify-center">
+                        {activityCounts.search}
+                      </Badge>
+                    )}
+                  </TabsTrigger>
+                  <TabsTrigger value="offer" className="text-xs px-2 h-6">
+                    Offers
+                    {activityCounts.offer > 0 && (
+                      <Badge variant="secondary" className="ml-1 h-4 w-4 p-0 text-[10px] flex items-center justify-center">
+                        {activityCounts.offer}
+                      </Badge>
+                    )}
+                  </TabsTrigger>
+                </TabsList>
+              </Tabs>
+            </div>
           </div>
         </div>
       </CardHeader>
-      <CardContent className="px-3 py-3">
+      <CardContent className="px-2 sm:px-3 py-3">
         {/* Special Rendering for Offer Tab */}
         {activeTab === 'offer' ? (
           // New Layout for Offer Tab - Similar to RecentOfferActivity
@@ -526,41 +511,46 @@ const ActivityWidget = () => {
                 return (
                   <div 
                     key={`offer-activity-${index}`} 
-                    className="flex gap-4 items-start border-b pb-4 last:border-0"
+                    className="flex flex-col sm:flex-row gap-3 items-start border-b pb-4 last:border-0 transition-all hover:bg-gray-50/50 p-2 rounded-lg"
                   >
-                    <div className="p-2 rounded-full bg-gray-100">
+                    <div className="p-2 rounded-full bg-gray-100 flex-shrink-0 sm:mt-0 mt-1">
                       {getOfferStatusIcon(activity.newStatus)}
                     </div>
                     
                     <div className="flex-1 space-y-1">
-                      <div className="flex items-center justify-between">
-                        <h4 className="font-medium">{getOfferActivityTitle(activity)}</h4>
+                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                        <h4 className="font-medium text-sm">{getOfferActivityTitle(activity)}</h4>
                         <Badge 
-                          className={getStatusBadgeClass(activity.newStatus)}
+                          className={`${getStatusBadgeClass(activity.newStatus)} text-xs self-start sm:self-auto`}
                         >
                           {activity.newStatus}
                         </Badge>
                       </div>
                       
-                      <div className="flex items-center text-sm text-gray-500">
-                        <User className="h-4 w-4 mr-1" />
-                        <span className="mr-4">{buyer.firstName} {buyer.lastName}</span>
-                        
-                        <Home className="h-4 w-4 mr-1" />
-                        <span className="mr-4">
-                          {/* Use formatted address instead of title */}
-                          {activity.propertyAddress 
-                            ? `${activity.propertyAddress}, ${activity.propertyCity || ''}, ${activity.propertyState || ''} ${activity.propertyZip || ''}`
-                            : (activity.propertyId || 'Unknown property')}
+                      <div className="flex flex-wrap text-xs text-gray-500 gap-x-2 gap-y-1">
+                        <span className="flex items-center">
+                          <User className="h-3 w-3 mr-1 flex-shrink-0" />
+                          {buyer.firstName} {buyer.lastName}
                         </span>
                         
-                        <Calendar className="h-4 w-4 mr-1" />
-                        <span>{format(new Date(activity.timestamp), "MMM d, yyyy")}</span>
+                        <span className="flex items-center">
+                          <Home className="h-3 w-3 mr-1 flex-shrink-0" />
+                          <span className="truncate max-w-[180px] sm:max-w-[200px]">
+                            {activity.propertyAddress 
+                              ? `${activity.propertyAddress}, ${activity.propertyCity || ''}, ${activity.propertyState || ''} ${activity.propertyZip || ''}`
+                              : (activity.propertyId || 'Unknown property')}
+                          </span>
+                        </span>
+                        
+                        <span className="flex items-center">
+                          <Calendar className="h-3 w-3 mr-1 flex-shrink-0" />
+                          <span className="whitespace-nowrap">{format(new Date(activity.timestamp), "MMM d, yyyy")}</span>
+                        </span>
                       </div>
                       
                       {/* Show messages if present */}
                       {(activity.buyerMessage || activity.sysMessage) && (
-                        <div className="mt-2 pt-2 text-sm italic bg-gray-50 p-2 rounded-md">
+                        <div className="mt-2 pt-2 text-xs italic bg-gray-50 p-2 rounded-md">
                           {activity.buyerMessage && (
                             <div className="mb-1">
                               <span className="font-semibold text-xs">Buyer says:</span> {activity.buyerMessage}
@@ -576,7 +566,7 @@ const ActivityWidget = () => {
                       )}
                     </div>
                     
-                    <Avatar className="h-10 w-10 bg-primary-100 text-primary-800">
+                    <Avatar className="h-10 w-10 bg-primary-100 text-primary-800 hidden sm:flex">
                       <AvatarFallback className="bg-[#324c48] text-white">
                         {initials}
                       </AvatarFallback>
@@ -588,7 +578,7 @@ const ActivityWidget = () => {
             
             <Button 
               variant="ghost" 
-              className="w-full mt-2 text-[#324c48]"
+              className="w-full mt-2 text-[#324c48] text-sm"
               onClick={() => window.location.href = "/admin/offers"}
             >
               View All Offers
@@ -618,7 +608,7 @@ const ActivityWidget = () => {
                 )}
               </div>
             ) : (
-              <div className="space-y-3">
+              <div className="space-y-2">
                 {filteredActivities.map((activity, index) => {
                   const buyer = buyers[activity.buyerId] || {};
                   const secondaryText = getActivitySecondaryText(activity);
@@ -629,23 +619,23 @@ const ActivityWidget = () => {
                   return (
                     <div 
                       key={`${activity.type}-${index}`} 
-                      className="flex items-start gap-3 p-3 rounded-md hover:bg-gray-50 transition-colors border"
+                      className="flex items-start gap-2 p-2 rounded-md hover:bg-gray-50 transition-colors border"
                     >
-                      <Avatar className="h-8 w-8 bg-[#324c48] text-white">
-                        <div className="flex items-center justify-center text-xs font-medium">
+                      <Avatar className="h-8 w-8 bg-[#324c48] text-white mt-1 flex-shrink-0">
+                        <AvatarFallback className="text-xs font-medium">
                           {initials}
-                        </div>
+                        </AvatarFallback>
                       </Avatar>
                       <div className="flex-1 min-w-0">
-                        <div className="flex justify-between items-start">
-                          <p className="text-sm font-medium text-[#324c48]">
+                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1">
+                          <p className="text-sm font-medium text-[#324c48] line-clamp-1">
                             {getActivityDescription(activity)}
                           </p>
                           <Badge 
                             variant="outline" 
-                            className={`text-xs ${getActivityBadgeClass(activity.type)}`}
+                            className={`text-xs w-fit self-start sm:self-auto ${getActivityBadgeClass(activity.type)}`}
                           >
-                            {activity.type.replace('_', ' ')}
+                            <span className="capitalize">{activity.type.replace('_', ' ')}</span>
                           </Badge>
                         </div>
                         {secondaryText && (
@@ -653,7 +643,7 @@ const ActivityWidget = () => {
                             {secondaryText}
                           </p>
                         )}
-                        <div className="flex items-center justify-between mt-1.5">
+                        <div className="flex flex-col xs:flex-row xs:items-center xs:justify-between gap-1 mt-1.5">
                           <p className="text-xs font-medium">
                             {buyer.firstName} {buyer.lastName}
                           </p>
@@ -671,7 +661,7 @@ const ActivityWidget = () => {
                 
                 <Button 
                   variant="ghost" 
-                  className="w-full mt-2 text-[#324c48]"
+                  className="w-full mt-2 text-[#324c48] text-sm"
                   onClick={() => window.location.href = "/admin/buyers"}
                 >
                   View Buyer Management
