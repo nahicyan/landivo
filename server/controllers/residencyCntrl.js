@@ -12,56 +12,70 @@ const __dirname = path.dirname(__filename);
 // Helper function to manage multiple property rows
 const managePropertyRowsDisplayOrder = async (propertyId, propertyRows) => {
   try {
-    if (!propertyRows || !Array.isArray(propertyRows) || propertyRows.length === 0) {
-      console.log("No property rows to manage");
-      return;
-    }
-    
-    // Process each row in the propertyRows array
-    for (const rowSelection of propertyRows) {
-      const { rowId, position } = rowSelection;
-      
-      if (!rowId) {
-        console.warn("Invalid row ID provided");
-        continue;
-      }
-      
-      // Find the specified row
-      const row = await prisma.propertyRow.findUnique({
-        where: { id: rowId }
-      });
-      
-      if (!row) {
-        console.warn(`Property row with ID ${rowId} not found`);
-        continue;
-      }
-      
-      // Get the current display order
-      const currentOrder = [...(row.displayOrder || [])];
-      
-      // Check if the property is already in the row
-      const currentPosition = currentOrder.indexOf(propertyId);
-      
-      // Remove the property from its current position if it exists
-      if (currentPosition !== -1) {
-        currentOrder.splice(currentPosition, 1);
-      }
-      
-      // Validate the desired position
-      const desiredPosition = position !== undefined ? 
-        Math.min(Math.max(0, position), currentOrder.length) : 
-        currentOrder.length; // Default to the end of the list
-      
-      // Insert at the desired position
-      currentOrder.splice(desiredPosition, 0, propertyId);
-      
-      // Update the PropertyRow with the new order
+    // 1) Fetch every row that currently contains this property
+    const existingRows = await prisma.propertyRow.findMany({
+      where: { displayOrder: { has: propertyId } }
+    });
+    const existingRowIds = existingRows.map(r => r.id);
+
+    // 2) Figure out which of those to delete (i.e. not in the new list)
+    const newRowIds = Array.isArray(propertyRows)
+      ? propertyRows.map(r => r.rowId)
+      : [];
+
+    const rowsToRemove = existingRowIds.filter(id => !newRowIds.includes(id));
+    for (const rowId of rowsToRemove) {
+      const row = existingRows.find(r => r.id === rowId);
+      const updatedOrder = row.displayOrder.filter(id => id !== propertyId);
       await prisma.propertyRow.update({
         where: { id: rowId },
-        data: { displayOrder: currentOrder }
+        data: { displayOrder: updatedOrder }
       });
-      
-      console.log(`Updated display order for property ${propertyId} in row ${rowId} to position ${desiredPosition}`);
+      console.log(`Removed property ${propertyId} from row ${rowId}`);
+    }
+
+    // 3) Now handle all the additions/reorders
+    if (Array.isArray(propertyRows)) {
+      for (const rowSelection of propertyRows) {
+        const { rowId, position } = rowSelection;
+        
+        if (!rowId) {
+          console.warn("Invalid row ID provided");
+          continue;
+        }
+        
+        // Find the specified row
+        const row = await prisma.propertyRow.findUnique({
+          where: { id: rowId }
+        });
+        
+        if (!row) {
+          console.warn(`Property row with ID ${rowId} not found`);
+          continue;
+        }
+        
+        // Get the current display order
+        const currentOrder = [...(row.displayOrder || [])];
+        
+        // Remove the property from its current position if it exists
+        const updatedOrder = currentOrder.filter(id => id !== propertyId);
+        
+        // Validate the desired position
+        const desiredPosition = position !== undefined ? 
+          Math.min(Math.max(0, position), updatedOrder.length) : 
+          updatedOrder.length; // Default to the end of the list
+        
+        // Insert at the desired position
+        updatedOrder.splice(desiredPosition, 0, propertyId);
+        
+        // Update the PropertyRow with the new order
+        await prisma.propertyRow.update({
+          where: { id: rowId },
+          data: { displayOrder: updatedOrder }
+        });
+        
+        console.log(`Updated display order for property ${propertyId} in row ${rowId} to position ${desiredPosition}`);
+      }
     }
   } catch (error) {
     console.error('Error managing property rows display order:', error);
@@ -444,8 +458,8 @@ export const updateResidency = asyncHandler(async (req, res) => {
     }
     
     // Update property rows if we have valid data
-    if (Array.isArray(parsedPropertyRows) && parsedPropertyRows.length > 0 &&
-        parsedPropertyRows.some(row => row && row.rowId)) {
+    if (Array.isArray(parsedPropertyRows)) {
+      // will handle both non-empty (re-order) and empty (removal) cases
       await managePropertyRowsDisplayOrder(id, parsedPropertyRows);
     }
     // For backward compatibility - ONLY IF NO VALID PROPERTY ROWS
