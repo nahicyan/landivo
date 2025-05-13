@@ -28,8 +28,8 @@ router.post(
   extractUserFromToken, 
   checkPermissions(['write:properties']), 
   uploadWithMedia.fields([
-    { name: 'images', maxCount: 10 },
-    { name: 'videos', maxCount: 5 }, // New field for videos
+    { name: 'images', maxCount: 30 },
+    { name: 'videos', maxCount: 10 }, // New field for videos
     { name: 'cmaFile', maxCount: 1 }
   ]), 
   createResidencyWithMultipleFiles
@@ -41,8 +41,8 @@ router.put(
   extractUserFromToken, 
   checkPermissions(['write:properties']), 
   uploadWithMedia.fields([
-    { name: 'images', maxCount: 10 },
-    { name: 'videos', maxCount: 5 }, // New field for videos
+    { name: 'images', maxCount: 30 },
+    { name: 'videos', maxCount: 10 }, // New field for videos
     { name: 'cmaFile', maxCount: 1 }
   ]), 
   updateResidency

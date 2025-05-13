@@ -115,7 +115,7 @@ const VideoUploadPreview = ({
   newVideos = [], 
   onExistingChange, 
   onNewChange,
-  maxVideos = 5
+  maxVideos = 10
 }) => {
   // Local state for existing videos with IDs
   const [existingItems, setExistingItems] = useState([]);
@@ -197,7 +197,7 @@ const VideoUploadPreview = ({
     accept: {
       'video/*': []
     },
-    maxSize: 100 * 1024 * 1024, // 100MB
+    maxSize: 500 * 1024 * 1024, // 500MB
     disabled: existingItems.length + newItems.length >= maxVideos
   });
 
@@ -356,7 +356,7 @@ const VideoUploadPreview = ({
                   : "Maximum number of videos reached"}
               </p>
               <p className="text-xs text-gray-500 mt-2">
-                Supports MP4, WebM, MOV, AVI. Max 100MB per file.
+                Supports MP4, WebM, MOV, AVI. Max 500MB per file.
               </p>
             </>
           )}

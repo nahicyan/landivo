@@ -25,7 +25,7 @@ const storage = multer.diskStorage({
 // Export multer instance with support for Media
 export const uploadWithMedia = multer({
   storage,
-  limits: { fileSize: 100 * 1024 * 1024 }, // 100MB limit for video files
+  limits: { fileSize: 500 * 1024 * 1024 }, // 500MB limit for video files
   fileFilter: function (req, file, cb) {
     if (file.fieldname === 'cmaFile') {
       // For CMA files, only accept PDFs

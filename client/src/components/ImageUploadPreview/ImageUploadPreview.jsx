@@ -107,7 +107,7 @@ const ImageUploadPreview = ({
   newImages = [], 
   onExistingChange, 
   onNewChange,
-  maxImages = 10
+  maxImages = 30
 }) => {
   // Local state for existing images with IDs
   const [existingItems, setExistingItems] = useState([]);
