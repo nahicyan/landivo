@@ -138,38 +138,47 @@ export default function EditProperty() {
   };
 
 
-  // Validation function for the current step
-  const validateStep = (stepIndex) => {
-    const currentRequiredFields = requiredFieldsByStep[stepIndex] || [];
-    const errors = {};
-    let isValid = true;
+// Update the validateStep function
+const validateStep = (stepIndex) => {
+  const currentRequiredFields = requiredFieldsByStep[stepIndex] || [];
+  const errors = {};
+  let isValid = true;
 
-    currentRequiredFields.forEach(field => {
-      // Handle rich text fields
-      if (field === 'title' || field === 'description') {
-        const textContent = formData[field]?.replace(/<[^>]*>/g, '')?.trim();
-        if (!textContent) {
-          errors[field] = 'This field is required';
-          isValid = false;
-        }
-      } 
-      // Handle numeric fields
-      else if (['sqft', 'askingPrice', 'minPrice'].includes(field)) {
-        const numValue = formData[field]?.toString().replace(/,/g, '');
-        if (!numValue || isNaN(parseFloat(numValue))) {
-          errors[field] = 'This field is required';
-          isValid = false;
-        }
-      }
-      // Handle regular string fields
-      else if (!formData[field] || formData[field].toString().trim() === '') {
+  // Special validation for MediaTags step (step 9)
+  if (stepIndex === 9) {
+    const totalImages = existingImages.length + uploadedImages.length;
+    if (totalImages === 0) {
+      errors.images = 'At least one image is required';
+      isValid = false;
+    }
+  }
+
+  currentRequiredFields.forEach(field => {
+    // Handle rich text fields
+    if (field === 'title' || field === 'description') {
+      const textContent = formData[field]?.replace(/<[^>]*>/g, '')?.trim();
+      if (!textContent) {
         errors[field] = 'This field is required';
         isValid = false;
       }
-    });
+    } 
+    // Handle numeric fields
+    else if (['sqft', 'askingPrice', 'minPrice'].includes(field)) {
+      const numValue = formData[field]?.toString().replace(/,/g, '');
+      if (!numValue || isNaN(parseFloat(numValue))) {
+        errors[field] = 'This field is required';
+        isValid = false;
+      }
+    }
+    // Handle regular string fields
+    else if (!formData[field] || formData[field].toString().trim() === '') {
+      errors[field] = 'This field is required';
+      isValid = false;
+    }
+  });
 
-    return { valid: isValid, errors };
-  };
+  return { valid: isValid, errors };
+};
 
   // Media state
   const [existingImages, setExistingImages] = useState([]);

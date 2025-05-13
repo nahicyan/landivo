@@ -25,6 +25,7 @@ export default function MediaTags({
   setUploadedVideos,
   existingVideos = [],
   setExistingVideos = () => {},
+    errors = {},
 }) {
   const hasExistingImages = Array.isArray(existingImages) && existingImages.length > 0;
   const hasNewImages = Array.isArray(uploadedImages) && uploadedImages.length > 0;
@@ -46,6 +47,12 @@ export default function MediaTags({
       </CardHeader>
 
       <CardContent>
+         {/* Add error message for images */}
+        {errors.images && (
+          <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-md">
+            <p className="text-sm text-red-600">{errors.images}</p>
+          </div>
+        )}
         <Tabs defaultValue="images" className="w-full">
           <TabsList className="w-full mb-6">
             <TabsTrigger value="images" className="flex items-center gap-2 flex-1">
