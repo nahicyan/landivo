@@ -36,7 +36,7 @@ export const getUserByAuth0Id = asyncHandler(async (req, res) => {
  * This is called when a new user with Auth0 roles/permissions logs in
  */
 export const createOrUpdateUser = asyncHandler(async (req, res) => {
-  const { auth0Id, firstName, lastName, email } = req.body;
+  const { auth0Id, firstName, lastName, email, phone, profileRole, avatarUrl, allowedProfiles } = req.body;
   
   if (!auth0Id || !email) {
     return res.status(400).json({ message: "Auth0 ID and email are required" });
@@ -49,13 +49,17 @@ export const createOrUpdateUser = asyncHandler(async (req, res) => {
     });
     
     if (user) {
-      // Update existing user
+      // Update existing user with new fields
       user = await prisma.user.update({
         where: { auth0Id },
         data: {
           firstName: firstName || user.firstName,
           lastName: lastName || user.lastName,
           email,
+          phone: phone || user.phone,
+          profileRole: profileRole || user.profileRole,
+          avatarUrl: avatarUrl || user.avatarUrl,
+          allowedProfiles: allowedProfiles || user.allowedProfiles,
           lastLoginAt: new Date(),
           loginCount: { increment: 1 }
         }
@@ -66,13 +70,17 @@ export const createOrUpdateUser = asyncHandler(async (req, res) => {
         user
       });
     } else {
-      // Create new user
+      // Create new user with new fields
       user = await prisma.user.create({
         data: {
           auth0Id,
           firstName,
           lastName,
           email,
+          phone,
+          profileRole,
+          avatarUrl,
+          allowedProfiles: allowedProfiles || [],
           lastLoginAt: new Date(),
           loginCount: 1
         }
@@ -91,6 +99,7 @@ export const createOrUpdateUser = asyncHandler(async (req, res) => {
     });
   }
 });
+
 
 /**
  * Get user profile - gets the current authenticated user's profile
@@ -145,7 +154,7 @@ export const updateUserProfile = asyncHandler(async (req, res) => {
       return res.status(401).json({ message: "Unauthorized: User not authenticated" });
     }
     
-    const { firstName, lastName } = req.body;
+    const { firstName, lastName, phone, profileRole, avatarUrl, allowedProfiles } = req.body;
     
     // Get the existing user to check if it exists
     const existingUser = await prisma.user.findUnique({
@@ -156,12 +165,16 @@ export const updateUserProfile = asyncHandler(async (req, res) => {
       return res.status(404).json({ message: "User not found" });
     }
     
-    // Remove modificationHistory tracking since it's not in the schema
+    // Update the user with new fields
     const updatedUser = await prisma.user.update({
       where: { auth0Id },
       data: { 
         firstName, 
-        lastName
+        lastName,
+        phone,
+        profileRole,
+        avatarUrl,
+        allowedProfiles
       }
     });
     
@@ -177,7 +190,6 @@ export const updateUserProfile = asyncHandler(async (req, res) => {
     });
   }
 });
-
 /**
  * Get all users (Admin only)
  */
@@ -238,6 +250,32 @@ export const getUserById = asyncHandler(async (req, res) => {
     console.error("Error fetching user by ID:", error);
     res.status(500).json({
       message: "An error occurred while fetching user information",
+      error: error.message
+    });
+  }
+});
+
+// Add updateUserStatus function
+export const updateUserStatus = asyncHandler(async (req, res) => {
+  const { id } = req.params;
+  const { isActive } = req.body;
+  
+  try {
+    const updatedUser = await prisma.user.update({
+      where: { id },
+      data: { 
+        isActive: isActive === true || isActive === "true"
+      }
+    });
+    
+    res.status(200).json({
+      message: `User ${isActive ? "enabled" : "disabled"} successfully`,
+      user: updatedUser
+    });
+  } catch (error) {
+    console.error("Error updating user status:", error);
+    res.status(500).json({
+      message: "An error occurred while updating user status",
       error: error.message
     });
   }

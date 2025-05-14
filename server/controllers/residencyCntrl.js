@@ -391,6 +391,7 @@ export const updateResidency = asyncHandler(async (req, res) => {
       imageUrls: finalImageUrls,
       videoUrls: finalVideoUrls,
       updatedBy: { connect: { id: updatedById } },
+      profileId: profileId || currentProperty.profileId,
       modificationHistory,
       cmaFilePath
     };
@@ -695,7 +696,10 @@ export const createResidencyWithMultipleFiles = asyncHandler(async (req, res) =>
       
       // CMA fields
       hasCma,
-      cmaData
+      cmaData,
+      // Profile
+      profileId,
+
     } = req.body;
 
     // Prepare landType as an array
@@ -814,7 +818,10 @@ export const createResidencyWithMultipleFiles = asyncHandler(async (req, res) =>
         hasCma: hasCma === "true" || hasCma === true,
         cmaData: cmaData || null,
         cmaFilePath: cmaFilePath,
-        
+
+        //Profile
+        profileId: req.body.profileId || null,
+                
         // Initialize modification history as an empty array
         modificationHistory: [],
       },

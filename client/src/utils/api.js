@@ -621,3 +621,29 @@ export const getFeaturedPropertiesRow = async () => {
     throw error;
   }
 };
+
+// Update user status (enable/disable)
+export const updateUserStatus = async (id, isActive) => {
+  try {
+    const response = await api.put(`/user/${id}/status`, { isActive });
+    return response.data;
+  } catch (error) {
+    handleRequestError(error, "Failed to update user status");
+  }
+};
+
+// Update updateUserProfile to handle new fields
+export const updateUserProfileWithFields = async (profileData) => {
+  try {
+    const token = await getAccessTokenSilently();
+    const response = await api.put('/user/profile', profileData, {
+      headers: {
+        Authorization: `Bearer ${token}`
+      }
+    });
+    return response.data;
+  } catch (error) {
+    console.error("Error updating user profile:", error);
+    throw error;
+  }
+};
