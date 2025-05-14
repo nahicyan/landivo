@@ -4,16 +4,18 @@
 import React, { useState, useEffect, useMemo } from "react";
 import { PuffLoader } from "react-spinners";
 import useUsers from "@/components/hooks/useUsers.js";
+import { updateUserStatus } from "@/utils/api";
 import { columns } from "@/components/UserColumns/UserColumns";
 import { DataTable } from "@/components/DataTable/DataTable";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { 
-  Select, 
-  SelectContent, 
-  SelectItem, 
-  SelectTrigger, 
-  SelectValue 
+import { toast } from "react-toastify";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue
 } from "@/components/ui/select";
 import {
   Card,
@@ -29,57 +31,79 @@ import {
 } from "@/components/ui/popover";
 
 export default function UsersTable() {
-  const { data, isError, isLoading } = useUsers();
-  // Generic search query
+  const { data, isError, isLoading, refetch } = useUsers();
   const [searchQuery, setSearchQuery] = useState("");
   const [activeFilters, setActiveFilters] = useState([]);
-  
-  // Filter states
   const [filters, setFilters] = useState({
     role: "all",
+    isActive: "all",
   });
-
-  // For mobile filter toggle
   const [showMobileFilters, setShowMobileFilters] = useState(false);
 
-  // Parse filtered data
+  // Handle toggling user status
+  const handleToggleUserStatus = async (user) => {
+    try {
+      await updateUserStatus(user.id, !user.isActive);
+      toast.success(`User ${user.isActive ? "disabled" : "enabled"} successfully`);
+      refetch();
+    } catch (error) {
+      console.error("Error toggling user status:", error);
+      toast.error("Failed to update user status");
+    }
+  };
+
   const filteredData = useMemo(() => {
     if (!data) return [];
-    
+
     return data.filter((user) => {
-      // General search query filtering
+      // Search across more user fields with the new schema
       const searchFields = [
-        user.name,
+        user.firstName,
+        user.lastName,
+        `${user.firstName || ''} ${user.lastName || ''}`.trim(), // Full name
         user.email,
+        user.phone,
+        user.profileRole,
       ];
-      
-      const matchesSearchQuery = !searchQuery || searchFields.some(field => 
+
+      const matchesSearchQuery = !searchQuery || searchFields.some(field =>
         field && field.toString().toLowerCase().includes(searchQuery.toLowerCase())
       );
-      
-      // Role filter
+
       const matchesRole = filters.role === "all" || user.role === filters.role;
       
-      return matchesSearchQuery && matchesRole;
+      const matchesActiveStatus =
+        filters.isActive === "all" ||
+        (filters.isActive === "active" && user.isActive) ||
+        (filters.isActive === "disabled" && !user.isActive);
+
+      return matchesSearchQuery && matchesRole && matchesActiveStatus;
     });
   }, [data, searchQuery, filters]);
 
   // Update active filters for display
   useEffect(() => {
     const newActiveFilters = [];
-    
+
     if (filters.role && filters.role !== "all") {
-      newActiveFilters.push({ 
-        type: 'role', 
-        value: filters.role, 
-        label: `Role: ${filters.role}` 
+      newActiveFilters.push({
+        type: 'role',
+        value: filters.role,
+        label: `Role: ${filters.role}`
       });
     }
-    
+
+    if (filters.isActive && filters.isActive !== "all") {
+      newActiveFilters.push({
+        type: 'isActive',
+        value: filters.isActive,
+        label: `Status: ${filters.isActive === "active" ? "Active" : "Disabled"}`
+      });
+    }
+
     setActiveFilters(newActiveFilters);
   }, [filters]);
 
-  // Handle filter changes
   const handleFilterChange = (type, value) => {
     setFilters(prev => ({
       ...prev,
@@ -87,7 +111,6 @@ export default function UsersTable() {
     }));
   };
 
-  // Remove a specific filter
   const removeFilter = (type) => {
     setFilters(prev => ({
       ...prev,
@@ -95,11 +118,11 @@ export default function UsersTable() {
     }));
   };
 
-  // Clear all filters
   const clearAllFilters = () => {
     setSearchQuery("");
     setFilters({
       role: "all",
+      isActive: "all",
     });
   };
 
@@ -129,7 +152,7 @@ export default function UsersTable() {
             <div className="relative">
               <Input
                 type="text"
-                placeholder="Search by name or email"
+                placeholder="Search by name, email, or phone"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:border-[#D4A017] focus:ring-1 focus:ring-[#D4A017]"
@@ -155,11 +178,11 @@ export default function UsersTable() {
           <div className="hidden lg:flex">
             <Popover>
               <PopoverTrigger asChild>
-                <Button 
-                  variant="outline" 
+                <Button
+                  variant="outline"
                   className="border-[#324c48] text-[#324c48] hover:bg-[#324c48] hover:text-white"
                 >
-                  <SlidersHorizontal className="h-4 w-4 mr-2" /> 
+                  <SlidersHorizontal className="h-4 w-4 mr-2" />
                   Filters
                 </Button>
               </PopoverTrigger>
@@ -183,17 +206,35 @@ export default function UsersTable() {
                       </SelectContent>
                     </Select>
                   </div>
+
+                  {/* Active status filter */}
+                  <div className="space-y-2">
+                    <Label htmlFor="status-filter">Status</Label>
+                    <Select
+                      value={filters.isActive}
+                      onValueChange={(value) => handleFilterChange('isActive', value)}
+                    >
+                      <SelectTrigger id="status-filter">
+                        <SelectValue placeholder="Select status" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">All Statuses</SelectItem>
+                        <SelectItem value="active">Active</SelectItem>
+                        <SelectItem value="disabled">Disabled</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
                 </div>
 
                 <div className="flex justify-end mt-4 space-x-2">
-                  <Button 
-                    variant="outline" 
+                  <Button
+                    variant="outline"
                     onClick={clearAllFilters}
                     className="text-red-500 border-red-500 hover:bg-red-50"
                   >
                     Clear All
                   </Button>
-                  <Button 
+                  <Button
                     onClick={() => document.body.click()}
                     className="bg-[#324c48] hover:bg-[#3f4f24]"
                   >
@@ -206,8 +247,8 @@ export default function UsersTable() {
 
           {/* Mobile Filter Button */}
           <div className="lg:hidden w-full">
-            <Button 
-              variant="outline" 
+            <Button
+              variant="outline"
               className="w-full border-[#324c48] text-[#324c48]"
               onClick={() => setShowMobileFilters(!showMobileFilters)}
             >
@@ -221,7 +262,7 @@ export default function UsersTable() {
         {showMobileFilters && (
           <div className="lg:hidden bg-white rounded-lg shadow p-4 space-y-4">
             <h3 className="font-medium text-lg">Filters</h3>
-            
+
             <div className="space-y-2">
               <Label htmlFor="mobile-role-filter">Role</Label>
               <Select
@@ -239,15 +280,32 @@ export default function UsersTable() {
               </Select>
             </div>
 
+            <div className="space-y-2">
+              <Label htmlFor="mobile-status-filter">Status</Label>
+              <Select
+                value={filters.isActive}
+                onValueChange={(value) => handleFilterChange('isActive', value)}
+              >
+                <SelectTrigger id="mobile-status-filter">
+                  <SelectValue placeholder="Select status" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Statuses</SelectItem>
+                  <SelectItem value="active">Active</SelectItem>
+                  <SelectItem value="disabled">Disabled</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
             <div className="flex space-x-2 pt-2">
-              <Button 
-                variant="outline" 
+              <Button
+                variant="outline"
                 onClick={clearAllFilters}
                 className="flex-1 text-red-500 border-red-500 hover:bg-red-50"
               >
                 Clear All
               </Button>
-              <Button 
+              <Button
                 onClick={() => setShowMobileFilters(false)}
                 className="flex-1 bg-[#324c48] hover:bg-[#3f4f24]"
               >
@@ -261,24 +319,24 @@ export default function UsersTable() {
         {activeFilters.length > 0 && (
           <div className="flex flex-wrap gap-2 mt-2">
             {activeFilters.map((filter, index) => (
-              <Badge 
-                key={index} 
+              <Badge
+                key={index}
                 variant="outline"
                 className="bg-[#f0f5f4] text-[#324c48] border-[#324c48] py-1 px-3 flex items-center gap-1"
               >
                 {filter.label}
                 <button
-                  onClick={() => removeFilter(filter.type, filter.value)}
+                  onClick={() => removeFilter(filter.type)}
                   className="ml-1 hover:text-red-500"
                 >
                   <X className="h-3 w-3" />
                 </button>
               </Badge>
             ))}
-            
-            <Button 
-              variant="ghost" 
-              size="sm" 
+
+            <Button
+              variant="ghost"
+              size="sm"
               onClick={clearAllFilters}
               className="text-[#324c48] hover:text-red-500 hover:bg-red-50 text-xs h-6"
             >
@@ -292,7 +350,7 @@ export default function UsersTable() {
           <p className="text-sm text-gray-600">
             {filteredData.length} {filteredData.length === 1 ? "user" : "users"} found
           </p>
-          <Button 
+          <Button
             onClick={() => window.location.href = "/admin/users/new"}
             className="bg-[#324c48] hover:bg-[#3f4f24] text-white"
           >
@@ -302,7 +360,14 @@ export default function UsersTable() {
 
         {/* Data Table */}
         <div className="bg-white rounded-lg overflow-hidden border border-gray-200">
-          <DataTable columns={columns} data={filteredData} />
+          <DataTable
+            columns={columns}
+            data={filteredData.map(user => ({
+              ...user,
+              // Add the toggle function to each row data
+              toggleStatus: () => handleToggleUserStatus(user)
+            }))}
+          />
         </div>
       </div>
     </div>

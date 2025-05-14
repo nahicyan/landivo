@@ -12,30 +12,34 @@ import {
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { 
-  Select, 
-  SelectTrigger, 
-  SelectContent, 
-  SelectItem, 
-  SelectValue 
+import {
+  Select,
+  SelectTrigger,
+  SelectContent,
+  SelectItem,
+  SelectValue
 } from "@/components/ui/select";
-import { 
+import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
   DialogFooter,
 } from "@/components/ui/dialog";
-import UserSubmit from "@/components/AddProperty/UserSubmit"; 
+import UserSubmit from "@/components/AddProperty/UserSubmit";
 import { Plus, X, ChevronDown, Loader2 } from "lucide-react";
 import axios from "axios";
+import { useAuth0 } from "@auth0/auth0-react";
 
 export default function SystemInfoCard({ formData, handleChange, errors }) {
+  const { getAccessTokenSilently } = useAuth0();
   const [propertyRows, setPropertyRows] = useState([]);
   const [isLoadingRows, setIsLoadingRows] = useState(false);
   const [showFeaturedDialog, setShowFeaturedDialog] = useState(false);
   const [loadingPropertyRows, setLoadingPropertyRows] = useState(false);
-  
+  const [allowedProfiles, setAllowedProfiles] = useState([]);
+  const [loadingProfiles, setLoadingProfiles] = useState(false);
+
   // State for managing property rows
   const [selectedRowEntries, setSelectedRowEntries] = useState([]);
   const [currentRowSelection, setCurrentRowSelection] = useState({
@@ -61,7 +65,49 @@ export default function SystemInfoCard({ formData, handleChange, errors }) {
   useEffect(() => {
     fetchPropertyRows();
   }, []);
-  
+
+  // Fetch user's allowed profiles
+  useEffect(() => {
+    const fetchUserProfiles = async () => {
+      setLoadingProfiles(true);
+      try {
+        // Get the auth token
+        const token = await getAccessTokenSilently();
+        
+        // Fetch user profile
+        const userProfile = await axios.get(
+          `${import.meta.env.VITE_SERVER_URL}/api/user/profile`,
+          {
+            headers: {
+              Authorization: `Bearer ${token}`
+            }
+          }
+        );
+        
+        // Check if user has allowedProfiles
+        if (userProfile.data && userProfile.data.allowedProfiles && Array.isArray(userProfile.data.allowedProfiles)) {
+          // Map the profile IDs to objects with name and id
+          // In a real app, you might want to fetch profile details from another endpoint
+          const profiles = userProfile.data.allowedProfiles.map(profileId => ({
+            id: profileId,
+            name: `Profile ${profileId.substr(0, 6)}` // Show shortened ID for readability
+          }));
+          setAllowedProfiles(profiles);
+        } else {
+          // Fallback with empty array
+          setAllowedProfiles([]);
+        }
+      } catch (error) {
+        console.error("Error fetching user profiles:", error);
+        setAllowedProfiles([]); // Ensure allowedProfiles is always an array
+      } finally {
+        setLoadingProfiles(false);
+      }
+    };
+
+    fetchUserProfiles();
+  }, [getAccessTokenSilently]);
+
   // If we're editing a property, load its existing row associations
   useEffect(() => {
     if (formData.id) {
@@ -81,18 +127,18 @@ export default function SystemInfoCard({ formData, handleChange, errors }) {
       setIsLoadingRows(false);
     }
   };
-  
+
   const fetchPropertyRowAssociations = async (propertyId) => {
     if (!propertyId) return;
-    
+
     setLoadingPropertyRows(true);
     try {
       // Find which rows include this property
       const response = await axios.get(`${import.meta.env.VITE_SERVER_URL}/api/property-rows`);
       const rows = response.data || [];
-      
+
       const propertyAssociations = [];
-      
+
       // Look through each row to find if it includes the property
       for (const row of rows) {
         if (row.displayOrder && Array.isArray(row.displayOrder) && row.displayOrder.includes(propertyId)) {
@@ -104,15 +150,15 @@ export default function SystemInfoCard({ formData, handleChange, errors }) {
           });
         }
       }
-      
+
       // Set the selected rows
       setSelectedRowEntries(propertyAssociations);
-      
+
       // Update form data with selected rows
       if (propertyAssociations.length > 0) {
         updateFormDataWithRows(propertyAssociations);
       }
-      
+
     } catch (error) {
       console.error("Error fetching property row associations:", error);
     } finally {
@@ -123,22 +169,22 @@ export default function SystemInfoCard({ formData, handleChange, errors }) {
   // Fetch properties in the selected row to show position options
   const fetchRowProperties = async (rowId) => {
     if (!rowId) return;
-    
+
     setLoadingRowProperties(true);
     try {
       const response = await axios.get(`${import.meta.env.VITE_SERVER_URL}/api/property-rows/${rowId}`);
-      
+
       if (response.data && response.data.propertyDetails) {
         // Store complete list of properties in this row
         const allProperties = response.data.propertyDetails || [];
         setAllRowProperties(allProperties);
-        
+
         // Filter out the current property if we're in edit mode
         let filteredProperties = allProperties;
         if (formData.id) {
           filteredProperties = allProperties.filter(p => p.id !== formData.id);
         }
-        
+
         setRowProperties(filteredProperties);
       } else {
         setRowProperties([]);
@@ -158,10 +204,10 @@ export default function SystemInfoCard({ formData, handleChange, errors }) {
     // Find the row name
     const selectedRow = propertyRows.find(row => row.id === rowId);
     const rowName = selectedRow ? (selectedRow.name || selectedRow.rowType || "Unnamed Row") : "";
-    
+
     // Check if this property is already in this row (for edit mode)
     const existingEntry = selectedRowEntries.find(entry => entry.rowId === rowId);
-    
+
     setCurrentRowSelection({
       ...currentRowSelection,
       rowId,
@@ -169,7 +215,7 @@ export default function SystemInfoCard({ formData, handleChange, errors }) {
       // If we're editing and already in this row, use the existing position
       position: existingEntry ? existingEntry.position : 0
     });
-    
+
     // Fetch properties in this row
     fetchRowProperties(rowId);
   };
@@ -177,14 +223,14 @@ export default function SystemInfoCard({ formData, handleChange, errors }) {
   // Add current row selection to the list
   const addRowToSelection = () => {
     if (!currentRowSelection.rowId) return;
-    
+
     // Check if row already exists
     const exists = selectedRowEntries.some(entry => entry.rowId === currentRowSelection.rowId);
-    
+
     if (exists) {
       // If it exists, update the position
-      const updatedEntries = selectedRowEntries.map(entry => 
-        entry.rowId === currentRowSelection.rowId 
+      const updatedEntries = selectedRowEntries.map(entry =>
+        entry.rowId === currentRowSelection.rowId
           ? { ...entry, position: currentRowSelection.position }
           : entry
       );
@@ -197,10 +243,10 @@ export default function SystemInfoCard({ formData, handleChange, errors }) {
       setSelectedRowEntries(updatedEntries);
       updateFormDataWithRows(updatedEntries);
     }
-    
+
     // Close the dialog after adding
     setShowFeaturedDialog(false);
-    
+
     // Reset selection
     setCurrentRowSelection({
       rowId: "",
@@ -215,57 +261,55 @@ export default function SystemInfoCard({ formData, handleChange, errors }) {
     if (!rowId || !selectedRowEntries.some(entry => entry.rowId === rowId)) {
       return;
     }
-    
+
     // Create a new array without the specified row
     const updatedEntries = selectedRowEntries.filter(entry => entry.rowId !== rowId);
-    
+
     // Update the state
     setSelectedRowEntries(updatedEntries);
-    
+
     // Update form data with the new list
     updateFormDataWithRows(updatedEntries);
-    
+
     console.log(`Removed property from row ${rowId}. Updated entries:`, updatedEntries);
   };
 
-// In SystemInfo.jsx, modify the updateFormDataWithRows function:
+  const updateFormDataWithRows = (entries) => {
+    // Make sure entries is an array
+    const dataToStore = Array.isArray(entries) ? entries : [];
 
-const updateFormDataWithRows = (entries) => {
-  // Make sure entries is an array
-  const dataToStore = Array.isArray(entries) ? entries : [];
-  
-  // Use a clean object for each entry to avoid circular references
-  const cleanedEntries = dataToStore.map(entry => ({
-    rowId: entry.rowId,
-    rowName: entry.rowName,
-    position: entry.position
-  }));
-  
-  // Convert to string with explicit JSON.stringify
-  const jsonString = JSON.stringify(cleanedEntries);
-  
-  // Store using handleChange to update parent component state
-  handleChange({
-    target: {
-      name: "propertyRows",
-      value: jsonString
-    }
-  });
-  
-  console.log("Updated form data with rows:", cleanedEntries);
-  console.log("JSON string for propertyRows:", jsonString);
-};
+    // Use a clean object for each entry to avoid circular references
+    const cleanedEntries = dataToStore.map(entry => ({
+      rowId: entry.rowId,
+      rowName: entry.rowName,
+      position: entry.position
+    }));
+
+    // Convert to string with explicit JSON.stringify
+    const jsonString = JSON.stringify(cleanedEntries);
+
+    // Store using handleChange to update parent component state
+    handleChange({
+      target: {
+        name: "propertyRows",
+        value: jsonString
+      }
+    });
+
+    console.log("Updated form data with rows:", cleanedEntries);
+    console.log("JSON string for propertyRows:", jsonString);
+  };
 
   // Format property address for display
   const formatPropertyAddress = (property) => {
     if (!property) return "Unknown Address";
-    
+
     let address = property.streetAddress || "";
     if (property.city) address += `, ${property.city}`;
     if (property.state && property.zip) address += `, ${property.state}-${property.zip}`;
     else if (property.state) address += `, ${property.state}`;
     else if (property.zip) address += `, ${property.zip}`;
-    
+
     return address || "Unknown Address";
   };
 
@@ -310,6 +354,33 @@ const updateFormDataWithRows = (entries) => {
         {/* Display the authenticated user information */}
         <UserSubmit />
 
+        {/* Profile Selector */}
+        {allowedProfiles.length > 0 && (
+          <div className="flex flex-col space-y-1">
+            <Label htmlFor="profileId" className="text-gray-700 font-semibold">
+              Profile
+            </Label>
+            <Select
+              name="profileId"
+              value={formData.profileId || ""}
+              onValueChange={(value) => handleChange({ target: { name: "profileId", value } })}
+            >
+              <SelectTrigger
+                className="w-full border-gray-300 focus:border-[#324c48] focus:ring-1 focus:ring-[#324c48]"
+              >
+                <SelectValue placeholder={loadingProfiles ? "Loading profiles..." : "Select Profile"} />
+              </SelectTrigger>
+              <SelectContent>
+                {allowedProfiles.map(profile => (
+                  <SelectItem key={profile.id} value={profile.id}>
+                    {profile.name || "Unnamed Profile"}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        )}
+
         {/* Owner ID */}
         <div className="flex flex-col space-y-1">
           <Label htmlFor="ownerId" className="text-gray-700 font-semibold">
@@ -338,7 +409,7 @@ const updateFormDataWithRows = (entries) => {
             value={formData.area}
             onValueChange={(value) => handleChange({ target: { name: "area", value } })}
           >
-            <SelectTrigger 
+            <SelectTrigger
               className={`w-full border-gray-300 focus:border-[#324c48] focus:ring-1 focus:ring-[#324c48] ${errors && errors.area ? "border-red-500" : ""}`}
             >
               <SelectValue placeholder="Select Area" />
@@ -366,7 +437,7 @@ const updateFormDataWithRows = (entries) => {
             value={formData.status}
             onValueChange={(value) => handleChange({ target: { name: "status", value } })}
           >
-            <SelectTrigger 
+            <SelectTrigger
               className={`w-full border-gray-300 focus:border-[#324c48] focus:ring-1 focus:ring-[#324c48] ${errors && errors.status ? "border-red-500" : ""}`}
             >
               <SelectValue placeholder="Select Status" />
@@ -407,14 +478,14 @@ const updateFormDataWithRows = (entries) => {
         {/* Add to Featured Lists button - Only show if property is featured */}
         {formData.featured === "Featured" && (
           <div className="pt-2">
-            <Button 
-              type="button" 
+            <Button
+              type="button"
               onClick={() => setShowFeaturedDialog(true)}
               className="w-full bg-[#324c48] hover:bg-[#3f4f24] text-white"
             >
               <Plus className="w-4 h-4 mr-2" /> Add to Featured Lists
             </Button>
-            
+
             {/* Loading indicator when fetching property row associations */}
             {loadingPropertyRows && (
               <div className="flex justify-center items-center p-4">
@@ -422,7 +493,7 @@ const updateFormDataWithRows = (entries) => {
                 <span>Loading property lists...</span>
               </div>
             )}
-            
+
             {/* Show selected rows */}
             {selectedRowEntries.length > 0 && (
               <div className="mt-4 space-y-2">
@@ -431,7 +502,7 @@ const updateFormDataWithRows = (entries) => {
                 </Label>
                 <div className="space-y-2">
                   {selectedRowEntries.map((entry, index) => (
-                    <div 
+                    <div
                       key={index}
                       className="flex items-center justify-between bg-[#f0f5f4] p-2 rounded-md"
                     >
@@ -462,7 +533,7 @@ const updateFormDataWithRows = (entries) => {
           <DialogHeader>
             <DialogTitle>Add to Featured Lists</DialogTitle>
           </DialogHeader>
-          
+
           <div className="grid grid-cols-2 gap-4 py-4">
             {/* Row Selection */}
             <div className="space-y-2">
@@ -484,7 +555,7 @@ const updateFormDataWithRows = (entries) => {
                 </SelectContent>
               </Select>
             </div>
-            
+
             {/* Position Selection */}
             <div className="space-y-2">
               <Label htmlFor="position">Position</Label>
@@ -505,7 +576,7 @@ const updateFormDataWithRows = (entries) => {
               </Select>
             </div>
           </div>
-          
+
           {/* Properties in selected row */}
           {currentRowSelection.rowId && rowProperties.length > 0 && (
             <div className="py-2">
@@ -519,7 +590,7 @@ const updateFormDataWithRows = (entries) => {
               </div>
             </div>
           )}
-          
+
           {/* Current property's row selection status */}
           {isEditing && currentRowSelection.rowId && (
             <div className="py-2">
@@ -538,7 +609,7 @@ const updateFormDataWithRows = (entries) => {
               )}
             </div>
           )}
-          
+
           <DialogFooter className="flex justify-between items-center">
             <Button variant="outline" onClick={() => setShowFeaturedDialog(false)}>
               Cancel
@@ -548,7 +619,7 @@ const updateFormDataWithRows = (entries) => {
               disabled={!currentRowSelection.rowId}
               className="bg-[#324c48] hover:bg-[#3f4f24]"
             >
-              {selectedRowEntries.some(entry => entry.rowId === currentRowSelection.rowId) ? 
+              {selectedRowEntries.some(entry => entry.rowId === currentRowSelection.rowId) ?
                 "Update Position" : "Add to List"}
             </Button>
           </DialogFooter>

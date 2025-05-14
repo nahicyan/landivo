@@ -15,24 +15,24 @@ model User {
   firstName        String?
   lastName         String?
   email            String      @unique
+  phone            String?     // Added: User's phone number
+  profileRole      String?     // Added: User's role/title (e.g. "Landivo Expert")
+  avatarUrl        String?     // Added: Profile image path
+  allowedProfiles  String[]    // Added: Array of profile IDs this user can use
+  isActive         Boolean     @default(true)
   lastLoginAt      DateTime?
   loginCount       Int         @default(0)
-  isActive         Boolean     @default(true)
-  
 
-  // For auditing - track who created/modified records
-  createdResidencies    Residency[]      @relation("CreatedByRelation")
-  updatedResidencies    Residency[]      @relation("UpdatedByRelation")
-  createdBuyers         Buyer[]          @relation("CreatedByBuyerRelation")
-  updatedBuyers         Buyer[]          @relation("UpdatedByBuyerRelation")
-  createdDeals          Deal[]           @relation("CreatedByDealRelation")
-  updatedDeals          Deal[]           @relation("UpdatedByDealRelation")
-  updatedQualifications Qualification[]  @relation("UpdatedByQualificationRelation")
-  
-  // Track system changes by this user
+  // Existing relations and fields
+  createdResidencies   Residency[]      @relation("CreatedByRelation")
+  updatedResidencies   Residency[]      @relation("UpdatedByRelation")
+  createdBuyers        Buyer[]          @relation("CreatedByBuyerRelation")
+  updatedBuyers        Buyer[]          @relation("UpdatedByBuyerRelation")
+  createdDeals         Deal[]           @relation("CreatedByDealRelation")
+  updatedDeals         Deal[]           @relation("UpdatedByDealRelation")
+  updatedQualifications Qualification[] @relation("UpdatedByQualificationRelation")
   activityLogs ActivityLog[] @relation("UserActivityLogs")
 
-  // Add these timestamp fields
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }
@@ -170,6 +170,9 @@ model Residency {
   // Timestamps
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+
+    // Add profile ID field
+  profileId        String? // ID of the profile used for this property
 
   // Unique Constraints
   @@unique(fields: [apnOrPin, streetAddress, city, state]) // Modified to remove userEmail
@@ -477,3 +480,5 @@ model PropertyRow {
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 }
+
+//---------------------- System ----------------------//
