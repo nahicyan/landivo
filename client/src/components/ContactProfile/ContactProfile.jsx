@@ -21,7 +21,7 @@ const ContactProfile = ({ profileId }) => {
         
         // Fetch both profile data and system settings in parallel
         const [profileResponse, settingsResponse] = await Promise.all([
-          api.get(`/user/${profileId}`),
+          api.get(`/user/public-profile/${profileId}`),
           getSystemSettings()
         ]);
         

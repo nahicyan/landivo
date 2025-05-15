@@ -8,6 +8,7 @@ import {
   getUserById,
   updateUserStatus,
   updateUserProfiles,
+  getPublicProfileById,
   getProfilesForPropertyAssignment
 } from "../controllers/userManagementCntrl.js";
 import { jwtCheck, extractUserFromToken, checkPermissions } from "../middlewares/authMiddleware.js";
@@ -15,6 +16,7 @@ const router = express.Router();
 // Public routes (no auth required)
 router.get("/byAuth0Id", getUserByAuth0Id);
 router.post("/sync", createOrUpdateUser);
+router.get("/public-profile/:id", getPublicProfileById);
 // Protected routes (require authentication)
 router.get("/profile", 
   jwtCheck, 
