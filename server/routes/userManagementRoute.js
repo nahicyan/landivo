@@ -7,7 +7,8 @@ import {
   getAllUsers,
   getUserById,
   updateUserStatus,
-  updateUserProfiles
+  updateUserProfiles,
+  getProfilesForPropertyAssignment
 } from "../controllers/userManagementCntrl.js";
 import { jwtCheck, extractUserFromToken, checkPermissions } from "../middlewares/authMiddleware.js";
 const router = express.Router();
@@ -25,6 +26,15 @@ router.put("/profile",
   extractUserFromToken,
   updateUserProfile
 );
+
+// Special route for property profiles - allows either permission
+router.get("/property-profiles", 
+  jwtCheck, 
+  extractUserFromToken, 
+  checkPermissions(['read:users', 'write:properties']), 
+  getProfilesForPropertyAssignment
+);
+
 // Admin routes (require specific permissions)
 router.get("/all", 
   jwtCheck, 
@@ -52,4 +62,6 @@ router.put("/:id/profiles",
   checkPermissions(['write:users']), 
   updateUserProfiles
 );
+
+
 export { router as userManagementRoute };

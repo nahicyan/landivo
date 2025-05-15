@@ -305,3 +305,41 @@ export const updateUserProfiles = asyncHandler(async (req, res) => {
     });
   }
 });
+
+/**
+ * Get limited user profiles for property assignments
+ * Used when creating/editing properties to select a contact profile
+ */
+export const getProfilesForPropertyAssignment = asyncHandler(async (req, res) => {
+  try {
+    const users = await prisma.user.findMany({
+      select: {
+        id: true,
+        firstName: true,
+        lastName: true,
+        email: true,
+        profileRole: true
+      },
+      orderBy: {
+        firstName: "asc"
+      }
+    });
+    
+    // Return limited profile data (just what's needed for dropdown)
+    const profiles = users.map(user => ({
+      id: user.id,
+      name: user.firstName && user.lastName ? 
+        `${user.firstName} ${user.lastName}` : 
+        user.email || `User (${user.id.substring(0, 8)}...)`,
+      role: user.profileRole || "Landivo Expert"
+    }));
+    
+    res.status(200).json(profiles);
+  } catch (error) {
+    console.error("Error fetching profiles for property assignment:", error);
+    res.status(500).json({
+      message: "An error occurred while fetching profiles",
+      error: error.message
+    });
+  }
+});

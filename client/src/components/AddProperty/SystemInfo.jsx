@@ -68,37 +68,34 @@ export default function SystemInfoCard({ formData, handleChange, errors }) {
   // Fetch user's allowed profiles
   useEffect(() => {
     // Update the fetchUserProfiles function
-    const fetchUserProfiles = async () => {
-      setLoadingProfiles(true);
-      try {
-        // Get the Auth0 token
-        const token = await getAccessTokenSilently();
+const fetchUserProfiles = async () => {
+  setLoadingProfiles(true);
+  try {
+    // Get the Auth0 token
+    const token = await getAccessTokenSilently();
 
-        // Make the API request with the token
-        const response = await axios.get(`${import.meta.env.VITE_SERVER_URL}/api/user/all`, {
-          headers: {
-            Authorization: `Bearer ${token}`
-          }
-        });
-
-        if (response.data && Array.isArray(response.data)) {
-          const profiles = response.data.map(user => ({
-            id: user.id,
-            name: user.firstName && user.lastName ?
-              `${user.firstName} ${user.lastName}` :
-              `${user.email || 'User'} (${user.id.substr(0, 6)})`
-          }));
-          setAllowedProfiles(profiles);
-        } else {
-          setAllowedProfiles([]);
+    // Use the new endpoint that works with write:properties permission
+    const response = await axios.get(
+      `${import.meta.env.VITE_SERVER_URL}/api/user/property-profiles`, 
+      {
+        headers: {
+          Authorization: `Bearer ${token}`
         }
-      } catch (error) {
-        console.error("Error fetching user profiles:", error);
-        setAllowedProfiles([]);
-      } finally {
-        setLoadingProfiles(false);
       }
-    };
+    );
+
+    if (response.data && Array.isArray(response.data)) {
+      setAllowedProfiles(response.data);
+    } else {
+      setAllowedProfiles([]);
+    }
+  } catch (error) {
+    console.error("Error fetching user profiles:", error);
+    setAllowedProfiles([]);
+  } finally {
+    setLoadingProfiles(false);
+  }
+};
     fetchUserProfiles();
   }, [getAccessTokenSilently]);
 
