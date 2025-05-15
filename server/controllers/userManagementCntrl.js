@@ -394,7 +394,38 @@ export const updateUserProfiles = asyncHandler(async (req, res) => {
  */
 export const getProfilesForPropertyAssignment = asyncHandler(async (req, res) => {
   try {
+    // Get current user's ID from the auth token
+    const auth0Id = req.user?.sub;
+    
+    if (!auth0Id) {
+      return res.status(401).json({ message: "Unauthorized: User not authenticated" });
+    }
+    
+    // Get the current user from database to get their allowedProfiles
+    const currentUser = await prisma.user.findUnique({
+      where: { auth0Id },
+      select: { 
+        id: true,
+        allowedProfiles: true 
+      }
+    });
+    
+    if (!currentUser) {
+      return res.status(404).json({ message: "User not found" });
+    }
+    
+    // Get only the profiles that the user is allowed to use
+    const allowedProfileIds = currentUser.allowedProfiles || [];
+    
+    // Include the user's own profile
+    if (!allowedProfileIds.includes(currentUser.id)) {
+      allowedProfileIds.push(currentUser.id);
+    }
+    
     const users = await prisma.user.findMany({
+      where: {
+        id: { in: allowedProfileIds }
+      },
       select: {
         id: true,
         firstName: true,
@@ -407,7 +438,7 @@ export const getProfilesForPropertyAssignment = asyncHandler(async (req, res) =>
       }
     });
     
-    // Return limited profile data (just what's needed for dropdown)
+    // Return limited profile data
     const profiles = users.map(user => ({
       id: user.id,
       name: user.firstName && user.lastName ? 
