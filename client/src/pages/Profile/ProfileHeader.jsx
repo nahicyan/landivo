@@ -1,4 +1,4 @@
-// client/src/pages/Profile/ProfileHeader.jsx
+// ProfileHeader.jsx
 import React from 'react';
 import { useAuth0 } from '@auth0/auth0-react';
 import { useVipBuyer } from '@/utils/VipBuyerContext';
@@ -53,6 +53,11 @@ const ProfileHeader = ({ user, dbUserData }) => {
     return dbUserData?.email || (vipBuyerData?.email) || user?.email || '';
   };
 
+  // Get avatar URL with priority for database avatar
+  const avatarUrl = dbUserData?.avatarUrl 
+    ? `${import.meta.env.VITE_SERVER_URL}/${dbUserData.avatarUrl}` 
+    : user?.picture || null;
+
   return (
     <>
       <div className="relative">
@@ -63,11 +68,15 @@ const ProfileHeader = ({ user, dbUserData }) => {
         <div className="px-6 pb-4 pt-4 flex flex-col md:flex-row md:items-end gap-4">
           {/* Profile picture */}
           <Avatar className="h-24 w-24 border-4 border-background mt-[-3rem] bg-white shadow-md">
-            {user?.picture ? (
+            {avatarUrl ? (
               <img
-                src={user.picture}
+                src={avatarUrl}
                 alt={getDisplayName()}
                 className="h-full w-full object-cover"
+                onError={(e) => {
+                  e.target.onerror = null;
+                  e.target.src = `https://ui-avatars.com/api/?name=${getDisplayName().replace(/\s+/g, '+')}&background=324c48&color=fff&size=150`;
+                }}
               />
             ) : (
               <User className="h-14 w-14 text-gray-400" />

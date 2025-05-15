@@ -1,5 +1,46 @@
+// server/controllers/userManagementCntrl.js
 import asyncHandler from "express-async-handler";
 import { prisma } from "../config/prismaConfig.js";
+import multer from "multer";
+import path from "path";
+import { fileURLToPath } from "url";
+import fs from "fs";
+
+// Configure multer for avatar uploads
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+const avatarDirectory = path.join(__dirname, "../uploads/avatars");
+
+// Ensure avatar directory exists
+if (!fs.existsSync(avatarDirectory)) {
+  fs.mkdirSync(avatarDirectory, { recursive: true });
+}
+
+const storage = multer.diskStorage({
+  destination: function (req, file, cb) {
+    cb(null, avatarDirectory);
+  },
+  filename: function (req, file, cb) {
+    const uniqueSuffix = Date.now() + "-" + Math.round(Math.random() * 1e9);
+    const ext = path.extname(file.originalname);
+    cb(null, "avatar-" + uniqueSuffix + ext);
+  }
+});
+
+export const uploadAvatar = multer({
+  storage,
+  limits: { fileSize: 5 * 1024 * 1024 }, // 5MB limit
+  fileFilter: function (req, file, cb) {
+    const allowedTypes = /jpeg|jpg|png|webp/;
+    const ext = path.extname(file.originalname).toLowerCase();
+    
+    if (allowedTypes.test(ext.substring(1))) {
+      cb(null, true);
+    } else {
+      cb(new Error("Only image files (JPEG, PNG, WebP) are allowed."));
+    }
+  }
+}).single("avatar");
 
 /**
  * Get user by Auth0 ID
@@ -145,6 +186,7 @@ export const getUserProfile = asyncHandler(async (req, res) => {
 
 /**
  * Update user profile - allows users to update their own profile info
+ * Now supports file uploads for profile avatars
  */
 export const updateUserProfile = asyncHandler(async (req, res) => {
   try {
@@ -153,34 +195,70 @@ export const updateUserProfile = asyncHandler(async (req, res) => {
     if (!auth0Id) {
       return res.status(401).json({ message: "Unauthorized: User not authenticated" });
     }
-    
-    const { firstName, lastName, phone, profileRole, avatarUrl, allowedProfiles } = req.body;
-    
-    // Get the existing user to check if it exists
-    const existingUser = await prisma.user.findUnique({
-      where: { auth0Id }
-    });
-    
-    if (!existingUser) {
-      return res.status(404).json({ message: "User not found" });
-    }
-    
-    // Update the user with new fields
-    const updatedUser = await prisma.user.update({
-      where: { auth0Id },
-      data: { 
-        firstName, 
-        lastName,
-        phone,
-        profileRole,
-        avatarUrl,
-        allowedProfiles
+
+    // Process file upload
+    uploadAvatar(req, res, async function(err) {
+      if (err) {
+        return res.status(400).json({ 
+          message: "Error uploading profile picture", 
+          error: err.message 
+        });
       }
-    });
-    
-    res.status(200).json({
-      message: "Profile updated successfully",
-      user: updatedUser
+      
+      // Get form data
+      const { firstName, lastName, phone, profileRole, removeAvatar } = req.body;
+      
+      // Get the existing user to check if it exists
+      const existingUser = await prisma.user.findUnique({
+        where: { auth0Id }
+      });
+      
+      if (!existingUser) {
+        return res.status(404).json({ message: "User not found" });
+      }
+      
+      // Handle avatar removal or replacement
+      let avatarUrl = existingUser.avatarUrl;
+      
+      // Remove existing avatar if requested or if uploading a new one
+      if ((removeAvatar === "true" || req.file) && existingUser.avatarUrl) {
+        const oldAvatarPath = path.join(__dirname, "..", existingUser.avatarUrl);
+        try {
+          if (fs.existsSync(oldAvatarPath)) {
+            fs.unlinkSync(oldAvatarPath);
+            console.log(`Deleted old avatar: ${oldAvatarPath}`);
+          }
+        } catch (err) {
+          console.error(`Error deleting old avatar: ${err.message}`);
+        }
+        
+        // Set to null if removing without replacement
+        if (removeAvatar === "true" && !req.file) {
+          avatarUrl = null;
+        }
+      }
+      
+      // Set new avatar URL if file was uploaded
+      if (req.file) {
+        avatarUrl = `uploads/avatars/${req.file.filename}`;
+      }
+      
+      // Update the user with new fields
+      const updatedUser = await prisma.user.update({
+        where: { auth0Id },
+        data: { 
+          firstName, 
+          lastName,
+          phone,
+          profileRole,
+          avatarUrl
+        }
+      });
+      
+      res.status(200).json({
+        message: "Profile updated successfully",
+        user: updatedUser
+      });
     });
   } catch (error) {
     console.error("Error updating user profile:", error);
@@ -190,6 +268,7 @@ export const updateUserProfile = asyncHandler(async (req, res) => {
     });
   }
 });
+
 /**
  * Get all users (Admin only)
  */
@@ -255,7 +334,9 @@ export const getUserById = asyncHandler(async (req, res) => {
   }
 });
 
-// Add updateUserStatus function
+/**
+ * Update user status (enable/disable)
+ */
 export const updateUserStatus = asyncHandler(async (req, res) => {
   const { id } = req.params;
   const { isActive } = req.body;
@@ -281,8 +362,9 @@ export const updateUserStatus = asyncHandler(async (req, res) => {
   }
 });
 
-// Update User Profiles
-
+/**
+ * Update user's allowed profiles
+ */
 export const updateUserProfiles = asyncHandler(async (req, res) => {
   const { id } = req.params;
   const { allowedProfiles } = req.body;
