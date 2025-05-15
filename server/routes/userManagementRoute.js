@@ -6,7 +6,8 @@ import {
   updateUserProfile,
   getAllUsers,
   getUserById,
-  updateUserStatus
+  updateUserStatus,
+  updateUserProfiles
 } from "../controllers/userManagementCntrl.js";
 
 const router = express.Router();
@@ -19,5 +20,6 @@ router.put("/profile", updateUserProfile);
 router.get("/all", getAllUsers);
 router.get("/:id", getUserById);
 router.put("/:id/status", updateUserStatus);
+router.put("/:id/profiles", updateUserProfiles);
 
 export { router as userManagementRoute };

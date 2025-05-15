@@ -280,3 +280,28 @@ export const updateUserStatus = asyncHandler(async (req, res) => {
     });
   }
 });
+
+// Update User Profiles
+
+export const updateUserProfiles = asyncHandler(async (req, res) => {
+  const { id } = req.params;
+  const { allowedProfiles } = req.body;
+  
+  try {
+    const user = await prisma.user.update({
+      where: { id },
+      data: { allowedProfiles }
+    });
+    
+    res.status(200).json({
+      message: "User profiles updated successfully",
+      user
+    });
+  } catch (error) {
+    console.error("Error updating user profiles:", error);
+    res.status(500).json({
+      message: "An error occurred while updating user profiles",
+      error: error.message
+    });
+  }
+});

@@ -26,7 +26,6 @@ import {
   DialogTitle,
   DialogFooter,
 } from "@/components/ui/dialog";
-import UserSubmit from "@/components/AddProperty/UserSubmit";
 import { Plus, X, ChevronDown, Loader2 } from "lucide-react";
 import axios from "axios";
 import { useAuth0 } from "@auth0/auth0-react";
@@ -68,43 +67,31 @@ export default function SystemInfoCard({ formData, handleChange, errors }) {
 
   // Fetch user's allowed profiles
   useEffect(() => {
-    const fetchUserProfiles = async () => {
-      setLoadingProfiles(true);
-      try {
-        // Get the auth token
-        const token = await getAccessTokenSilently();
-        
-        // Fetch user profile
-        const userProfile = await axios.get(
-          `${import.meta.env.VITE_SERVER_URL}/api/user/profile`,
-          {
-            headers: {
-              Authorization: `Bearer ${token}`
-            }
-          }
-        );
-        
-        // Check if user has allowedProfiles
-        if (userProfile.data && userProfile.data.allowedProfiles && Array.isArray(userProfile.data.allowedProfiles)) {
-          // Map the profile IDs to objects with name and id
-          // In a real app, you might want to fetch profile details from another endpoint
-          const profiles = userProfile.data.allowedProfiles.map(profileId => ({
-            id: profileId,
-            name: `Profile ${profileId.substr(0, 6)}` // Show shortened ID for readability
-          }));
-          setAllowedProfiles(profiles);
-        } else {
-          // Fallback with empty array
-          setAllowedProfiles([]);
-        }
-      } catch (error) {
-        console.error("Error fetching user profiles:", error);
-        setAllowedProfiles([]); // Ensure allowedProfiles is always an array
-      } finally {
-        setLoadingProfiles(false);
-      }
-    };
-
+const fetchUserProfiles = async () => {
+  setLoadingProfiles(true);
+  try {
+    // Instead of relying on authenticated user profile fetch,
+    // directly get all users to use as profile options
+    const response = await axios.get(`${import.meta.env.VITE_SERVER_URL}/api/user/all`);
+    if (response.data && Array.isArray(response.data)) {
+      // Transform users into profile options
+      const profiles = response.data.map(user => ({
+        id: user.id,
+        name: user.firstName && user.lastName ? 
+          `${user.firstName} ${user.lastName}` : 
+          `${user.email || 'User'} (${user.id.substr(0, 6)})`
+      }));
+      setAllowedProfiles(profiles);
+    } else {
+      setAllowedProfiles([]);
+    }
+  } catch (error) {
+    console.error("Error fetching user profiles:", error);
+    setAllowedProfiles([]); // Ensure allowedProfiles is always an array
+  } finally {
+    setLoadingProfiles(false);
+  }
+};
     fetchUserProfiles();
   }, [getAccessTokenSilently]);
 
@@ -351,9 +338,6 @@ export default function SystemInfoCard({ formData, handleChange, errors }) {
       </CardHeader>
 
       <CardContent className="space-y-4">
-        {/* Display the authenticated user information */}
-        <UserSubmit />
-
         {/* Profile Selector */}
         {allowedProfiles.length > 0 && (
           <div className="flex flex-col space-y-1">
