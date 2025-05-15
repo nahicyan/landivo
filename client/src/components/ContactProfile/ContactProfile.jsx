@@ -1,10 +1,11 @@
-// ContactProfile.jsx
+// Updated ContactProfile.jsx
 import React, { useState, useEffect } from "react";
-import { api } from "@/utils/api";
+import { api, getSystemSettings } from "@/utils/api";
 import { Loader2 } from "lucide-react";
 
 const ContactProfile = ({ profileId }) => {
   const [profileData, setProfileData] = useState(null);
+  const [systemSettings, setSystemSettings] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
@@ -14,20 +15,27 @@ const ContactProfile = ({ profileId }) => {
       return;
     }
 
-    const fetchProfileData = async () => {
+    const fetchData = async () => {
       try {
         setLoading(true);
-        const response = await api.get(`/user/${profileId}`);
-        setProfileData(response.data);
+        
+        // Fetch both profile data and system settings in parallel
+        const [profileResponse, settingsResponse] = await Promise.all([
+          api.get(`/user/${profileId}`),
+          getSystemSettings()
+        ]);
+        
+        setProfileData(profileResponse.data);
+        setSystemSettings(settingsResponse);
       } catch (err) {
-        console.error("Error fetching profile data:", err);
+        console.error("Error fetching data:", err);
         setError("Unable to load contact information");
       } finally {
         setLoading(false);
       }
     };
 
-    fetchProfileData();
+    fetchData();
   }, [profileId]);
 
   if (loading) {
@@ -42,6 +50,9 @@ const ContactProfile = ({ profileId }) => {
     return null;
   }
 
+  // Determine which phone number to display
+  const displayPhone = systemSettings?.overrideContactPhone || profileData.phone;
+  
   const imageUrl = profileData.avatarUrl ? 
     `${import.meta.env.VITE_SERVER_URL}/${profileData.avatarUrl}` : 
     `https://ui-avatars.com/api/?name=${profileData.firstName}+${profileData.lastName}&background=324c48&color=fff&size=150`;
@@ -72,12 +83,12 @@ const ContactProfile = ({ profileId }) => {
       </div>
       
       <div className="flex flex-col items-start space-y-4">
-        {profileData.phone && (
+        {displayPhone && (
           <a 
-            href={`tel:${profileData.phone.replace(/\D/g, '')}`}
+            href={`tel:${displayPhone.replace(/\D/g, '')}`}
             className="text-xl text-[#324c48] hover:text-[#D4A017] border-b border-[#324c48] pb-1"
           >
-            {profileData.phone}
+            {displayPhone}
           </a>
         )}
         

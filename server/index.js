@@ -15,6 +15,7 @@ import { jwtCheck, extractUserFromToken } from "./middlewares/authMiddleware.js"
 import { userManagementRoute } from "./routes/userManagementRoute.js";
 import { trackActivity } from "./middlewares/auditMiddleware.js";
 import { propertyRowRoute } from "./routes/propertyRowRoute.js";
+import { settingsRoute } from "./routes/settingsRoute.js";
 
 const app = express();
 const PORT = process.env.PORT || 8200;
@@ -59,6 +60,7 @@ app.use("/api/qualification", qualificationRoute);
 app.use("/api/buyer-lists", buyerListRoute);
 app.use("/api/deal", dealRoute);
 app.use("/api/property-rows", propertyRowRoute);
+app.use("/api/settings", settingsRoute);
 
 // Auth test route
 app.get("/auth/test-jwt", jwtCheck, extractUserFromToken, (req, res) => {
