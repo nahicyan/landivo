@@ -63,7 +63,8 @@ export default function EditProperty() {
     area: "",
     featured: "",
     featuredPosition: 0,
-    propertyRows: "", // Add explicit property for property rows
+    propertyRows: "", 
+    profileId: "",
     title: "",
     description: "",
     notes: "",
@@ -441,7 +442,7 @@ const validateStep = (stepIndex) => {
       // Only include fields that match the server's schema exactly
       const validFields = [
         // System Info
-        "ownerId", "status", "area", "featured", "featuredPosition",
+        "ownerId", "status", "area", "featured", "featuredPosition", "profileId",
         
         // Listing Details
         "title", "description", "notes",
