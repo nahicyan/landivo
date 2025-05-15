@@ -124,14 +124,14 @@ const ProfileReassignmentModal = ({
                       <thead className="bg-gray-50">
                         <tr>
                           <th className="px-3 py-2 text-left text-xs font-medium text-gray-500">Address</th>
-                          <th className="px-3 py-2 text-left text-xs font-medium text-gray-500">Location</th>
                         </tr>
                       </thead>
                       <tbody className="divide-y">
                         {properties.map((property, index) => (
                           <tr key={index} className="hover:bg-gray-50">
-                            <td className="px-3 py-2 text-sm">{property.streetAddress}</td>
-                            <td className="px-3 py-2 text-sm">{property.city}, {property.state} {property.zip}</td>
+                            <td className="px-3 py-2 text-sm">
+                              {property.streetAddress}, {property.city}, {property.state} {property.zip}
+                            </td>
                           </tr>
                         ))}
                       </tbody>
