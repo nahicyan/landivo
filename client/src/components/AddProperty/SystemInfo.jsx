@@ -67,14 +67,21 @@ export default function SystemInfoCard({ formData, handleChange, errors }) {
 
   // Fetch user's allowed profiles
   useEffect(() => {
+// Update the fetchUserProfiles function
 const fetchUserProfiles = async () => {
   setLoadingProfiles(true);
   try {
-    // Instead of relying on authenticated user profile fetch,
-    // directly get all users to use as profile options
-    const response = await axios.get(`${import.meta.env.VITE_SERVER_URL}/api/user/all`);
+    // Get the Auth0 token
+    const token = await getAccessTokenSilently();
+    
+    // Make the API request with the token
+    const response = await axios.get(`${import.meta.env.VITE_SERVER_URL}/api/user/all`, {
+      headers: {
+        Authorization: `Bearer ${token}`
+      }
+    });
+    
     if (response.data && Array.isArray(response.data)) {
-      // Transform users into profile options
       const profiles = response.data.map(user => ({
         id: user.id,
         name: user.firstName && user.lastName ? 
@@ -87,7 +94,7 @@ const fetchUserProfiles = async () => {
     }
   } catch (error) {
     console.error("Error fetching user profiles:", error);
-    setAllowedProfiles([]); // Ensure allowedProfiles is always an array
+    setAllowedProfiles([]);
   } finally {
     setLoadingProfiles(false);
   }
