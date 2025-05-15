@@ -31,7 +31,7 @@ import { Label } from "@/components/ui/label";
 import { toast } from "react-toastify";
 import { api } from "@/utils/api"; // Use the api object directly
 
-// Fixed ProfileManagementDialog component with proper API handling
+// Updated ProfileManagementDialog component with better profile display
 const ProfileManagementDialog = ({ user, isOpen, onClose, onSuccess }) => {
   const [profiles, setProfiles] = useState([]);
   const [allUsers, setAllUsers] = useState([]);
@@ -42,16 +42,13 @@ const ProfileManagementDialog = ({ user, isOpen, onClose, onSuccess }) => {
   useEffect(() => {
     if (isOpen) {
       fetchAllUsers();
-      
-      // Initialize profiles with current allowed profiles
-      setProfiles(user.allowedProfiles?.map(id => ({ id })) || []);
+      fetchUserProfiles();
     }
   }, [isOpen, user]);
   
   const fetchAllUsers = async () => {
     setLoading(true);
     try {
-      // Use the api object directly - avoid path duplication
       const response = await api.get('/user/all');
       setAllUsers(response.data || []);
     } catch (error) {
@@ -62,39 +59,58 @@ const ProfileManagementDialog = ({ user, isOpen, onClose, onSuccess }) => {
     }
   };
 
+  const fetchUserProfiles = async () => {
+    setLoading(true);
+    try {
+      // If user has allowedProfiles, fetch full details for each
+      if (user.allowedProfiles && user.allowedProfiles.length > 0) {
+        const profileDetails = await Promise.all(
+          user.allowedProfiles.map(async (profileId) => {
+            try {
+              const userData = await api.get(`/user/${profileId}`);
+              return userData.data;
+            } catch (error) {
+              console.error(`Failed to fetch profile ${profileId}:`, error);
+              return { id: profileId, firstName: "Unknown", lastName: "User" };
+            }
+          })
+        );
+        setProfiles(profileDetails);
+      } else {
+        setProfiles([]);
+      }
+    } catch (error) {
+      console.error("Failed to fetch profiles:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+  
+  // Add handleAddProfile function
   const handleAddProfile = async () => {
     if (!selectedUserId) return;
-    
-    setLoading(true);
     
     // Check if profile is already added
     if ((user.allowedProfiles || []).includes(selectedUserId)) {
       toast.warning("This profile is already assigned to the user");
-      setLoading(false);
       return;
     }
+    
+    setLoading(true);
     
     // Get current profiles and add the new one
     const updatedProfileIds = [...(user.allowedProfiles || []), selectedUserId];
     
     try {
-      // Log what we're sending to the API
-      console.log(`Updating user ${user.id} with allowedProfiles:`, updatedProfileIds);
-      
-      // Send only the allowedProfiles field
+      // Update the user with new allowedProfiles
       await api.put(`/user/${user.id}/profiles`, { 
         allowedProfiles: updatedProfileIds 
       });
       
-      // Update local state
+      // Find the selected user to add to profiles list
       const selectedUser = allUsers.find(u => u.id === selectedUserId);
       if (selectedUser) {
-        setProfiles([...profiles, { 
-          id: selectedUserId,
-          firstName: selectedUser.firstName,
-          lastName: selectedUser.lastName,
-          email: selectedUser.email
-        }]);
+        setProfiles([...profiles, selectedUser]);
       }
       
       setSelectedUserId("");
@@ -102,18 +118,13 @@ const ProfileManagementDialog = ({ user, isOpen, onClose, onSuccess }) => {
       if (onSuccess) onSuccess();
     } catch (error) {
       console.error("Failed to add profile:", error);
-      // More detailed error logging
-      console.error("Error details:", {
-        message: error.message,
-        response: error.response?.data,
-        status: error.response?.status
-      });
-      toast.error(`Failed to add profile: ${error.response?.data?.message || error.message}`);
+      toast.error("Failed to add profile");
     } finally {
       setLoading(false);
     }
   };
 
+  // Add handleRemoveProfile function
   const handleRemoveProfile = async (profileId) => {
     setLoading(true);
     
@@ -121,7 +132,7 @@ const ProfileManagementDialog = ({ user, isOpen, onClose, onSuccess }) => {
     const updatedProfileIds = (user.allowedProfiles || []).filter(id => id !== profileId);
     
     try {
-      // Use a specific endpoint for profile updates
+      // Update user with new profile list
       await api.put(`/user/${user.id}/profiles`, { 
         allowedProfiles: updatedProfileIds 
       });
@@ -132,12 +143,7 @@ const ProfileManagementDialog = ({ user, isOpen, onClose, onSuccess }) => {
       if (onSuccess) onSuccess();
     } catch (error) {
       console.error("Failed to remove profile:", error);
-      console.error("Error details:", {
-        message: error.message,
-        response: error.response?.data,
-        status: error.response?.status
-      });
-      toast.error(`Failed to remove profile: ${error.response?.data?.message || error.message}`);
+      toast.error("Failed to remove profile");
     } finally {
       setLoading(false);
     }
@@ -166,13 +172,13 @@ const ProfileManagementDialog = ({ user, isOpen, onClose, onSuccess }) => {
               <SelectContent>
                 {allUsers.map(user => (
                   <SelectItem key={user.id} value={user.id}>
-                    {user.firstName || ''} {user.lastName || ''} ({user.email})
+                    {user.firstName} {user.lastName} ({user.email})
                   </SelectItem>
                 ))}
               </SelectContent>
             </Select>
             <Button onClick={handleAddProfile} disabled={!selectedUserId || loading}>
-              {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : "Add"}
+              Add
             </Button>
           </div>
           
@@ -189,18 +195,22 @@ const ProfileManagementDialog = ({ user, isOpen, onClose, onSuccess }) => {
               profiles.map((profile) => (
                 <div key={profile.id} className="flex justify-between items-center p-3 bg-gray-50 rounded-md">
                   <div>
-                    <span className="font-medium">{profile.firstName || ''} {profile.lastName || ''}</span>
-                    {profile.email && <span className="text-sm text-gray-500 ml-2">({profile.email})</span>}
-                    {!profile.email && <span className="text-sm text-gray-500 ml-2">(ID: {profile.id})</span>}
+                    {/* Display name instead of ID */}
+                    <span className="font-medium">
+                      {profile.firstName && profile.lastName 
+                        ? `${profile.firstName} ${profile.lastName}` 
+                        : profile.email 
+                        ? profile.email 
+                        : `(ID: ${profile.id.substring(0, 8)}...)`}
+                    </span>
                   </div>
                   <Button
                     variant="ghost"
                     size="sm"
                     onClick={() => handleRemoveProfile(profile.id)}
                     className="text-red-500 hover:text-red-700"
-                    disabled={loading}
                   >
-                    {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <X className="h-4 w-4" />}
+                    <X className="h-4 w-4" />
                   </Button>
                 </div>
               ))
