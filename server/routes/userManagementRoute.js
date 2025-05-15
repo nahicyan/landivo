@@ -1,3 +1,4 @@
+// server/routes/userManagementRoute.js
 import express from "express";
 import {
   getUserByAuth0Id,
@@ -9,14 +10,20 @@ import {
   updateUserStatus,
   updateUserProfiles,
   getPublicProfileById,
-  getProfilesForPropertyAssignment
+  getProfilesForPropertyAssignment,
+  getPropertiesUsingProfile,
+  getPropertiesCountByProfile,
+  reassignProperties
 } from "../controllers/userManagementCntrl.js";
 import { jwtCheck, extractUserFromToken, checkPermissions } from "../middlewares/authMiddleware.js";
+
 const router = express.Router();
+
 // Public routes (no auth required)
 router.get("/byAuth0Id", getUserByAuth0Id);
 router.post("/sync", createOrUpdateUser);
 router.get("/public-profile/:id", getPublicProfileById);
+
 // Protected routes (require authentication)
 router.get("/profile", 
   jwtCheck, 
@@ -50,14 +57,16 @@ router.get("/:id",
   checkPermissions(['read:users']), 
   getUserById
 );
-// New route for enabling/disabling users
+
+// User status management
 router.put("/:id/status", 
   jwtCheck, 
   extractUserFromToken, 
   checkPermissions(['write:users']), 
   updateUserStatus
 );
-// New route for updating user profiles
+
+// User profiles management
 router.put("/:id/profiles", 
   jwtCheck, 
   extractUserFromToken, 
@@ -65,5 +74,26 @@ router.put("/:id/profiles",
   updateUserProfiles
 );
 
+// Property assignment routes
+router.get("/:id/properties", 
+  jwtCheck, 
+  extractUserFromToken, 
+  checkPermissions(['read:users']), 
+  getPropertiesUsingProfile
+);
+
+router.get("/:id/properties-count", 
+  jwtCheck, 
+  extractUserFromToken, 
+  checkPermissions(['read:users']), 
+  getPropertiesCountByProfile
+);
+
+router.put("/:id/reassign-properties", 
+  jwtCheck, 
+  extractUserFromToken, 
+  checkPermissions(['write:users']), 
+  reassignProperties
+);
 
 export { router as userManagementRoute };

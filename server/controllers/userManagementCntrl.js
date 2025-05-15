@@ -491,3 +491,99 @@ export const getPublicProfileById = asyncHandler(async (req, res) => {
     });
   }
 });
+
+// server/controllers/userManagementCntrl.js - Add new functions
+
+/**
+ * Get properties using a specific profile ID
+ */
+export const getPropertiesUsingProfile = asyncHandler(async (req, res) => {
+  const { id } = req.params;
+  
+  try {
+    const properties = await prisma.residency.findMany({
+      where: { profileId: id },
+      select: {
+        id: true,
+        title: true,
+        streetAddress: true,
+        city: true,
+        state: true,
+        zip: true
+      },
+      orderBy: {
+        updatedAt: "desc"
+      }
+    });
+    
+    res.status(200).json(properties);
+  } catch (error) {
+    console.error("Error fetching properties using profile:", error);
+    res.status(500).json({
+      message: "An error occurred while fetching properties",
+      error: error.message
+    });
+  }
+});
+
+/**
+ * Get count of properties using a specific profile ID
+ */
+export const getPropertiesCountByProfile = asyncHandler(async (req, res) => {
+  const { id } = req.params;
+  
+  try {
+    const count = await prisma.residency.count({
+      where: { profileId: id }
+    });
+    
+    res.status(200).json({ count });
+  } catch (error) {
+    console.error("Error counting properties using profile:", error);
+    res.status(500).json({
+      message: "An error occurred while counting properties",
+      error: error.message
+    });
+  }
+});
+
+/**
+ * Reassign properties from one profile to another
+ */
+export const reassignProperties = asyncHandler(async (req, res) => {
+  const { id } = req.params;
+  const { newProfileId } = req.body;
+  
+  if (!newProfileId) {
+    return res.status(400).json({ message: "New profile ID is required" });
+  }
+  
+  try {
+    // Check if new profile exists
+    const newProfile = await prisma.user.findUnique({
+      where: { id: newProfileId },
+      select: { id: true }
+    });
+    
+    if (!newProfile) {
+      return res.status(404).json({ message: "New profile not found" });
+    }
+    
+    // Update all properties using the old profile ID
+    const result = await prisma.residency.updateMany({
+      where: { profileId: id },
+      data: { profileId: newProfileId }
+    });
+    
+    res.status(200).json({
+      message: `${result.count} properties reassigned successfully`,
+      updatedCount: result.count
+    });
+  } catch (error) {
+    console.error("Error reassigning properties:", error);
+    res.status(500).json({
+      message: "An error occurred while reassigning properties",
+      error: error.message
+    });
+  }
+});
