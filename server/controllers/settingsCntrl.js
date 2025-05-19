@@ -109,34 +109,44 @@ export const updateSettings = asyncHandler(async (req, res) => {
 });
 
 /**
- * Test SMTP connection
+ * Test SMTP connection by sending a test email
+ * Doesn't require all fields - uses stored settings if fields are missing
  */
 export const testSmtpConnection = asyncHandler(async (req, res) => {
   const { smtpServer, smtpPort, smtpUser, smtpPassword, testRecipient } = req.body;
 
-  if (!smtpServer || !smtpPort || !smtpUser) {
-    return res.status(400).json({ message: "SMTP server, port, and user are required" });
+  if (!testRecipient) {
+    return res.status(400).json({ message: "Email recipient is required" });
   }
 
   try {
-    // If no password provided, get from database
-    let password = smtpPassword;
-    if (!password) {
-      const settings = await prisma.settings.findFirst();
-      if (settings && settings.smtpPassword) {
-        password = settings.smtpPassword;
-      } else {
-        return res.status(400).json({ message: "SMTP password is required" });
-      }
+    // Get existing settings from database for any missing fields
+    const dbSettings = await prisma.settings.findFirst();
+    
+    if (!dbSettings) {
+      return res.status(400).json({ message: "No SMTP settings found in database" });
+    }
+    
+    // Use provided values or fall back to database values
+    const server = smtpServer || dbSettings.smtpServer;
+    const port = smtpPort || dbSettings.smtpPort;
+    const user = smtpUser || dbSettings.smtpUser;
+    const password = smtpPassword || dbSettings.smtpPassword;
+    
+    // Check if we have the minimum required settings
+    if (!server || !port || !user || !password) {
+      return res.status(400).json({ 
+        message: "Incomplete SMTP configuration. Please configure SMTP settings first." 
+      });
     }
 
     // Create a test SMTP transporter
     const transporter = nodemailer.createTransport({
-      host: smtpServer,
-      port: parseInt(smtpPort, 10),
-      secure: parseInt(smtpPort, 10) === 465, // true for 465, false for other ports
+      host: server,
+      port: parseInt(port, 10),
+      secure: parseInt(port, 10) === 465, // true for 465, false for other ports
       auth: {
-        user: smtpUser,
+        user: user,
         pass: password
       },
       // Connection timeout settings
@@ -148,37 +158,40 @@ export const testSmtpConnection = asyncHandler(async (req, res) => {
     // Verify the connection configuration
     await transporter.verify();
     
-    // If recipient provided, send test email
-    if (testRecipient) {
-      await transporter.sendMail({
-        from: `"Landivo System" <${smtpUser}>`,
-        to: testRecipient,
-        subject: "Landivo SMTP Test",
-        html: `
-        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #ddd; border-radius: 5px;">
-          <div style="text-align: center; margin-bottom: 20px;">
-            <img src="https://landivo.com/logo.png" alt="Landivo Logo" style="max-width: 200px; height: auto;" />
-          </div>
-          <h2 style="color: #3f4f24; text-align: center;">SMTP Configuration Test Successful!</h2>
-          <div style="background-color: #f4f7ee; padding: 15px; border-radius: 5px; margin: 20px 0;">
-            <p style="margin: 0; color: #324c48;">This is a test email confirming that your Landivo email notifications are working correctly.</p>
-          </div>
-          <div style="background-color: #FDF8F2; border-left: 4px solid #D4A017; padding: 15px; margin: 20px 0;">
-            <p style="margin: 0; color: #324c48;">You're receiving this because you tested the SMTP configuration in the Landivo admin panel.</p>
-          </div>
-          <p style="text-align: center; color: #666; font-size: 12px; margin-top: 30px;">
-            &copy; ${new Date().getFullYear()} Landivo. All rights reserved.
-          </p>
+    // Send test email
+    await transporter.sendMail({
+      from: `"Landivo System" <${user}>`,
+      to: testRecipient,
+      subject: "Landivo SMTP Test",
+      html: `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #ddd; border-radius: 5px;">
+        <div style="text-align: center; margin-bottom: 20px;">
+          <h2 style="color: #3f4f24; margin-bottom: 5px;">LANDIVO</h2>
+          <div style="height: 2px; background-color: #D4A017; width: 100px; margin: 0 auto;"></div>
         </div>
-        `
-      });
-    }
+        <h2 style="color: #3f4f24; text-align: center;">SMTP Configuration Test Successful!</h2>
+        <div style="background-color: #f4f7ee; padding: 15px; border-radius: 5px; margin: 20px 0;">
+          <p style="margin: 0; color: #324c48;">This is a test email confirming that your Landivo email notifications are working correctly.</p>
+        </div>
+        <div style="background-color: #FDF8F2; border-left: 4px solid #D4A017; padding: 15px; margin: 20px 0;">
+          <p style="margin: 0; color: #324c48;">You're receiving this because you tested the SMTP configuration in the Landivo admin panel.</p>
+        </div>
+        <div style="background-color: #f5f5f5; padding: 15px; border-radius: 5px; margin: 20px 0;">
+          <h3 style="color: #3f4f24; margin-top: 0;">SMTP Settings</h3>
+          <p style="margin: 5px 0; color: #324c48;"><strong>Server:</strong> ${server}</p>
+          <p style="margin: 5px 0; color: #324c48;"><strong>Port:</strong> ${port}</p>
+          <p style="margin: 5px 0; color: #324c48;"><strong>Username:</strong> ${user}</p>
+        </div>
+        <p style="text-align: center; color: #666; font-size: 12px; margin-top: 30px;">
+          &copy; ${new Date().getFullYear()} Landivo. All rights reserved.
+        </p>
+      </div>
+      `
+    });
     
     res.status(200).json({
       success: true,
-      message: testRecipient 
-        ? `SMTP connection successful! Test email sent to ${testRecipient}` 
-        : "SMTP connection successful"
+      message: `SMTP test successful! Email sent to ${testRecipient}`
     });
   } catch (error) {
     console.error("SMTP connection test failed:", error);

@@ -681,7 +681,7 @@ export const updateSystemSettings = async (settingsData) => {
 
 /**
  * Test SMTP connection
- * @param {Object} smtpData - SMTP connection details
+ * @param {Object} smtpData - SMTP connection details and test recipient
  * @returns {Promise<Object>} Response with success/failure message
  */
 export const testSmtpConnection = async (smtpData) => {
