@@ -481,4 +481,10 @@ model PropertyRow {
   updatedAt    DateTime @updatedAt
 }
 
-//---------------------- System ----------------------//
+//---------------------- Settings ----------------------//
+model Settings {
+  id                  String  @id @default(auto()) @map("_id") @db.ObjectId
+  overrideContactPhone String?
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+}

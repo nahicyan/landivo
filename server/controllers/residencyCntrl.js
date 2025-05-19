@@ -204,7 +204,7 @@ export const updateResidency = asyncHandler(async (req, res) => {
   console.log("Received updateResidency request body:", req.body);
   try {
     const { id } = req.params;
-    let { imageUrls, videoUrls, viewCount, removeCmaFile, propertyRows, featuredPosition, ...restOfData } = req.body;
+    let { imageUrls, videoUrls, viewCount, removeCmaFile, propertyRows, featuredPosition, profileId, ...restOfData } = req.body;
     // Get the authenticated user's ID from the req object (set by middleware)
     const updatedById = req.userId;
     
@@ -393,7 +393,8 @@ export const updateResidency = asyncHandler(async (req, res) => {
       updatedBy: { connect: { id: updatedById } },
       profileId: profileId || currentProperty.profileId,
       modificationHistory,
-      cmaFilePath
+      cmaFilePath,
+      profileId: profileId || currentProperty.profileId, // Add the profileId field
     };
 
     const updatedResidency = await prisma.residency.update({
@@ -622,6 +623,7 @@ export const createResidencyWithMultipleFiles = asyncHandler(async (req, res) =>
       featured,
       featuredPosition,
       propertyRows,
+      profileId, // Add the new profileId field
 
       // Listing Details
       title,
@@ -740,6 +742,7 @@ export const createResidencyWithMultipleFiles = asyncHandler(async (req, res) =>
         area,
         status,
         featured: featured ?? "Not Featured",
+        profileId: profileId || null, // Add the profileId field
     
         // Listing Details
         title,

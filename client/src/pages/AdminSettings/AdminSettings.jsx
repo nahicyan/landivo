@@ -1,5 +1,7 @@
-// client/src/pages/AdminSettings/AdminSettings.jsx
-import React, { useState } from "react";
+// Updated client/src/pages/AdminSettings/AdminSettings.jsx
+// This replaces the Finance tab with System tab and adds phone override setting
+
+import React, { useState, useEffect } from "react";
 import { 
   Tabs, 
   TabsContent, 
@@ -39,9 +41,12 @@ import {
   SettingsIcon,
   GaugeIcon,
   MapPinIcon,
-  LineChartIcon
+  LineChartIcon,
+  WrenchIcon,
+  PhoneIcon
 } from "lucide-react";
 import { toast } from "react-toastify";
+import { getSystemSettings, updateSystemSettings } from "@/utils/api";
 
 export default function AdminSettings() {
   const [isLoading, setIsLoading] = useState(false);
@@ -74,6 +79,31 @@ export default function AdminSettings() {
     }
   });
 
+  // System settings form
+  const systemForm = useForm({
+    defaultValues: {
+      overrideContactPhone: ""
+    }
+  });
+
+  // Load system settings
+  useEffect(() => {
+    const loadSettings = async () => {
+      try {
+        const settings = await getSystemSettings();
+        if (settings) {
+          systemForm.reset({
+            overrideContactPhone: settings.overrideContactPhone || ""
+          });
+        }
+      } catch (error) {
+        console.error("Error loading settings:", error);
+      }
+    };
+
+    loadSettings();
+  }, []);
+
   const onEmailSubmit = (data) => {
     setIsLoading(true);
     
@@ -94,6 +124,20 @@ export default function AdminSettings() {
       toast.success("Auth0 settings updated successfully");
       setIsLoading(false);
     }, 1500);
+  };
+
+  const onSystemSubmit = async (data) => {
+    setIsLoading(true);
+    
+    try {
+      await updateSystemSettings(data);
+      toast.success("System settings updated successfully");
+    } catch (error) {
+      console.error("Error updating system settings:", error);
+      toast.error("Failed to update system settings");
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const handleServerAction = (action) => {
@@ -141,9 +185,9 @@ export default function AdminSettings() {
             <MailIcon className="w-4 h-4" />
             Email Settings
           </TabsTrigger>
-          <TabsTrigger value="finance" className="flex items-center gap-2">
-            <GaugeIcon className="w-4 h-4" />
-            Finance
+          <TabsTrigger value="system" className="flex items-center gap-2">
+            <WrenchIcon className="w-4 h-4" />
+            System
           </TabsTrigger>
           <TabsTrigger value="api" className="flex items-center gap-2">
             <KeyIcon className="w-4 h-4" />
@@ -328,19 +372,60 @@ export default function AdminSettings() {
           </Tabs>
         </TabsContent>
 
-        {/* Finance Tab */}
-        <TabsContent value="finance">
+        {/* System Tab (replacing Finance) */}
+        <TabsContent value="system">
           <Card>
             <CardHeader>
-              <CardTitle className="text-2xl">Finance Settings</CardTitle>
+              <CardTitle className="text-2xl flex items-center gap-2">
+                <WrenchIcon className="w-6 h-6 text-[#D4A017]" />
+                System Settings
+              </CardTitle>
               <CardDescription>
-                Configure global finance settings and default terms
+                Configure global system settings and display options
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <p className="text-[#324c48] mb-4">
-                This section is under development. Check back soon for finance configuration options.
-              </p>
+              <Form {...systemForm}>
+                <form onSubmit={systemForm.handleSubmit(onSystemSubmit)} className="space-y-6">
+                  {/* Contact Settings Section */}
+                  <div className="space-y-4">
+                    <h3 className="text-lg font-medium text-[#324c48]">Contact Display Settings</h3>
+                    <FormField
+                      control={systemForm.control}
+                      name="overrideContactPhone"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel className="flex items-center gap-2">
+                            <PhoneIcon className="w-4 h-4 text-[#D4A017]" />
+                            Override Contact Profile Phone Number
+                          </FormLabel>
+                          <FormControl>
+                            <Input 
+                              placeholder="(555) 123-4567" 
+                              {...field} 
+                            />
+                          </FormControl>
+                          <FormDescription>
+                            If set, this phone number will be displayed for all contact profiles
+                            instead of their individual numbers. Leave empty to use individual profile numbers.
+                          </FormDescription>
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+                  
+                  {/* Save Button */}
+                  <div className="flex justify-end mt-6 pt-6 border-t">
+                    <Button 
+                      type="submit" 
+                      className="bg-[#3f4f24] hover:bg-[#3f4f24]/90"
+                      disabled={isLoading}
+                    >
+                      {isLoading ? "Saving..." : "Save System Settings"}
+                    </Button>
+                  </div>
+                </form>
+              </Form>
             </CardContent>
           </Card>
         </TabsContent>

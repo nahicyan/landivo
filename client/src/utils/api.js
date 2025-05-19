@@ -647,3 +647,25 @@ export const updateUserProfileWithFields = async (profileData) => {
     throw error;
   }
 };
+
+
+// Get system settings
+export const getSystemSettings = async () => {
+  try {
+    const response = await api.get('/settings');
+    return response.data;
+  } catch (error) {
+    console.error("Error fetching system settings:", error);
+    return null;
+  }
+};
+
+// Update system settings
+export const updateSystemSettings = async (settingsData) => {
+  try {
+    const response = await api.put('/settings', settingsData);
+    return response.data;
+  } catch (error) {
+    handleRequestError(error, "Failed to update system settings");
+  }
+};

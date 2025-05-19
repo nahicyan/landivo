@@ -1,7 +1,14 @@
 "use client";
 
-import React, { useState } from "react";
-import { MoreVertical, Plus, X, Edit } from "lucide-react";
+import React, { useState, useEffect } from "react";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue
+} from "@/components/ui/select";
+import { MoreVertical, Plus, X, Edit, Loader2 } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -24,53 +31,122 @@ import { Label } from "@/components/ui/label";
 import { toast } from "react-toastify";
 import { api } from "@/utils/api"; // Use the api object directly
 
-// Profile Management Dialog Component
+// Updated ProfileManagementDialog component with better profile display
 const ProfileManagementDialog = ({ user, isOpen, onClose, onSuccess }) => {
   const [profiles, setProfiles] = useState([]);
+  const [allUsers, setAllUsers] = useState([]);
   const [loading, setLoading] = useState(false);
-  const [newProfileId, setNewProfileId] = useState("");
-
-  // Load user's profiles
-  React.useEffect(() => {
+  const [selectedUserId, setSelectedUserId] = useState("");
+  
+  // Load all users and current user's profiles
+  useEffect(() => {
     if (isOpen) {
-      // Set current user's profiles
-      setProfiles(user.allowedProfiles || []);
+      fetchAllUsers();
+      fetchUserProfiles();
     }
   }, [isOpen, user]);
-
-  const handleAddProfile = () => {
-    if (!newProfileId) return;
-    
-    const updatedProfiles = [...profiles, newProfileId];
-    
-    // Use the api object directly
-    api.put(`/user/${user.id}`, { allowedProfiles: updatedProfiles })
-      .then(() => {
-        setProfiles(updatedProfiles);
-        setNewProfileId("");
-        toast.success("Profile added successfully");
-        if (onSuccess) onSuccess();
-      })
-      .catch(error => {
-        console.error("Failed to add profile:", error);
-        toast.error("Failed to add profile");
-      });
+  
+  const fetchAllUsers = async () => {
+    setLoading(true);
+    try {
+      const response = await api.get('/user/all');
+      setAllUsers(response.data || []);
+    } catch (error) {
+      console.error("Failed to fetch users:", error);
+      toast.error("Failed to load users");
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const handleRemoveProfile = (profileId) => {
-    const updatedProfiles = profiles.filter(id => id !== profileId);
+  const fetchUserProfiles = async () => {
+    setLoading(true);
+    try {
+      // If user has allowedProfiles, fetch full details for each
+      if (user.allowedProfiles && user.allowedProfiles.length > 0) {
+        const profileDetails = await Promise.all(
+          user.allowedProfiles.map(async (profileId) => {
+            try {
+              const userData = await api.get(`/user/${profileId}`);
+              return userData.data;
+            } catch (error) {
+              console.error(`Failed to fetch profile ${profileId}:`, error);
+              return { id: profileId, firstName: "Unknown", lastName: "User" };
+            }
+          })
+        );
+        setProfiles(profileDetails);
+      } else {
+        setProfiles([]);
+      }
+    } catch (error) {
+      console.error("Failed to fetch profiles:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+  
+  // Add handleAddProfile function
+  const handleAddProfile = async () => {
+    if (!selectedUserId) return;
     
-    // Use the api object directly
-    api.put(`/user/${user.id}`, { allowedProfiles: updatedProfiles })
-      .then(() => {
-        setProfiles(updatedProfiles);
-        toast.success("Profile removed successfully");
-        if (onSuccess) onSuccess();
-      })
-      .catch(error => {
-        console.error("Failed to remove profile:", error);
-        toast.error("Failed to remove profile");
+    // Check if profile is already added
+    if ((user.allowedProfiles || []).includes(selectedUserId)) {
+      toast.warning("This profile is already assigned to the user");
+      return;
+    }
+    
+    setLoading(true);
+    
+    // Get current profiles and add the new one
+    const updatedProfileIds = [...(user.allowedProfiles || []), selectedUserId];
+    
+    try {
+      // Update the user with new allowedProfiles
+      await api.put(`/user/${user.id}/profiles`, { 
+        allowedProfiles: updatedProfileIds 
       });
+      
+      // Find the selected user to add to profiles list
+      const selectedUser = allUsers.find(u => u.id === selectedUserId);
+      if (selectedUser) {
+        setProfiles([...profiles, selectedUser]);
+      }
+      
+      setSelectedUserId("");
+      toast.success("Profile added successfully");
+      if (onSuccess) onSuccess();
+    } catch (error) {
+      console.error("Failed to add profile:", error);
+      toast.error("Failed to add profile");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Add handleRemoveProfile function
+  const handleRemoveProfile = async (profileId) => {
+    setLoading(true);
+    
+    // Filter out the profile to remove
+    const updatedProfileIds = (user.allowedProfiles || []).filter(id => id !== profileId);
+    
+    try {
+      // Update user with new profile list
+      await api.put(`/user/${user.id}/profiles`, { 
+        allowedProfiles: updatedProfileIds 
+      });
+      
+      // Update local state
+      setProfiles(profiles.filter(profile => profile.id !== profileId));
+      toast.success("Profile removed successfully");
+      if (onSuccess) onSuccess();
+    } catch (error) {
+      console.error("Failed to remove profile:", error);
+      toast.error("Failed to remove profile");
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -85,29 +161,53 @@ const ProfileManagementDialog = ({ user, isOpen, onClose, onSuccess }) => {
         
         <div className="py-4">
           <div className="flex gap-2 mb-4">
-            <Input
-              placeholder="Enter profile ID"
-              value={newProfileId}
-              onChange={(e) => setNewProfileId(e.target.value)}
-              className="flex-1"
-            />
-            <Button onClick={handleAddProfile} disabled={!newProfileId}>
+            <Select
+              value={selectedUserId}
+              onValueChange={setSelectedUserId}
+              disabled={loading}
+            >
+              <SelectTrigger className="flex-1">
+                <SelectValue placeholder={loading ? "Loading users..." : "Select a user profile"} />
+              </SelectTrigger>
+              <SelectContent>
+                {allUsers.map(user => (
+                  <SelectItem key={user.id} value={user.id}>
+                    {user.firstName} {user.lastName} ({user.email})
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <Button onClick={handleAddProfile} disabled={!selectedUserId || loading}>
               Add
             </Button>
           </div>
           
           <Label>Current Profiles</Label>
           <div className="mt-2 space-y-2">
-            {profiles.length === 0 ? (
+            {loading ? (
+              <div className="flex items-center justify-center p-4">
+                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                <span>Loading profiles...</span>
+              </div>
+            ) : profiles.length === 0 ? (
               <p className="text-gray-500 text-sm">No profiles assigned</p>
             ) : (
-              profiles.map((profileId) => (
-                <div key={profileId} className="flex justify-between items-center p-2 bg-gray-50 rounded-md">
-                  <span>{profileId}</span>
+              profiles.map((profile) => (
+                <div key={profile.id} className="flex justify-between items-center p-3 bg-gray-50 rounded-md">
+                  <div>
+                    {/* Display name instead of ID */}
+                    <span className="font-medium">
+                      {profile.firstName && profile.lastName 
+                        ? `${profile.firstName} ${profile.lastName}` 
+                        : profile.email 
+                        ? profile.email 
+                        : `(ID: ${profile.id.substring(0, 8)}...)`}
+                    </span>
+                  </div>
                   <Button
                     variant="ghost"
                     size="sm"
-                    onClick={() => handleRemoveProfile(profileId)}
+                    onClick={() => handleRemoveProfile(profile.id)}
                     className="text-red-500 hover:text-red-700"
                   >
                     <X className="h-4 w-4" />

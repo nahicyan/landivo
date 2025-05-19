@@ -26,7 +26,6 @@ import {
   DialogTitle,
   DialogFooter,
 } from "@/components/ui/dialog";
-import UserSubmit from "@/components/AddProperty/UserSubmit";
 import { Plus, X, ChevronDown, Loader2 } from "lucide-react";
 import axios from "axios";
 import { useAuth0 } from "@auth0/auth0-react";
@@ -68,43 +67,35 @@ export default function SystemInfoCard({ formData, handleChange, errors }) {
 
   // Fetch user's allowed profiles
   useEffect(() => {
-    const fetchUserProfiles = async () => {
-      setLoadingProfiles(true);
-      try {
-        // Get the auth token
-        const token = await getAccessTokenSilently();
-        
-        // Fetch user profile
-        const userProfile = await axios.get(
-          `${import.meta.env.VITE_SERVER_URL}/api/user/profile`,
-          {
-            headers: {
-              Authorization: `Bearer ${token}`
-            }
-          }
-        );
-        
-        // Check if user has allowedProfiles
-        if (userProfile.data && userProfile.data.allowedProfiles && Array.isArray(userProfile.data.allowedProfiles)) {
-          // Map the profile IDs to objects with name and id
-          // In a real app, you might want to fetch profile details from another endpoint
-          const profiles = userProfile.data.allowedProfiles.map(profileId => ({
-            id: profileId,
-            name: `Profile ${profileId.substr(0, 6)}` // Show shortened ID for readability
-          }));
-          setAllowedProfiles(profiles);
-        } else {
-          // Fallback with empty array
-          setAllowedProfiles([]);
-        }
-      } catch (error) {
-        console.error("Error fetching user profiles:", error);
-        setAllowedProfiles([]); // Ensure allowedProfiles is always an array
-      } finally {
-        setLoadingProfiles(false);
-      }
-    };
+    // Update the fetchUserProfiles function
+const fetchUserProfiles = async () => {
+  setLoadingProfiles(true);
+  try {
+    // Get the Auth0 token
+    const token = await getAccessTokenSilently();
 
+    // Use the new endpoint that works with write:properties permission
+    const response = await axios.get(
+      `${import.meta.env.VITE_SERVER_URL}/api/user/property-profiles`, 
+      {
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
+      }
+    );
+
+    if (response.data && Array.isArray(response.data)) {
+      setAllowedProfiles(response.data);
+    } else {
+      setAllowedProfiles([]);
+    }
+  } catch (error) {
+    console.error("Error fetching user profiles:", error);
+    setAllowedProfiles([]);
+  } finally {
+    setLoadingProfiles(false);
+  }
+};
     fetchUserProfiles();
   }, [getAccessTokenSilently]);
 
@@ -351,35 +342,30 @@ export default function SystemInfoCard({ formData, handleChange, errors }) {
       </CardHeader>
 
       <CardContent className="space-y-4">
-        {/* Display the authenticated user information */}
-        <UserSubmit />
-
         {/* Profile Selector */}
-        {allowedProfiles.length > 0 && (
-          <div className="flex flex-col space-y-1">
-            <Label htmlFor="profileId" className="text-gray-700 font-semibold">
-              Profile
-            </Label>
-            <Select
-              name="profileId"
-              value={formData.profileId || ""}
-              onValueChange={(value) => handleChange({ target: { name: "profileId", value } })}
+        <div className="flex flex-col space-y-1">
+          <Label htmlFor="profileId" className="text-gray-700 font-semibold">
+            Profile
+          </Label>
+          <Select
+            name="profileId"
+            value={formData.profileId || ""}
+            onValueChange={(value) => handleChange({ target: { name: "profileId", value } })}
+          >
+            <SelectTrigger
+              className="w-full border-gray-300 focus:border-[#324c48] focus:ring-1 focus:ring-[#324c48]"
             >
-              <SelectTrigger
-                className="w-full border-gray-300 focus:border-[#324c48] focus:ring-1 focus:ring-[#324c48]"
-              >
-                <SelectValue placeholder={loadingProfiles ? "Loading profiles..." : "Select Profile"} />
-              </SelectTrigger>
-              <SelectContent>
-                {allowedProfiles.map(profile => (
-                  <SelectItem key={profile.id} value={profile.id}>
-                    {profile.name || "Unnamed Profile"}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-        )}
+              <SelectValue placeholder={loadingProfiles ? "Loading profiles..." : "Select Profile"} />
+            </SelectTrigger>
+            <SelectContent>
+              {allowedProfiles.map(profile => (
+                <SelectItem key={profile.id} value={profile.id}>
+                  {profile.name || "Unnamed Profile"}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
 
         {/* Owner ID */}
         <div className="flex flex-col space-y-1">

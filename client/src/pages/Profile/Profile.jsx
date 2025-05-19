@@ -18,24 +18,42 @@ import BuyerOffersTable from './BuyerOffersTable';
 import BuyerQualificationsTable from './BuyerQualificationsTable';
 
 const Profile = () => {
-  const { user, isLoading, isAuthenticated } = useAuth0();
+  const { user, isLoading, isAuthenticated, getAccessTokenSilently } = useAuth0();
   const { userRoles, userPermissions } = useAuth();
-  const { getUserProfile, updateUserProfile } = useUserProfileApi();
+  const { getUserProfile } = useUserProfileApi();
   const { isVipBuyer } = useVipBuyer();
 
   const [isEditing, setIsEditing] = useState(false);
   const [profileData, setProfileData] = useState({
     firstName: '',
-    lastName: ''
+    lastName: '',
+    phone: '',
+    profileRole: ''
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [updateSuccess, setUpdateSuccess] = useState(false);
   const [dbUserData, setDbUserData] = useState(null);
   const [profileError, setProfileError] = useState(null);
   const [isLoadingProfile, setIsLoadingProfile] = useState(false);
+  
+  // Image upload state
+  const [selectedFile, setSelectedFile] = useState(null);
+  const [removeAvatar, setRemoveAvatar] = useState(false);
 
   // Check if user is a system user (has roles or permissions)
   const isSystemUser = userRoles.length > 0 || userPermissions.length > 0;
+
+  // Handle image selection
+  const handleImageUpload = (file) => {
+    setSelectedFile(file);
+    setRemoveAvatar(false);
+  };
+
+  // Handle image removal
+  const handleImageRemove = () => {
+    setSelectedFile(null);
+    setRemoveAvatar(true);
+  };
 
   // Load user profile data only for system users
   useEffect(() => {
@@ -50,7 +68,9 @@ const Profile = () => {
             setDbUserData(userProfile);
             setProfileData({
               firstName: userProfile.firstName || '',
-              lastName: userProfile.lastName || ''
+              lastName: userProfile.lastName || '',
+              phone: userProfile.phone || '',
+              profileRole: userProfile.profileRole || ''
             });
           }
         } catch (error) {
@@ -68,7 +88,7 @@ const Profile = () => {
     loadUserProfile();
   }, [isAuthenticated, user, getUserProfile, isSystemUser]);
 
-  // Handle profile form submission
+  // Handle profile form submission with file upload
   const handleSubmit = async (e) => {
     e.preventDefault();
     setIsSubmitting(true);
@@ -76,16 +96,57 @@ const Profile = () => {
     setProfileError(null);
 
     try {
-      await updateUserProfile(profileData);
+      // Create FormData for file upload
+      const formData = new FormData();
+      formData.append("firstName", profileData.firstName);
+      formData.append("lastName", profileData.lastName);
+      
+      if (profileData.phone) {
+        formData.append("phone", profileData.phone);
+      }
+      
+      if (profileData.profileRole) {
+        formData.append("profileRole", profileData.profileRole);
+      }
+      
+      // Handle image upload
+      if (selectedFile) {
+        formData.append("avatar", selectedFile);
+      }
+      
+      // Handle image removal
+      if (removeAvatar) {
+        formData.append("removeAvatar", "true");
+      }
+
+      // Send to API
+      const token = await getAccessTokenSilently();
+      const response = await fetch(`${import.meta.env.VITE_SERVER_URL}/api/user/profile`, {
+        method: "PUT",
+        headers: {
+          Authorization: `Bearer ${token}`
+        },
+        body: formData
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to update profile");
+      }
+
+      const updatedUser = await response.json();
+      
       setUpdateSuccess(true);
       setIsEditing(false);
 
       // Update local data
-      setDbUserData({
-        ...dbUserData,
-        firstName: profileData.firstName,
-        lastName: profileData.lastName
-      });
+      setDbUserData(updatedUser.user);
+      
+      // Reset file state
+      setSelectedFile(null);
+      setRemoveAvatar(false);
+      
+      // Display success message and reload after a short delay
+      setTimeout(() => window.location.reload(), 1000);
     } catch (error) {
       console.error("Error updating profile:", error);
       setProfileError("Failed to update your profile. Please try again later.");
@@ -159,6 +220,9 @@ const Profile = () => {
                 updateSuccess={updateSuccess}
                 profileError={profileError}
                 isLoading={isLoadingProfile}
+                handleImageUpload={handleImageUpload}
+                handleImageRemove={handleImageRemove}
+                isSystemUser={isSystemUser}
               />
             ) : (
               <div className="space-y-5">

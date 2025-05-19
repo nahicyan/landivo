@@ -1,5 +1,46 @@
+// server/controllers/userManagementCntrl.js
 import asyncHandler from "express-async-handler";
 import { prisma } from "../config/prismaConfig.js";
+import multer from "multer";
+import path from "path";
+import { fileURLToPath } from "url";
+import fs from "fs";
+
+// Configure multer for avatar uploads
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+const avatarDirectory = path.join(__dirname, "../uploads/avatars");
+
+// Ensure avatar directory exists
+if (!fs.existsSync(avatarDirectory)) {
+  fs.mkdirSync(avatarDirectory, { recursive: true });
+}
+
+const storage = multer.diskStorage({
+  destination: function (req, file, cb) {
+    cb(null, avatarDirectory);
+  },
+  filename: function (req, file, cb) {
+    const uniqueSuffix = Date.now() + "-" + Math.round(Math.random() * 1e9);
+    const ext = path.extname(file.originalname);
+    cb(null, "avatar-" + uniqueSuffix + ext);
+  }
+});
+
+export const uploadAvatar = multer({
+  storage,
+  limits: { fileSize: 5 * 1024 * 1024 }, // 5MB limit
+  fileFilter: function (req, file, cb) {
+    const allowedTypes = /jpeg|jpg|png|webp/;
+    const ext = path.extname(file.originalname).toLowerCase();
+    
+    if (allowedTypes.test(ext.substring(1))) {
+      cb(null, true);
+    } else {
+      cb(new Error("Only image files (JPEG, PNG, WebP) are allowed."));
+    }
+  }
+}).single("avatar");
 
 /**
  * Get user by Auth0 ID
@@ -145,6 +186,7 @@ export const getUserProfile = asyncHandler(async (req, res) => {
 
 /**
  * Update user profile - allows users to update their own profile info
+ * Now supports file uploads for profile avatars
  */
 export const updateUserProfile = asyncHandler(async (req, res) => {
   try {
@@ -153,34 +195,70 @@ export const updateUserProfile = asyncHandler(async (req, res) => {
     if (!auth0Id) {
       return res.status(401).json({ message: "Unauthorized: User not authenticated" });
     }
-    
-    const { firstName, lastName, phone, profileRole, avatarUrl, allowedProfiles } = req.body;
-    
-    // Get the existing user to check if it exists
-    const existingUser = await prisma.user.findUnique({
-      where: { auth0Id }
-    });
-    
-    if (!existingUser) {
-      return res.status(404).json({ message: "User not found" });
-    }
-    
-    // Update the user with new fields
-    const updatedUser = await prisma.user.update({
-      where: { auth0Id },
-      data: { 
-        firstName, 
-        lastName,
-        phone,
-        profileRole,
-        avatarUrl,
-        allowedProfiles
+
+    // Process file upload
+    uploadAvatar(req, res, async function(err) {
+      if (err) {
+        return res.status(400).json({ 
+          message: "Error uploading profile picture", 
+          error: err.message 
+        });
       }
-    });
-    
-    res.status(200).json({
-      message: "Profile updated successfully",
-      user: updatedUser
+      
+      // Get form data
+      const { firstName, lastName, phone, profileRole, removeAvatar } = req.body;
+      
+      // Get the existing user to check if it exists
+      const existingUser = await prisma.user.findUnique({
+        where: { auth0Id }
+      });
+      
+      if (!existingUser) {
+        return res.status(404).json({ message: "User not found" });
+      }
+      
+      // Handle avatar removal or replacement
+      let avatarUrl = existingUser.avatarUrl;
+      
+      // Remove existing avatar if requested or if uploading a new one
+      if ((removeAvatar === "true" || req.file) && existingUser.avatarUrl) {
+        const oldAvatarPath = path.join(__dirname, "..", existingUser.avatarUrl);
+        try {
+          if (fs.existsSync(oldAvatarPath)) {
+            fs.unlinkSync(oldAvatarPath);
+            console.log(`Deleted old avatar: ${oldAvatarPath}`);
+          }
+        } catch (err) {
+          console.error(`Error deleting old avatar: ${err.message}`);
+        }
+        
+        // Set to null if removing without replacement
+        if (removeAvatar === "true" && !req.file) {
+          avatarUrl = null;
+        }
+      }
+      
+      // Set new avatar URL if file was uploaded
+      if (req.file) {
+        avatarUrl = `uploads/avatars/${req.file.filename}`;
+      }
+      
+      // Update the user with new fields
+      const updatedUser = await prisma.user.update({
+        where: { auth0Id },
+        data: { 
+          firstName, 
+          lastName,
+          phone,
+          profileRole,
+          avatarUrl
+        }
+      });
+      
+      res.status(200).json({
+        message: "Profile updated successfully",
+        user: updatedUser
+      });
     });
   } catch (error) {
     console.error("Error updating user profile:", error);
@@ -255,7 +333,9 @@ export const getUserById = asyncHandler(async (req, res) => {
   }
 });
 
-// Add updateUserStatus function
+/**
+ * Update user status (enable/disable)
+ */
 export const updateUserStatus = asyncHandler(async (req, res) => {
   const { id } = req.params;
   const { isActive } = req.body;
@@ -276,6 +356,232 @@ export const updateUserStatus = asyncHandler(async (req, res) => {
     console.error("Error updating user status:", error);
     res.status(500).json({
       message: "An error occurred while updating user status",
+      error: error.message
+    });
+  }
+});
+
+/**
+ * Update user's allowed profiles
+ */
+export const updateUserProfiles = asyncHandler(async (req, res) => {
+  const { id } = req.params;
+  const { allowedProfiles } = req.body;
+  
+  try {
+    const user = await prisma.user.update({
+      where: { id },
+      data: { allowedProfiles }
+    });
+    
+    res.status(200).json({
+      message: "User profiles updated successfully",
+      user
+    });
+  } catch (error) {
+    console.error("Error updating user profiles:", error);
+    res.status(500).json({
+      message: "An error occurred while updating user profiles",
+      error: error.message
+    });
+  }
+});
+
+/**
+ * Get limited user profiles for property assignments
+ * Used when creating/editing properties to select a contact profile
+ */
+export const getProfilesForPropertyAssignment = asyncHandler(async (req, res) => {
+  try {
+    // Get current user's ID from the auth token
+    const auth0Id = req.user?.sub;
+    
+    if (!auth0Id) {
+      return res.status(401).json({ message: "Unauthorized: User not authenticated" });
+    }
+    
+    // Get the current user from database to get their allowedProfiles
+    const currentUser = await prisma.user.findUnique({
+      where: { auth0Id },
+      select: { 
+        id: true,
+        allowedProfiles: true 
+      }
+    });
+    
+    if (!currentUser) {
+      return res.status(404).json({ message: "User not found" });
+    }
+    
+    // Get only the profiles that the user is allowed to use
+    const allowedProfileIds = currentUser.allowedProfiles || [];
+    
+    // Include the user's own profile
+    if (!allowedProfileIds.includes(currentUser.id)) {
+      allowedProfileIds.push(currentUser.id);
+    }
+    
+    const users = await prisma.user.findMany({
+      where: {
+        id: { in: allowedProfileIds }
+      },
+      select: {
+        id: true,
+        firstName: true,
+        lastName: true,
+        email: true,
+        profileRole: true
+      },
+      orderBy: {
+        firstName: "asc"
+      }
+    });
+    
+    // Return limited profile data
+    const profiles = users.map(user => ({
+      id: user.id,
+      name: user.firstName && user.lastName ? 
+        `${user.firstName} ${user.lastName}` : 
+        user.email || `User (${user.id.substring(0, 8)}...)`,
+      role: user.profileRole || "Landivo Expert"
+    }));
+    
+    res.status(200).json(profiles);
+  } catch (error) {
+    console.error("Error fetching profiles for property assignment:", error);
+    res.status(500).json({
+      message: "An error occurred while fetching profiles",
+      error: error.message
+    });
+  }
+});
+
+/**
+ * Get public profile for property contact
+ * This endpoint is public and doesn't require authentication
+ */
+export const getPublicProfileById = asyncHandler(async (req, res) => {
+  const { id } = req.params;
+  
+  try {
+    const user = await prisma.user.findUnique({
+      where: { id },
+      select: {
+        id: true,
+        firstName: true,
+        lastName: true,
+        email: true,
+        phone: true,
+        profileRole: true,
+        avatarUrl: true
+      }
+    });
+    
+    if (!user) {
+      return res.status(404).json({ message: "Profile not found" });
+    }
+    
+    res.status(200).json(user);
+  } catch (error) {
+    console.error("Error fetching public profile:", error);
+    res.status(500).json({
+      message: "An error occurred while fetching profile information",
+      error: error.message
+    });
+  }
+});
+
+// server/controllers/userManagementCntrl.js - Add new functions
+
+/**
+ * Get properties using a specific profile ID
+ */
+export const getPropertiesUsingProfile = asyncHandler(async (req, res) => {
+  const { id } = req.params;
+  
+  try {
+    const properties = await prisma.residency.findMany({
+      where: { profileId: id },
+      select: {
+        id: true,
+        title: true,
+        streetAddress: true,
+        city: true,
+        state: true,
+        zip: true
+      },
+      orderBy: {
+        updatedAt: "desc"
+      }
+    });
+    
+    res.status(200).json(properties);
+  } catch (error) {
+    console.error("Error fetching properties using profile:", error);
+    res.status(500).json({
+      message: "An error occurred while fetching properties",
+      error: error.message
+    });
+  }
+});
+
+/**
+ * Get count of properties using a specific profile ID
+ */
+export const getPropertiesCountByProfile = asyncHandler(async (req, res) => {
+  const { id } = req.params;
+  
+  try {
+    const count = await prisma.residency.count({
+      where: { profileId: id }
+    });
+    
+    res.status(200).json({ count });
+  } catch (error) {
+    console.error("Error counting properties using profile:", error);
+    res.status(500).json({
+      message: "An error occurred while counting properties",
+      error: error.message
+    });
+  }
+});
+
+/**
+ * Reassign properties from one profile to another
+ */
+export const reassignProperties = asyncHandler(async (req, res) => {
+  const { id } = req.params;
+  const { newProfileId } = req.body;
+  
+  if (!newProfileId) {
+    return res.status(400).json({ message: "New profile ID is required" });
+  }
+  
+  try {
+    // Check if new profile exists
+    const newProfile = await prisma.user.findUnique({
+      where: { id: newProfileId },
+      select: { id: true }
+    });
+    
+    if (!newProfile) {
+      return res.status(404).json({ message: "New profile not found" });
+    }
+    
+    // Update all properties using the old profile ID
+    const result = await prisma.residency.updateMany({
+      where: { profileId: id },
+      data: { profileId: newProfileId }
+    });
+    
+    res.status(200).json({
+      message: `${result.count} properties reassigned successfully`,
+      updatedCount: result.count
+    });
+  } catch (error) {
+    console.error("Error reassigning properties:", error);
+    res.status(500).json({
+      message: "An error occurred while reassigning properties",
       error: error.message
     });
   }
