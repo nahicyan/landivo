@@ -1,4 +1,4 @@
-// server/routes/offerRoute.js - With permissions and checks removed
+// server/routes/offerRoute.js
 import express from "express";
 import { 
   makeOffer, 
@@ -8,7 +8,7 @@ import {
   getOfferHistory,
   getAllOffers,
   getRecentOfferActivity 
-} from "../controllers/offerCntrl.js";
+} from "../services/offer/index.js";
 
 const router = express.Router();
 
