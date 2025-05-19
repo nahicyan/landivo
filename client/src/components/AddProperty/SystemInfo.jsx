@@ -342,10 +342,10 @@ const fetchUserProfiles = async () => {
       </CardHeader>
 
       <CardContent className="space-y-4">
-        {/* Profile Selector */}
+        {/* Profile Selector - UPDATED: Added required indicator and error state */}
         <div className="flex flex-col space-y-1">
           <Label htmlFor="profileId" className="text-gray-700 font-semibold">
-            Profile
+            Profile <span className="text-red-500">*</span>
           </Label>
           <Select
             name="profileId"
@@ -353,7 +353,7 @@ const fetchUserProfiles = async () => {
             onValueChange={(value) => handleChange({ target: { name: "profileId", value } })}
           >
             <SelectTrigger
-              className="w-full border-gray-300 focus:border-[#324c48] focus:ring-1 focus:ring-[#324c48]"
+              className={`w-full border-gray-300 focus:border-[#324c48] focus:ring-1 focus:ring-[#324c48] ${errors && errors.profileId ? "border-red-500 ring-1 ring-red-500" : ""}`}
             >
               <SelectValue placeholder={loadingProfiles ? "Loading profiles..." : "Select Profile"} />
             </SelectTrigger>
@@ -365,6 +365,9 @@ const fetchUserProfiles = async () => {
               ))}
             </SelectContent>
           </Select>
+          {errors && errors.profileId && (
+            <span className="text-red-500 text-sm">{errors.profileId}</span>
+          )}
         </div>
 
         {/* Owner ID */}
@@ -388,7 +391,7 @@ const fetchUserProfiles = async () => {
         {/* Area Selection */}
         <div className="flex flex-col space-y-1">
           <Label htmlFor="area" className="text-gray-700 font-semibold">
-            Area
+            Area <span className="text-red-500">*</span>
           </Label>
           <Select
             name="area"
@@ -416,7 +419,7 @@ const fetchUserProfiles = async () => {
         {/* Status Selection */}
         <div className="flex flex-col space-y-1">
           <Label htmlFor="status" className="text-gray-700 font-semibold">
-            Status
+            Status <span className="text-red-500">*</span>
           </Label>
           <Select
             name="status"

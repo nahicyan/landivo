@@ -1,4 +1,3 @@
-// Updated ContactProfile.jsx
 import React, { useState, useEffect } from "react";
 import { api, getSystemSettings } from "@/utils/api";
 import { Loader2 } from "lucide-react";
@@ -58,9 +57,9 @@ const ContactProfile = ({ profileId }) => {
     `https://ui-avatars.com/api/?name=${profileData.firstName}+${profileData.lastName}&background=324c48&color=fff&size=150`;
 
   return (
-    <div className="w-full bg-[#f5faf7] rounded-lg px-8 py-10 mt-6">
-      <div className="flex items-center mb-6">
-        <div className="w-16 h-16 rounded-full overflow-hidden flex-shrink-0">
+    <div className="w-full bg-[#f5faf7] rounded-lg px-6 py-6 mt-5">
+     <div className="flex items-center mb-4">
+        <div className="w-14 h-14 rounded-full overflow-hidden flex-shrink-0">
           <img
             src={imageUrl}
             alt={`${profileData.firstName} ${profileData.lastName}`}
@@ -72,21 +71,21 @@ const ContactProfile = ({ profileId }) => {
           />
         </div>
         
-        <div className="ml-4">
-          <h3 className="text-2xl font-normal text-[#324c48]">
+        <div className="ml-3">
+          <h3 className="text-xl font-normal text-[#324c48]">
             {profileData.firstName} {profileData.lastName}
           </h3>
-          <p className="text-[#3f4f24] text-lg font-light">
+          <p className="text-[#3f4f24] text-base font-light">
             {profileData.profileRole || "Landivo Expert"}
           </p>
         </div>
       </div>
       
-      <div className="flex flex-col items-start space-y-4">
+      <div className="flex flex-col items-start space-y-2">
         {displayPhone && (
           <a 
             href={`tel:${displayPhone.replace(/\D/g, '')}`}
-            className="text-xl text-[#324c48] hover:text-[#D4A017] border-b border-[#324c48] pb-1"
+            className="text-lg text-[#324c48] hover:text-[#D4A017] border-b border-[#324c48] pb-1"
           >
             {displayPhone}
           </a>
@@ -95,7 +94,7 @@ const ContactProfile = ({ profileId }) => {
         {profileData.email && (
           <a 
             href={`mailto:${profileData.email}`}
-            className="text-[#324c48] hover:text-[#D4A017] text-lg font-light"
+            className="text-[#324c48] hover:text-[#D4A017] text-base font-light"
           >
             {profileData.email}
           </a>

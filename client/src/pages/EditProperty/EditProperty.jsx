@@ -128,7 +128,7 @@ export default function EditProperty() {
 
   // Required fields for each step (based on Prisma schema without ?)
   const requiredFieldsByStep = {
-    0: ["status", "area"], // System Info
+    0: ["status", "area", "profileId"], // System Info
     1: ["title", "description"], // Listing Details
     2: ["type", "landType", "zoning"], // Classification
     3: ["streetAddress", "city", "state", "zip", "latitude", "longitude", "apnOrPin"], // Location

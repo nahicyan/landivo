@@ -1,7 +1,7 @@
 "use client";
 
-import React, { useState } from "react";
-import { Card, CardHeader, CardTitle } from "@/components/ui/card";
+import React, { useState, useEffect } from "react";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -11,49 +11,82 @@ import {
   DialogDescription,
   DialogFooter,
 } from "@/components/ui/dialog";
+import { api, getSystemSettings } from "@/utils/api";
+import { Loader2 } from "lucide-react";
 
-export default function ContactCard() {
+export default function ContactCard({ profileId }) {
   const [openDialog, setOpenDialog] = useState(false);
+  const [profileData, setProfileData] = useState(null);
+  const [systemSettings, setSystemSettings] = useState(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        setLoading(true);
+        
+        // Fetch both profile data and system settings in parallel
+        const [profileResponse, settingsResponse] = await Promise.all([
+          profileId ? api.get(`/user/public-profile/${profileId}`) : Promise.resolve({data: null}),
+          getSystemSettings()
+        ]);
+        
+        setProfileData(profileResponse.data);
+        setSystemSettings(settingsResponse);
+      } catch (err) {
+        console.error("Error fetching data:", err);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchData();
+  }, [profileId]);
+
+  // Determine which phone number to display (override or profile)
+  const displayPhone = systemSettings?.overrideContactPhone || 
+                      (profileData?.phone) || 
+                      "+18172471312"; // Fallback
+
+  if (loading) {
+    return (
+      <div className="w-full flex justify-center p-2">
+        <Loader2 className="h-5 w-5 text-[#324c48] animate-spin" />
+      </div>
+    );
+  }
 
   return (
     <>
-      {/* Desktop Card (hidden on mobile) */}
-      <Card className="hidden sm:block w-full max-w-sm mx-auto p-4 shadow-md border border-gray-200">
-        <CardHeader className="flex flex-col items-center space-y-4">
-          {/* Action Buttons */}
-          <div className="flex items-center gap-3 w-full justify-center">
-            <Button
-              onClick={() => (window.location.href = "tel:+18172471312")}
-              className="bg-[#324c48] text-white w-28 py-2 text-sm font-semibold uppercase rounded-full shadow-md hover:shadow-lg transition-shadow"
-            >
-              Call
-            </Button>
-            <Button
-              onClick={() => setOpenDialog(true)}
-              className="bg-[#324c48] text-white w-28 py-2 text-sm font-semibold uppercase rounded-full shadow-md hover:shadow-lg transition-shadow"
-            >
-              Message
-            </Button>
-          </div>
-
-          {/* Title */}
-          <CardTitle className="text-xl font-bold text-gray-800">
-            Reach out now!
-          </CardTitle>
-        </CardHeader>
+      {/* Desktop Card (hidden on mobile) - More compact version with equal width buttons */}
+      <Card className="hidden sm:block w-full max-w-sm mx-auto shadow-sm border border-gray-200">
+        <CardContent className="p-3 grid grid-cols-2 gap-3">
+          <Button
+            onClick={() => window.location.href = `tel:${displayPhone.replace(/\D/g, '')}`}
+            className="bg-[#324c48] text-white py-1 text-sm font-semibold rounded-full shadow-sm hover:shadow-md transition-shadow w-full"
+          >
+            Call
+          </Button>
+          <Button
+            onClick={() => setOpenDialog(true)}
+            className="bg-[#324c48] text-white py-1 text-sm font-semibold rounded-full shadow-sm hover:shadow-md transition-shadow w-full"
+          >
+            Message
+          </Button>
+        </CardContent>
       </Card>
 
       {/* Mobile Sticky Bar */}
-      <div className="block sm:hidden fixed bottom-0 left-0 w-full p-4 bg-white border-t border-gray-200 z-50 flex gap-2 overflow-x-hidden">
+      <div className="block sm:hidden fixed bottom-0 left-0 w-full p-2 bg-white border-t border-gray-200 z-50 grid grid-cols-2 gap-2">
         <Button
-          onClick={() => (window.location.href = "tel:+18172471312")}
-          className="bg-[#324c48] text-white flex-1 py-3 text-base font-semibold uppercase rounded-full shadow-md hover:shadow-lg transition-shadow"
+          onClick={() => window.location.href = `tel:${displayPhone.replace(/\D/g, '')}`}
+          className="bg-[#324c48] text-white py-2 text-sm font-semibold rounded-full shadow-sm hover:shadow-md transition-shadow"
         >
           Call
         </Button>
         <Button
           onClick={() => setOpenDialog(true)}
-          className="bg-[#324c48] text-white flex-1 py-3 text-base font-semibold uppercase rounded-full shadow-md hover:shadow-lg transition-shadow"
+          className="bg-[#324c48] text-white py-2 text-sm font-semibold rounded-full shadow-sm hover:shadow-md transition-shadow"
         >
           Message
         </Button>
@@ -75,7 +108,7 @@ export default function ContactCard() {
               variant="outline"
               className="w-full sm:w-auto bg-blue-100 text-blue-800"
               onClick={() => {
-                window.location.href = "sms:+18172471312";
+                window.location.href = `sms:${displayPhone.replace(/\D/g, '')}`;
                 setOpenDialog(false);
               }}
             >

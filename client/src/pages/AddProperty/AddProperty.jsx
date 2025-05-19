@@ -54,6 +54,7 @@ export default function AddProperty() {
     area: "",
     featured: "Not Featured",
     featuredPosition: 0,
+    profileId: "",
 
     // Listing Details
     title: "",
@@ -139,7 +140,7 @@ export default function AddProperty() {
 
   // Required fields for each step (based on Prisma schema without ?)
   const requiredFieldsByStep = {
-    0: ["status", "area"], // System Info
+    0: ["status", "area", "profileId"], // System Info
     1: ["title", "description"], // Listing Details
     2: ["type", "landType", "zoning"], // Classification
     3: ["streetAddress", "city", "state", "zip", "latitude", "longitude", "apnOrPin"], // Location

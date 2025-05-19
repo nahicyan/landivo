@@ -10,29 +10,16 @@ import { useVipBuyer } from '@/utils/VipBuyerContext';
 
 // ShadCN UI components
 import {
-  Card,
-  CardHeader,
-  CardTitle,
-  CardDescription,
-  CardContent,
+  Card, CardHeader, CardTitle, CardDescription, CardContent,
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import {
-  Select,
-  SelectTrigger,
-  SelectValue,
-  SelectContent,
-  SelectItem,
+  Select, SelectTrigger, SelectValue, SelectContent, SelectItem,
 } from "@/components/ui/select";
 import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-  DialogFooter,
+  Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter,
 } from "@/components/ui/dialog";
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { InfoCircledIcon, CheckCircledIcon, CrossCircledIcon } from '@radix-ui/react-icons';
@@ -656,44 +643,43 @@ export default function Offer({ propertyData }) {
     }
   };
 
-  return (
-    <div className="bg-white text-[#050002]">
-      <Card className="w-full max-w-md border border-[#405025]/20 bg-white shadow-lg mx-auto">
-        <CardHeader className="text-center">
-          <CardTitle className="text-2xl font-bold text-[#405025]">
-            {getCardTitle()}
-          </CardTitle>
-          <CardDescription className="text-[#324d49]">
-            For {propertyData.streetAddress || "This Property"}
-          </CardDescription>
-        </CardHeader>
+return (
+  <div className="bg-white text-[#050002]">
+    <Card className="w-full max-w-md border border-[#405025]/20 bg-white shadow-lg mx-auto">
+      <CardHeader className="text-center py-4">
+        <CardTitle className="text-2xl font-bold text-[#405025]">
+          {getCardTitle()}
+        </CardTitle>
+        <CardDescription className="text-[#324d49] text-sm">
+          For {propertyData.streetAddress || "This Property"}
+        </CardDescription>
+      </CardHeader>
 
-        <CardContent>
-          {/* Status Alert - Only shown for existing offers */}
-          {hasExistingOffer && (
-            <Alert className={`mb-4 ${getStatusColor()}`}>
-              <div className="flex items-center">
-                {getStatusIcon()}
-                <AlertTitle className="ml-2">Status: {offerStatus}</AlertTitle>
+      <CardContent className="px-5 pb-3">
+        {/* Status Alert - Only shown for existing offers */}
+        {hasExistingOffer && (
+          <Alert className={`mb-4 py-3 ${getStatusColor()}`}>
+            <div className="flex items-center">
+              {getStatusIcon()}
+              <AlertTitle className="ml-2 text-sm">Status: {offerStatus}</AlertTitle>
+            </div>
+            <AlertDescription className="text-sm mt-1">{getStatusMessage()}</AlertDescription>
+
+            {/* Show system message if exists */}
+            {sysMessage && (
+              <div className="mt-2 pt-1 border-t border-[#324d49]/20 text-sm">
+                <p className="font-semibold">Landivo Says:</p>
+                <p className="italic">{sysMessage}</p>
               </div>
-              <AlertDescription>{getStatusMessage()}</AlertDescription>
+            )}
+          </Alert>
+        )}
 
-              {/* Show system message if exists */}
-              {sysMessage && (
-                <div className="mt-2 pt-2 border-t border-[#324d49]/20">
-                  <p className="font-semibold">Landivo Says:</p>
-                  <p className="italic">{sysMessage}</p>
-                </div>
-              )}
-            </Alert>
-          )}
-
-          <form onSubmit={handleSubmit} className="space-y-4">
-            {/* First Name */}
-            <div>
-              <Label htmlFor="firstName" className="text-sm text-[#050002]">
-                First Name
-              </Label>
+        <form onSubmit={handleSubmit} className="space-y-3">
+          {/* Name fields on same line */}
+          <div className="flex space-x-3">
+            <div className="flex-1">
+              <Label htmlFor="firstName" className="text-sm text-[#050002] mb-1 block">First Name</Label>
               <Input
                 id="firstName"
                 type="text"
@@ -702,14 +688,11 @@ export default function Offer({ propertyData }) {
                 onChange={(e) => setFirstName(e.target.value)}
                 required
                 disabled={isFormDisabled()}
+                className="h-9 text-sm"
               />
             </div>
-
-            {/* Last Name */}
-            <div>
-              <Label htmlFor="lastName" className="text-sm text-[#050002]">
-                Last Name
-              </Label>
+            <div className="flex-1">
+              <Label htmlFor="lastName" className="text-sm text-[#050002] mb-1 block">Last Name</Label>
               <Input
                 id="lastName"
                 type="text"
@@ -718,56 +701,74 @@ export default function Offer({ propertyData }) {
                 onChange={(e) => setLastName(e.target.value)}
                 required
                 disabled={isFormDisabled()}
+                className="h-9 text-sm"
               />
             </div>
+          </div>
 
-            {/* Email */}
-            <div>
-              <Label htmlFor="email" className="text-sm text-[#050002]">
-                Email
+          {/* Email on separate line */}
+          <div>
+            <Label htmlFor="email" className="text-sm text-[#050002] mb-1 block">Email</Label>
+            <Input
+              id="email"
+              type="email"
+              placeholder="example@mail.com"
+              value={email}
+              onChange={handleEmailChange}
+              required
+              disabled={isFormDisabled()}
+              className="h-9 text-sm"
+            />
+          </div>
+
+          {/* Phone on separate line */}
+          <div>
+            <Label htmlFor="phone" className="text-sm text-[#050002] mb-1 block">Phone</Label>
+            <Input
+              id="phone"
+              type="text"
+              placeholder="(555) 555-5555"
+              value={phone}
+              onChange={handlePhoneChange}
+              required
+              disabled={isFormDisabled()}
+              className="h-9 text-sm"
+            />
+          </div>
+
+          {/* Offer Price and Buyer Type on same line, with Offer first */}
+          <div className="flex space-x-3">
+            <div className="flex-1">
+              <Label htmlFor="offerPrice" className="text-sm text-[#050002] mb-1 block">
+                {hasExistingOffer
+                  ? (offerStatus === "COUNTERED"
+                    ? "Your Original Offer"
+                    : "Your Offer Price")
+                  : "Offer Price ($)"}
               </Label>
               <Input
-                id="email"
-                type="email"
-                placeholder="example@mail.com"
-                value={email}
-                onChange={handleEmailChange}
-                required
-                disabled={isFormDisabled()}
-              />
-            </div>
-
-            {/* Phone */}
-            <div>
-              <Label htmlFor="phone" className="text-sm text-[#050002]">
-                Phone
-              </Label>
-              <Input
-                id="phone"
+                id="offerPrice"
                 type="text"
-                placeholder="(555) 555-5555"
-                value={phone}
-                onChange={handlePhoneChange}
+                placeholder="500,000"
+                value={offerPrice}
+                onChange={handleOfferPriceChange}
                 required
-                disabled={isFormDisabled()}
+                disabled={isFormDisabled() || offerStatus === "COUNTERED"}
+                className="h-9 text-sm"
               />
             </div>
-
-            {/* Buyer Type */}
-            <div>
-              <Label className="text-sm text-[#050002] mb-1 block">
-                Buyer Type
-              </Label>
+            <div className="flex-1">
+              <Label className="text-sm text-[#050002] mb-1 block">Buyer Type</Label>
               <Select
                 value={buyerType}
                 onValueChange={(val) => setBuyerType(val)}
                 required
                 disabled={isFormDisabled()}
               >
-                <SelectTrigger className="w-full">
-                  <SelectValue placeholder="Select Buyer Type" />
+                <SelectTrigger className="w-full h-9 text-sm">
+                  <SelectValue placeholder="Select Type" />
                 </SelectTrigger>
-                <SelectContent className="bg-[#FFF] text-[#050002] border border-[#405025]/20">
+                <SelectContent className="bg-[#FFF] text-[#050002] border border-[#405025]/20 text-sm">
                   <SelectItem value="CashBuyer">Cash Buyer</SelectItem>
                   <SelectItem value="Builder">Builder</SelectItem>
                   <SelectItem value="Developer">Developer</SelectItem>
@@ -777,156 +778,138 @@ export default function Offer({ propertyData }) {
                 </SelectContent>
               </Select>
             </div>
+          </div>
 
-            {/* Offer Price */}
-            <div>
-              <Label htmlFor="offerPrice" className="text-sm text-[#050002]">
-                {hasExistingOffer
-                  ? (offerStatus === "COUNTERED"
-                    ? "Your Original Offer"
-                    : "Your Offer Price")
-                  : "Offer Price ($)"}
+          {/* Show counter offer price if applicable */}
+          {offerStatus === "COUNTERED" && counteredPrice && (
+            <div className="mt-2">
+              <Label htmlFor="counteredPrice" className="text-sm font-medium text-blue-700 mb-1 block">
+                Counter Offer Price
               </Label>
               <Input
-                id="offerPrice"
-                type="text" // Changed to text to allow comma formatting
-                placeholder="500,000"
-                value={offerPrice}
-                onChange={handleOfferPriceChange}
-                required
-                disabled={isFormDisabled() || offerStatus === "COUNTERED"}
-              />
-
-              {/* Show counter offer price if applicable */}
-              {offerStatus === "COUNTERED" && counteredPrice && (
-                <div className="mt-2">
-                  <Label htmlFor="counteredPrice" className="text-sm font-medium text-blue-700">
-                    Counter Offer Price
-                  </Label>
-                  <Input
-                    id="counteredPrice"
-                    type="text"
-                    value={counteredPrice.toLocaleString()}
-                    disabled={true}
-                    className="bg-blue-50 text-blue-800 font-medium"
-                  />
-                </div>
-              )}
-            </div>
-
-            {/* Buyer Message */}
-            <div>
-              <Label htmlFor="buyerMessage" className="text-sm text-[#050002]">
-                Message (Optional)
-              </Label>
-              <textarea
-                id="buyerMessage"
-                placeholder="Include any notes or questions about your offer"
-                value={buyerMessage}
-                onChange={(e) => setBuyerMessage(e.target.value)}
-                className="w-full min-h-[80px] p-2 rounded-md border border-input bg-background resize-y"
-                disabled={isFormDisabled()}
+                id="counteredPrice"
+                type="text"
+                value={counteredPrice.toLocaleString()}
+                disabled={true}
+                className="bg-blue-50 text-blue-800 font-medium h-9 text-sm"
               />
             </div>
+          )}
 
-            {/* Action Buttons - Display based on offer status */}
-            <div>
-              {/* CASE 1: COUNTERED status - show side-by-side Accept Counter and Update Offer buttons */}
-              {offerStatus === "COUNTERED" ? (
-                <div className="grid grid-cols-2 gap-2">
-                  <Button
-                    type="button"
-                    className="w-full bg-[#324c48] text-[#FFF] hover:bg-[#324c48]/90 font-semibold"
-                    onClick={handleAcceptCounter}
-                    disabled={isAcceptingCounter}
-                  >
-                    {isAcceptingCounter ? "Accepting..." : "Accept Counter"}
-                  </Button>
+          {/* Buyer Message */}
+          <div>
+            <Label htmlFor="buyerMessage" className="text-sm text-[#050002] mb-1 block">
+              Message (Optional)
+            </Label>
+            <textarea
+              id="buyerMessage"
+              placeholder="Include any notes or questions about your offer"
+              value={buyerMessage}
+              onChange={(e) => setBuyerMessage(e.target.value)}
+              className="w-full min-h-[70px] p-2 text-sm rounded-md border border-input bg-background resize-y"
+              disabled={isFormDisabled()}
+            />
+          </div>
 
-                  <Button
-                    type="button"
-                    className="w-full bg-[#405025] text-[#FFF] hover:bg-[#405025]/90 font-semibold"
-                    onClick={() => {
-                      setActionType("counter");
-                      setNewOfferPrice("");
-                      setUpdateDialogOpen(true);
-                    }}
-                    disabled={isFormDisabled()}
-                  >
-                    Counter Offer
-                  </Button>
-                </div>
-              ) : offerStatus === "ACCEPTED" ? (
-                /* CASE 2: ACCEPTED status - show disabled accepted button */
+          {/* Action Buttons - Display based on offer status */}
+          <div className="pt-0">
+            {/* CASE 1: COUNTERED status - show side-by-side Accept Counter and Update Offer buttons */}
+            {offerStatus === "COUNTERED" ? (
+              <div className="grid grid-cols-2 gap-3">
                 <Button
                   type="button"
-                  className="w-full bg-green-600 text-[#FFF] hover:bg-green-600 font-semibold mt-4"
-                  disabled={true}
+                  className="w-full bg-[#324c48] text-[#FFF] hover:bg-[#324c48]/90 font-semibold text-sm h-9"
+                  onClick={handleAcceptCounter}
+                  disabled={isAcceptingCounter}
                 >
-                  Offer Accepted
+                  {isAcceptingCounter ? "Accepting..." : "Accept Counter"}
                 </Button>
-              ) : (
-                /* CASE 3: All other statuses (PENDING, REJECTED, EXPIRED or new offer) - show single submit/update button */
+
                 <Button
-                  type="submit"
-                  className="w-full bg-[#324c48] text-[#FFF] hover:bg-[#324c48]/90 font-semibold mt-4"
+                  type="button"
+                  className="w-full bg-[#405025] text-[#FFF] hover:bg-[#405025]/90 font-semibold text-sm h-9"
+                  onClick={() => {
+                    setActionType("counter");
+                    setNewOfferPrice("");
+                    setUpdateDialogOpen(true);
+                  }}
                   disabled={isFormDisabled()}
                 >
-                  {hasExistingOffer ? "Update Your Offer" : "Submit Offer"}
+                  Counter Offer
                 </Button>
-              )}
-            </div>
-          </form>
-          <div className="py-6">
-            <ContactCard />
+              </div>
+            ) : offerStatus === "ACCEPTED" ? (
+              /* CASE 2: ACCEPTED status - show disabled accepted button */
+              <Button
+                type="button"
+                className="w-full bg-green-600 text-[#FFF] hover:bg-green-600 font-semibold text-sm h-9 mt-1"
+                disabled={true}
+              >
+                Offer Accepted
+              </Button>
+            ) : (
+              /* CASE 3: All other statuses (PENDING, REJECTED, EXPIRED or new offer) - show single submit/update button */
+              <Button
+                type="submit"
+                className="w-full bg-[#324c48] text-[#FFF] hover:bg-[#324c48]/90 font-semibold text-sm h-9 mt-1"
+                disabled={isFormDisabled()}
+              >
+                {hasExistingOffer ? "Update Your Offer" : "Submit Offer"}
+              </Button>
+            )}
           </div>
-        </CardContent>
-      </Card>
+        </form>
+        <div className="py-2 mt-1">
+          <ContactCard />
+        </div>
+      </CardContent>
+    </Card>
 
-      {/* Dialog Notification */}
-      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent className="bg-[#FFF] text-[#050002] border border-[#405025]/30 shadow-lg">
-          <DialogHeader>
-            <DialogTitle
-              className={dialogType === "success" ? "text-green-600" : "text-red-600"}
-            >
-              {dialogType === "success" ? "Success" : "Warning"}
-            </DialogTitle>
-            <DialogDescription>{dialogMessage}</DialogDescription>
-          </DialogHeader>
-          <DialogFooter>
-            <Button
-              onClick={() => {
-                setDialogOpen(false);
-                if (dialogType === "success" && offerStatus === "ACCEPTED") {
-                  navigate("/properties");
-                }
-              }}
-              className="bg-[#324c48] text-[#FFF]"
-            >
-              Okay
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+    {/* Dialog Notification */}
+    <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+      <DialogContent className="bg-[#FFF] text-[#050002] border border-[#405025]/30 shadow-lg max-w-sm">
+        <DialogHeader className="pb-2">
+          <DialogTitle
+            className={dialogType === "success" ? "text-green-600" : "text-red-600"}
+          >
+            {dialogType === "success" ? "Success" : "Warning"}
+          </DialogTitle>
+          <DialogDescription>{dialogMessage}</DialogDescription>
+        </DialogHeader>
+        <DialogFooter>
+          <Button
+            onClick={() => {
+              setDialogOpen(false);
+              if (dialogType === "success" && offerStatus === "ACCEPTED") {
+                navigate("/properties");
+              }
+            }}
+            className="bg-[#324c48] text-[#FFF]"
+          >
+            Okay
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
 
-      {/* Update Offer Dialog */}
-      <Dialog open={updateDialogOpen} onOpenChange={setUpdateDialogOpen}>
-        <DialogContent className="bg-[#FFF] text-[#050002] border border-[#405025]/30 shadow-lg">
-          <DialogHeader>
-            <DialogTitle className="text-[#405025]">
-              {actionType === "counter"
-                ? "Respond to Counter Offer"
-                : "Update Your Offer"}
-            </DialogTitle>
-            <DialogDescription>
-              {actionType === "counter"
-                ? `The seller has countered with $${counteredPrice?.toLocaleString() || 0}. You can respond with a new offer.`
-                : `Your new offer must be higher than your previous offer of $${existingOffer?.offeredPrice?.toLocaleString() || "0"}.`}
-            </DialogDescription>
-          </DialogHeader>
-          <div className="py-4">
-            <Label htmlFor="newOfferPrice" className="text-sm text-[#050002]">
+    {/* Update Offer Dialog */}
+    <Dialog open={updateDialogOpen} onOpenChange={setUpdateDialogOpen}>
+      <DialogContent className="bg-[#FFF] text-[#050002] border border-[#405025]/30 shadow-lg max-w-sm">
+        <DialogHeader className="pb-2">
+          <DialogTitle className="text-[#405025]">
+            {actionType === "counter"
+              ? "Respond to Counter Offer"
+              : "Update Your Offer"}
+          </DialogTitle>
+          <DialogDescription className="text-sm">
+            {actionType === "counter"
+              ? `The seller has countered with $${counteredPrice?.toLocaleString() || 0}. You can respond with a new offer.`
+              : `Your new offer must be higher than your previous offer of $${existingOffer?.offeredPrice?.toLocaleString() || "0"}.`}
+          </DialogDescription>
+        </DialogHeader>
+        <div className="py-2 space-y-3">
+          <div>
+            <Label htmlFor="newOfferPrice" className="text-sm text-[#050002] mb-1 block">
               New Offer Price ($)
             </Label>
             <Input
@@ -948,38 +931,39 @@ export default function Offer({ propertyData }) {
                   setNewOfferPrice(value);
                 }
               }}
-              className="mt-1"
+              className="text-sm h-9"
             />
-            <div className="mt-4">
-              <Label htmlFor="updateMessage" className="text-sm text-[#050002]">
-                Message (Optional)
-              </Label>
-              <textarea
-                id="updateMessage"
-                placeholder="Include any notes about your updated offer..."
-                value={updateMessage}
-                onChange={(e) => setUpdateMessage(e.target.value)}
-                className="w-full min-h-[80px] p-2 rounded-md border border-input bg-background resize-y mt-1"
-              />
-            </div>
           </div>
-          <DialogFooter>
-            <Button
-              onClick={() => setUpdateDialogOpen(false)}
-              variant="outline"
-              className="mr-2"
-            >
-              Cancel
-            </Button>
-            <Button
-              onClick={handleUpdateFromDialog}
-              className="bg-[#324c48] text-[#FFF]"
-            >
-              Submit New Offer
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-    </div>
-  );
+          <div>
+            <Label htmlFor="updateMessage" className="text-sm text-[#050002] mb-1 block">
+              Message (Optional)
+            </Label>
+            <textarea
+              id="updateMessage"
+              placeholder="Include any notes about your updated offer..."
+              value={updateMessage}
+              onChange={(e) => setUpdateMessage(e.target.value)}
+              className="w-full min-h-[70px] p-2 text-sm rounded-md border border-input bg-background resize-y"
+            />
+          </div>
+        </div>
+        <DialogFooter className="flex justify-end space-x-2">
+          <Button
+            onClick={() => setUpdateDialogOpen(false)}
+            variant="outline"
+            className="text-sm"
+          >
+            Cancel
+          </Button>
+          <Button
+            onClick={handleUpdateFromDialog}
+            className="bg-[#324c48] text-[#FFF] text-sm"
+          >
+            Submit New Offer
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  </div>
+);
 }
