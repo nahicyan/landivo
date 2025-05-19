@@ -649,7 +649,12 @@ export const updateUserProfileWithFields = async (profileData) => {
 };
 
 
-// Get system settings
+// client/src/utils/api.js - Add/Update functions for email settings
+
+/**
+ * Get system settings
+ * @returns {Promise<Object>} Settings object
+ */
 export const getSystemSettings = async () => {
   try {
     const response = await api.get('/settings');
@@ -660,12 +665,31 @@ export const getSystemSettings = async () => {
   }
 };
 
-// Update system settings
+/**
+ * Update system settings
+ * @param {Object} settingsData - Settings data to update
+ * @returns {Promise<Object>} Updated settings
+ */
 export const updateSystemSettings = async (settingsData) => {
   try {
     const response = await api.put('/settings', settingsData);
     return response.data;
   } catch (error) {
     handleRequestError(error, "Failed to update system settings");
+  }
+};
+
+/**
+ * Test SMTP connection
+ * @param {Object} smtpData - SMTP connection details
+ * @returns {Promise<Object>} Response with success/failure message
+ */
+export const testSmtpConnection = async (smtpData) => {
+  try {
+    const response = await api.post('/settings/test-smtp', smtpData);
+    return response.data;
+  } catch (error) {
+    console.error("SMTP test failed:", error.response?.data || error);
+    throw error; // Rethrow to handle in the component
   }
 };

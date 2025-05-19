@@ -481,10 +481,24 @@ model PropertyRow {
   updatedAt    DateTime @updatedAt
 }
 
-//---------------------- Settings ----------------------//
 model Settings {
-  id                  String  @id @default(auto()) @map("_id") @db.ObjectId
-  overrideContactPhone String?
-  createdAt           DateTime @default(now())
-  updatedAt           DateTime @updatedAt
+  id                      String    @id @default(auto()) @map("_id") @db.ObjectId
+  overrideContactPhone    String?
+  
+  // SMTP Configuration
+  smtpServer              String?
+  smtpPort                String?
+  smtpUser                String?
+  smtpPassword            String?
+  
+  // Offer Email Notification Settings
+  enableOfferEmails       Boolean   @default(false)
+  offerEmailRecipients    String[]  @default([])
+  
+  // Financing Email Notification Settings
+  enableFinancingEmails   Boolean   @default(false)
+  financingEmailRecipients String[] @default([])
+  
+  createdAt               DateTime  @default(now())
+  updatedAt               DateTime  @updatedAt
 }
