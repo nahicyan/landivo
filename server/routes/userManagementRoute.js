@@ -15,7 +15,7 @@ import {
   getPropertiesCountByProfile,
   reassignProperties
 } from "../controllers/userManagementCntrl.js";
-
+import { jwtCheck, extractUserFromToken, checkPermissions } from "../middlewares/authMiddleware.js";
 const router = express.Router();
 
 // Routes with all auth checks removed
