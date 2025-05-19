@@ -115,7 +115,6 @@ const ProfileReassignmentModal = ({
                   </SelectContent>
                 </Select>
               </div>
-
               <div>
                 <h3 className="font-medium mb-2">Properties to be reassigned:</h3>
                 <div className="max-h-64 overflow-y-auto border rounded">
