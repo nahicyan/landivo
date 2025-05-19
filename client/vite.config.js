@@ -12,9 +12,11 @@ export default defineConfig({
     },
   },
   server: {
-    allowedHosts: ['landivo.com'],
-    host: true, // Set to true to listen on all addresses
-    port: 5173,
-    
+    hmr: {
+      // Fix for production deployment
+      host: 'landivo.com',
+      clientPort: 443, // HTTPS port
+      protocol: 'wss'
+    }
   }
 })
