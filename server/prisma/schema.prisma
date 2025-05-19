@@ -108,7 +108,7 @@ model Residency {
   zip           String
   latitude      Float // Latitude for geolocation
   longitude     Float // Longitude for geolocation
-  apnOrPin      String  @unique // APN/PIN must be unique
+  apnOrPin      String // @unique // APN/PIN must be unique
   direction     String?
   landId        Boolean @default(false)
   landIdLink    String?
@@ -229,7 +229,7 @@ model Buyer {
   source         String?
   preferredAreas String[]
   offers         Offer[]         @relation("BuyerOffers")
-  auth0Id        String?         
+  auth0Id        String?        // @unique // Link to Auth0 if the buyer is also a system user
   
   // Audit fields
   createdById    String?         @db.ObjectId

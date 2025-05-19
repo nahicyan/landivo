@@ -1,7 +1,8 @@
 // Updated client/src/pages/AdminSettings/AdminSettings.jsx
-// This replaces the Finance tab with System tab and adds phone override setting
+// This replaces the Finance tab with System tab and adds phone override setting with validation
 
 import React, { useState, useEffect } from "react";
+import { parsePhoneNumber } from "libphonenumber-js";
 import { 
   Tabs, 
   TabsContent, 
@@ -50,6 +51,7 @@ import { getSystemSettings, updateSystemSettings } from "@/utils/api";
 
 export default function AdminSettings() {
   const [isLoading, setIsLoading] = useState(false);
+  const [phoneError, setPhoneError] = useState(null);
   
   // Email settings form
   const emailForm = useForm({
@@ -104,6 +106,51 @@ export default function AdminSettings() {
     loadSettings();
   }, []);
 
+  // Phone number validation using libphonenumber-js
+  const validatePhone = (phoneInput) => {
+    if (!phoneInput) return true; // Allow empty
+    
+    try {
+      const phoneNumber = parsePhoneNumber(phoneInput, "US"); // "US" as default country code
+      return phoneNumber?.isValid();
+    } catch (error) {
+      console.error("Phone validation error:", error);
+      return false;
+    }
+  };
+
+  // Format phone number as user types
+  const formatPhoneNumber = (input) => {
+    if (!input) return '';
+    
+    // Strip all non-numeric characters
+    const digitsOnly = input.replace(/\D/g, '');
+    
+    // Format the number as user types
+    let formattedNumber = '';
+    if (digitsOnly.length === 0) {
+      return '';
+    } else if (digitsOnly.length <= 3) {
+      formattedNumber = digitsOnly;
+    } else if (digitsOnly.length <= 6) {
+      formattedNumber = `(${digitsOnly.slice(0, 3)}) ${digitsOnly.slice(3)}`;
+    } else {
+      formattedNumber = `(${digitsOnly.slice(0, 3)}) ${digitsOnly.slice(3, 6)}-${digitsOnly.slice(6, Math.min(10, digitsOnly.length))}`;
+    }
+    
+    return formattedNumber;
+  };
+
+  const handlePhoneChange = (e) => {
+    const formatted = formatPhoneNumber(e.target.value);
+    systemForm.setValue("overrideContactPhone", formatted);
+    
+    // Clear error if field is empty or valid
+    if (!formatted || validatePhone(formatted)) {
+      setPhoneError(null);
+    }
+  };
+
   const onEmailSubmit = (data) => {
     setIsLoading(true);
     
@@ -127,6 +174,12 @@ export default function AdminSettings() {
   };
 
   const onSystemSubmit = async (data) => {
+    // Validate phone number before submission
+    if (data.overrideContactPhone && !validatePhone(data.overrideContactPhone)) {
+      setPhoneError("Please enter a valid US phone number");
+      return;
+    }
+    
     setIsLoading(true);
     
     try {
@@ -402,9 +455,14 @@ export default function AdminSettings() {
                           <FormControl>
                             <Input 
                               placeholder="(555) 123-4567" 
-                              {...field} 
+                              {...field}
+                              onChange={handlePhoneChange}
+                              className={phoneError ? "border-red-500 focus:ring-red-500" : ""}
                             />
                           </FormControl>
+                          {phoneError && (
+                            <div className="text-red-500 text-sm mt-1">{phoneError}</div>
+                          )}
                           <FormDescription>
                             If set, this phone number will be displayed for all contact profiles
                             instead of their individual numbers. Leave empty to use individual profile numbers.
