@@ -229,7 +229,7 @@ model Buyer {
   source         String?
   preferredAreas String[]
   offers         Offer[]         @relation("BuyerOffers")
-  auth0Id        String?         @unique // Link to Auth0 if the buyer is also a system user
+  auth0Id        String?         
   
   // Audit fields
   createdById    String?         @db.ObjectId
