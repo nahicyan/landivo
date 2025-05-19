@@ -1,17 +1,17 @@
 import React, { useState } from "react";
-import { useForm } from "react-hook-form";
+import { useForm, Form } from "react-hook-form"; // Import Form if needed
 import { toast } from "react-toastify";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
-import { FormControl, FormDescription, FormItem, FormLabel } from "@/components/ui/form";
+import { Form as UIForm, FormControl, FormDescription, FormField, FormItem, FormLabel } from "@/components/ui/form"; // Import the UI Form component
 import { DatabaseIcon } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 
 export default function DatabaseOperations() {
   const [isLoading, setIsLoading] = useState(false);
   
-  const maintenanceForm = useForm({
+  const form = useForm({
     defaultValues: {
       backupLocation: "/var/backups/mongodb"
     }
@@ -41,18 +41,23 @@ export default function DatabaseOperations() {
       </CardHeader>
       <CardContent>
         <div className="space-y-6">
-          <FormItem>
-            <FormLabel>Backup Location</FormLabel>
-            <FormControl>
-              <Input 
-                {...maintenanceForm.register("backupLocation")} 
-                defaultValue="/var/backups/mongodb"
-              />
-            </FormControl>
-            <FormDescription>
-              Directory path for database backups
-            </FormDescription>
-          </FormItem>
+          <UIForm {...form}>
+            <FormField
+              control={form.control}
+              name="backupLocation"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Backup Location</FormLabel>
+                  <FormControl>
+                    <Input {...field} />
+                  </FormControl>
+                  <FormDescription>
+                    Directory path for database backups
+                  </FormDescription>
+                </FormItem>
+              )}
+            />
+          </UIForm>
 
           <Separator className="my-4" />
 
