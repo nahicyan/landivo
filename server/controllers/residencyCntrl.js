@@ -699,8 +699,6 @@ export const createResidencyWithMultipleFiles = asyncHandler(async (req, res) =>
       // CMA fields
       hasCma,
       cmaData,
-      // Profile
-      profileId,
 
     } = req.body;
 
