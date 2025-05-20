@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { parsePhoneNumber } from 'libphonenumber-js';
 import { Button } from '@/components/ui/button';
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
@@ -25,6 +26,69 @@ const ProfileDetails = ({
 }) => {
   const [previewImage, setPreviewImage] = useState(null);
   const [imageMarkedForRemoval, setImageMarkedForRemoval] = useState(false);
+  const [phoneError, setPhoneError] = useState(null);
+
+  // Phone number validation using libphonenumber-js
+  const validatePhone = (phoneInput) => {
+    if (!phoneInput) return true; // Allow empty
+    
+    try {
+      const phoneNumber = parsePhoneNumber(phoneInput, "US"); // "US" as default country code
+      return phoneNumber?.isValid();
+    } catch (error) {
+      console.error("Phone validation error:", error);
+      return false;
+    }
+  };
+
+  // Format phone number as user types
+  const formatPhoneNumber = (input) => {
+    if (!input) return '';
+    
+    // Strip all non-numeric characters
+    const digitsOnly = input.replace(/\D/g, '');
+    
+    // Format the number as user types
+    let formattedNumber = '';
+    if (digitsOnly.length === 0) {
+      return '';
+    } else if (digitsOnly.length <= 3) {
+      formattedNumber = digitsOnly;
+    } else if (digitsOnly.length <= 6) {
+      formattedNumber = `(${digitsOnly.slice(0, 3)}) ${digitsOnly.slice(3)}`;
+    } else {
+      formattedNumber = `(${digitsOnly.slice(0, 3)}) ${digitsOnly.slice(3, 6)}-${digitsOnly.slice(6, Math.min(10, digitsOnly.length))}`;
+    }
+    
+    return formattedNumber;
+  };
+
+  // Handle phone number change with formatting
+  const handlePhoneChange = (e) => {
+    const formatted = formatPhoneNumber(e.target.value);
+    setProfileData({ ...profileData, phone: formatted });
+    
+    // Clear error if field is empty or valid
+    if (!formatted || validatePhone(formatted)) {
+      setPhoneError(null);
+    } else {
+      setPhoneError("Please enter a valid US phone number");
+    }
+  };
+
+  // Extended form submission handler that validates the phone first
+  const handleFormSubmit = (e) => {
+    e.preventDefault();
+    
+    // Validate phone number before submission
+    if (profileData.phone && !validatePhone(profileData.phone)) {
+      setPhoneError("Please enter a valid US phone number");
+      return;
+    }
+    
+    // If phone is valid, proceed with the original submission
+    handleSubmit(e);
+  };
 
   // Handle file selection
   const onFileChange = (e) => {
@@ -69,7 +133,7 @@ const ProfileDetails = ({
   return (
     <div className="space-y-5">
       {isEditing ? (
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <form onSubmit={handleFormSubmit} className="space-y-4">
           {/* Image Upload */}
           <div className="flex flex-col space-y-1">
             <Label htmlFor="avatar" className="text-sm font-medium text-text-500">Profile Picture</Label>
@@ -154,17 +218,23 @@ const ProfileDetails = ({
             />
           </div>
 
-          {/* Phone Number field */}
+          {/* Phone Number field - Updated with formatting and validation */}
           <div>
             <Label htmlFor="phone" className="text-sm font-medium text-text-500">Phone Number</Label>
             <Input
               id="phone"
               name="phone"
               value={profileData.phone || ''}
-              onChange={(e) => setProfileData({ ...profileData, phone: e.target.value })}
-              className="mt-1"
-              placeholder="Enter phone number"
+              onChange={handlePhoneChange}
+              className={`mt-1 ${phoneError ? "border-red-500 focus:ring-red-500" : ""}`}
+              placeholder="(555) 123-4567"
             />
+            {phoneError && (
+              <div className="text-red-500 text-sm mt-1">{phoneError}</div>
+            )}
+            <p className="text-xs text-gray-500 mt-1">
+              U.S. format: (123) 456-7890
+            </p>
           </div>
 
           {/* Profile Role field */}
@@ -184,7 +254,7 @@ const ProfileDetails = ({
             <Button
               type="submit"
               className="bg-[#000] hover:[#030001]"
-              disabled={isSubmitting}
+              disabled={isSubmitting || !!phoneError}
             >
               {isSubmitting ? "Saving..." : "Save Profile"}
             </Button>
@@ -192,7 +262,10 @@ const ProfileDetails = ({
             <Button
               type="button"
               variant="outline"
-              onClick={() => setIsEditing(false)}
+              onClick={() => {
+                setIsEditing(false);
+                setPhoneError(null);
+              }}
               disabled={isSubmitting}
             >
               Cancel
