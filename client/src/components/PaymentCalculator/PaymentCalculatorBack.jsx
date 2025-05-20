@@ -330,525 +330,541 @@ export default function PaymentCalculatorBack({ formData, handleChange }) {
     formData.downPaymentThreeSource,
   ]);
 
-  return (
+return (
     <Card className="border border-gray-200 shadow-sm rounded-lg w-full">
       <CardHeader>
         <CardTitle className="text-2xl font-bold text-gray-800">
           Landivo Payment Calculator v0.0.0.3
         </CardTitle>
       </CardHeader>
-      <CardContent className="space-y-4">
-        {/* ------------------- Row 1 ------------------- */}
-        <div className="grid grid-cols-1 gap-2 md:grid-cols-4">
-          {/* Asking Price (display-only) */}
-          <div>
-            <Label className="block text-sm font-semibold text-gray-700 mb-1">
-              Asking Price
-            </Label>
-            <Input
-              type="text"
-              readOnly
-              value={formData.askingPrice}
-              className="w-full bg-gray-100 text-gray-600"
-            />
+      <CardContent className="space-y-6">
+        {/* ------------------- Top Section (DARKER TEAL THEME - #5d8a87) ------------------- */}
+        <div className="p-4 bg-[#e0efee] border border-[#85a8a6] rounded-lg">
+          {/* ------------------- Row 1 ------------------- */}
+          <div className="grid grid-cols-1 gap-2 md:grid-cols-4">
+            {/* Asking Price (display-only) */}
+            <div>
+              <Label className="block text-sm font-semibold text-[#3a6361] mb-1">
+                Asking Price
+              </Label>
+              <Input
+                type="text"
+                readOnly
+                value={formData.askingPrice}
+                className="w-full bg-[#cce1e0] text-[#294847]"
+              />
+            </div>
+            {/* Financing Price */}
+            <div>
+              <Label htmlFor="financingPrice" className="block text-sm font-semibold text-[#3a6361] mb-1">
+                Financing Price
+              </Label>
+              <Input
+                id="financingPrice"
+                name="financingPrice"
+                type="text"
+                placeholder="Enter financing price"
+                value={formData.financingPrice}
+                onChange={handleCurrencyInputChange}
+                onBlur={handleCurrencyBlur}
+                className="w-full border-[#85a8a6] focus:border-[#5d8a87]"
+              />
+            </div>
+            {/* Purchase Price */}
+            <div>
+              <Label htmlFor="purchasePrice" className="block text-sm font-semibold text-[#3a6361] mb-1">
+                Purchase Price (Optional)
+              </Label>
+              <Input
+                id="purchasePrice"
+                name="purchasePrice"
+                type="text"
+                placeholder="Enter purchase price"
+                value={formData.purchasePrice}
+                onChange={handleCurrencyInputChange}
+                className="w-full border-[#85a8a6]"
+              />
+            </div>
+            {/* Sort Options Dropdown */}
+            <div>
+              <Label className="block text-sm font-semibold text-[#3a6361] mb-1">
+                Sort Plans By
+              </Label>
+              <Select 
+                value={sortOption}
+                onValueChange={handleSortOptionChange}
+              >
+                <SelectTrigger className="w-full border-[#85a8a6]">
+                  <SelectValue placeholder="Select sort option" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="highToLowMonthly">Monthly High to Low </SelectItem>
+                  <SelectItem value="lowToHighMonthly">Monthly Low to High</SelectItem>
+                  <SelectItem value="highToLowDown">Down Payment High to Low</SelectItem>
+                  <SelectItem value="lowToHighDown">Down Payment Low to High</SelectItem>
+                  <SelectItem value="highToLowInterest">Interest High to Low</SelectItem>
+                  <SelectItem value="lowToHighInterest">Interest Low to High</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
           </div>
-          {/* Financing Price */}
-          <div>
-            <Label htmlFor="financingPrice" className="block text-sm font-semibold text-gray-700 mb-1">
-              Financing Price
-            </Label>
-            <Input
-              id="financingPrice"
-              name="financingPrice"
-              type="text"
-              placeholder="Enter financing price"
-              value={formData.financingPrice}
-              onChange={handleCurrencyInputChange}
-              onBlur={handleCurrencyBlur}
-              className="w-full"
-            />
-          </div>
-          {/* Purchase Price */}
-          <div>
-            <Label htmlFor="purchasePrice" className="block text-sm font-semibold text-gray-700 mb-1">
-              Purchase Price (Optional)
-            </Label>
-            <Input
-              id="purchasePrice"
-              name="purchasePrice"
-              type="text"
-              placeholder="Enter purchase price"
-              value={formData.purchasePrice}
-              onChange={handleCurrencyInputChange}
-              className="w-full"
-            />
-          </div>
-          {/* Sort Options Dropdown */}
-          <div>
-            <Label className="block text-sm font-semibold text-gray-700 mb-1">
-              Sort Plans By
-            </Label>
-            <Select 
-              value={sortOption}
-              onValueChange={handleSortOptionChange}
-            >
-              <SelectTrigger className="w-full">
-                <SelectValue placeholder="Select sort option" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="highToLowMonthly">Monthly High to Low </SelectItem>
-                <SelectItem value="lowToHighMonthly">Monthly Low to High</SelectItem>
-                <SelectItem value="highToLowDown">Down Payment High to Low</SelectItem>
-                <SelectItem value="lowToHighDown">Down Payment Low to High</SelectItem>
-                <SelectItem value="highToLowInterest">Interest High to Low</SelectItem>
-                <SelectItem value="lowToHighInterest">Interest Low to High</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-        </div>
 
-        {/* ------------------- Row 2 ------------------- */}
-        <div className="grid grid-cols-1 gap-2 md:grid-cols-4">
-           {/* Service Fee */}
-           <div>
-            <Label htmlFor="serviceFee" className="block text-sm font-semibold text-gray-700 mb-1">
-              Service Fee
-            </Label>
-            <Input
-              id="serviceFee"
-              name="serviceFee"
-              type="text"
-              placeholder="Service fee"
-              value={formData.serviceFee}
-              onChange={handleCurrencyInputChange}
-              className="w-full"
-            />
+          {/* ------------------- Row 2 ------------------- */}
+          <div className="grid grid-cols-1 gap-2 md:grid-cols-4 mt-3">
+            {/* Service Fee */}
+            <div>
+              <Label htmlFor="serviceFee" className="block text-sm font-semibold text-[#3a6361] mb-1">
+                Service Fee
+              </Label>
+              <Input
+                id="serviceFee"
+                name="serviceFee"
+                type="text"
+                placeholder="Service fee"
+                value={formData.serviceFee}
+                onChange={handleCurrencyInputChange}
+                className="w-full border-[#85a8a6]"
+              />
+            </div>
+            {/* Tax */}
+            <div>
+              <Label className="block text-sm font-semibold text-[#3a6361] mb-1">
+                Yearly Tax
+              </Label>
+              <Input
+                type="text"
+                readOnly
+                value={formData.tax}
+                className="w-full bg-[#cce1e0] text-[#294847]"
+              />
+            </div>
+            {/* HOA Monthly */}
+            <div>
+              <Label className="block text-sm font-semibold text-[#3a6361] mb-1">
+                HOA Monthly Fee
+              </Label>
+              <Input
+                type="text"
+                readOnly
+                value={formData.hoaMonthly}
+                className="w-full bg-[#cce1e0] text-[#294847]"
+              />
+            </div>
+            {/* Term Display (in Years + Months) */}
+            <div>
+              <Label className="block text-sm font-semibold text-[#3a6361] mb-1">
+                Term
+              </Label>
+              <Input
+                type="text"
+                readOnly
+                value={formatTerm(formData.term)}
+                className="w-full bg-[#cce1e0] text-[#294847]"
+              />
+            </div>
           </div>
-          {/* Tax */}
-          <div>
-            <Label className="block text-sm font-semibold text-gray-700 mb-1">
-              Yearly Tax
-            </Label>
-            <Input
-              type="text"
-              readOnly
-              value={formData.tax}
-              className="w-full bg-gray-100 text-gray-600"
-            />
-          </div>
-          {/* HOA Monthly */}
-          <div>
-            <Label className="block text-sm font-semibold text-gray-700 mb-1">
-              HOA Monthly Fee
-            </Label>
-            <Input
-              type="text"
-              readOnly
-              value={formData.hoaMonthly}
-              className="w-full bg-gray-100 text-gray-600"
-            />
-          </div>
-          {/* Term Display (in Years + Months) */}
-          <div>
-            <Label className="block text-sm font-semibold text-gray-700 mb-1">
-              Term
-            </Label>
-            <Input
-              type="text"
-              readOnly
-              value={formatTerm(formData.term)}
-              className="w-full bg-gray-100 text-gray-600"
-            />
-          </div>
-        </div>
 
-        {/* ------------------- Row 3: Term Slider ------------------- */}
-        <div className="grid grid-cols-1 gap-4">
-          <div>
-            <Label className="block text-sm font-semibold text-gray-700 mb-2">
-              Term Slider (Months)
-            </Label>
-            <Slider
-              value={[Number(formData.term) || 1]}
-              min={1}
-              max={360}
-              step={1}
-              onValueChange={(val) => {
-                handleSliderChange("term", val);
-              }}
-            />
-            <p className="text-xs text-gray-500 mt-2">
-              Currently: {formData.term} month{Number(formData.term) > 1 ? "s" : ""}
-            </p>
+          {/* ------------------- Row 3: Term Slider ------------------- */}
+          <div className="grid grid-cols-1 gap-4 mt-3">
+            <div>
+              <Label className="block text-sm font-semibold text-[#3a6361] mb-2">
+                Term Slider (Months)
+              </Label>
+              <Slider
+                value={[Number(formData.term) || 1]}
+                min={1}
+                max={360}
+                step={1}
+                onValueChange={(val) => {
+                  handleSliderChange("term", val);
+                }}
+                className="bg-[#85a8a6]"
+              />
+              <p className="text-xs text-[#3a6361] mt-2">
+                Currently: {formData.term} month{Number(formData.term) > 1 ? "s" : ""}
+              </p>
+            </div>
           </div>
         </div>
 
         {/* ============================================================
-            PLAN 1
+            PLAN 1 - SALMON THEME (#EF9C66)
             (Now Row 4 & Row 5)
         ============================================================ */}
-        {/* ------------------- Row 4: Plan 1 Details ------------------- */}
-        <div className="grid grid-cols-1 gap-2 md:grid-cols-4">
-          {/* Down Payment (Plan 1) */}
-          <div>
-            <Label htmlFor="downPaymentOne" className="block text-sm font-semibold text-gray-700 mb-1">
-              Down Payment (Plan 1)
-            </Label>
-            <Input
-              id="downPaymentOne"
-              name="downPaymentOne"
-              type="text"
-              placeholder="Enter down payment"
-              value={formData.downPaymentOne}
-              onChange={(e) => handleDownPaymentChange("One", e)}
-              onBlur={() => handleDownPaymentBlur("One")}
-              className="w-full"
-            />
+        <div className="p-4 bg-[#fdf1ea] border-l-4 border-[#EF9C66] rounded-lg">
+          <h3 className="text-lg font-bold text-[#c97745] mb-3">Payment Plan 1</h3>
+          {/* ------------------- Row 4: Plan 1 Details ------------------- */}
+          <div className="grid grid-cols-1 gap-2 md:grid-cols-4">
+            {/* Down Payment (Plan 1) */}
+            <div>
+              <Label htmlFor="downPaymentOne" className="block text-sm font-semibold text-[#c97745] mb-1">
+                Down Payment (Plan 1)
+              </Label>
+              <Input
+                id="downPaymentOne"
+                name="downPaymentOne"
+                type="text"
+                placeholder="Enter down payment"
+                value={formData.downPaymentOne}
+                onChange={(e) => handleDownPaymentChange("One", e)}
+                onBlur={() => handleDownPaymentBlur("One")}
+                className="w-full border-[#f7cdb3] focus:border-[#EF9C66]"
+              />
+            </div>
+            {/* Down Payment Selector (Plan 1) */}
+            <div>
+              <Label className="block text-sm font-semibold text-[#c97745] mb-1">
+                Down Payment % (Plan 1)
+              </Label>
+              <Select
+                value={formData.downPaymentOnePercent}
+                onValueChange={(val) => {
+                  handleSelectChange("downPaymentOnePercent", val);
+                  handleSelectChange("downPaymentOneSource", "selector");
+                }}
+              >
+                <SelectTrigger className="w-full border-[#f7cdb3] bg-white">
+                  <SelectValue placeholder="Select %" />
+                </SelectTrigger>
+                <SelectContent>
+                  {[...Array(19)].map((_, i) => {
+                    const percent = 5 + i * 5;
+                    return (
+                      <SelectItem key={percent} value={String(percent)}>
+                        {percent}% (
+                        {formatCurrency((parseCurrencyToNumber(formData.financingPrice) || 0) * (percent / 100))}
+                        )
+                      </SelectItem>
+                    );
+                  })}
+                </SelectContent>
+              </Select>
+            </div>
+            {/* Loan Amount (Plan 1) */}
+            <div>
+              <Label className="block text-sm font-semibold text-[#c97745] mb-1">
+                Loan Amount (Plan 1)
+              </Label>
+              <Input
+                type="text"
+                readOnly
+                value={formData.loanAmountOne}
+                className="w-full bg-[#fae6d9] text-[#c97745]"
+              />
+            </div>
+            {/* Interest Rate (Plan 1) */}
+            <div>
+              <Label className="block text-sm font-semibold text-[#c97745] mb-1">
+                Interest Rate (Plan 1)
+              </Label>
+              <Select
+                value={formData.interestOne}
+                onValueChange={(val) => handleSelectChange("interestOne", val)}
+              >
+                <SelectTrigger className="w-full border-[#f7cdb3] bg-white">
+                  <SelectValue placeholder="Select Rate" />
+                </SelectTrigger>
+                <SelectContent>
+                  {[...Array(11)].map((_, i) => {
+                    const rate = (4.99 + i).toFixed(2);
+                    return (
+                      <SelectItem key={rate} value={rate}>
+                        {rate}%
+                      </SelectItem>
+                    );
+                  })}
+                </SelectContent>
+              </Select>
+            </div>
           </div>
-          {/* Down Payment Selector (Plan 1) */}
-          <div>
-            <Label className="block text-sm font-semibold text-gray-700 mb-1">
-              Down Payment % (Plan 1)
-            </Label>
-            <Select
-              value={formData.downPaymentOnePercent}
-              onValueChange={(val) => {
-                handleSelectChange("downPaymentOnePercent", val);
-                handleSelectChange("downPaymentOneSource", "selector");
-              }}
-            >
-              <SelectTrigger className="w-full">
-                <SelectValue placeholder="Select %" />
-              </SelectTrigger>
-              <SelectContent>
-                {[...Array(19)].map((_, i) => {
-                  const percent = 5 + i * 5;
-                  return (
-                    <SelectItem key={percent} value={String(percent)}>
-                      {percent}% (
-                      {formatCurrency((parseCurrencyToNumber(formData.financingPrice) || 0) * (percent / 100))}
-                      )
-                    </SelectItem>
-                  );
-                })}
-              </SelectContent>
-            </Select>
-          </div>
-          {/* Loan Amount (Plan 1) */}
-          <div>
-            <Label className="block text-sm font-semibold text-gray-700 mb-1">
-              Loan Amount (Plan 1)
-            </Label>
-            <Input
-              type="text"
-              readOnly
-              value={formData.loanAmountOne}
-              className="w-full bg-gray-100"
-            />
-          </div>
-          {/* Interest Rate (Plan 1) */}
-          <div>
-            <Label className="block text-sm font-semibold text-gray-700 mb-1">
-              Interest Rate (Plan 1)
-            </Label>
-            <Select
-              value={formData.interestOne}
-              onValueChange={(val) => handleSelectChange("interestOne", val)}
-            >
-              <SelectTrigger className="w-full">
-                <SelectValue placeholder="Select Rate" />
-              </SelectTrigger>
-              <SelectContent>
-                {[...Array(11)].map((_, i) => {
-                  const rate = (4.99 + i).toFixed(2);
-                  return (
-                    <SelectItem key={rate} value={rate}>
-                      {rate}%
-                    </SelectItem>
-                  );
-                })}
-              </SelectContent>
-            </Select>
-          </div>
-        </div>
-        {/* ------------------- Row 5: Plan 1 Slider & Monthly Payment ------------------- */}
-        <div className="grid grid-cols-4 gap-4">
-          {/* Slider (3/4 width) */}
-          <div className="col-span-3">
-            <Label className="block text-sm font-semibold text-gray-700 mb-2">
-              Down Payment vs. Loan Amount (Plan 1)
-            </Label>
-            <Slider
-              value={[Number(formData.downPaymentOneSlider) || 1]}
-              min={0.5}
-              max={99.5}
-              step={0.5}
-              onValueChange={(val) => {
-                handleSliderChange("downPaymentOneSlider", val);
-                handleSelectChange("downPaymentOneSource", "slider");
-              }}
-            />
-            <p className="text-xs text-gray-500 mt-2">
-              Currently: {formData.downPaymentOneSlider || 1}%
-            </p>
-          </div>
-          {/* Monthly Payment (1/4 width) */}
-          <div className="col-span-1">
-            <Label className="block text-sm font-semibold text-gray-700 mb-1">
-              Monthly Payment (Plan 1)
-            </Label>
-            <Input
-              type="text"
-              readOnly
-              value={formData.monthlyPaymentOne}
-              className="w-full bg-gray-100"
-            />
+          {/* ------------------- Row 5: Plan 1 Slider & Monthly Payment ------------------- */}
+          <div className="grid grid-cols-4 gap-4 mt-4">
+            {/* Slider (3/4 width) */}
+            <div className="col-span-3">
+              <Label className="block text-sm font-semibold text-[#c97745] mb-2">
+                Down Payment vs. Loan Amount (Plan 1)
+              </Label>
+              <Slider
+                value={[Number(formData.downPaymentOneSlider) || 1]}
+                min={0.5}
+                max={99.5}
+                step={0.5}
+                onValueChange={(val) => {
+                  handleSliderChange("downPaymentOneSlider", val);
+                  handleSelectChange("downPaymentOneSource", "slider");
+                }}
+                className="bg-[#f7cdb3]"
+              />
+              <p className="text-xs text-[#c97745] mt-2">
+                Currently: {formData.downPaymentOneSlider || 1}%
+              </p>
+            </div>
+            {/* Monthly Payment (1/4 width) */}
+            <div className="col-span-1">
+              <Label className="block text-sm font-semibold text-[#c97745] mb-1">
+                Monthly Payment (Plan 1)
+              </Label>
+              <Input
+                type="text"
+                readOnly
+                value={formData.monthlyPaymentOne}
+                className="w-full bg-[#fae6d9] text-[#c97745] font-semibold"
+              />
+            </div>
           </div>
         </div>
 
         {/* ============================================================
-            PLAN 2
+            PLAN 2 - SAGE THEME (#C8CFA0)
             (Now Row 6 & Row 7)
         ============================================================ */}
-        {/* ------------------- Row 6: Plan 2 Details ------------------- */}
-        <div className="grid grid-cols-1 gap-2 md:grid-cols-4">
-          {/* Down Payment (Plan 2) */}
-          <div>
-            <Label htmlFor="downPaymentTwo" className="block text-sm font-semibold text-gray-700 mb-1">
-              Down Payment (Plan 2)
-            </Label>
-            <Input
-              id="downPaymentTwo"
-              name="downPaymentTwo"
-              type="text"
-              placeholder="Enter down payment"
-              value={formData.downPaymentTwo}
-              onChange={(e) => handleDownPaymentChange("Two", e)}
-              onBlur={() => handleDownPaymentBlur("Two")}
-              className="w-full"
-            />
+        <div className="p-4 bg-[#f6f7ed] border-l-4 border-[#C8CFA0] rounded-lg">
+          <h3 className="text-lg font-bold text-[#7a8062] mb-3">Payment Plan 2</h3>
+          {/* ------------------- Row 6: Plan 2 Details ------------------- */}
+          <div className="grid grid-cols-1 gap-2 md:grid-cols-4">
+            {/* Down Payment (Plan 2) */}
+            <div>
+              <Label htmlFor="downPaymentTwo" className="block text-sm font-semibold text-[#7a8062] mb-1">
+                Down Payment (Plan 2)
+              </Label>
+              <Input
+                id="downPaymentTwo"
+                name="downPaymentTwo"
+                type="text"
+                placeholder="Enter down payment"
+                value={formData.downPaymentTwo}
+                onChange={(e) => handleDownPaymentChange("Two", e)}
+                onBlur={() => handleDownPaymentBlur("Two")}
+                className="w-full border-[#dde3c0] focus:border-[#C8CFA0]"
+              />
+            </div>
+            {/* Down Payment Selector (Plan 2) */}
+            <div>
+              <Label className="block text-sm font-semibold text-[#7a8062] mb-1">
+                Down Payment % (Plan 2)
+              </Label>
+              <Select
+                value={formData.downPaymentTwoPercent}
+                onValueChange={(val) => {
+                  handleSelectChange("downPaymentTwoPercent", val);
+                  handleSelectChange("downPaymentTwoSource", "selector");
+                }}
+              >
+                <SelectTrigger className="w-full border-[#dde3c0] bg-white">
+                  <SelectValue placeholder="Select %" />
+                </SelectTrigger>
+                <SelectContent>
+                  {[...Array(19)].map((_, i) => {
+                    const percent = 5 + i * 5;
+                    return (
+                      <SelectItem key={percent} value={String(percent)}>
+                        {percent}% (
+                        {formatCurrency((parseCurrencyToNumber(formData.financingPrice) || 0) * (percent / 100))}
+                        )
+                      </SelectItem>
+                    );
+                  })}
+                </SelectContent>
+              </Select>
+            </div>
+            {/* Loan Amount (Plan 2) */}
+            <div>
+              <Label className="block text-sm font-semibold text-[#7a8062] mb-1">
+                Loan Amount (Plan 2)
+              </Label>
+              <Input
+                type="text"
+                readOnly
+                value={formData.loanAmountTwo}
+                className="w-full bg-[#eceed9] text-[#7a8062]"
+              />
+            </div>
+            {/* Interest Rate (Plan 2) */}
+            <div>
+              <Label className="block text-sm font-semibold text-[#7a8062] mb-1">
+                Interest Rate (Plan 2)
+              </Label>
+              <Select
+                value={formData.interestTwo}
+                onValueChange={(val) => handleSelectChange("interestTwo", val)}
+              >
+                <SelectTrigger className="w-full border-[#dde3c0] bg-white">
+                  <SelectValue placeholder="Select Rate" />
+                </SelectTrigger>
+                <SelectContent>
+                  {[...Array(11)].map((_, i) => {
+                    const rate = (4.99 + i).toFixed(2);
+                    return (
+                      <SelectItem key={rate} value={rate}>
+                        {rate}%
+                      </SelectItem>
+                    );
+                  })}
+                </SelectContent>
+              </Select>
+            </div>
           </div>
-          {/* Down Payment Selector (Plan 2) */}
-          <div>
-            <Label className="block text-sm font-semibold text-gray-700 mb-1">
-              Down Payment % (Plan 2)
-            </Label>
-            <Select
-              value={formData.downPaymentTwoPercent}
-              onValueChange={(val) => {
-                handleSelectChange("downPaymentTwoPercent", val);
-                handleSelectChange("downPaymentTwoSource", "selector");
-              }}
-            >
-              <SelectTrigger className="w-full">
-                <SelectValue placeholder="Select %" />
-              </SelectTrigger>
-              <SelectContent>
-                {[...Array(19)].map((_, i) => {
-                  const percent = 5 + i * 5;
-                  return (
-                    <SelectItem key={percent} value={String(percent)}>
-                      {percent}% (
-                      {formatCurrency((parseCurrencyToNumber(formData.financingPrice) || 0) * (percent / 100))}
-                      )
-                    </SelectItem>
-                  );
-                })}
-              </SelectContent>
-            </Select>
-          </div>
-          {/* Loan Amount (Plan 2) */}
-          <div>
-            <Label className="block text-sm font-semibold text-gray-700 mb-1">
-              Loan Amount (Plan 2)
-            </Label>
-            <Input
-              type="text"
-              readOnly
-              value={formData.loanAmountTwo}
-              className="w-full bg-gray-100"
-            />
-          </div>
-          {/* Interest Rate (Plan 2) */}
-          <div>
-            <Label className="block text-sm font-semibold text-gray-700 mb-1">
-              Interest Rate (Plan 2)
-            </Label>
-            <Select
-              value={formData.interestTwo}
-              onValueChange={(val) => handleSelectChange("interestTwo", val)}
-            >
-              <SelectTrigger className="w-full">
-                <SelectValue placeholder="Select Rate" />
-              </SelectTrigger>
-              <SelectContent>
-                {[...Array(11)].map((_, i) => {
-                  const rate = (4.99 + i).toFixed(2);
-                  return (
-                    <SelectItem key={rate} value={rate}>
-                      {rate}%
-                    </SelectItem>
-                  );
-                })}
-              </SelectContent>
-            </Select>
-          </div>
-        </div>
-        {/* ------------------- Row 7: Plan 2 Slider & Monthly Payment ------------------- */}
-        <div className="grid grid-cols-4 gap-4">
-          {/* Slider (3/4 width) */}
-          <div className="col-span-3">
-            <Label className="block text-sm font-semibold text-gray-700 mb-2">
-              Down Payment vs. Loan Amount (Plan 2)
-            </Label>
-            <Slider
-              value={[Number(formData.downPaymentTwoSlider) || 1]}
-              min={0.5}
-              max={99.5}
-              step={0.5}
-              onValueChange={(val) => {
-                handleSliderChange("downPaymentTwoSlider", val);
-                handleSelectChange("downPaymentTwoSource", "slider");
-              }}
-            />
-            <p className="text-xs text-gray-500 mt-2">
-              Currently: {formData.downPaymentTwoSlider || 1}%
-            </p>
-          </div>
-          {/* Monthly Payment (1/4 width) */}
-          <div className="col-span-1">
-            <Label className="block text-sm font-semibold text-gray-700 mb-1">
-              Monthly Payment (Plan 2)
-            </Label>
-            <Input
-              type="text"
-              readOnly
-              value={formData.monthlyPaymentTwo}
-              className="w-full bg-gray-100"
-            />
+          {/* ------------------- Row 7: Plan 2 Slider & Monthly Payment ------------------- */}
+          <div className="grid grid-cols-4 gap-4 mt-4">
+            {/* Slider (3/4 width) */}
+            <div className="col-span-3">
+              <Label className="block text-sm font-semibold text-[#7a8062] mb-2">
+                Down Payment vs. Loan Amount (Plan 2)
+              </Label>
+              <Slider
+                value={[Number(formData.downPaymentTwoSlider) || 1]}
+                min={0.5}
+                max={99.5}
+                step={0.5}
+                onValueChange={(val) => {
+                  handleSliderChange("downPaymentTwoSlider", val);
+                  handleSelectChange("downPaymentTwoSource", "slider");
+                }}
+                className="bg-[#dde3c0]"
+              />
+              <p className="text-xs text-[#7a8062] mt-2">
+                Currently: {formData.downPaymentTwoSlider || 1}%
+              </p>
+            </div>
+            {/* Monthly Payment (1/4 width) */}
+            <div className="col-span-1">
+              <Label className="block text-sm font-semibold text-[#7a8062] mb-1">
+                Monthly Payment (Plan 2)
+              </Label>
+              <Input
+                type="text"
+                readOnly
+                value={formData.monthlyPaymentTwo}
+                className="w-full bg-[#eceed9] text-[#7a8062] font-semibold"
+              />
+            </div>
           </div>
         </div>
 
         {/* ============================================================
-            PLAN 3
+            PLAN 3 - DARKER YELLOW THEME (#E7C05F instead of #FCDC94)
             (Now Row 8 & Row 9)
         ============================================================ */}
-        {/* ------------------- Row 8: Plan 3 Details ------------------- */}
-        <div className="grid grid-cols-1 gap-2 md:grid-cols-4">
-          {/* Down Payment (Plan 3) */}
-          <div>
-            <Label htmlFor="downPaymentThree" className="block text-sm font-semibold text-gray-700 mb-1">
-              Down Payment (Plan 3)
-            </Label>
-            <Input
-              id="downPaymentThree"
-              name="downPaymentThree"
-              type="text"
-              placeholder="Enter down payment"
-              value={formData.downPaymentThree}
-              onChange={(e) => handleDownPaymentChange("Three", e)}
-              onBlur={() => handleDownPaymentBlur("Three")}
-              className="w-full"
-            />
+        <div className="p-4 bg-[#fdf7e8] border-l-4 border-[#E7C05F] rounded-lg">
+          <h3 className="text-lg font-bold text-[#b39032] mb-3">Payment Plan 3</h3>
+          {/* ------------------- Row 8: Plan 3 Details ------------------- */}
+          <div className="grid grid-cols-1 gap-2 md:grid-cols-4">
+            {/* Down Payment (Plan 3) */}
+            <div>
+              <Label htmlFor="downPaymentThree" className="block text-sm font-semibold text-[#b39032] mb-1">
+                Down Payment (Plan 3)
+              </Label>
+              <Input
+                id="downPaymentThree"
+                name="downPaymentThree"
+                type="text"
+                placeholder="Enter down payment"
+                value={formData.downPaymentThree}
+                onChange={(e) => handleDownPaymentChange("Three", e)}
+                onBlur={() => handleDownPaymentBlur("Three")}
+                className="w-full border-[#f1d99c] focus:border-[#E7C05F]"
+              />
+            </div>
+            {/* Down Payment Selector (Plan 3) */}
+            <div>
+              <Label className="block text-sm font-semibold text-[#b39032] mb-1">
+                Down Payment % (Plan 3)
+              </Label>
+              <Select
+                value={formData.downPaymentThreePercent}
+                onValueChange={(val) => {
+                  handleSelectChange("downPaymentThreePercent", val);
+                  handleSelectChange("downPaymentThreeSource", "selector");
+                }}
+              >
+                <SelectTrigger className="w-full border-[#f1d99c] bg-white">
+                  <SelectValue placeholder="Select %" />
+                </SelectTrigger>
+                <SelectContent>
+                  {[...Array(19)].map((_, i) => {
+                    const percent = 5 + i * 5;
+                    return (
+                      <SelectItem key={percent} value={String(percent)}>
+                        {percent}% (
+                        {formatCurrency((parseCurrencyToNumber(formData.financingPrice) || 0) * (percent / 100))}
+                        )
+                      </SelectItem>
+                    );
+                  })}
+                </SelectContent>
+              </Select>
+            </div>
+            {/* Loan Amount (Plan 3) */}
+            <div>
+              <Label className="block text-sm font-semibold text-[#b39032] mb-1">
+                Loan Amount (Plan 3)
+              </Label>
+              <Input
+                type="text"
+                readOnly
+                value={formData.loanAmountThree}
+                className="w-full bg-[#fbecc9] text-[#b39032]"
+              />
+            </div>
+            {/* Interest Rate (Plan 3) */}
+            <div>
+              <Label className="block text-sm font-semibold text-[#b39032] mb-1">
+                Interest Rate (Plan 3)
+              </Label>
+              <Select
+                value={formData.interestThree}
+                onValueChange={(val) => handleSelectChange("interestThree", val)}
+              >
+                <SelectTrigger className="w-full border-[#f1d99c] bg-white">
+                  <SelectValue placeholder="Select Rate" />
+                </SelectTrigger>
+                <SelectContent>
+                  {[...Array(11)].map((_, i) => {
+                    const rate = (4.99 + i).toFixed(2);
+                    return (
+                      <SelectItem key={rate} value={rate}>
+                        {rate}%
+                      </SelectItem>
+                    );
+                  })}
+                </SelectContent>
+              </Select>
+            </div>
           </div>
-          {/* Down Payment Selector (Plan 3) */}
-          <div>
-            <Label className="block text-sm font-semibold text-gray-700 mb-1">
-              Down Payment % (Plan 3)
-            </Label>
-            <Select
-              value={formData.downPaymentThreePercent}
-              onValueChange={(val) => {
-                handleSelectChange("downPaymentThreePercent", val);
-                handleSelectChange("downPaymentThreeSource", "selector");
-              }}
-            >
-              <SelectTrigger className="w-full">
-                <SelectValue placeholder="Select %" />
-              </SelectTrigger>
-              <SelectContent>
-                {[...Array(19)].map((_, i) => {
-                  const percent = 5 + i * 5;
-                  return (
-                    <SelectItem key={percent} value={String(percent)}>
-                      {percent}% (
-                      {formatCurrency((parseCurrencyToNumber(formData.financingPrice) || 0) * (percent / 100))}
-                      )
-                    </SelectItem>
-                  );
-                })}
-              </SelectContent>
-            </Select>
-          </div>
-          {/* Loan Amount (Plan 3) */}
-          <div>
-            <Label className="block text-sm font-semibold text-gray-700 mb-1">
-              Loan Amount (Plan 3)
-            </Label>
-            <Input
-              type="text"
-              readOnly
-              value={formData.loanAmountThree}
-              className="w-full bg-gray-100"
-            />
-          </div>
-          {/* Interest Rate (Plan 3) */}
-          <div>
-            <Label className="block text-sm font-semibold text-gray-700 mb-1">
-              Interest Rate (Plan 3)
-            </Label>
-            <Select
-              value={formData.interestThree}
-              onValueChange={(val) => handleSelectChange("interestThree", val)}
-            >
-              <SelectTrigger className="w-full">
-                <SelectValue placeholder="Select Rate" />
-              </SelectTrigger>
-              <SelectContent>
-                {[...Array(11)].map((_, i) => {
-                  const rate = (4.99 + i).toFixed(2);
-                  return (
-                    <SelectItem key={rate} value={rate}>
-                      {rate}%
-                    </SelectItem>
-                  );
-                })}
-              </SelectContent>
-            </Select>
-          </div>
-        </div>
-        {/* ------------------- Row 9: Plan 3 Slider & Monthly Payment ------------------- */}
-        <div className="grid grid-cols-4 gap-4">
-          {/* Slider (3/4 width) */}
-          <div className="col-span-3">
-            <Label className="block text-sm font-semibold text-gray-700 mb-2">
-              Down Payment vs. Loan Amount (Plan 3)
-            </Label>
-            <Slider
-              value={[Number(formData.downPaymentThreeSlider) || 1]}
-              min={0.5}
-              max={99.5}
-              step={0.5}
-              onValueChange={(val) => {
-                handleSliderChange("downPaymentThreeSlider", val);
-                handleSelectChange("downPaymentThreeSource", "slider");
-              }}
-            />
-            <p className="text-xs text-gray-500 mt-2">
-              Currently: {formData.downPaymentThreeSlider || 1}%
-            </p>
-          </div>
-          {/* Monthly Payment (1/4 width) */}
-          <div className="col-span-1">
-            <Label className="block text-sm font-semibold text-gray-700 mb-1">
-              Monthly Payment (Plan 3)
-            </Label>
-            <Input
-              type="text"
-              readOnly
-              value={formData.monthlyPaymentThree}
-              className="w-full bg-gray-100"
-            />
+          {/* ------------------- Row 9: Plan 3 Slider & Monthly Payment ------------------- */}
+          <div className="grid grid-cols-4 gap-4 mt-4">
+            {/* Slider (3/4 width) */}
+            <div className="col-span-3">
+              <Label className="block text-sm font-semibold text-[#b39032] mb-2">
+                Down Payment vs. Loan Amount (Plan 3)
+              </Label>
+              <Slider
+                value={[Number(formData.downPaymentThreeSlider) || 1]}
+                min={0.5}
+                max={99.5}
+                step={0.5}
+                onValueChange={(val) => {
+                  handleSliderChange("downPaymentThreeSlider", val);
+                  handleSelectChange("downPaymentThreeSource", "slider");
+                }}
+                className="bg-[#f1d99c]"
+              />
+              <p className="text-xs text-[#b39032] mt-2">
+                Currently: {formData.downPaymentThreeSlider || 1}%
+              </p>
+            </div>
+            {/* Monthly Payment (1/4 width) */}
+            <div className="col-span-1">
+              <Label className="block text-sm font-semibold text-[#b39032] mb-1">
+                Monthly Payment (Plan 3)
+              </Label>
+              <Input
+                type="text"
+                readOnly
+                value={formData.monthlyPaymentThree}
+                className="w-full bg-[#fbecc9] text-[#b39032] font-semibold"
+              />
+            </div>
           </div>
         </div>
       </CardContent>
