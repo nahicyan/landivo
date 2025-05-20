@@ -38,6 +38,7 @@ export const createQualification = asyncHandler(async (req, res) => {
       lastName,
       email,
       phone,
+      auth0Id,
       // Property info
       propertyAddress,
       propertyCity,
@@ -46,6 +47,18 @@ export const createQualification = asyncHandler(async (req, res) => {
       // Qualification status
       qualified,
     } = req.body;
+
+    // Find or create buyer
+    const buyer = await findOrCreateBuyer({
+      email,
+      phone,
+      firstName,
+      lastName,
+      auth0Id,
+      buyerType: null // Default to null for qualification leads
+    });
+    
+    console.log(`Qualification for buyer: ${buyer.id}, ${buyer.firstName} ${buyer.lastName}`);
 
     // Check for disqualifying factors
     const disqualifiers = [];
@@ -129,7 +142,13 @@ export const createQualification = asyncHandler(async (req, res) => {
     res.status(201).json({
       message: "Qualification submitted successfully",
       qualification,
-      qualified
+      qualified,
+      buyer: {
+        id: buyer.id,
+        firstName: buyer.firstName,
+        lastName: buyer.lastName,
+        email: buyer.email
+      }
     });
   } catch (error) {
     console.error("Error creating qualification:", error);
@@ -139,6 +158,71 @@ export const createQualification = asyncHandler(async (req, res) => {
     });
   }
 });
+
+/**
+ * Find existing buyer or create a new one
+ */
+async function findOrCreateBuyer(buyerData) {
+  const { email, phone, buyerType, firstName, lastName, auth0Id } = buyerData;
+  
+  let buyer = null;
+  let buyerFoundMethod = 'none';
+  
+  // First try to find buyer by Auth0 ID if provided
+  if (auth0Id) {
+    console.log(`Attempting to find buyer by Auth0 ID: ${auth0Id}`);
+    buyer = await prisma.buyer.findFirst({
+      where: { auth0Id }
+    });
+    
+    // If found by Auth0 ID, return early
+    if (buyer) {
+      buyerFoundMethod = 'auth0Id';
+      console.log(`Buyer found by Auth0 ID: ${auth0Id}, buyerId: ${buyer.id}`);
+      return buyer;
+    }
+  }
+  
+  // If not found by Auth0 ID, try email or phone
+  console.log(`Attempting to find buyer by email: ${email} or phone: ${phone}`);
+  buyer = await prisma.buyer.findFirst({
+    where: {
+      OR: [{ email: email.toLowerCase() }, { phone }],
+    },
+  });
+
+  if (buyer) {
+    buyerFoundMethod = buyer.email.toLowerCase() === email.toLowerCase() ? 'email' : 'phone';
+    console.log(`Buyer found by ${buyerFoundMethod}: buyerId: ${buyer.id}`);
+    
+    // If buyer found by email/phone but doesn't have Auth0 ID, update with Auth0 ID
+    if (auth0Id && !buyer.auth0Id) {
+      console.log(`Updating existing buyer (${buyer.id}) with Auth0 ID: ${auth0Id}`);
+      buyer = await prisma.buyer.update({
+        where: { id: buyer.id },
+        data: { auth0Id }
+      });
+    }
+  } else {
+    // Create a new buyer if not found
+    console.log(`No existing buyer found. Creating new buyer with email: ${email}, phone: ${phone}${auth0Id ? `, auth0Id: ${auth0Id}` : ''}`);
+    buyer = await prisma.buyer.create({
+      data: {
+        email: email.toLowerCase(),
+        phone,
+        buyerType,
+        firstName,
+        lastName,
+        source: "Qualification Lead",
+        auth0Id: auth0Id || null
+      },
+    });
+    buyerFoundMethod = 'created';
+    console.log(`New buyer created with ID: ${buyer.id}`);
+  }
+  
+  return buyer;
+}
 
 // Get qualifications for a specific property
 export const getQualificationsForProperty = asyncHandler(async (req, res) => {
@@ -225,23 +309,41 @@ export const getAllQualifications = asyncHandler(async (req, res) => {
 
 // Email notification for new qualifications
 async function sendQualificationEmail(qualification) {
-  // Check if SMTP is configured
-  if (!process.env.SMTP_HOST || !process.env.SMTP_USER || !process.env.SMTP_PASS) {
-    console.log("SMTP not configured, skipping email notification");
-    return;
-  }
-
   try {
-    // Create transporter
+    // Get system settings to check if financing emails are enabled
+    const settings = await prisma.settings.findFirst();
+    
+    // If settings don't exist or financing emails are disabled, skip sending
+    if (!settings || !settings.enableFinancingEmails) {
+      console.log('Financing email notifications are disabled in settings');
+      return;
+    }
+    
+    // Check if we have recipients
+    if (!settings.financingEmailRecipients || settings.financingEmailRecipients.length === 0) {
+      console.log('No financing email recipients configured');
+      return;
+    }
+    
+    // Check if we have SMTP configuration
+    if (!settings.smtpServer || !settings.smtpPort || !settings.smtpUser || !settings.smtpPassword) {
+      console.log('Incomplete SMTP configuration');
+      return;
+    }
+    
+    // Create transporter using settings from database
     const transporter = nodemailer.createTransport({
-      host: process.env.SMTP_HOST,
-      port: process.env.SMTP_PORT || 587,
-      secure: process.env.SMTP_PORT == 465,
+      host: settings.smtpServer,
+      port: parseInt(settings.smtpPort),
+      secure: parseInt(settings.smtpPort) === 465, // true for 465, false for other ports
       auth: {
-        user: process.env.SMTP_USER,
-        pass: process.env.SMTP_PASS,
-      },
+        user: settings.smtpUser,
+        pass: settings.smtpPassword
+      }
     });
+
+    // Verify connection
+    await transporter.verify();
 
     // Prepare email content
     const qualificationStatus = qualification.qualified ? "QUALIFIED" : "NOT QUALIFIED";
@@ -313,15 +415,16 @@ async function sendQualificationEmail(qualification) {
       </div>
     `;
 
-    // Send email
-    await transporter.sendMail({
-      from: `"Landivo Qualification" <${process.env.SMTP_USER}>`,
-      to: process.env.SMTP_TO || process.env.SMTP_USER,
+    // Send email to all configured recipients
+    const mailOptions = {
+      from: `"Landivo Qualification" <${settings.smtpUser}>`,
+      to: settings.financingEmailRecipients.join(', '),
       subject: emailSubject,
       html: emailHtml,
-    });
+    };
 
-    console.log("Qualification notification email sent successfully");
+    await transporter.sendMail(mailOptions);
+    console.log(`Qualification notification email sent to ${settings.financingEmailRecipients.length} recipients`);
   } catch (error) {
     console.error("Error sending qualification email:", error);
   }
