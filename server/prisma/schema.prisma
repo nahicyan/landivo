@@ -481,6 +481,8 @@ model PropertyRow {
   updatedAt    DateTime @updatedAt
 }
 
+//---------------------- Settings ----------------------//
+
 model Settings {
   id                      String    @id @default(auto()) @map("_id") @db.ObjectId
   overrideContactPhone    String?
@@ -501,4 +503,56 @@ model Settings {
   
   createdAt               DateTime  @default(now())
   updatedAt               DateTime  @updatedAt
+}
+
+//---------------------- Visitor Tracking ----------------------//
+
+// Visitor tracking models
+model Visitor {
+  id             String    @id @default(auto()) @map("_id") @db.ObjectId
+  visitorId      String    @unique // Client-side generated ID
+  firstVisit     DateTime  @default(now())
+  lastVisit      DateTime  @default(now())
+  totalVisits    Int       @default(1)
+  country        String?
+  region         String?
+  deviceType     String?   // mobile, tablet, desktop
+  browser        String?
+  os             String?
+  visits         Visit[]
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+}
+
+model Visit {
+  id             String    @id @default(auto()) @map("_id") @db.ObjectId
+  visitorId      String
+  visitor        Visitor   @relation(fields: [visitorId], references: [visitorId])
+  sessionId      String    // Unique session ID
+  startTime      DateTime  @default(now())
+  endTime        DateTime?
+  duration       Int?      // Duration in seconds
+  pagesViewed    Int       @default(1)
+  entryPage      String
+  exitPage       String?
+  referrer       String?
+  userAgent      String?
+  ipAddress      String?
+  screenSize     String?
+
+  @@index([visitorId])
+  @@index([startTime])
+}
+
+model VisitorStat {
+  id              String    @id @default(auto()) @map("_id") @db.ObjectId
+  date            DateTime  @unique
+  uniqueVisitors  Int       @default(0)
+  totalVisits     Int       @default(0)
+  newVisitors     Int       @default(0)
+  returningVisitors Int      @default(0)
+  topPages        Json?
+  deviceBreakdown Json?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
 }

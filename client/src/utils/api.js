@@ -693,3 +693,45 @@ export const testSmtpConnection = async (smtpData) => {
     throw error; // Rethrow to handle in the component
   }
 };
+
+
+/**
+ * Get visitor statistics for dashboard
+ * @param {Object} options - Query options
+ * @returns {Promise<Object>} Visitor statistics
+ */
+export const getVisitorStats = async (options = {}) => {
+  try {
+    const queryParams = new URLSearchParams({
+      period: options.period || 'week',
+      ...(options.startDate && { startDate: options.startDate }),
+      ...(options.endDate && { endDate: options.endDate })
+    });
+    
+    const response = await api.get(`/visitors/stats?${queryParams}`);
+    return response.data;
+  } catch (error) {
+    console.error("Error fetching visitor statistics:", error);
+    return {
+      dailyStats: [],
+      currentPeriod: { uniqueVisitors: 0, totalVisits: 0, newVisitors: 0, returningVisitors: 0 },
+      previousPeriod: { uniqueVisitors: 0, totalVisits: 0, newVisitors: 0, returningVisitors: 0 },
+      topPages: [],
+      deviceBreakdown: []
+    };
+  }
+};
+
+/**
+ * Get current active visitor count
+ * @returns {Promise<Object>} Current visitor count
+ */
+export const getCurrentVisitorCount = async () => {
+  try {
+    const response = await api.get('/visitors/current');
+    return response.data;
+  } catch (error) {
+    console.error("Error fetching current visitor count:", error);
+    return { currentVisitors: 0 };
+  }
+};
