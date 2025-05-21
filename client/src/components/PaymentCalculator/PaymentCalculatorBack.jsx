@@ -338,25 +338,25 @@ return (
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-6">
-        {/* ------------------- Top Section (DARKER TEAL THEME - #5d8a87) ------------------- */}
-        <div className="p-4 bg-[#e0efee] border border-[#85a8a6] rounded-lg">
+        {/* ------------------- Top Section (WARM GRAY THEME) ------------------- */}
+        <div className="p-4 bg-[#f5f5f3] border border-[#adadab] rounded-lg">
           {/* ------------------- Row 1 ------------------- */}
           <div className="grid grid-cols-1 gap-2 md:grid-cols-4">
             {/* Asking Price (display-only) */}
             <div>
-              <Label className="block text-sm font-semibold text-[#3a6361] mb-1">
+              <Label className="block text-sm font-semibold text-[#4a4a48] mb-1">
                 Asking Price
               </Label>
               <Input
                 type="text"
                 readOnly
                 value={formData.askingPrice}
-                className="w-full bg-[#cce1e0] text-[#294847]"
+                className="w-full bg-[#e8e8e6] text-[#333331]"
               />
             </div>
             {/* Financing Price */}
             <div>
-              <Label htmlFor="financingPrice" className="block text-sm font-semibold text-[#3a6361] mb-1">
+              <Label htmlFor="financingPrice" className="block text-sm font-semibold text-[#4a4a48] mb-1">
                 Financing Price
               </Label>
               <Input
@@ -367,12 +367,12 @@ return (
                 value={formData.financingPrice}
                 onChange={handleCurrencyInputChange}
                 onBlur={handleCurrencyBlur}
-                className="w-full border-[#85a8a6] focus:border-[#5d8a87]"
+                className="w-full border-[#adadab] focus:border-[#8a8a88]"
               />
             </div>
             {/* Purchase Price */}
             <div>
-              <Label htmlFor="purchasePrice" className="block text-sm font-semibold text-[#3a6361] mb-1">
+              <Label htmlFor="purchasePrice" className="block text-sm font-semibold text-[#4a4a48] mb-1">
                 Purchase Price (Optional)
               </Label>
               <Input
@@ -382,19 +382,19 @@ return (
                 placeholder="Enter purchase price"
                 value={formData.purchasePrice}
                 onChange={handleCurrencyInputChange}
-                className="w-full border-[#85a8a6]"
+                className="w-full border-[#adadab]"
               />
             </div>
             {/* Sort Options Dropdown */}
             <div>
-              <Label className="block text-sm font-semibold text-[#3a6361] mb-1">
+              <Label className="block text-sm font-semibold text-[#4a4a48] mb-1">
                 Sort Plans By
               </Label>
               <Select 
                 value={sortOption}
                 onValueChange={handleSortOptionChange}
               >
-                <SelectTrigger className="w-full border-[#85a8a6]">
+                <SelectTrigger className="w-full border-[#adadab]">
                   <SelectValue placeholder="Select sort option" />
                 </SelectTrigger>
                 <SelectContent>
@@ -413,7 +413,7 @@ return (
           <div className="grid grid-cols-1 gap-2 md:grid-cols-4 mt-3">
             {/* Service Fee */}
             <div>
-              <Label htmlFor="serviceFee" className="block text-sm font-semibold text-[#3a6361] mb-1">
+              <Label htmlFor="serviceFee" className="block text-sm font-semibold text-[#4a4a48] mb-1">
                 Service Fee
               </Label>
               <Input
@@ -423,43 +423,43 @@ return (
                 placeholder="Service fee"
                 value={formData.serviceFee}
                 onChange={handleCurrencyInputChange}
-                className="w-full border-[#85a8a6]"
+                className="w-full border-[#adadab]"
               />
             </div>
             {/* Tax */}
             <div>
-              <Label className="block text-sm font-semibold text-[#3a6361] mb-1">
+              <Label className="block text-sm font-semibold text-[#4a4a48] mb-1">
                 Yearly Tax
               </Label>
               <Input
                 type="text"
                 readOnly
                 value={formData.tax}
-                className="w-full bg-[#cce1e0] text-[#294847]"
+                className="w-full bg-[#e8e8e6] text-[#333331]"
               />
             </div>
             {/* HOA Monthly */}
             <div>
-              <Label className="block text-sm font-semibold text-[#3a6361] mb-1">
+              <Label className="block text-sm font-semibold text-[#4a4a48] mb-1">
                 HOA Monthly Fee
               </Label>
               <Input
                 type="text"
                 readOnly
                 value={formData.hoaMonthly}
-                className="w-full bg-[#cce1e0] text-[#294847]"
+                className="w-full bg-[#e8e8e6] text-[#333331]"
               />
             </div>
             {/* Term Display (in Years + Months) */}
             <div>
-              <Label className="block text-sm font-semibold text-[#3a6361] mb-1">
+              <Label className="block text-sm font-semibold text-[#4a4a48] mb-1">
                 Term
               </Label>
               <Input
                 type="text"
                 readOnly
                 value={formatTerm(formData.term)}
-                className="w-full bg-[#cce1e0] text-[#294847]"
+                className="w-full bg-[#e8e8e6] text-[#333331]"
               />
             </div>
           </div>
@@ -467,7 +467,7 @@ return (
           {/* ------------------- Row 3: Term Slider ------------------- */}
           <div className="grid grid-cols-1 gap-4 mt-3">
             <div>
-              <Label className="block text-sm font-semibold text-[#3a6361] mb-2">
+              <Label className="block text-sm font-semibold text-[#4a4a48] mb-2">
                 Term Slider (Months)
               </Label>
               <Slider
@@ -478,9 +478,9 @@ return (
                 onValueChange={(val) => {
                   handleSliderChange("term", val);
                 }}
-                className="bg-[#85a8a6]"
+                className="bg-[#d2d2d0]"
               />
-              <p className="text-xs text-[#3a6361] mt-2">
+              <p className="text-xs text-[#4a4a48] mt-2">
                 Currently: {formData.term} month{Number(formData.term) > 1 ? "s" : ""}
               </p>
             </div>
