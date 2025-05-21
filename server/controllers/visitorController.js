@@ -288,7 +288,8 @@ export const getCurrentVisitors = asyncHandler(async (req, res) => {
   try {
     const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000);
     
-    const activeVisits = await prisma.visit.count({
+    // Use findMany with distinct instead, then count the results
+    const activeVisits = await prisma.visit.findMany({
       where: {
         OR: [
           { startTime: { gte: fiveMinutesAgo } },
@@ -298,7 +299,10 @@ export const getCurrentVisitors = asyncHandler(async (req, res) => {
       distinct: ['visitorId']
     });
     
-    res.status(200).json({ currentVisitors: activeVisits });
+    // Count the unique visitors
+    const uniqueVisitorCount = activeVisits.length;
+    
+    res.status(200).json({ currentVisitors: uniqueVisitorCount });
   } catch (error) {
     console.error("Error fetching current visitors:", error);
     res.status(500).json({
