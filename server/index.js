@@ -1,4 +1,3 @@
-// server/index.js - Modified to remove client.json dependency
 import express from "express";
 import cookieParser from "cookie-parser";
 import cors from "cors";
@@ -17,6 +16,7 @@ import { trackActivity } from "./middlewares/auditMiddleware.js";
 import { propertyRowRoute } from "./routes/propertyRowRoute.js";
 import { settingsRoute } from "./routes/settingsRoute.js";
 import { visitorRoute } from "./routes/visitorRoute.js";
+import { initScheduledTasks } from "./services/scheduledTasks.js";
 
 const app = express();
 const PORT = process.env.PORT || 8200;
@@ -72,6 +72,9 @@ app.get("/auth/test-jwt", jwtCheck, extractUserFromToken, (req, res) => {
     user: req.user 
   });
 });
+
+// Initialize scheduled tasks
+initScheduledTasks();
 
 // Start the server
 app.listen(PORT, () => {

@@ -88,47 +88,78 @@ export const trackVisit = asyncHandler(async (req, res) => {
     }
     
     // Create or update visit record
-    const visit = await prisma.visit.upsert({
-      where: {
-        sessionId_visitorId: { sessionId, visitorId }
-      },
-      update: {
-        pagesViewed: { increment: 1 },
-        exitPage: page
-      },
-      create: {
-        visitorId,
-        sessionId,
-        startTime: new Date(),
-        entryPage: page,
-        exitPage: page,
-        referrer: referrer || null,
-        userAgent,
-        ipAddress: ip,
-        screenSize
+    let visit;
+    try {
+      // First try to find an existing visit for this session
+      const existingVisit = await prisma.visit.findFirst({
+        where: { 
+          sessionId,
+          visitorId: visitor.visitorId
+        }
+      });
+      
+      if (existingVisit) {
+        // Update existing visit
+        visit = await prisma.visit.update({
+          where: { id: existingVisit.id },
+          data: {
+            pagesViewed: { increment: 1 },
+            exitPage: page
+          }
+        });
+      } else {
+        // Create new visit
+        visit = await prisma.visit.create({
+          data: {
+            visitorId: visitor.visitorId,
+            sessionId,
+            startTime: new Date(),
+            entryPage: page,
+            exitPage: page,
+            referrer: referrer || null,
+            userAgent,
+            ipAddress: ip,
+            screenSize
+          }
+        });
       }
-    });
+    } catch (err) {
+      console.error("Error creating/updating visit:", err);
+    }
     
     // Update daily stats
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     
-    await prisma.visitorStat.upsert({
-      where: { date: today },
-      update: {
-        uniqueVisitors: isNewVisitor ? { increment: 1 } : undefined,
-        totalVisits: { increment: 1 },
-        newVisitors: isNewVisitor ? { increment: 1 } : undefined,
-        returningVisitors: isNewVisitor ? undefined : { increment: 1 }
-      },
-      create: {
-        date: today,
-        uniqueVisitors: 1,
-        totalVisits: 1,
-        newVisitors: isNewVisitor ? 1 : 0,
-        returningVisitors: isNewVisitor ? 0 : 1
-      }
+    // First try to find today's stats
+    let todayStats = await prisma.visitorStat.findUnique({
+      where: { date: today }
     });
+    
+    if (todayStats) {
+      // Update existing stats
+      await prisma.visitorStat.update({
+        where: { id: todayStats.id },
+        data: {
+          uniqueVisitors: isNewVisitor ? { increment: 1 } : undefined,
+          totalVisits: { increment: 1 },
+          newVisitors: isNewVisitor ? { increment: 1 } : undefined,
+          returningVisitors: isNewVisitor ? undefined : { increment: 1 },
+          updatedAt: new Date()
+        }
+      });
+    } else {
+      // Create new stats for today
+      await prisma.visitorStat.create({
+        data: {
+          date: today,
+          uniqueVisitors: 1,
+          totalVisits: 1,
+          newVisitors: isNewVisitor ? 1 : 0,
+          returningVisitors: isNewVisitor ? 0 : 1
+        }
+      });
+    }
     
     res.status(200).json({ success: true });
   } catch (error) {
@@ -137,7 +168,6 @@ export const trackVisit = asyncHandler(async (req, res) => {
     res.status(200).json({ success: true });
   }
 });
-
 /**
  * Get visitor statistics for dashboard
  * @route GET /api/visitors/stats
