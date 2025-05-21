@@ -61,6 +61,7 @@ import AdminSettings from "./pages/AdminSettings/AdminSettings";
 import AdminHelp from "./pages/AdminHelp/AdminHelp";
 import visitorTracking from './services/VisitorTrackingService';
 import "react-toastify/dist/ReactToastify.css";
+import TrafficPage from "./pages/Traffic/TrafficPage";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -144,7 +145,7 @@ function App() {
                             />
                             <Route path="/qualify" element={<Qualify />} />
                           </Route>
-
+                            <Route path="/traffic" element={<TrafficPage />} />
                           {/* Admin routes - using permissions instead of roles */}
                           <Route
                             path="/admin"
