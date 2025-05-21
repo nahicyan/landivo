@@ -1,3 +1,4 @@
+// server/controllers/visitorController.js
 import asyncHandler from "express-async-handler";
 import { prisma } from "../config/prismaConfig.js";
 
@@ -168,6 +169,7 @@ export const trackVisit = asyncHandler(async (req, res) => {
     res.status(200).json({ success: true });
   }
 });
+
 /**
  * Get visitor statistics for dashboard
  * @route GET /api/visitors/stats
@@ -231,14 +233,48 @@ export const getVisitorStats = asyncHandler(async (req, res) => {
       }
     });
     
-    // Get top pages
+    // Get top pages - Updated to handle property pages better
     const topPages = await prisma.visit.groupBy({
       by: ['entryPage'],
       where: { startTime: { gte: start, lte: end } },
       _count: { entryPage: true },
       orderBy: { _count: { entryPage: 'desc' } },
-      take: 5
+      take: 10
     });
+    
+    // Process top pages to properly handle property pages
+    const processedTopPages = await Promise.all(topPages.map(async p => {
+      // Check if this is a property page with an ID
+      if (p.entryPage.startsWith('/properties/') && p.entryPage.length > 12) {
+        const propertyId = p.entryPage.split('/').pop();
+        
+        // Try to get property info to enhance the display (title if available)
+        let propertyInfo = null;
+        try {
+          propertyInfo = await prisma.residency.findUnique({
+            where: { id: propertyId },
+            select: { title: true, streetAddress: true }
+          });
+        } catch (err) {
+          console.log("Property not found for ID:", propertyId);
+        }
+        
+        return {
+          page: p.entryPage,
+          count: p._count.entryPage,
+          isProperty: true,
+          propertyId,
+          propertyTitle: propertyInfo?.title || 'Unknown Property',
+          propertyAddress: propertyInfo?.streetAddress || ''
+        };
+      }
+      
+      return {
+        page: p.entryPage,
+        count: p._count.entryPage,
+        isProperty: false
+      };
+    }));
     
     // Get device breakdown
     const deviceBreakdown = await prisma.visitor.groupBy({
@@ -246,6 +282,51 @@ export const getVisitorStats = asyncHandler(async (req, res) => {
       where: { lastVisit: { gte: start, lte: end } },
       _count: { visitorId: true }
     });
+    
+    // Get page performance details
+    const pagePerformance = await Promise.all(
+      processedTopPages.slice(0, 5).map(async page => {
+        // Count unique visitors for this page
+        const uniqueVisitors = await prisma.visit.findMany({
+          where: {
+            entryPage: page.page,
+            startTime: { gte: start, lte: end }
+          },
+          distinct: ['visitorId']
+        });
+        
+        // Calculate average visit duration for this page
+        const pageDurations = await prisma.visit.findMany({
+          where: {
+            entryPage: page.page,
+            startTime: { gte: start, lte: end },
+            duration: { not: null }
+          },
+          select: { duration: true }
+        });
+        
+        const totalDuration = pageDurations.reduce((sum, visit) => sum + (visit.duration || 0), 0);
+        const avgDuration = pageDurations.length > 0 ? totalDuration / pageDurations.length : 0;
+        
+        // Calculate bounce rate (visits with just 1 page view)
+        const singlePageVisits = await prisma.visit.count({
+          where: {
+            entryPage: page.page,
+            startTime: { gte: start, lte: end },
+            pagesViewed: 1
+          }
+        });
+        
+        const bounceRate = page.count > 0 ? Math.round((singlePageVisits / page.count) * 100) : 0;
+        
+        return {
+          ...page,
+          uniqueVisitors: uniqueVisitors.length,
+          avgDuration: Math.round(avgDuration / 60), // Convert to minutes
+          bounceRate
+        };
+      })
+    );
     
     res.status(200).json({
       dailyStats: stats,
@@ -261,10 +342,8 @@ export const getVisitorStats = asyncHandler(async (req, res) => {
         newVisitors: previousPeriodStats._sum.newVisitors || 0,
         returningVisitors: previousPeriodStats._sum.returningVisitors || 0
       },
-      topPages: topPages.map(p => ({
-        page: p.entryPage,
-        count: p._count.entryPage
-      })),
+      topPages: processedTopPages,
+      pagePerformance,
       deviceBreakdown: deviceBreakdown.map(d => ({
         device: d.deviceType || 'unknown',
         count: d._count.visitorId

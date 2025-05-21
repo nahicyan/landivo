@@ -1,3 +1,5 @@
+// client/src/components/Dashboard/widgets/VisitorsWidget.jsx
+
 import React, { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -6,27 +8,67 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { 
   TrendingUp, TrendingDown, Eye, Users, BarChart3, ExternalLink
 } from "lucide-react";
-import { getVisitorStats, getCurrentVisitorCount } from "@/utils/api";
+import { getVisitorStats, getCurrentVisitorCount, getProperty } from "@/utils/api";
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from "recharts";
 import { useNavigate } from "react-router-dom";
 
-export default function VisitorsWidget({ isLoading }) {
+export default function VisitorsWidget({ isLoading, fullSize = false, activeTabOverride = null, dateRange }) {
   const [stats, setStats] = useState(null);
   const [currentVisitors, setCurrentVisitors] = useState(0);
-  const [activeTab, setActiveTab] = useState("overview");
+  const [activeTab, setActiveTab] = useState(activeTabOverride || "overview");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [propertyCache, setPropertyCache] = useState({});
   const navigate = useNavigate();
   
   // Colors for charts
   const COLORS = ['#3f4f24', '#324c48', '#D4A017', '#8caf50', '#a3bf73'];
   
+  // Set active tab when activeTabOverride changes
+  useEffect(() => {
+    if (activeTabOverride) {
+      setActiveTab(activeTabOverride);
+    }
+  }, [activeTabOverride]);
+  
+  // Fetch property details for URLs
+  const fetchPropertyDetails = async (pageUrls) => {
+    const newCache = { ...propertyCache };
+    const propertyUrlPattern = /\/properties\/([a-zA-Z0-9]+)/;
+    
+    for (const page of pageUrls) {
+      const match = page.page.match(propertyUrlPattern);
+      if (match && match[1] && !propertyCache[match[1]]) {
+        try {
+          const propertyId = match[1];
+          const propertyData = await getProperty(propertyId);
+          newCache[propertyId] = propertyData;
+        } catch (error) {
+          console.error("Error fetching property:", error);
+        }
+      }
+    }
+    
+    setPropertyCache(newCache);
+  };
+  
   useEffect(() => {
     const fetchData = async () => {
       setLoading(true);
       try {
-        const data = await getVisitorStats({ period: 'week' });
+        const options = {
+          period: 'week',
+          ...(dateRange?.from && { startDate: dateRange.from.toISOString() }),
+          ...(dateRange?.to && { endDate: dateRange.to.toISOString() })
+        };
+        
+        const data = await getVisitorStats(options);
         setStats(data);
+        
+        // Fetch property details if we have page data
+        if (data && data.topPages && data.topPages.length > 0) {
+          await fetchPropertyDetails(data.topPages);
+        }
         
         const liveCount = await getCurrentVisitorCount();
         setCurrentVisitors(liveCount.currentVisitors);
@@ -53,7 +95,7 @@ export default function VisitorsWidget({ isLoading }) {
     }, 60000); // refresh every minute
     
     return () => clearInterval(intervalId);
-  }, []);
+  }, [dateRange]);
   
   // Calculate trends
   const calculateTrend = (current, previous) => {
@@ -77,40 +119,66 @@ export default function VisitorsWidget({ isLoading }) {
     return stats.topPages.slice(0, 5); // Top 5 pages
   };
   
+  // Add a helper function to render page names
+  const renderPageName = (pagePath) => {
+    const propertyUrlPattern = /\/properties\/([a-zA-Z0-9]+)/;
+    const match = pagePath.match(propertyUrlPattern);
+    
+    if (match && match[1]) {
+      const propertyId = match[1];
+      const property = propertyCache[propertyId];
+      
+      if (property) {
+        return (
+          <span className="text-xs">
+            <span className="text-green-600 font-medium">Property: </span>
+            {property.streetAddress}, {property.city}, {property.state} {property.zip || ''}
+          </span>
+        );
+      }
+    }
+    
+    return <span className="text-xs">{pagePath}</span>;
+  };
+  
   // Check if we should render the loading state
   const isLoadingState = loading || isLoading || !stats;
   
   return (
-    <Card className="overflow-hidden h-full">
+    <Card className={`overflow-hidden ${fullSize ? "h-auto" : "h-full"}`}>
       <CardHeader className="pb-2">
-        <div className="flex justify-between items-center">
-          <div>
-            <CardTitle>Website Traffic</CardTitle>
-            <CardDescription>Analyze visitor analytics and conversion rates</CardDescription>
+        {!activeTabOverride && (
+          <div className="flex justify-between items-center">
+            <div>
+              <CardTitle>Website Traffic</CardTitle>
+              <CardDescription>Analyze visitor analytics and conversion rates</CardDescription>
+            </div>
+            <Button 
+              variant="outline" 
+              size="sm"
+              onClick={() => navigate('/traffic')}
+              className="flex items-center gap-1"
+            >
+              Learn More <ExternalLink className="h-3 w-3 ml-1" />
+            </Button>
           </div>
-          <Button 
-            variant="outline" 
-            size="sm"
-            onClick={() => navigate('/traffic')}
-            className="flex items-center gap-1"
-          >
-            Learn More <ExternalLink className="h-3 w-3 ml-1" />
-          </Button>
-        </div>
+        )}
       </CardHeader>
       
       <CardContent>
         <Tabs 
           defaultValue="overview" 
           value={activeTab}
-          onValueChange={setActiveTab}
+          onValueChange={!activeTabOverride ? setActiveTab : undefined}
           className="space-y-4"
         >
-          <TabsList>
-            <TabsTrigger value="overview">Overview</TabsTrigger>
-            <TabsTrigger value="devices">Devices</TabsTrigger>
-            <TabsTrigger value="pages">Pages</TabsTrigger>
-          </TabsList>
+          {!activeTabOverride && (
+            <TabsList>
+              <TabsTrigger value="overview">Overview</TabsTrigger>
+              <TabsTrigger value="devices">Devices</TabsTrigger>
+              <TabsTrigger value="pages">Pages</TabsTrigger>
+            </TabsList>
+          )}
           
           <TabsContent value="overview" className="space-y-4">
             {isLoadingState ? (
@@ -129,7 +197,7 @@ export default function VisitorsWidget({ isLoading }) {
               </div>
             ) : (
               <>
-                <div className="grid grid-cols-4 gap-4">
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
                   {/* Current Visitors */}
                   <div className="bg-white p-4 rounded-lg border">
                     <div className="flex flex-col">
@@ -219,9 +287,14 @@ export default function VisitorsWidget({ isLoading }) {
                   </div>
                 </div>
                 
-                {stats.dailyStats && stats.dailyStats.length > 0 ? (
+                {fullSize && stats.dailyStats && stats.dailyStats.length > 0 ? (
+                  <div className="h-64 mt-6 text-center">
+                    <div className="flex items-center justify-center h-full">
+                      <p className="text-gray-500">Detailed traffic trends available in <a href="/traffic" className="text-blue-500 underline">Traffic Analytics</a></p>
+                    </div>
+                  </div>
+                ) : stats.dailyStats && stats.dailyStats.length > 0 ? (
                   <div className="h-48 text-center mt-6">
-                    {/* Placeholder for chart if needed */}
                     <div className="flex items-center justify-center h-full bg-gray-50 rounded-lg border border-dashed border-gray-300">
                       <p className="text-gray-500">Visitor trend data available in detailed view</p>
                     </div>
@@ -243,7 +316,7 @@ export default function VisitorsWidget({ isLoading }) {
                 {error}
               </div>
             ) : getDeviceData().length > 0 ? (
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="h-64">
                   <h3 className="text-sm font-medium text-gray-700 mb-2">Device Distribution</h3>
                   <ResponsiveContainer width="100%" height="90%">
@@ -323,7 +396,7 @@ export default function VisitorsWidget({ isLoading }) {
                       {getTopPagesData().map((page, index) => (
                         <tr key={index} className={index % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
                           <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 truncate max-w-[200px]">
-                            {page.page}
+                            {renderPageName(page.page)}
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 text-right">
                             {page.count}
@@ -342,7 +415,7 @@ export default function VisitorsWidget({ isLoading }) {
           </TabsContent>
         </Tabs>
         
-        {!isLoadingState && stats && (
+        {!activeTabOverride && !isLoadingState && stats && (
           <div className="grid grid-cols-2 gap-4 mt-6">
             <div className="bg-gray-50 p-4 rounded-md">
               <div className="text-sm text-gray-500">Total Unique Visitors</div>
@@ -374,6 +447,19 @@ export default function VisitorsWidget({ isLoading }) {
                 )}
               </div>
             </div>
+          </div>
+        )}
+        
+        {fullSize && !isLoadingState && (
+          <div className="flex justify-end mt-4">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => navigate('/traffic')}
+              className="flex items-center gap-1"
+            >
+              View Detailed Analytics <ExternalLink className="h-3 w-3 ml-1" />
+            </Button>
           </div>
         )}
       </CardContent>

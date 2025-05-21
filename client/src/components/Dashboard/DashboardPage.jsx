@@ -11,7 +11,8 @@ import {
   BarChart3, 
   Users, 
   Home, 
-  Building2
+  Building2,
+  LineChart
 } from "lucide-react";
 
 // Import dashboard widgets
@@ -25,6 +26,9 @@ import BuyerListsWidget from "./widgets/BuyerListsWidget";
 import EmailReportWidget from "./widgets/EmailReportWidget";
 import QualificationsWidget from "./widgets/QualificationsWidget";
 import VisitorsWidget from "./widgets/VisitorsWidget";
+
+// Import Traffic Content Component
+import { DashboardTrafficContent } from "@/pages/Traffic/TrafficPage";
 
 export default function DashboardPage() {
   const navigate = useNavigate();
@@ -94,6 +98,13 @@ export default function DashboardPage() {
           >
             <Building2 className="h-4 w-4 mr-2" />
             Properties
+          </TabsTrigger>
+          <TabsTrigger 
+            value="traffic" 
+            className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-[#546930]/25 data-[state=active]:to-[#546930]/15 data-[state=active]:text-[#324c48] data-[state=active]:shadow-sm text-[#324c48]/70 py-2"
+          >
+            <LineChart className="h-4 w-4 mr-2" />
+            Traffic
           </TabsTrigger>
         </TabsList>
         
@@ -216,6 +227,18 @@ export default function DashboardPage() {
             </div>
             <div className="p-4">
               <PropertiesWidget isLoading={isLoading} fullSize />
+            </div>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="traffic" className="space-y-6">
+          <Card className="overflow-hidden rounded-xl border border-[#324c48]/10 shadow-sm">
+            <div className="p-4 bg-gradient-to-r from-[#324c48]/10 to-[#324c48]/5 border-b border-[#324c48]/10">
+              <h3 className="text-lg font-semibold text-[#324c48]">Traffic Analytics</h3>
+              <p className="text-xs text-[#324c48]/70">Comprehensive visitor and engagement metrics</p>
+            </div>
+            <div className="p-4">
+              <DashboardTrafficContent inDashboard={true} />
             </div>
           </Card>
         </TabsContent>

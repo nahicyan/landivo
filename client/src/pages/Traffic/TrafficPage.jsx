@@ -27,7 +27,7 @@ import {
   Laptop,
   Tablet
 } from "lucide-react";
-import { getVisitorStats, getCurrentVisitorCount } from "@/utils/api";
+import { getVisitorStats, getCurrentVisitorCount, getProperty } from "@/utils/api";
 import { 
   LineChart, 
   Line, 
@@ -46,7 +46,8 @@ import {
   Area
 } from "recharts";
 
-export default function TrafficPage() {
+// The main content component that can be reused in the dashboard
+export function DashboardTrafficContent({ inDashboard = false }) {
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState("overview");
   const [stats, setStats] = useState(null);
@@ -55,6 +56,7 @@ export default function TrafficPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [dateRange, setDateRange] = useState(null);
+  const [propertyCache, setPropertyCache] = useState({});
   
   // Colors for charts
   const COLORS = ['#3f4f24', '#324c48', '#D4A017', '#8caf50', '#a3bf73'];
@@ -63,6 +65,27 @@ export default function TrafficPage() {
     tablet: '#3f4f24',
     desktop: '#324c48',
     unknown: '#8caf50'
+  };
+
+  // Fetch property details for URLs
+  const fetchPropertyDetails = async (pageUrls) => {
+    const newCache = { ...propertyCache };
+    const propertyUrlPattern = /\/properties\/([a-zA-Z0-9]+)/;
+    
+    for (const page of pageUrls) {
+      const match = page.page.match(propertyUrlPattern);
+      if (match && match[1] && !propertyCache[match[1]]) {
+        try {
+          const propertyId = match[1];
+          const propertyData = await getProperty(propertyId);
+          newCache[propertyId] = propertyData;
+        } catch (error) {
+          console.error("Error fetching property:", error);
+        }
+      }
+    }
+    
+    setPropertyCache(newCache);
   };
   
   // Fetch visitor stats
@@ -78,6 +101,11 @@ export default function TrafficPage() {
         
         const data = await getVisitorStats(options);
         setStats(data);
+        
+        // Fetch property details if we have page data
+        if (data && data.topPages && data.topPages.length > 0) {
+          await fetchPropertyDetails(data.topPages);
+        }
         
         const liveCount = await getCurrentVisitorCount();
         setCurrentVisitors(liveCount.currentVisitors);
@@ -106,6 +134,62 @@ export default function TrafficPage() {
     return () => clearInterval(intervalId);
   }, [period, dateRange]);
   
+  // Helper function to render page names
+  const renderPageName = (pagePath) => {
+    const propertyUrlPattern = /\/properties\/([a-zA-Z0-9]+)/;
+    const match = pagePath.match(propertyUrlPattern);
+    
+    if (match && match[1]) {
+      const propertyId = match[1];
+      const property = propertyCache[propertyId];
+      
+      if (property) {
+        return (
+          <span>
+            <span className="text-green-600 font-medium">Property: </span>
+            {property.streetAddress}, {property.city}, {property.state} {property.zip}
+          </span>
+        );
+      }
+    }
+    
+    return <span>{pagePath}</span>;
+  };
+  
+  // Custom formatter for bar chart labels
+  const formatBarChartLabel = (label) => {
+    const propertyUrlPattern = /\/properties\/([a-zA-Z0-9]+)/;
+    const match = label.match(propertyUrlPattern);
+    
+    if (match && match[1]) {
+      const propertyId = match[1];
+      const property = propertyCache[propertyId];
+      
+      if (property) {
+        return `Property: ${property.streetAddress}`;
+      }
+    }
+    
+    return label.length > 20 ? label.substring(0, 20) + '...' : label;
+  };
+  
+  // Custom formatter for tooltip
+  const formatTooltipLabel = (label) => {
+    const propertyUrlPattern = /\/properties\/([a-zA-Z0-9]+)/;
+    const match = label.match(propertyUrlPattern);
+    
+    if (match && match[1]) {
+      const propertyId = match[1];
+      const property = propertyCache[propertyId];
+      
+      if (property) {
+        return `Property: ${property.streetAddress}, ${property.city}, ${property.state} ${property.zip}`;
+      }
+    }
+    
+    return `Page: ${label}`;
+  };
+  
   // Handle period change
   const handlePeriodChange = (newPeriod) => {
     setPeriod(newPeriod);
@@ -123,6 +207,11 @@ export default function TrafficPage() {
       
       const data = await getVisitorStats(options);
       setStats(data);
+      
+      // Fetch property details if we have page data
+      if (data && data.topPages && data.topPages.length > 0) {
+        await fetchPropertyDetails(data.topPages);
+      }
       
       const liveCount = await getCurrentVisitorCount();
       setCurrentVisitors(liveCount.currentVisitors);
@@ -236,67 +325,58 @@ export default function TrafficPage() {
   // Check if we should render the loading state
   const isLoadingState = loading || !stats;
   
-  return (
-    <div className="container mx-auto p-4 space-y-6">
-      {/* Header */}
-      <div className="flex justify-between items-center">
-        <div className="flex items-center space-x-2">
-          <Button 
-            variant="outline" 
-            size="sm" 
-            onClick={() => navigate(-1)}
-          >
-            <ArrowLeft className="h-4 w-4 mr-2" /> Back
-          </Button>
-          <h1 className="text-2xl font-bold">Traffic Analytics</h1>
-        </div>
-        <div className="flex space-x-2">
-          <div className="flex space-x-1 border rounded-md overflow-hidden">
-            <Button 
-              variant={period === 'day' ? 'default' : 'ghost'}
-              size="sm"
-              onClick={() => handlePeriodChange('day')}
-              className="rounded-none"
-            >
-              Day
-            </Button>
-            <Button 
-              variant={period === 'week' ? 'default' : 'ghost'}
-              size="sm"
-              onClick={() => handlePeriodChange('week')}
-              className="rounded-none"
-            >
-              Week
-            </Button>
-            <Button 
-              variant={period === 'month' ? 'default' : 'ghost'}
-              size="sm"
-              onClick={() => handlePeriodChange('month')}
-              className="rounded-none"
-            >
-              Month
-            </Button>
-          </div>
-          <Button 
-            variant="outline" 
-            size="sm" 
-            onClick={handleRefresh}
-            disabled={loading}
-          >
-            <RefreshCw className="h-4 w-4 mr-2" /> Refresh
-          </Button>
-          <Button 
-            variant="outline" 
-            size="sm" 
-            onClick={handleExport}
-            disabled={loading || !stats}
-          >
-            <Download className="h-4 w-4 mr-2" /> Export
-          </Button>
-        </div>
+  // Period controls for top of page
+  const PeriodControls = () => (
+    <div className="flex space-x-2 mb-4">
+      <div className="flex space-x-1 border rounded-md overflow-hidden">
+        <Button 
+          variant={period === 'day' ? 'default' : 'ghost'}
+          size="sm"
+          onClick={() => handlePeriodChange('day')}
+          className="rounded-none"
+        >
+          Day
+        </Button>
+        <Button 
+          variant={period === 'week' ? 'default' : 'ghost'}
+          size="sm"
+          onClick={() => handlePeriodChange('week')}
+          className="rounded-none"
+        >
+          Week
+        </Button>
+        <Button 
+          variant={period === 'month' ? 'default' : 'ghost'}
+          size="sm"
+          onClick={() => handlePeriodChange('month')}
+          className="rounded-none"
+        >
+          Month
+        </Button>
       </div>
+      <Button 
+        variant="outline" 
+        size="sm" 
+        onClick={handleRefresh}
+        disabled={loading}
+      >
+        <RefreshCw className="h-4 w-4 mr-2" /> Refresh
+      </Button>
+      <Button 
+        variant="outline" 
+        size="sm" 
+        onClick={handleExport}
+        disabled={loading || !stats}
+      >
+        <Download className="h-4 w-4 mr-2" /> Export
+      </Button>
+    </div>
+  );
 
-      {/* Tabs navigation */}
+  return (
+    <div className="space-y-4">
+      {!inDashboard && <PeriodControls />}
+
       <Tabs 
         defaultValue="overview" 
         value={activeTab}
@@ -858,11 +938,11 @@ export default function TrafficPage() {
                         type="category" 
                         width={150}
                         tick={{fontSize: 12}}
-                        tickFormatter={(value) => value.length > 20 ? value.substring(0, 20) + '...' : value}
+                        tickFormatter={formatBarChartLabel}
                       />
                       <Tooltip 
                         formatter={(value) => [`${value} visits`, 'Visits']}
-                        labelFormatter={(label) => `Page: ${label}`}
+                        labelFormatter={formatTooltipLabel}
                       />
                       <Bar 
                         dataKey="count" 
@@ -903,8 +983,8 @@ export default function TrafficPage() {
                     <tbody>
                       {stats.topPages && stats.topPages.map((page, index) => (
                         <tr key={index} className="border-b hover:bg-gray-50">
-                          <td className="p-2 max-w-[200px] truncate">
-                            {page.page}
+                          <td className="p-2 max-w-[300px] truncate">
+                            {renderPageName(page.page)}
                           </td>
                           <td className="text-center p-2">
                             {page.count}
@@ -928,6 +1008,43 @@ export default function TrafficPage() {
           </Card>
         </TabsContent>
       </Tabs>
+      
+      {inDashboard && (
+        <div className="flex justify-end mt-4">
+          <Button
+            variant="outline"
+            onClick={() => navigate('/traffic')}
+          >
+            View Detailed Report
+          </Button>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// Standalone page version
+export default function TrafficPage() {
+  const navigate = useNavigate();
+
+  return (
+    <div className="container mx-auto p-4 space-y-6">
+      {/* Header */}
+      <div className="flex justify-between items-center">
+        <div className="flex items-center space-x-2">
+          <Button 
+            variant="outline" 
+            size="sm" 
+            onClick={() => navigate('/admin')}
+          >
+            <ArrowLeft className="h-4 w-4 mr-2" /> Back to Dashboard
+          </Button>
+          <h1 className="text-2xl font-bold">Traffic Analytics</h1>
+        </div>
+      </div>
+
+      {/* Main Content */}
+      <DashboardTrafficContent />
     </div>
   );
 }
