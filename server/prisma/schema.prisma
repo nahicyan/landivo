@@ -229,13 +229,12 @@ model Buyer {
   source         String?
   preferredAreas String[]
   offers         Offer[]         @relation("BuyerOffers")
-  auth0Id        String?        // @unique // Link to Auth0 if the buyer is also a system user
+  auth0Id        String?
 
-  // Email List
-  
-  emailstatus	String ?
-  emailPermissionStatus	String ?
-  emailLists 
+  // Email List fields
+  emailStatus           String?     // "available" or "unsubscribe"
+  emailPermissionStatus String?
+  emailListMemberships  BuyerEmailList[] @relation("BuyerEmailLists")
   
   // Audit fields
   createdById    String?         @db.ObjectId
@@ -250,6 +249,46 @@ model Buyer {
   updatedAt      DateTime        @updatedAt
   deals          Deal[]
   activities     BuyerActivity[] @relation("BuyerActivities")
+}
+
+//---------------------- Email List ----------------------//
+
+model EmailList {
+  id            String    @id @default(auto()) @map("_id") @db.ObjectId
+  name          String
+  description   String?
+  createdBy     String?   @db.ObjectId
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  lastEmailDate DateTime?
+
+  // Criteria for automatic membership
+  criteria Json?
+
+  // Members through join table
+  buyerMemberships BuyerEmailList[] @relation("EmailListBuyers")
+
+  // Additional metadata
+  isDefault Boolean @default(false)
+  color     String?
+  
+  // Track modifications
+  modificationHistory Json?
+}
+
+//---------------------- Join Table ----------------------//
+
+model BuyerEmailList {
+  id          String    @id @default(auto()) @map("_id") @db.ObjectId
+  buyerId     String    @db.ObjectId
+  buyer       Buyer     @relation("BuyerEmailLists", fields: [buyerId], references: [id])
+  emailListId String    @db.ObjectId
+  emailList   EmailList @relation("EmailListBuyers", fields: [emailListId], references: [id])
+  joinedAt    DateTime  @default(now())
+  
+  @@unique([buyerId, emailListId])
+  @@index([buyerId])
+  @@index([emailListId])
 }
 
 enum BuyerType {
@@ -342,31 +381,6 @@ model Qualification {
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
-}
-
-//---------------------- Email List ----------------------//
-
-model EmailList {
-  id            String    @id @default(auto()) @map("_id") @db.ObjectId
-  name          String
-  description   String?
-  createdBy     String?   @db.ObjectId
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
-  lastEmailDate DateTime?
-
-  // Criteria for automatic membership
-  criteria Json? // Stores areas, buyerTypes, isVIP, etc.
-
-  // Manual members (buyers explicitly added to this list)
-  buyerIds String[] @db.ObjectId
-
-  // Additional metadata
-  isDefault Boolean @default(false)
-  color     String? // Optional color coding for the list
-  
-  // Track modifications
-  modificationHistory Json?
 }
 
 //---------------------- Deals ----------------------//

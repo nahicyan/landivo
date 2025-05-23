@@ -177,13 +177,26 @@ export default function EmailLists() {
       <ImportCsvDialog
         open={csvUploadOpen}
         onOpenChange={setCsvUploadOpen}
-        onImport={(csvData, options) => {
-          // Handle CSV import based on context
-          if (selectedList) {
-            // Add to existing list
-            addBuyersToListFn(selectedList.id, csvData.map(buyer => buyer.id));
+        existingLists={lists} // Pass existing email lists
+        onImport={async (csvData, options) => {
+          try {
+            // Import buyers via API
+            const response = await api.post('/buyer/import', {
+              buyers: csvData,
+              source: 'CSV Import'
+            });
+
+            toast.success(response.data.message);
+
+            // Refresh buyers and lists
+            await refetchBuyers();
+            await refetchLists();
+
+            setCsvUploadOpen(false);
+          } catch (error) {
+            toast.error('Failed to import buyers');
+            console.error('Import error:', error);
           }
-          setCsvUploadOpen(false);
         }}
       />
     </div>

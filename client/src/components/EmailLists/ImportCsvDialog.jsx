@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   Dialog,
   DialogContent,
@@ -11,6 +11,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Badge } from "@/components/ui/badge";
 import { 
   Select, 
   SelectContent, 
@@ -23,13 +24,15 @@ import {
   UploadCloud, 
   Trash2, 
   AlertCircle, 
-  Check 
+  Check,
+  Plus
 } from "lucide-react";
 import { toast } from "react-toastify";
 import Papa from "papaparse";
 
 // Define the available areas
 const AREAS = [
+  { id: '', label: 'None (Empty)' }, // Add blank option
   { id: 'DFW', label: 'Dallas Fort Worth' },
   { id: 'Austin', label: 'Austin' },
   { id: 'Houston', label: 'Houston' },
@@ -39,6 +42,7 @@ const AREAS = [
 
 // Define buyer types
 const BUYER_TYPES = [
+  { id: '', label: 'None (Empty)' }, // Add blank option
   { id: 'CashBuyer', label: 'Cash Buyer' },
   { id: 'Builder', label: 'Builder' },
   { id: 'Developer', label: 'Developer' },
@@ -47,22 +51,45 @@ const BUYER_TYPES = [
   { id: 'Wholesaler', label: 'Wholesaler' }
 ];
 
+// Define available fields for mapping
+const AVAILABLE_FIELDS = [
+  { id: 'firstName', label: 'First Name', required: true },
+  { id: 'lastName', label: 'Last Name', required: true },
+  { id: 'email', label: 'Email', required: true },
+  { id: 'phone', label: 'Phone', required: true },
+  { id: 'buyerType', label: 'Buyer Type', required: false },
+  { id: 'preferredAreas', label: 'Preferred Areas', required: false },
+  { id: 'emailStatus', label: 'Email Status', required: false },
+  { id: 'emailPermissionStatus', label: 'Email Permission Status', required: false },
+  { id: 'emailLists', label: 'Email Lists', required: false }
+];
+
 export default function ImportCsvDialog({ 
   open, 
   onOpenChange, 
-  onImport 
+  onImport,
+  existingLists = [] // Pass existing email lists
 }) {
   // CSV state
   const [csvFile, setCsvFile] = useState(null);
+  const [csvHeaders, setCsvHeaders] = useState([]);
   const [csvData, setCsvData] = useState([]);
   const [csvErrors, setCsvErrors] = useState([]);
+  
+  // Column mapping state
+  const [columnMappings, setColumnMappings] = useState({});
+  const [showMapping, setShowMapping] = useState(false);
   
   // Import options
   const [importOptions, setImportOptions] = useState({
     skipFirstRow: true,
-    defaultBuyerType: "Investor",
-    defaultArea: "DFW"
+    defaultBuyerType: "",
+    defaultArea: ""
   });
+
+  // Multi-list assignment state
+  const [multiListBuyers, setMultiListBuyers] = useState([]);
+  const [selectedListsForBuyers, setSelectedListsForBuyers] = useState({});
 
   // Handle file selection
   const handleFileChange = (e) => {
@@ -71,49 +98,115 @@ export default function ImportCsvDialog({
     
     setCsvFile(file);
     setCsvData([]);
+    setCsvHeaders([]);
     setCsvErrors([]);
+    setColumnMappings({});
+    setShowMapping(false);
     
-    // Parse CSV file
+    // Parse CSV file to get headers
     Papa.parse(file, {
+      preview: 5, // Only parse first 5 rows to get headers
+      complete: (results) => {
+        if (results.data && results.data.length > 0) {
+          const headers = Object.keys(results.data[0]);
+          setCsvHeaders(headers);
+          
+          // Auto-map columns with matching names
+          const autoMappings = {};
+          headers.forEach(header => {
+            const normalized = header.toLowerCase().replace(/\s+/g, '');
+            AVAILABLE_FIELDS.forEach(field => {
+              const fieldNormalized = field.label.toLowerCase().replace(/\s+/g, '');
+              if (normalized === fieldNormalized || 
+                  (normalized === 'emailaddress' && field.id === 'email') ||
+                  (normalized === 'firstname' && field.id === 'firstName') ||
+                  (normalized === 'lastname' && field.id === 'lastName')) {
+                autoMappings[header] = field.id;
+              }
+            });
+          });
+          
+          setColumnMappings(autoMappings);
+          setShowMapping(true);
+        }
+      },
+      header: true,
+      skipEmptyLines: true
+    });
+  };
+
+  // Handle column mapping change
+  const handleMappingChange = (csvColumn, fieldId) => {
+    setColumnMappings(prev => ({
+      ...prev,
+      [csvColumn]: fieldId
+    }));
+  };
+
+  // Process CSV with mappings
+  const processCsvWithMappings = () => {
+    if (!csvFile) return;
+    
+    Papa.parse(csvFile, {
       header: true,
       skipEmptyLines: true,
       complete: (results) => {
         const errors = [];
+        const validData = [];
+        const buyersWithMultipleLists = [];
         
-        // Validate CSV format
-        const requiredColumns = ["firstName", "lastName", "email", "phone"];
-        const headers = results.meta.fields || [];
-        
-        const missingColumns = requiredColumns.filter(col => !headers.includes(col));
-        if (missingColumns.length > 0) {
-          errors.push(`Missing required columns: ${missingColumns.join(", ")}`);
-        }
-        
-        // Validate data
-        const validData = results.data.filter((row, index) => {
-          const rowErrors = [];
+        results.data.forEach((row, index) => {
+          const mappedRow = {};
+          let hasRequiredFields = true;
+          
+          // Map CSV columns to fields
+          Object.entries(columnMappings).forEach(([csvColumn, fieldId]) => {
+            if (fieldId && row[csvColumn] !== undefined) {
+              mappedRow[fieldId] = row[csvColumn];
+            }
+          });
           
           // Check required fields
-          if (!row.firstName) rowErrors.push("Missing first name");
-          if (!row.lastName) rowErrors.push("Missing last name");
-          if (!row.email) rowErrors.push("Missing email");
-          if (!row.phone) rowErrors.push("Missing phone");
+          AVAILABLE_FIELDS.filter(f => f.required).forEach(field => {
+            if (!mappedRow[field.id] || mappedRow[field.id].trim() === '') {
+              hasRequiredFields = false;
+              errors.push(`Row ${index + 2}: Missing ${field.label}`);
+            }
+          });
           
-          // Add any row errors to the main errors array
-          if (rowErrors.length > 0) {
-            errors.push(`Row ${index + 2}: ${rowErrors.join(", ")}`);
-            return false;
+          if (hasRequiredFields) {
+            // Apply defaults if not mapped
+            if (!mappedRow.buyerType && importOptions.defaultBuyerType) {
+              mappedRow.buyerType = importOptions.defaultBuyerType;
+            }
+            
+            // Handle email lists (comma-separated)
+            if (mappedRow.emailLists) {
+              const lists = mappedRow.emailLists.split(',').map(l => l.trim()).filter(l => l);
+              if (lists.length > 1) {
+                buyersWithMultipleLists.push({
+                  ...mappedRow,
+                  rowIndex: index,
+                  suggestedLists: lists
+                });
+              }
+              mappedRow.emailLists = lists;
+            }
+            
+            validData.push(mappedRow);
           }
-          
-          return true;
         });
         
-        // Update state
         setCsvData(validData);
         setCsvErrors(errors);
-      },
-      error: (error) => {
-        setCsvErrors([`Error parsing CSV: ${error.message}`]);
+        setMultiListBuyers(buyersWithMultipleLists);
+        
+        // Initialize selected lists for buyers with multiple lists
+        const initialSelections = {};
+        buyersWithMultipleLists.forEach(buyer => {
+          initialSelections[buyer.rowIndex] = buyer.suggestedLists;
+        });
+        setSelectedListsForBuyers(initialSelections);
       }
     });
   };
@@ -126,23 +219,21 @@ export default function ImportCsvDialog({
     }));
   };
 
-  // Handle closing the dialog
-  const handleOpenChange = (open) => {
-    if (!open) {
-      resetState();
-    }
-    onOpenChange(open);
-  };
-
-  // Reset state
-  const resetState = () => {
-    setCsvFile(null);
-    setCsvData([]);
-    setCsvErrors([]);
-    setImportOptions({
-      skipFirstRow: true,
-      defaultBuyerType: "Investor",
-      defaultArea: "DFW"
+  // Toggle list selection for a buyer
+  const toggleListForBuyer = (buyerIndex, listName) => {
+    setSelectedListsForBuyers(prev => {
+      const current = prev[buyerIndex] || [];
+      if (current.includes(listName)) {
+        return {
+          ...prev,
+          [buyerIndex]: current.filter(l => l !== listName)
+        };
+      } else {
+        return {
+          ...prev,
+          [buyerIndex]: [...current, listName]
+        };
+      }
     });
   };
 
@@ -153,19 +244,26 @@ export default function ImportCsvDialog({
       return;
     }
 
-    // Format CSV data to buyer objects
-    const formattedData = csvData.map((row, index) => ({
-      id: `csv-buyer-${Date.now()}-${index}`,
-      firstName: row.firstName,
-      lastName: row.lastName,
-      email: row.email,
-      phone: row.phone,
-      buyerType: row.buyerType || importOptions.defaultBuyerType,
-      preferredAreas: row.preferredAreas ? 
-        row.preferredAreas.split(",").map(a => a.trim()) : 
-        [importOptions.defaultArea],
-      source: "CSV Import"
-    }));
+    // Format CSV data to buyer objects with selected lists
+    const formattedData = csvData.map((row, index) => {
+      const buyer = {
+        id: `csv-buyer-${Date.now()}-${index}`,
+        firstName: row.firstName,
+        lastName: row.lastName,
+        email: row.email.toLowerCase(),
+        phone: row.phone,
+        buyerType: row.buyerType || importOptions.defaultBuyerType || null,
+        preferredAreas: row.preferredAreas ? 
+          row.preferredAreas.split(",").map(a => a.trim()) : 
+          (importOptions.defaultArea ? [importOptions.defaultArea] : []),
+        emailStatus: row.emailStatus || null,
+        emailPermissionStatus: row.emailPermissionStatus || null,
+        emailLists: selectedListsForBuyers[index] || row.emailLists || [],
+        source: "CSV Import"
+      };
+      
+      return buyer;
+    });
 
     try {
       onImport(formattedData, importOptions);
@@ -177,16 +275,38 @@ export default function ImportCsvDialog({
     }
   };
 
+  // Reset state when dialog closes
+  const handleOpenChange = (open) => {
+    if (!open) {
+      setCsvFile(null);
+      setCsvHeaders([]);
+      setCsvData([]);
+      setCsvErrors([]);
+      setColumnMappings({});
+      setShowMapping(false);
+      setMultiListBuyers([]);
+      setSelectedListsForBuyers({});
+      setImportOptions({
+        skipFirstRow: true,
+        defaultBuyerType: "",
+        defaultArea: ""
+      });
+    }
+    onOpenChange(open);
+  };
+
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogContent className="sm:max-w-[600px]">
+      <DialogContent className="sm:max-w-[800px] max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Import Buyers from CSV</DialogTitle>
           <DialogDescription>
-            Upload a CSV file with buyer information to import
+            Upload a CSV file and map columns to buyer fields
           </DialogDescription>
         </DialogHeader>
+        
         <div className="py-4 space-y-4">
+          {/* File Upload */}
           <div className="flex items-center gap-4">
             <Label htmlFor="csv-upload-file">Select CSV File</Label>
             <Button 
@@ -211,32 +331,150 @@ export default function ImportCsvDialog({
             <div className="flex items-center gap-2 p-2 bg-[#f0f5f4] rounded-lg">
               <FileText className="h-5 w-5 text-[#324c48]" />
               <span className="font-medium">{csvFile.name}</span>
-              <span className="text-sm text-gray-500">
-                ({(csvFile.size / 1024).toFixed(1)} KB)
-              </span>
               <Button
                 size="sm"
                 variant="ghost"
-                className="ml-auto h-8 w-8 p-0 text-gray-500"
+                className="ml-auto h-8 w-8 p-0"
                 onClick={() => {
                   setCsvFile(null);
-                  setCsvData([]);
-                  setCsvErrors([]);
+                  setCsvHeaders([]);
+                  setShowMapping(false);
                 }}
               >
                 <Trash2 className="h-4 w-4" />
-                <span className="sr-only">Remove</span>
               </Button>
             </div>
           )}
           
+          {/* Column Mapping */}
+          {showMapping && csvHeaders.length > 0 && (
+            <div className="space-y-3">
+              <h3 className="font-medium">Map CSV Columns to Fields</h3>
+              <div className="space-y-2 max-h-60 overflow-y-auto border rounded-lg p-3">
+                {csvHeaders.map(header => (
+                  <div key={header} className="flex items-center gap-3">
+                    <Label className="w-1/3 text-sm">{header}</Label>
+                    <Select
+                      value={columnMappings[header] || ""}
+                      onValueChange={(value) => handleMappingChange(header, value)}
+                    >
+                      <SelectTrigger className="w-2/3">
+                        <SelectValue placeholder="Skip this column" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="">Skip this column</SelectItem>
+                        {AVAILABLE_FIELDS.map(field => (
+                          <SelectItem key={field.id} value={field.id}>
+                            {field.label} {field.required && "*"}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                ))}
+              </div>
+              
+              <Button
+                onClick={processCsvWithMappings}
+                className="w-full bg-[#324c48] text-white"
+              >
+                Process CSV
+              </Button>
+            </div>
+          )}
+          
+          {/* Import Options */}
+          {csvData.length > 0 && (
+            <div className="bg-[#f0f5f4]/50 p-3 rounded-lg space-y-3">
+              <p className="text-sm font-medium text-[#324c48]">
+                Default values for missing fields:
+              </p>
+              
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-1">
+                  <Label htmlFor="defaultBuyerType" className="text-sm">Default Buyer Type</Label>
+                  <Select
+                    value={importOptions.defaultBuyerType}
+                    onValueChange={(value) => handleOptionChange("defaultBuyerType", value)}
+                  >
+                    <SelectTrigger id="defaultBuyerType" className="text-sm h-8">
+                      <SelectValue placeholder="Select default type" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {BUYER_TYPES.map(type => (
+                        <SelectItem key={type.id} value={type.id}>
+                          {type.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                
+                <div className="space-y-1">
+                  <Label htmlFor="defaultArea" className="text-sm">Default Area</Label>
+                  <Select
+                    value={importOptions.defaultArea}
+                    onValueChange={(value) => handleOptionChange("defaultArea", value)}
+                  >
+                    <SelectTrigger id="defaultArea" className="text-sm h-8">
+                      <SelectValue placeholder="Select default area" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {AREAS.map(area => (
+                        <SelectItem key={area.id} value={area.id}>
+                          {area.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+            </div>
+          )}
+          
+          {/* Multi-list Buyers */}
+          {multiListBuyers.length > 0 && (
+            <div className="space-y-3">
+              <h3 className="font-medium text-[#324c48]">
+                Buyers with Multiple Lists
+              </h3>
+              <div className="max-h-40 overflow-y-auto border rounded-lg p-3 space-y-2">
+                {multiListBuyers.map((buyer, idx) => (
+                  <div key={idx} className="bg-gray-50 p-2 rounded">
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="text-sm font-medium">
+                        {buyer.firstName} {buyer.lastName} ({buyer.email})
+                      </span>
+                    </div>
+                    <div className="flex flex-wrap gap-1">
+                      {buyer.suggestedLists.map((list, listIdx) => (
+                        <Badge
+                          key={listIdx}
+                          variant={selectedListsForBuyers[buyer.rowIndex]?.includes(list) ? "default" : "outline"}
+                          className="cursor-pointer"
+                          onClick={() => toggleListForBuyer(buyer.rowIndex, list)}
+                        >
+                          {list}
+                          {selectedListsForBuyers[buyer.rowIndex]?.includes(list) && (
+                            <Check className="h-3 w-3 ml-1" />
+                          )}
+                        </Badge>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+          
+          {/* Errors */}
           {csvErrors.length > 0 && (
             <div className="p-3 bg-red-50 border border-red-200 rounded-lg">
               <div className="flex items-center gap-2 mb-2">
                 <AlertCircle className="h-5 w-5 text-red-500" />
-                <p className="font-medium text-red-700">CSV Import Errors</p>
+                <p className="font-medium text-red-700">Import Errors</p>
               </div>
-              <ul className="pl-5 list-disc text-sm text-red-600 space-y-1">
+              <ul className="pl-5 list-disc text-sm text-red-600 space-y-1 max-h-20 overflow-y-auto">
                 {csvErrors.map((error, idx) => (
                   <li key={idx}>{error}</li>
                 ))}
@@ -244,7 +482,8 @@ export default function ImportCsvDialog({
             </div>
           )}
           
-          {csvData.length > 0 && (
+          {/* Success Message */}
+          {csvData.length > 0 && csvErrors.length === 0 && (
             <div className="p-3 bg-green-50 border border-green-200 rounded-lg">
               <div className="flex items-center gap-2">
                 <Check className="h-5 w-5 text-green-500" />
@@ -254,88 +493,8 @@ export default function ImportCsvDialog({
               </div>
             </div>
           )}
-          
-          <div className="p-3 bg-[#f0f5f4] rounded-lg">
-            <p className="text-sm font-medium text-[#324c48] mb-2">
-              CSV Format Requirements:
-            </p>
-            <ul className="pl-5 list-disc text-sm text-gray-600 space-y-1">
-              <li>Required columns: firstName, lastName, email, phone</li>
-              <li>Optional columns: buyerType, preferredAreas (comma separated)</li>
-              <li>First row should be column headers</li>
-            </ul>
-            <p className="text-sm mt-2">
-              <a href="#" className="text-[#324c48] underline" onClick={(e) => {
-                e.preventDefault();
-                const csv = "firstName,lastName,email,phone,buyerType,preferredAreas\nJohn,Doe,john@example.com,(555) 123-4567,Builder,\"Austin, DFW\"\nJane,Smith,jane@example.com,(555) 987-6543,Investor,Houston";
-                const blob = new Blob([csv], { type: 'text/csv' });
-                const url = URL.createObjectURL(blob);
-                const a = document.createElement('a');
-                a.href = url;
-                a.download = 'buyer_list_template.csv';
-                a.click();
-                URL.revokeObjectURL(url);
-              }}>
-                Download template
-              </a>
-            </p>
-          </div>
-          
-          <div className="bg-[#f0f5f4]/50 p-3 rounded-lg space-y-3">
-            <p className="text-sm font-medium text-[#324c48]">
-              Default values for missing fields:
-            </p>
-            
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-1">
-                <Label htmlFor="defaultBuyerType" className="text-sm">Default Buyer Type</Label>
-                <Select
-                  value={importOptions.defaultBuyerType}
-                  onValueChange={(value) => handleOptionChange("defaultBuyerType", value)}
-                >
-                  <SelectTrigger id="defaultBuyerType" className="text-sm h-8">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {BUYER_TYPES.map(type => (
-                      <SelectItem key={type.id} value={type.id}>
-                        {type.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              
-              <div className="space-y-1">
-                <Label htmlFor="defaultArea" className="text-sm">Default Area</Label>
-                <Select
-                  value={importOptions.defaultArea}
-                  onValueChange={(value) => handleOptionChange("defaultArea", value)}
-                >
-                  <SelectTrigger id="defaultArea" className="text-sm h-8">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {AREAS.map(area => (
-                      <SelectItem key={area.id} value={area.id}>
-                        {area.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-            
-            <div className="flex items-center space-x-2">
-              <Checkbox
-                id="skipFirstRow"
-                checked={importOptions.skipFirstRow}
-                onCheckedChange={(checked) => handleOptionChange("skipFirstRow", checked)}
-              />
-              <Label htmlFor="skipFirstRow" className="text-sm">Skip first row (header row)</Label>
-            </div>
-          </div>
         </div>
+        
         <DialogFooter className="gap-2">
           <Button variant="outline" onClick={() => handleOpenChange(false)}>
             Cancel

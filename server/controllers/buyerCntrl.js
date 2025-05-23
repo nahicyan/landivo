@@ -92,7 +92,7 @@ export const getAllBuyers = asyncHandler(async (req, res) => {
         createdAt: "desc"
       }
     });
-    
+
     res.status(200).json(buyers);
   } catch (err) {
     console.error("Error fetching buyers:", err);
@@ -110,11 +110,11 @@ export const getAllBuyers = asyncHandler(async (req, res) => {
  */
 export const getBuyerById = asyncHandler(async (req, res) => {
   const { id } = req.params;
-  
+
   if (!id) {
     return res.status(400).json({ message: "Buyer ID is required" });
   }
-  
+
   try {
     const buyer = await prisma.buyer.findUnique({
       where: { id },
@@ -132,11 +132,11 @@ export const getBuyerById = asyncHandler(async (req, res) => {
         }
       }
     });
-    
+
     if (!buyer) {
       return res.status(404).json({ message: "Buyer not found" });
     }
-    
+
     res.status(200).json(buyer);
   } catch (err) {
     console.error("Error fetching buyer:", err);
@@ -163,43 +163,43 @@ export const updateBuyer = asyncHandler(async (req, res) => {
     source,
     preferredAreas
   } = req.body;
-  
+
   if (!id) {
     return res.status(400).json({ message: "Buyer ID is required" });
   }
-  
+
   try {
     // Check if buyer exists
     const existingBuyer = await prisma.buyer.findUnique({
       where: { id }
     });
-    
+
     if (!existingBuyer) {
       return res.status(404).json({ message: "Buyer not found" });
     }
-    
+
     // Check if email is changing and if it's already in use
     if (email !== existingBuyer.email) {
       const emailExists = await prisma.buyer.findUnique({
         where: { email: email.toLowerCase() }
       });
-      
+
       if (emailExists && emailExists.id !== id) {
         return res.status(400).json({ message: "Email already in use by another buyer" });
       }
     }
-    
+
     // Check if phone is changing and if it's already in use
     if (phone !== existingBuyer.phone) {
       const phoneExists = await prisma.buyer.findUnique({
         where: { phone }
       });
-      
+
       if (phoneExists && phoneExists.id !== id) {
         return res.status(400).json({ message: "Phone number already in use by another buyer" });
       }
     }
-    
+
     // Update the buyer
     const updatedBuyer = await prisma.buyer.update({
       where: { id },
@@ -216,7 +216,7 @@ export const updateBuyer = asyncHandler(async (req, res) => {
         offers: true
       }
     });
-    
+
     res.status(200).json(updatedBuyer);
   } catch (err) {
     console.error("Error updating buyer:", err);
@@ -234,31 +234,31 @@ export const updateBuyer = asyncHandler(async (req, res) => {
  */
 export const deleteBuyer = asyncHandler(async (req, res) => {
   const { id } = req.params;
-  
+
   if (!id) {
     return res.status(400).json({ message: "Buyer ID is required" });
   }
-  
+
   try {
     // Check if buyer exists
     const existingBuyer = await prisma.buyer.findUnique({
       where: { id }
     });
-    
+
     if (!existingBuyer) {
       return res.status(404).json({ message: "Buyer not found" });
     }
-    
+
     // First delete all offers from this buyer (due to foreign key constraint)
     await prisma.offer.deleteMany({
       where: { buyerId: id }
     });
-    
+
     // Then delete the buyer
     const deletedBuyer = await prisma.buyer.delete({
       where: { id }
     });
-    
+
     res.status(200).json({
       message: "Buyer and associated offers deleted successfully",
       buyer: deletedBuyer
@@ -277,6 +277,7 @@ export const deleteBuyer = asyncHandler(async (req, res) => {
  * @route POST /api/buyer/create
  * @access Public
  */
+// Update createBuyer function
 export const createBuyer = asyncHandler(async (req, res) => {
   const {
     email,
@@ -285,19 +286,22 @@ export const createBuyer = asyncHandler(async (req, res) => {
     firstName,
     lastName,
     source,
-    preferredAreas
+    preferredAreas,
+    emailStatus,
+    emailPermissionStatus,
+    emailLists // Array of list names or IDs
   } = req.body;
 
   // Validate required fields
-  if (!email || !phone || !buyerType || !firstName || !lastName) {
+  if (!email || !phone || !firstName || !lastName) {
     res.status(400).json({
-      message: "Email, phone, buyerType, firstName, and lastName are required."
+      message: "Email, phone, firstName, and lastName are required."
     });
     return;
   }
 
   try {
-    // Check if buyer already exists with this email or phone
+    // Check if buyer already exists
     const existingBuyer = await prisma.buyer.findFirst({
       where: {
         OR: [
@@ -314,8 +318,20 @@ export const createBuyer = asyncHandler(async (req, res) => {
       });
       return;
     }
-    
-    // Create new buyer
+
+    // Find email lists by name if provided
+    let emailListConnections = [];
+    if (emailLists && emailLists.length > 0) {
+      const lists = await prisma.emailList.findMany({
+        where: {
+          name: { in: emailLists }
+        },
+        select: { id: true }
+      });
+      emailListConnections = lists.map(list => ({ id: list.id }));
+    }
+
+    // Create new buyer with email list connections
     const buyer = await prisma.buyer.create({
       data: {
         email: email.toLowerCase(),
@@ -324,7 +340,21 @@ export const createBuyer = asyncHandler(async (req, res) => {
         firstName,
         lastName,
         source: source || "Manual Entry",
-        preferredAreas: preferredAreas || []
+        preferredAreas: preferredAreas || [],
+        emailStatus: emailStatus || "available",
+        emailPermissionStatus,
+        emailListMemberships: {
+          create: emailListConnections.map(listId => ({
+            emailList: { connect: { id: listId } }
+          }))
+        }
+      },
+      include: {
+        emailListMemberships: {
+          include: {
+            emailList: true
+          }
+        }
       }
     });
 
@@ -348,11 +378,11 @@ export const createBuyer = asyncHandler(async (req, res) => {
  */
 export const getBuyersByArea = asyncHandler(async (req, res) => {
   const { areaId } = req.params;
-  
+
   if (!areaId) {
     return res.status(400).json({ message: "Area ID is required" });
   }
-  
+
   try {
     const buyers = await prisma.buyer.findMany({
       where: {
@@ -364,7 +394,7 @@ export const getBuyersByArea = asyncHandler(async (req, res) => {
         createdAt: "desc"
       }
     });
-    
+
     res.status(200).json({
       areaId,
       count: buyers.length,
@@ -386,15 +416,15 @@ export const getBuyersByArea = asyncHandler(async (req, res) => {
  */
 export const sendEmailToBuyers = asyncHandler(async (req, res) => {
   const { buyerIds, subject, content, includeUnsubscribed = false } = req.body;
-  
+
   if (!buyerIds || !Array.isArray(buyerIds) || buyerIds.length === 0) {
     return res.status(400).json({ message: "At least one buyer ID is required" });
   }
-  
+
   if (!subject || !content) {
     return res.status(400).json({ message: "Email subject and content are required" });
   }
-  
+
   try {
     // Get the buyers to email
     const buyers = await prisma.buyer.findMany({
@@ -403,16 +433,16 @@ export const sendEmailToBuyers = asyncHandler(async (req, res) => {
         ...(includeUnsubscribed ? {} : { unsubscribed: false })
       }
     });
-    
+
     if (buyers.length === 0) {
-      return res.status(404).json({ 
-        message: "No eligible buyers found with the provided IDs" 
+      return res.status(404).json({
+        message: "No eligible buyers found with the provided IDs"
       });
     }
-    
+
     // In a real implementation, you'd use a service like SendGrid, Mailchimp, etc.
     // Here we'll simulate sending emails
-    
+
     // Process email content with placeholders
     const emailsSent = buyers.map(buyer => {
       // Replace placeholders with buyer data
@@ -421,9 +451,9 @@ export const sendEmailToBuyers = asyncHandler(async (req, res) => {
         .replace(/{lastName}/g, buyer.lastName)
         .replace(/{email}/g, buyer.email)
         .replace(/{preferredAreas}/g, (buyer.preferredAreas || []).join(", "));
-      
+
       // In a real implementation, send the email here
-      
+
       return {
         buyerId: buyer.id,
         email: buyer.email,
@@ -431,10 +461,10 @@ export const sendEmailToBuyers = asyncHandler(async (req, res) => {
         status: "sent" // In a real implementation, this would be the actual status
       };
     });
-    
+
     // Create a record of the email campaign
     // In a real implementation, you'd store this in the database
-    
+
     res.status(200).json({
       message: `Successfully sent emails to ${emailsSent.length} buyers`,
       emailsSent,
@@ -455,15 +485,12 @@ export const sendEmailToBuyers = asyncHandler(async (req, res) => {
  * @access Private (only admins should import buyers)
  */
 export const importBuyersFromCsv = asyncHandler(async (req, res) => {
-  // In a real implementation, you'd process the uploaded CSV file
-  // Here we'll assume the data is already parsed and available in req.body.buyers
-  
   const { buyers, source = "CSV Import" } = req.body;
-  
+
   if (!buyers || !Array.isArray(buyers) || buyers.length === 0) {
     return res.status(400).json({ message: "No buyer data provided" });
   }
-  
+
   try {
     const results = {
       created: 0,
@@ -471,12 +498,22 @@ export const importBuyersFromCsv = asyncHandler(async (req, res) => {
       failed: 0,
       errors: []
     };
-    
+
     // Process each buyer
     for (const buyerData of buyers) {
       try {
-        const { email, phone, firstName, lastName, buyerType, preferredAreas } = buyerData;
-        
+        const {
+          email,
+          phone,
+          firstName,
+          lastName,
+          buyerType,
+          preferredAreas,
+          emailStatus,
+          emailPermissionStatus,
+          emailLists
+        } = buyerData;
+
         // Check required fields
         if (!email || !phone || !firstName || !lastName) {
           results.failed++;
@@ -486,7 +523,19 @@ export const importBuyersFromCsv = asyncHandler(async (req, res) => {
           });
           continue;
         }
-        
+
+        // Find email lists by name
+        let emailListConnections = [];
+        if (emailLists && emailLists.length > 0) {
+          const lists = await prisma.emailList.findMany({
+            where: {
+              name: { in: emailLists }
+            },
+            select: { id: true }
+          });
+          emailListConnections = lists.map(list => ({ id: list.id }));
+        }
+
         // Check if buyer already exists
         const existingBuyer = await prisma.buyer.findFirst({
           where: {
@@ -496,7 +545,7 @@ export const importBuyersFromCsv = asyncHandler(async (req, res) => {
             ]
           }
         });
-        
+
         if (existingBuyer) {
           // Update existing buyer
           await prisma.buyer.update({
@@ -506,10 +555,16 @@ export const importBuyersFromCsv = asyncHandler(async (req, res) => {
               lastName,
               buyerType: buyerType || existingBuyer.buyerType,
               preferredAreas: preferredAreas || existingBuyer.preferredAreas,
-              source: source || existingBuyer.source
+              source: source || existingBuyer.source,
+              emailStatus: emailStatus || existingBuyer.emailStatus,
+              emailPermissionStatus: emailPermissionStatus || existingBuyer.emailPermissionStatus,
+              emailLists: {
+                set: [], // Clear existing connections
+                connect: emailListConnections // Add new connections
+              }
             }
           });
-          
+
           results.updated++;
         } else {
           // Create new buyer
@@ -517,14 +572,19 @@ export const importBuyersFromCsv = asyncHandler(async (req, res) => {
             data: {
               email: email.toLowerCase(),
               phone,
+              buyerType,
               firstName,
               lastName,
-              buyerType: buyerType || "Investor", // Default
+              source: source || "Manual Entry",
               preferredAreas: preferredAreas || [],
-              source
+              emailStatus: emailStatus || "available", // Default to available
+              emailPermissionStatus,
+              emailLists: {
+                connect: emailListConnections
+              }
             }
           });
-          
+
           results.created++;
         }
       } catch (err) {
@@ -535,7 +595,7 @@ export const importBuyersFromCsv = asyncHandler(async (req, res) => {
         });
       }
     }
-    
+
     res.status(200).json({
       message: `Processed ${buyers.length} buyers: ${results.created} created, ${results.updated} updated, ${results.failed} failed`,
       results
@@ -558,12 +618,12 @@ export const getBuyerStats = asyncHandler(async (req, res) => {
   try {
     // Get total buyer count
     const totalCount = await prisma.buyer.count();
-    
+
     // Get count of VIP buyers
     const vipCount = await prisma.buyer.count({
       where: { source: "VIP Buyers List" }
     });
-    
+
     // Get counts by area (this is more complex with array fields)
     // In MongoDB/Prisma, we'd need aggregation for this
     // This is a simplified version
@@ -576,15 +636,15 @@ export const getBuyerStats = asyncHandler(async (req, res) => {
         createdAt: true
       }
     });
-    
+
     // Manually count by area
     const byArea = {};
     const byType = {};
     const bySource = {};
-    
+
     // Process for time-based analytics - group by month
     const monthlyGrowth = {};
-    
+
     buyers.forEach(buyer => {
       // Count by area
       if (buyer.preferredAreas) {
@@ -592,16 +652,16 @@ export const getBuyerStats = asyncHandler(async (req, res) => {
           byArea[area] = (byArea[area] || 0) + 1;
         });
       }
-      
+
       // Count by type
       if (buyer.buyerType) {
         byType[buyer.buyerType] = (byType[buyer.buyerType] || 0) + 1;
       }
-      
+
       // Count by source
       const source = buyer.source || "Unknown";
       bySource[source] = (bySource[source] || 0) + 1;
-      
+
       // Process for monthly growth
       if (buyer.createdAt) {
         const date = new Date(buyer.createdAt);
@@ -609,7 +669,7 @@ export const getBuyerStats = asyncHandler(async (req, res) => {
         monthlyGrowth[monthKey] = (monthlyGrowth[monthKey] || 0) + 1;
       }
     });
-    
+
     // Return stats
     res.status(200).json({
       totalCount,
@@ -635,21 +695,21 @@ export const getBuyerStats = asyncHandler(async (req, res) => {
  */
 export const getBuyerByAuth0Id = asyncHandler(async (req, res) => {
   const { auth0Id } = req.query;
-  
+
   if (!auth0Id) {
     return res.status(400).json({ message: "Auth0 ID is required" });
   }
-  
+
   try {
     // Find buyer by Auth0 ID
     const buyer = await prisma.buyer.findFirst({
       where: { auth0Id }
     });
-    
+
     if (!buyer) {
       return res.status(404).json({ message: "Buyer not found" });
     }
-    
+
     // Return buyer data with 200 status
     res.status(200).json(buyer);
   } catch (err) {
