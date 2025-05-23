@@ -40,15 +40,21 @@ const DisplayRow = ({
         return properties;
 
       case 'featured':
-        // Filter by featured status
-        let featuredProps = properties.filter(p => p.featured === "Featured");
-        
-        // Additional rowType filtering if specified
-        if (filter.rowType && filter.rowIds) {
-          const rowIds = filter.rowIds;
-          featuredProps = featuredProps.filter(p => rowIds.includes(p.id));
+        // If specific rowIds are provided, use those as the primary filter
+        if (filter.rowIds && filter.rowIds.length > 0) {
+          // Get properties in the order specified by rowIds
+          const orderedProperties = [];
+          filter.rowIds.forEach(id => {
+            const property = properties.find(p => p.id === id);
+            if (property) {
+              orderedProperties.push(property);
+            }
+          });
+          return orderedProperties;
         }
-        return featuredProps;
+        
+        // Otherwise, filter by featured status
+        return properties.filter(p => p.featured === "Featured");
 
       case 'area':
         return properties.filter(p => p.area === filter.value);
@@ -147,7 +153,12 @@ const DisplayRow = ({
     updateScrollState();
     window.addEventListener("resize", updateScrollState);
     return () => window.removeEventListener("resize", updateScrollState);
-  }, [filteredProperties]);
+  }, []);
+
+  // Update scroll state when properties or filter changes
+  useEffect(() => {
+    updateScrollState();
+  }, [properties.length, filter]);
 
   // Scroll handlers
   const handleScrollLeft = () => {
