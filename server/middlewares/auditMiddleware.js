@@ -158,7 +158,7 @@ function getEntityTypeFromUrl(url) {
   if (url.includes('/api/deal')) return 'Deal';
   if (url.includes('/api/user')) return 'User';
   if (url.includes('/api/qualification')) return 'Qualification';
-  if (url.includes('/api/buyer-list')) return 'BuyerList';
+  if (url.includes('/api/email-list')) return 'EmailList';
   return null;
 }
 

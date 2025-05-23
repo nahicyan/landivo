@@ -1,10 +1,10 @@
 import asyncHandler from "express-async-handler";
 import { prisma } from "../config/prismaConfig.js";
 
-// Get all buyer lists
-export const getAllBuyerLists = asyncHandler(async (req, res) => {
+// Get all email lists
+export const getAllEmailLists = asyncHandler(async (req, res) => {
   try {
-    const lists = await prisma.buyerList.findMany({
+    const lists = await prisma.emailList.findMany({
       orderBy: {
         createdAt: "desc"
       }
@@ -62,16 +62,16 @@ export const getAllBuyerLists = asyncHandler(async (req, res) => {
     
     res.status(200).json(listsWithCounts);
   } catch (err) {
-    console.error("Error fetching buyer lists:", err);
+    console.error("Error fetching email lists:", err);
     res.status(500).json({
-      message: "An error occurred while fetching buyer lists",
+      message: "An error occurred while fetching email lists",
       error: err.message
     });
   }
 });
 
-// Get a specific buyer list with its members
-export const getBuyerList = asyncHandler(async (req, res) => {
+// Get a specific email list with its members
+export const getEmailList = asyncHandler(async (req, res) => {
   const { id } = req.params;
   
   if (!id) {
@@ -80,7 +80,7 @@ export const getBuyerList = asyncHandler(async (req, res) => {
   
   try {
     // Get the list
-    const list = await prisma.buyerList.findUnique({
+    const list = await prisma.emailList.findUnique({
       where: { id }
     });
     
@@ -146,16 +146,16 @@ export const getBuyerList = asyncHandler(async (req, res) => {
       buyerCount: allBuyers.length
     });
   } catch (err) {
-    console.error("Error fetching buyer list:", err);
+    console.error("Error fetching email list:", err);
     res.status(500).json({
-      message: "An error occurred while fetching the buyer list",
+      message: "An error occurred while fetching the email list",
       error: err.message
     });
   }
 });
 
-// Create a new buyer list
-export const createBuyerList = asyncHandler(async (req, res) => {
+// Create a new email list
+export const createEmailList = asyncHandler(async (req, res) => {
   const { name, description, criteria, buyerIds = [], color } = req.body;
   
   if (!name) {
@@ -164,7 +164,7 @@ export const createBuyerList = asyncHandler(async (req, res) => {
   
   try {
     // Create the list
-    const newList = await prisma.buyerList.create({
+    const newList = await prisma.emailList.create({
       data: {
         name,
         description,
@@ -180,16 +180,16 @@ export const createBuyerList = asyncHandler(async (req, res) => {
       list: newList
     });
   } catch (err) {
-    console.error("Error creating buyer list:", err);
+    console.error("Error creating email list:", err);
     res.status(500).json({
-      message: "An error occurred while creating the buyer list",
+      message: "An error occurred while creating the email list",
       error: err.message
     });
   }
 });
 
-// Update a buyer list
-export const updateBuyerList = asyncHandler(async (req, res) => {
+// Update a email list
+export const updateEmailList = asyncHandler(async (req, res) => {
   const { id } = req.params;
   const { name, description, criteria, color } = req.body;
   
@@ -203,7 +203,7 @@ export const updateBuyerList = asyncHandler(async (req, res) => {
   
   try {
     // Check if the list exists
-    const existingList = await prisma.buyerList.findUnique({
+    const existingList = await prisma.emailList.findUnique({
       where: { id }
     });
     
@@ -212,7 +212,7 @@ export const updateBuyerList = asyncHandler(async (req, res) => {
     }
     
     // Update the list
-    const updatedList = await prisma.buyerList.update({
+    const updatedList = await prisma.emailList.update({
       where: { id },
       data: {
         name,
@@ -228,16 +228,16 @@ export const updateBuyerList = asyncHandler(async (req, res) => {
       list: updatedList
     });
   } catch (err) {
-    console.error("Error updating buyer list:", err);
+    console.error("Error updating email list:", err);
     res.status(500).json({
-      message: "An error occurred while updating the buyer list",
+      message: "An error occurred while updating the email list",
       error: err.message
     });
   }
 });
 
-// Delete a buyer list
-export const deleteBuyerList = asyncHandler(async (req, res) => {
+// Delete a email list
+export const deleteEmailList = asyncHandler(async (req, res) => {
   const { id } = req.params;
   
   if (!id) {
@@ -246,7 +246,7 @@ export const deleteBuyerList = asyncHandler(async (req, res) => {
   
   try {
     // Check if the list exists
-    const existingList = await prisma.buyerList.findUnique({
+    const existingList = await prisma.emailList.findUnique({
       where: { id }
     });
     
@@ -255,7 +255,7 @@ export const deleteBuyerList = asyncHandler(async (req, res) => {
     }
     
     // Delete the list
-    await prisma.buyerList.delete({
+    await prisma.emailList.delete({
       where: { id }
     });
     
@@ -263,9 +263,9 @@ export const deleteBuyerList = asyncHandler(async (req, res) => {
       message: "Buyer list deleted successfully"
     });
   } catch (err) {
-    console.error("Error deleting buyer list:", err);
+    console.error("Error deleting email list:", err);
     res.status(500).json({
-      message: "An error occurred while deleting the buyer list",
+      message: "An error occurred while deleting the email list",
       error: err.message
     });
   }
@@ -286,7 +286,7 @@ export const addBuyersToList = asyncHandler(async (req, res) => {
   
   try {
     // Check if the list exists
-    const existingList = await prisma.buyerList.findUnique({
+    const existingList = await prisma.emailList.findUnique({
       where: { id }
     });
     
@@ -301,7 +301,7 @@ export const addBuyersToList = asyncHandler(async (req, res) => {
     const updatedBuyerIds = Array.from(new Set([...currentBuyerIds, ...buyerIds]));
     
     // Update the list
-    const updatedList = await prisma.buyerList.update({
+    const updatedList = await prisma.emailList.update({
       where: { id },
       data: {
         buyerIds: updatedBuyerIds,
@@ -337,7 +337,7 @@ export const removeBuyersFromList = asyncHandler(async (req, res) => {
   
   try {
     // Check if the list exists
-    const existingList = await prisma.buyerList.findUnique({
+    const existingList = await prisma.emailList.findUnique({
       where: { id }
     });
     
@@ -352,7 +352,7 @@ export const removeBuyersFromList = asyncHandler(async (req, res) => {
     const updatedBuyerIds = currentBuyerIds.filter(id => !buyerIds.includes(id));
     
     // Update the list
-    const updatedList = await prisma.buyerList.update({
+    const updatedList = await prisma.emailList.update({
       where: { id },
       data: {
         buyerIds: updatedBuyerIds,
@@ -388,7 +388,7 @@ export const sendEmailToList = asyncHandler(async (req, res) => {
   
   try {
     // Get the list with its buyers
-    const list = await prisma.buyerList.findUnique({
+    const list = await prisma.emailList.findUnique({
       where: { id }
     });
     
@@ -480,7 +480,7 @@ export const sendEmailToList = asyncHandler(async (req, res) => {
     });
     
     // Update last email date for the list
-    await prisma.buyerList.update({
+    await prisma.emailList.update({
       where: { id },
       data: {
         lastEmailDate: new Date()

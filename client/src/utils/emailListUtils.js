@@ -1,5 +1,5 @@
 /**
- * Utility functions for working with buyer lists
+ * Utility functions for working with email lists
  */
 
 // Define the available areas

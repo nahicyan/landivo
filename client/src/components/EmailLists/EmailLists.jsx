@@ -2,8 +2,8 @@ import React, { useState } from "react";
 import { Card } from "@/components/ui/card";
 import { PuffLoader } from "react-spinners";
 
-// Import core components for buyer lists
-import BuyerListsTable from "./BuyerListsTable";
+// Import core components for email lists
+import EmailListsTable from "./EmailListsTable";
 import CreateListForm from "./CreateListForm";
 import EditListForm from "./EditListForm";
 import EmailForm from "./EmailForm";
@@ -12,10 +12,10 @@ import ManageMembersDialog from "./ManageMembersDialog";
 import ImportCsvDialog from "./ImportCsvDialog";
 
 // Import custom hooks from the proper location
-import { useBuyerLists } from "@/components/hooks/useBuyerLists";
+import { useEmailLists } from "@/components/hooks/useEmailLists";
 import useBuyers from "@/components/hooks/useBuyers.js";
 
-export default function BuyerLists() {
+export default function EmailLists() {
   // State for dialogs and selected list
   const [createListOpen, setCreateListOpen] = useState(false);
   const [editListOpen, setEditListOpen] = useState(false);
@@ -38,7 +38,7 @@ export default function BuyerLists() {
     addBuyersToList: addBuyersToListFn,
     removeBuyersFromList,
     setListFilters,
-  } = useBuyerLists();
+  } = useEmailLists();
 
   const {
     buyers,
@@ -112,7 +112,7 @@ export default function BuyerLists() {
   return (
     <div className="max-w-screen-xl mx-auto p-4 sm:p-6">
       <div className="mb-6">
-        <h1 className="text-2xl font-bold text-[#324c48] mb-2">Buyer Lists</h1>
+        <h1 className="text-2xl font-bold text-[#324c48] mb-2">Email Lists</h1>
         <p className="text-gray-600">
           Create and manage lists of buyers grouped by area and type for targeted emails
         </p>
@@ -121,7 +121,7 @@ export default function BuyerLists() {
       {/* Main Content */}
       <Card className="border-[#324c48]/20">
         {/* Table with search and actions */}
-        <BuyerListsTable
+        <EmailListsTable
           lists={filteredLists}
           searchQuery={searchQuery}
           onSearchChange={handleSearchChange}

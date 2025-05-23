@@ -1,17 +1,17 @@
 import { useState, useEffect } from "react";
 import { toast } from "react-toastify";
 import { 
-  getBuyerLists, 
-  getBuyerList,
-  createBuyerList, 
-  updateBuyerList, 
-  deleteBuyerList, 
+  getEmailLists, 
+  getEmailList,
+  createEmailList, 
+  updateEmailList, 
+  deleteEmailList, 
   addBuyersToList as addBuyersApi, 
   removeBuyersFromList as removeBuyersApi, 
   sendEmailToList 
 } from "@/utils/api";
 
-export function useBuyerLists() {
+export function useEmailLists() {
   const [lists, setLists] = useState([]);
   const [filteredLists, setFilteredLists] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -20,18 +20,18 @@ export function useBuyerLists() {
     search: "",
   });
 
-  // Fetch all buyer lists
+  // Fetch all email lists
   useEffect(() => {
     const fetchLists = async () => {
       try {
         setLoading(true);
-        const data = await getBuyerLists();
+        const data = await getEmailLists();
         setLists(data);
         setFilteredLists(data);
       } catch (err) {
-        console.error("Error fetching buyer lists:", err);
-        setError("Failed to load buyer lists");
-        toast.error("Failed to load buyer lists");
+        console.error("Error fetching email lists:", err);
+        setError("Failed to load email lists");
+        toast.error("Failed to load email lists");
       } finally {
         setLoading(false);
       }
@@ -67,13 +67,13 @@ export function useBuyerLists() {
   // Create a new list
   const createList = async (listData) => {
     try {
-      const response = await createBuyerList(listData);
+      const response = await createEmailList(listData);
       setLists(prev => [...prev, response.list]);
       toast.success("Buyer list created successfully!");
       return response.list;
     } catch (err) {
-      console.error("Error creating buyer list:", err);
-      toast.error("Failed to create buyer list");
+      console.error("Error creating email list:", err);
+      toast.error("Failed to create email list");
       throw err;
     }
   };
@@ -81,15 +81,15 @@ export function useBuyerLists() {
   // Update an existing list
   const updateList = async (listId, listData) => {
     try {
-      const response = await updateBuyerList(listId, listData);
+      const response = await updateEmailList(listId, listData);
       setLists(prev => 
         prev.map(list => list.id === listId ? response.list : list)
       );
       toast.success("Buyer list updated successfully!");
       return response.list;
     } catch (err) {
-      console.error("Error updating buyer list:", err);
-      toast.error("Failed to update buyer list");
+      console.error("Error updating email list:", err);
+      toast.error("Failed to update email list");
       throw err;
     }
   };
@@ -97,12 +97,12 @@ export function useBuyerLists() {
   // Delete a list
   const deleteList = async (listId) => {
     try {
-      await deleteBuyerList(listId);
+      await deleteEmailList(listId);
       setLists(prev => prev.filter(list => list.id !== listId));
       toast.success("Buyer list deleted successfully!");
     } catch (err) {
-      console.error("Error deleting buyer list:", err);
-      toast.error("Failed to delete buyer list");
+      console.error("Error deleting email list:", err);
+      toast.error("Failed to delete email list");
       throw err;
     }
   };
@@ -188,7 +188,7 @@ export function useBuyerLists() {
   // Get list members
   const getListMembers = async (listId) => {
     try {
-      const listData = await getBuyerList(listId);
+      const listData = await getEmailList(listId);
       return listData.buyers || [];
     } catch (err) {
       console.error("Error fetching list members:", err);

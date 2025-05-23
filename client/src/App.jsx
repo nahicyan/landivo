@@ -40,7 +40,7 @@ import BuyerDetail from "./components/BuyerDetail/BuyerDetail";
 import CreateBuyer from "./components/CreateBuyer/CreateBuyer";
 import EditBuyer from "./components/EditBuyer/EditBuyer";
 import BuyerOffers from "./components/BuyerOffers/BuyerOffers";
-import BuyerLists from "./components/BuyerLists/BuyerLists";
+import EmailLists from "./components/EmailLists/EmailLists";
 import Profile from "./pages/Profile/Profile";
 import VipSignupSuccess from "./pages/Subscription/VipSignupSuccess";
 import AdminDeals from "./pages/AdminDeals/AdminDeals";
@@ -261,14 +261,14 @@ function App() {
                               }
                             />
                             <Route
-                              path="buyer-lists"
+                              path="email-lists"
                               element={
                                 <ProtectedRoute
                                   requiredPermissions={[PERMISSIONS.READ_BUYERS]}
                                   fallbackToRoles={true}
                                   allowedRoles={['Admin']}
                                 >
-                                  <BuyerLists />
+                                  <EmailLists />
                                 </ProtectedRoute>
                               }
                             />

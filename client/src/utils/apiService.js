@@ -56,25 +56,25 @@ export const useApiService = () => {
     return await api.delete(`/buyer/delete/${id}`);
   };
   
-  // Buyer Lists
-  const getBuyerLists = async () => {
-    return await api.get('/buyer-lists');
+  // Email Lists
+  const getEmailLists = async () => {
+    return await api.get('/email-lists');
   };
   
-  const getBuyerList = async (id) => {
-    return await api.get(`/buyer-lists/${id}`);
+  const getEmailList = async (id) => {
+    return await api.get(`/email-lists/${id}`);
   };
   
-  const createBuyerList = async (data) => {
-    return await api.post('/buyer-lists', data);
+  const createEmailList = async (data) => {
+    return await api.post('/email-lists', data);
   };
   
-  const updateBuyerList = async (id, data) => {
-    return await api.put(`/buyer-lists/${id}`, data);
+  const updateEmailList = async (id, data) => {
+    return await api.put(`/email-lists/${id}`, data);
   };
   
-  const deleteBuyerList = async (id) => {
-    return await api.delete(`/buyer-lists/${id}`);
+  const deleteEmailList = async (id) => {
+    return await api.delete(`/email-lists/${id}`);
   };
   
   // Offers
@@ -124,12 +124,12 @@ export const useApiService = () => {
     updateBuyer,
     deleteBuyer,
     
-    // Buyer Lists
-    getBuyerLists,
-    getBuyerList,
-    createBuyerList,
-    updateBuyerList,
-    deleteBuyerList,
+    // Email Lists
+    getEmailLists,
+    getEmailList,
+    createEmailList,
+    updateEmailList,
+    deleteEmailList,
     
     // Offers
     makeOffer,

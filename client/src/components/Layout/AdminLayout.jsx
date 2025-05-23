@@ -55,7 +55,7 @@ export default function AdminLayout() {
     {
       name: "Communications",
       items: [
-        { text: "Email Lists", icon: <ListChecks className="h-5 w-5" />, path: "/admin/buyer-lists" },
+        { text: "Email Lists", icon: <ListChecks className="h-5 w-5" />, path: "/admin/email-lists" },
       ]
     },
     {

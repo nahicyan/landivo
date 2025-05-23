@@ -89,7 +89,7 @@ const data = {
       url: "#",
       icon: User, // Changed to User icon
       items: [
-        { title: "VIP Buyer's List", url: "admin/buyer-lists" },
+        { title: "VIP Buyer's List", url: "admin/email-lists" },
         { title: "Property Alert List", url: "#" },
         { title: "Manage Buyers", url: "admin/buyers" },
       ],

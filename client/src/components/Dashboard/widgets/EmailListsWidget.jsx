@@ -1,4 +1,4 @@
-// client/src/components/Dashboard/widgets/BuyerListsWidget.jsx
+// client/src/components/Dashboard/widgets/EmailListsWidget.jsx
 
 import React from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { useNavigate } from "react-router-dom";
 import { useQuery } from "react-query";
-import { getBuyerLists } from "@/utils/api";
+import { getEmailLists } from "@/utils/api";
 import { 
   Users, 
   Mail, 
@@ -18,14 +18,14 @@ import {
   UserPlus
 } from "lucide-react";
 
-export default function BuyerListsWidget({ isLoading: externalLoading = false }) {
+export default function EmailListsWidget({ isLoading: externalLoading = false }) {
   const navigate = useNavigate();
 
-  // Fetch real buyer lists from API
-  const { data: buyerLists, isLoading: listsLoading, error } = useQuery(
-    'dashboardBuyerLists',
+  // Fetch real email lists from API
+  const { data: emailLists, isLoading: listsLoading, error } = useQuery(
+    'dashboardEmailLists',
     async () => {
-      const lists = await getBuyerLists();
+      const lists = await getEmailLists();
       // Sort lists by lastEmailDate (most recent first) or by memberCount
       return lists.sort((a, b) => {
         if (a.lastEmailDate && b.lastEmailDate) {
@@ -47,7 +47,7 @@ export default function BuyerListsWidget({ isLoading: externalLoading = false })
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Buyer Lists</CardTitle>
+        <CardTitle>Email Lists</CardTitle>
         <CardDescription>
           Segmented buyer audiences for targeted marketing
         </CardDescription>
@@ -66,11 +66,11 @@ export default function BuyerListsWidget({ isLoading: externalLoading = false })
           </div>
         ) : error ? (
           <div className="text-center py-4 text-red-500">
-            Error loading buyer lists. Please try again later.
+            Error loading email lists. Please try again later.
           </div>
-        ) : buyerLists && buyerLists.length > 0 ? (
+        ) : emailLists && emailLists.length > 0 ? (
           <div className="space-y-4">
-            {buyerLists.slice(0, 4).map((list) => {
+            {emailLists.slice(0, 4).map((list) => {
               // Calculate member count
               const memberCount = list.buyerIds?.length || 0;
               
@@ -87,7 +87,7 @@ export default function BuyerListsWidget({ isLoading: externalLoading = false })
                 <div 
                   key={list.id} 
                   className="p-3 border rounded-lg hover:border-[#324c48] transition-colors cursor-pointer"
-                  onClick={() => navigate(`/admin/buyer-lists/${list.id}`)}
+                  onClick={() => navigate(`/admin/email-lists/${list.id}`)}
                 >
                   <div className="flex justify-between items-start mb-1">
                     <div>
@@ -156,7 +156,7 @@ export default function BuyerListsWidget({ isLoading: externalLoading = false })
           </div>
         ) : (
           <div className="text-center py-6 text-gray-500">
-            No buyer lists found. Create your first list to get started.
+            No email lists found. Create your first list to get started.
           </div>
         )}
       </CardContent>
@@ -164,7 +164,7 @@ export default function BuyerListsWidget({ isLoading: externalLoading = false })
         <Button
           variant="outline"
           size="sm"
-          onClick={() => navigate("/admin/buyer-lists")}
+          onClick={() => navigate("/admin/email-lists")}
         >
           <UserPlus className="mr-2 h-4 w-4" />
           Create List
@@ -173,7 +173,7 @@ export default function BuyerListsWidget({ isLoading: externalLoading = false })
         <Button
           variant="outline"
           size="sm"
-          onClick={() => navigate("/admin/buyer-lists")}
+          onClick={() => navigate("/admin/email-lists")}
         >
           <Mail className="mr-2 h-4 w-4" />
           Send Email

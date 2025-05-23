@@ -109,7 +109,7 @@ export default function CreateListForm({
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogContent className="sm:max-w-[700px]">
         <DialogHeader>
-          <DialogTitle>Create New Buyer List</DialogTitle>
+          <DialogTitle>Create New Email List</DialogTitle>
           <DialogDescription>
             Define a new list of buyers based on area and type criteria
           </DialogDescription>

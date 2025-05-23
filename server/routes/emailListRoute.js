@@ -1,15 +1,15 @@
-// server/routes/buyerListRoute.js
+// server/routes/emailListRoute.js
 import express from "express";
 import {
-  getAllBuyerLists,
-  getBuyerList,
-  createBuyerList,
-  updateBuyerList,
-  deleteBuyerList,
+  getAllEmailLists,
+  getEmailList,
+  createEmailList,
+  updateEmailList,
+  deleteEmailList,
   addBuyersToList,
   removeBuyersFromList,
   sendEmailToList
-} from "../controllers/buyerListCntrl.js";
+} from "../controllers/emailListCntrl.js";
 import { 
   jwtCheck, 
   extractUserFromToken, 
@@ -25,14 +25,14 @@ router.get("/",
   jwtCheck, 
   extractUserFromToken, 
   checkPermissions(['read:buyers']), 
-  getAllBuyerLists
+  getAllEmailLists
 );
 
 router.get("/:id", 
   jwtCheck, 
   extractUserFromToken, 
   checkPermissions(['read:buyers']), 
-  getBuyerList
+  getEmailList
 );
 
 // Write operations - require write:buyers permission
@@ -40,14 +40,14 @@ router.post("/",
   jwtCheck, 
   extractUserFromToken, 
   checkPermissions(['write:buyers']), 
-  createBuyerList
+  createEmailList
 );
 
 router.put("/:id", 
   jwtCheck, 
   extractUserFromToken, 
   checkPermissions(['write:buyers']), 
-  updateBuyerList
+  updateEmailList
 );
 
 router.post("/:id/add-buyers", 
@@ -76,7 +76,7 @@ router.delete("/:id",
   jwtCheck, 
   extractUserFromToken, 
   checkPermissions(['delete:buyers']), 
-  deleteBuyerList
+  deleteEmailList
 );
 
-export { router as buyerListRoute };
+export { router as emailListRoute };

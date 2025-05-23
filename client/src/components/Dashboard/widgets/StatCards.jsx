@@ -125,9 +125,9 @@ const StatsCard = () => {
     });
     
     // Buyer stats
-    const buyerList = buyers || [];
-    const totalBuyers = buyerList.length;
-    const vipBuyers = buyerList.filter(b => b.source === "VIP Buyers List" || b.auth0Id).length;
+    const emailList = buyers || [];
+    const totalBuyers = emailList.length;
+    const vipBuyers = emailList.filter(b => b.source === "VIP Buyers List" || b.auth0Id).length;
     const emailReadyBuyers = totalBuyers; // Assuming all buyers have emails
     
     // Offer stats 

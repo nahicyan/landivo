@@ -22,7 +22,7 @@ import FinanceWidget from "./widgets/FinanceWidget";
 import ActivityWidget from "./widgets/ActivityWidget";
 import PropertiesWidget from "./widgets/PropertiesWidget";
 import BuyersWidget from "./widgets/BuyersWidget";
-import BuyerListsWidget from "./widgets/BuyerListsWidget";
+import EmailListsWidget from "./widgets/EmailListsWidget";
 import EmailReportWidget from "./widgets/EmailReportWidget";
 import QualificationsWidget from "./widgets/QualificationsWidget";
 import VisitorsWidget from "./widgets/VisitorsWidget";
@@ -200,11 +200,11 @@ export default function DashboardPage() {
             </Card>
             <Card className="overflow-hidden rounded-xl border border-[#324c48]/10 shadow-sm">
               <div className="p-4 bg-gradient-to-r from-[#324c48]/10 to-[#324c48]/5 border-b border-[#324c48]/10">
-                <h3 className="text-lg font-semibold text-[#324c48]">Buyer Lists</h3>
-                <p className="text-xs text-[#324c48]/70">Active buyer lists and membership stats</p>
+                <h3 className="text-lg font-semibold text-[#324c48]">Email Lists</h3>
+                <p className="text-xs text-[#324c48]/70">Active email lists and membership stats</p>
               </div>
               <div className="p-4">
-                <BuyerListsWidget isLoading={isLoading} />
+                <EmailListsWidget isLoading={isLoading} />
               </div>
             </Card>
           </div>

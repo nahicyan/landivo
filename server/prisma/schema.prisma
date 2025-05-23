@@ -230,6 +230,12 @@ model Buyer {
   preferredAreas String[]
   offers         Offer[]         @relation("BuyerOffers")
   auth0Id        String?        // @unique // Link to Auth0 if the buyer is also a system user
+
+  // Email List
+  
+  emailstatus	String
+  emailPermissionStatus	String
+  emailLists 
   
   // Audit fields
   createdById    String?         @db.ObjectId
@@ -340,7 +346,7 @@ model Qualification {
 
 //---------------------- Email List ----------------------//
 
-model BuyerList {
+model EmailList {
   id            String    @id @default(auto()) @map("_id") @db.ObjectId
   name          String
   description   String?

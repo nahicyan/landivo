@@ -25,7 +25,7 @@ import {
   Trash2 
 } from "lucide-react";
 import { toast } from "react-toastify";
-import { getBuyerList } from "@/utils/api";
+import { getEmailList } from "@/utils/api";
 
 export default function ManageMembersDialog({ 
   open, 
@@ -49,7 +49,7 @@ export default function ManageMembersDialog({
       try {
         setLoading(true);
         // Fetch list with its members
-        const listData = await getBuyerList(selectedList.id);
+        const listData = await getEmailList(selectedList.id);
         
         if (listData && listData.buyers) {
           setListMembers(listData.buyers);

@@ -1,11 +1,11 @@
-// Main exports for the BuyerLists module
-import BuyerLists from './BuyerLists';
+// Main exports for the EmailLists module
+import EmailLists from './EmailLists';
 
 // Re-export for easy imports
-export default BuyerLists;
+export default EmailLists;
 
 // export individual components for potential standalone use
-export { default as BuyerListsTable } from './BuyerListsTable';
+export { default as EmailListsTable } from './EmailListsTable';
 export { default as CreateListForm } from './CreateListForm';
 export { default as EditListForm } from './EditListForm';
 export { default as EmailForm } from './EmailForm';
