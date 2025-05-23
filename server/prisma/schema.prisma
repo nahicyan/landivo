@@ -233,8 +233,8 @@ model Buyer {
 
   // Email List
   
-  emailstatus	String
-  emailPermissionStatus	String
+  emailstatus	String ?
+  emailPermissionStatus	String ?
   emailLists 
   
   // Audit fields
