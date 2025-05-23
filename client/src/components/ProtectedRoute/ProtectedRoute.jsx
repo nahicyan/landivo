@@ -93,7 +93,7 @@ const ProtectedRoute = ({
   // If no specific permissions or roles are required, grant access
   else if (requiredPermissions.length === 0 && (!fallbackToRoles || allowedRoles.length === 0)) {
     hasAccess = true;
-  }
+  } 
   
   if (!hasAccess) {
     console.log('User lacks required permissions/roles, redirecting to unauthorized');

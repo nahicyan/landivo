@@ -1,13 +1,9 @@
-"use client";
-
-import React, { useState, useRef, useEffect } from "react";
+import React, { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import { Box, Typography } from "@mui/material";
 import { PuffLoader } from "react-spinners";
 import { useNavigate } from "react-router-dom";
-import { ChevronLeftIcon, ChevronRightIcon } from "@heroicons/react/24/solid";
-import PropertyCard from "../../components/PropertyCard/PropertyCard";
 import useProperties from "../../components/hooks/useProperties.js";
+import DisplayRow, { createFilter } from "../../components/DisplayRow/DisplayRow";
 import axios from "axios";
 
 // Simple variants for fade-up animation
@@ -25,15 +21,8 @@ export const Lands = () => {
   const navigate = useNavigate();
 
   // State for homepage featured properties
-  const [featuredProperties, setFeaturedProperties] = useState([]);
+  const [featuredPropertyIds, setFeaturedPropertyIds] = useState([]);
   const [loadingFeatured, setLoadingFeatured] = useState(true);
-
-  // Ref and state for Featured Properties scroll buttons
-  const featuredScrollRef = useRef(null);
-  const [featuredScrollState, setFeaturedScrollState] = useState({
-    showLeft: false,
-    showRight: false,
-  });
 
   // Fetch homepage featured properties
   useEffect(() => {
@@ -49,26 +38,18 @@ export const Lands = () => {
           // Get the display order
           const displayOrder = response.data.displayOrder;
           
-          // Create a map of properties by ID for quick lookup
+          // Filter to only include IDs that exist and are featured
           const propertiesMap = new Map(data.map(property => [property.id, property]));
+          const featuredIds = displayOrder.filter(id => {
+            const property = propertiesMap.get(id);
+            return property && property.featured === "Featured";
+          });
           
-          // Get properties in the correct order, filtering out any IDs that don't exist
-          // AND only include properties that have featured: "Featured"
-          const orderedProperties = displayOrder
-            .map(id => propertiesMap.get(id))
-            .filter(property => !!property && property.featured === "Featured");
-          
-          setFeaturedProperties(orderedProperties);
-        } else {
-          // Fallback to filtering just featured properties from all data
-          const featured = data.filter(property => property.featured === "Featured");
-          setFeaturedProperties(featured);
+          setFeaturedPropertyIds(featuredIds);
         }
       } catch (error) {
         console.error("Error fetching homepage properties:", error);
-        // Fallback to filtering featured properties from data
-        const featured = data.filter(property => property.featured === "Featured");
-        setFeaturedProperties(featured);
+        setFeaturedPropertyIds([]);
       } finally {
         setLoadingFeatured(false);
       }
@@ -77,55 +58,21 @@ export const Lands = () => {
     fetchFeaturedProperties();
   }, [data]);
 
-  // Function to update scroll state for the featured container
-  const updateFeaturedScrollState = () => {
-    if (featuredScrollRef.current) {
-      const { scrollLeft, clientWidth, scrollWidth } = featuredScrollRef.current;
-      setFeaturedScrollState({
-        showLeft: scrollLeft > 0,
-        showRight: scrollLeft + clientWidth < scrollWidth,
-      });
-    }
-  };
-
-  useEffect(() => {
-    updateFeaturedScrollState();
-    window.addEventListener("resize", updateFeaturedScrollState);
-    return () => {
-      window.removeEventListener("resize", updateFeaturedScrollState);
-    };
-  }, [featuredProperties]);
-
-  // Scroll handlers for Featured Properties
-  const handleFeaturedScrollLeft = () => {
-    if (featuredScrollRef.current) {
-      featuredScrollRef.current.scrollBy({ left: -380, behavior: "smooth" });
-      setTimeout(updateFeaturedScrollState, 300);
-    }
-  };
-
-  const handleFeaturedScrollRight = () => {
-    if (featuredScrollRef.current) {
-      featuredScrollRef.current.scrollBy({ left: 380, behavior: "smooth" });
-      setTimeout(updateFeaturedScrollState, 300);
-    }
-  };
-
   if (isError) {
     return (
-      <Box display="flex" justifyContent="center" alignItems="center" height="60vh">
-        <Typography variant="h6" color="error">
+      <div className="flex items-center justify-center h-[60vh]">
+        <h6 className="text-red-600 text-xl font-semibold">
           Error While Fetching Data
-        </Typography>
-      </Box>
+        </h6>
+      </div>
     );
   }
 
   if (isLoading) {
     return (
-      <Box display="flex" justifyContent="center" alignItems="center" height="60vh">
+      <div className="flex items-center justify-center h-[60vh]">
         <PuffLoader size={80} color="#D4A017" />
-      </Box>
+      </div>
     );
   }
 
@@ -252,7 +199,7 @@ export const Lands = () => {
                 </div>
               </div>
             </div>
-            </div>
+          </div>
         </div>
       </motion.section>
 
@@ -265,71 +212,18 @@ export const Lands = () => {
         variants={fadeUp}
       >
         <div className="max-w-screen-xl mx-auto px-4">
-          {/* Title & Subtext */}
-          <div className="text-center mb-8">
-            <h2 className="text-4xl font-bold mb-2 text-[#3f4f24]">
-              Featured Properties
-            </h2>
-            {/* Decorative line under the heading */}
-            <div className="mx-auto w-20 h-1 bg-[#D4A017] mb-2"></div>
-            <p className="text-[#324c48]/80">
-              Discover our top picks for this week
-            </p>
-          </div>
-
-          {/* Scrollable Container with left/right buttons */}
-          <div className="relative">
-            {/* Left Scroll Button */}
-            {featuredScrollState.showLeft && (
-              <button
-                onClick={handleFeaturedScrollLeft}
-                className="hidden sm:block sm:absolute -left-6 top-1/2 -translate-y-1/2 z-10 bg-white border rounded-full p-3 shadow-md hover:shadow-lg"
-              >
-                <ChevronLeftIcon className="w-6 h-6" />
-              </button>
-            )}
-
-            {loadingFeatured ? (
-              <div className="flex justify-center p-12">
-                <PuffLoader size={60} color="#D4A017" />
-              </div>
-            ) : featuredProperties.length > 0 ? (
-              <div
-                className="px-2 py-4 overflow-y-auto overflow-x-hidden sm:overflow-x-auto sm:overflow-y-hidden no-scrollbar"
-                ref={featuredScrollRef}
-                onScroll={updateFeaturedScrollState}
-              >
-                <div className="flex flex-col sm:flex-row space-y-8 sm:space-y-0 sm:space-x-20">
-                  {featuredProperties.map((property) => (
-                    <div
-                      key={property.id}
-                      className="w-72 flex-shrink-0 transition hover:scale-105"
-                    >
-                      <PropertyCard card={property} />
-                    </div>
-                  ))}
-                </div>
-              </div>
-            ) : (
-              <div className="text-center py-10 text-gray-500">
-                No featured properties available at this time.
-              </div>
-            )}
-
-            {/* Right Scroll Button */}
-            {featuredScrollState.showRight && (
-              <button
-                onClick={handleFeaturedScrollRight}
-                className="hidden sm:block sm:absolute -right-6 top-1/2 -translate-y-1/2 z-10 bg-white border rounded-full p-3 shadow-md hover:shadow-lg"
-              >
-                <ChevronRightIcon className="w-6 h-6" />
-              </button>
-            )}
-          </div>
+          {/* Featured Properties using DisplayRow */}
+          <DisplayRow
+            properties={data}
+            filter={createFilter.featured('homepage', featuredPropertyIds)}
+            title="Featured Properties"
+            subtitle="Discover our top picks for this week"
+            loading={loadingFeatured}
+            emptyMessage="No featured properties available at this time."
+          />
 
           {/* Browse All Properties Button */}
           <div className="mt-8 flex justify-end">
-            
             <a href="/properties"
               className="inline-block bg-[#324c48] text-white font-semibold py-2 px-6 rounded-md shadow hover:bg-[#3f4f24] transition-colors"
             >
