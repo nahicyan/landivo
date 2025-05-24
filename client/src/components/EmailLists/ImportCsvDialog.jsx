@@ -32,7 +32,7 @@ import Papa from "papaparse";
 
 // Define the available areas
 const AREAS = [
-  { id: '', label: 'None (Empty)' }, // Add blank option
+  { id: '_none', label: 'None (Empty)' },
   { id: 'DFW', label: 'Dallas Fort Worth' },
   { id: 'Austin', label: 'Austin' },
   { id: 'Houston', label: 'Houston' },
@@ -42,7 +42,7 @@ const AREAS = [
 
 // Define buyer types
 const BUYER_TYPES = [
-  { id: '', label: 'None (Empty)' }, // Add blank option
+  { id: '_none', label: 'None (Empty)' },
   { id: 'CashBuyer', label: 'Cash Buyer' },
   { id: 'Builder', label: 'Builder' },
   { id: 'Developer', label: 'Developer' },
@@ -53,22 +53,22 @@ const BUYER_TYPES = [
 
 // Define available fields for mapping
 const AVAILABLE_FIELDS = [
-  { id: 'firstName', label: 'First Name', required: true },
-  { id: 'lastName', label: 'Last Name', required: true },
+  { id: 'firstName', label: 'First Name', required: false },
+  { id: 'lastName', label: 'Last Name', required: false },
   { id: 'email', label: 'Email', required: true },
-  { id: 'phone', label: 'Phone', required: true },
+  { id: 'phone', label: 'Phone', required: false },
   { id: 'buyerType', label: 'Buyer Type', required: false },
   { id: 'preferredAreas', label: 'Preferred Areas', required: false },
   { id: 'emailStatus', label: 'Email Status', required: false },
   { id: 'emailPermissionStatus', label: 'Email Permission Status', required: false },
-  { id: 'emailLists', label: 'Email Lists', required: false }
+  { id: 'emailLists', label: 'Email Lists', required: true }
 ];
 
 export default function ImportCsvDialog({ 
   open, 
   onOpenChange, 
   onImport,
-  existingLists = [] // Pass existing email lists
+  existingLists = []
 }) {
   // CSV state
   const [csvFile, setCsvFile] = useState(null);
@@ -83,8 +83,8 @@ export default function ImportCsvDialog({
   // Import options
   const [importOptions, setImportOptions] = useState({
     skipFirstRow: true,
-    defaultBuyerType: "",
-    defaultArea: ""
+    defaultBuyerType: "_none",
+    defaultArea: "_none"
   });
 
   // Multi-list assignment state
@@ -105,7 +105,7 @@ export default function ImportCsvDialog({
     
     // Parse CSV file to get headers
     Papa.parse(file, {
-      preview: 5, // Only parse first 5 rows to get headers
+      preview: 5,
       complete: (results) => {
         if (results.data && results.data.length > 0) {
           const headers = Object.keys(results.data[0]);
@@ -120,7 +120,10 @@ export default function ImportCsvDialog({
               if (normalized === fieldNormalized || 
                   (normalized === 'emailaddress' && field.id === 'email') ||
                   (normalized === 'firstname' && field.id === 'firstName') ||
-                  (normalized === 'lastname' && field.id === 'lastName')) {
+                  (normalized === 'lastname' && field.id === 'lastName') ||
+                  (normalized === 'emailstatus' && field.id === 'emailStatus') ||
+                  (normalized === 'emailpermissionstatus' && field.id === 'emailPermissionStatus') ||
+                  (normalized === 'emaillists' && field.id === 'emailLists')) {
                 autoMappings[header] = field.id;
               }
             });
@@ -139,7 +142,7 @@ export default function ImportCsvDialog({
   const handleMappingChange = (csvColumn, fieldId) => {
     setColumnMappings(prev => ({
       ...prev,
-      [csvColumn]: fieldId
+      [csvColumn]: fieldId === '_skip' ? null : fieldId
     }));
   };
 
@@ -157,7 +160,7 @@ export default function ImportCsvDialog({
         
         results.data.forEach((row, index) => {
           const mappedRow = {};
-          let hasRequiredFields = true;
+          let hasErrors = false;
           
           // Map CSV columns to fields
           Object.entries(columnMappings).forEach(([csvColumn, fieldId]) => {
@@ -166,17 +169,20 @@ export default function ImportCsvDialog({
             }
           });
           
-          // Check required fields
-          AVAILABLE_FIELDS.filter(f => f.required).forEach(field => {
-            if (!mappedRow[field.id] || mappedRow[field.id].trim() === '') {
-              hasRequiredFields = false;
-              errors.push(`Row ${index + 2}: Missing ${field.label}`);
-            }
-          });
+          // Check only email and emailLists are required
+          if (!mappedRow.email || mappedRow.email.trim() === '') {
+            hasErrors = true;
+            errors.push(`Row ${index + 2}: Missing email address`);
+          }
           
-          if (hasRequiredFields) {
+          if (!mappedRow.emailLists || mappedRow.emailLists.trim() === '') {
+            hasErrors = true;
+            errors.push(`Row ${index + 2}: Missing email lists`);
+          }
+          
+          if (!hasErrors) {
             // Apply defaults if not mapped
-            if (!mappedRow.buyerType && importOptions.defaultBuyerType) {
+            if (!mappedRow.buyerType && importOptions.defaultBuyerType !== '_none') {
               mappedRow.buyerType = importOptions.defaultBuyerType;
             }
             
@@ -248,15 +254,15 @@ export default function ImportCsvDialog({
     const formattedData = csvData.map((row, index) => {
       const buyer = {
         id: `csv-buyer-${Date.now()}-${index}`,
-        firstName: row.firstName,
-        lastName: row.lastName,
+        firstName: row.firstName || null,
+        lastName: row.lastName || null,
         email: row.email.toLowerCase(),
-        phone: row.phone,
-        buyerType: row.buyerType || importOptions.defaultBuyerType || null,
+        phone: row.phone || null,
+        buyerType: row.buyerType || (importOptions.defaultBuyerType === '_none' ? null : importOptions.defaultBuyerType),
         preferredAreas: row.preferredAreas ? 
           row.preferredAreas.split(",").map(a => a.trim()) : 
-          (importOptions.defaultArea ? [importOptions.defaultArea] : []),
-        emailStatus: row.emailStatus || null,
+          (importOptions.defaultArea === '_none' ? [] : [importOptions.defaultArea]),
+        emailStatus: row.emailStatus || "available",
         emailPermissionStatus: row.emailPermissionStatus || null,
         emailLists: selectedListsForBuyers[index] || row.emailLists || [],
         source: "CSV Import"
@@ -288,8 +294,8 @@ export default function ImportCsvDialog({
       setSelectedListsForBuyers({});
       setImportOptions({
         skipFirstRow: true,
-        defaultBuyerType: "",
-        defaultArea: ""
+        defaultBuyerType: "_none",
+        defaultArea: "_none"
       });
     }
     onOpenChange(open);
@@ -355,14 +361,14 @@ export default function ImportCsvDialog({
                   <div key={header} className="flex items-center gap-3">
                     <Label className="w-1/3 text-sm">{header}</Label>
                     <Select
-                      value={columnMappings[header] || ""}
+                      value={columnMappings[header] || "_skip"}
                       onValueChange={(value) => handleMappingChange(header, value)}
                     >
                       <SelectTrigger className="w-2/3">
                         <SelectValue placeholder="Skip this column" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="">Skip this column</SelectItem>
+                        <SelectItem value="_skip">Skip this column</SelectItem>
                         {AVAILABLE_FIELDS.map(field => (
                           <SelectItem key={field.id} value={field.id}>
                             {field.label} {field.required && "*"}
@@ -443,7 +449,7 @@ export default function ImportCsvDialog({
                   <div key={idx} className="bg-gray-50 p-2 rounded">
                     <div className="flex items-center justify-between mb-2">
                       <span className="text-sm font-medium">
-                        {buyer.firstName} {buyer.lastName} ({buyer.email})
+                        {buyer.firstName || ''} {buyer.lastName || ''} ({buyer.email})
                       </span>
                     </div>
                     <div className="flex flex-wrap gap-1">
@@ -493,6 +499,34 @@ export default function ImportCsvDialog({
               </div>
             </div>
           )}
+          
+          {/* CSV Format Information */}
+          <div className="p-3 bg-[#f0f5f4] rounded-lg">
+            <p className="text-sm font-medium text-[#324c48] mb-2">
+              CSV Format Requirements:
+            </p>
+            <ul className="pl-5 list-disc text-sm text-gray-600 space-y-1">
+              <li>Required columns: email, emailLists</li>
+              <li>Optional columns: firstName, lastName, phone, buyerType, preferredAreas (comma separated), emailStatus, emailPermissionStatus</li>
+              <li>First row should be column headers</li>
+              <li>Multiple email lists should be comma separated</li>
+            </ul>
+            <p className="text-sm mt-2">
+              <a href="#" className="text-[#324c48] underline" onClick={(e) => {
+                e.preventDefault();
+                const csv = "email,emailLists,firstName,lastName,phone,buyerType,preferredAreas,emailStatus,emailPermissionStatus\njohn@example.com,\"Weekly Newsletter, Special Offers\",John,Doe,(555) 123-4567,Builder,\"Austin, DFW\",available,subscribed\njane@example.com,Monthly Updates,Jane,Smith,(555) 987-6543,Investor,Houston,available,subscribed";
+                const blob = new Blob([csv], { type: 'text/csv' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = 'buyer_list_template.csv';
+                a.click();
+                URL.revokeObjectURL(url);
+              }}>
+                Download template
+              </a>
+            </p>
+          </div>
         </div>
         
         <DialogFooter className="gap-2">

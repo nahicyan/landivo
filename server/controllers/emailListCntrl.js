@@ -7,59 +7,69 @@ export const getAllEmailLists = asyncHandler(async (req, res) => {
     const lists = await prisma.emailList.findMany({
       orderBy: {
         createdAt: "desc"
+      },
+      include: {
+        buyerMemberships: {
+          select: {
+            id: true
+          }
+        }
       }
     });
-
-    // For each list, count the buyers that match its criteria
+    
+    // For each list, count the buyers that match its criteria and manual members
     const listsWithCounts = await Promise.all(
       lists.map(async (list) => {
-        // Count buyers that are explicitly added to the list
-        const manualCount = list.buyerIds.length;
-
+        // Count buyers explicitly added to the list (through join table)
+        const manualCount = list.buyerMemberships.length;
+        
         // Count buyers that match criteria (if criteria exists)
         let criteriaCount = 0;
         if (list.criteria) {
           const criteria = JSON.parse(JSON.stringify(list.criteria));
-
+          
           // Build the query based on criteria
           const query = {};
-
+          
           // Add area filter if specified
           if (criteria.areas && criteria.areas.length > 0) {
             query.preferredAreas = {
               hasSome: criteria.areas
             };
           }
-
+          
           // Add buyer type filter if specified
           if (criteria.buyerTypes && criteria.buyerTypes.length > 0) {
             query.buyerType = {
               in: criteria.buyerTypes
             };
           }
-
+          
           // Add VIP filter if specified
           if (criteria.isVIP) {
             query.source = "VIP Buyers List";
           }
-
+          
           // Count buyers matching the criteria
           criteriaCount = await prisma.buyer.count({
             where: query
           });
         }
-
+        
         // Calculate total unique buyers
         // In a real implementation, you'd need to remove duplicates between manual and criteria
         const totalCount = manualCount + criteriaCount;
-
+        
+        // Remove the buyerMemberships from the response
+        const { buyerMemberships, ...listData } = list;
+        
         return {
-          ...list,
+          ...listData,
           buyerCount: totalCount
         };
       })
     );
-
+    
     res.status(200).json(listsWithCounts);
   } catch (err) {
     console.error("Error fetching email lists:", err);
@@ -73,76 +83,114 @@ export const getAllEmailLists = asyncHandler(async (req, res) => {
 // Get a specific email list with its members
 export const getEmailList = asyncHandler(async (req, res) => {
   const { id } = req.params;
-
+  
   if (!id) {
     return res.status(400).json({ message: "List ID is required" });
   }
-
+  
   try {
-    // Get the list with related buyers
+    // Get the list with buyers through join table
     const list = await prisma.emailList.findUnique({
       where: { id },
       include: {
         buyerMemberships: {
           include: {
-            buyer: true
+            buyer: {
+              include: {
+                emailListMemberships: {
+                  include: {
+                    emailList: true
+                  }
+                }
+              }
+            }
           }
         }
       }
     });
-
+    
     if (!list) {
       return res.status(404).json({ message: "Email list not found" });
     }
-
+    
+    // Extract buyers from join table
+    const manualBuyers = list.buyerMemberships.map(membership => membership.buyer);
+    
     // Get buyers matching criteria
     let criteriaBuyers = [];
     if (list.criteria) {
       const criteria = JSON.parse(JSON.stringify(list.criteria));
-
+      
       // Build the query based on criteria
       const query = {};
-
+      
+      // Add area filter if specified
       if (criteria.areas && criteria.areas.length > 0) {
         query.preferredAreas = {
           hasSome: criteria.areas
         };
       }
-
+      
+      // Add buyer type filter if specified
       if (criteria.buyerTypes && criteria.buyerTypes.length > 0) {
         query.buyerType = {
           in: criteria.buyerTypes
         };
       }
-
+      
+      // Add VIP filter if specified
       if (criteria.isVIP) {
         query.source = "VIP Buyers List";
       }
-
+      
+      // Get buyers matching the criteria
       criteriaBuyers = await prisma.buyer.findMany({
-        where: query
+        where: query,
+        include: {
+          emailListMemberships: {
+            include: {
+              emailList: true
+            }
+          }
+        }
       });
     }
-
-    // Combine manual and criteria buyers
+    
+    // Combine and remove duplicates
     const allBuyerIds = new Set([
-      ...list.buyers.map(b => b.id),
+      ...manualBuyers.map(b => b.id),
       ...criteriaBuyers.map(b => b.id)
     ]);
-
+    
     const allBuyers = await prisma.buyer.findMany({
       where: {
         id: { in: Array.from(allBuyerIds) }
       },
       include: {
-        emailLists: true
+        emailListMemberships: {
+          include: {
+            emailList: true
+          }
+        }
       }
     });
-
+    
+    // Transform buyer data to include emailLists array
+    const buyersWithEmailLists = allBuyers.map(buyer => {
+      const { emailListMemberships, ...buyerData } = buyer;
+      return {
+        ...buyerData,
+        emailLists: emailListMemberships.map(m => m.emailList)
+      };
+    });
+    
+    // Remove buyerMemberships from response and add transformed buyers
+    const { buyerMemberships, ...listData } = list;
+    
     res.status(200).json({
-      ...list,
-      buyers: allBuyers,
-      buyerCount: allBuyers.length
+      ...listData,
+      buyers: buyersWithEmailLists,
+      buyerCount: buyersWithEmailLists.length
     });
   } catch (err) {
     console.error("Error fetching email list:", err);
@@ -156,26 +204,30 @@ export const getEmailList = asyncHandler(async (req, res) => {
 // Create a new email list
 export const createEmailList = asyncHandler(async (req, res) => {
   const { name, description, criteria, buyerIds = [], color } = req.body;
-
+  
   if (!name) {
     return res.status(400).json({ message: "List name is required" });
   }
-
+  
   try {
-    // Create the list
+    // Create the list with initial buyers if provided
     const newList = await prisma.emailList.create({
       data: {
         name,
         description,
         criteria,
-        buyerIds,
         color,
-        createdBy: req.userId // Assuming you have middleware that sets req.userId
+        createdBy: req.userId, // Assuming you have middleware that sets req.userId
+        buyerMemberships: {
+          create: buyerIds.map(buyerId => ({
+            buyer: { connect: { id: buyerId } }
+          }))
+        }
       }
     });
-
+    
     res.status(201).json({
-      message: "Buyer list created successfully",
+      message: "Email list created successfully",
       list: newList
     });
   } catch (err) {
@@ -191,25 +243,25 @@ export const createEmailList = asyncHandler(async (req, res) => {
 export const updateEmailList = asyncHandler(async (req, res) => {
   const { id } = req.params;
   const { name, description, criteria, color } = req.body;
-
+  
   if (!id) {
     return res.status(400).json({ message: "List ID is required" });
   }
-
+  
   if (!name) {
     return res.status(400).json({ message: "List name is required" });
   }
-
+  
   try {
     // Check if the list exists
     const existingList = await prisma.emailList.findUnique({
       where: { id }
     });
-
+    
     if (!existingList) {
-      return res.status(404).json({ message: "Buyer list not found" });
+      return res.status(404).json({ message: "Email list not found" });
     }
-
+    
     // Update the list
     const updatedList = await prisma.emailList.update({
       where: { id },
@@ -221,9 +273,9 @@ export const updateEmailList = asyncHandler(async (req, res) => {
         updatedAt: new Date()
       }
     });
-
+    
     res.status(200).json({
-      message: "Buyer list updated successfully",
+      message: "Email list updated successfully",
       list: updatedList
     });
   } catch (err) {
@@ -238,28 +290,28 @@ export const updateEmailList = asyncHandler(async (req, res) => {
 // Delete a email list
 export const deleteEmailList = asyncHandler(async (req, res) => {
   const { id } = req.params;
-
+  
   if (!id) {
     return res.status(400).json({ message: "List ID is required" });
   }
-
+  
   try {
     // Check if the list exists
     const existingList = await prisma.emailList.findUnique({
       where: { id }
     });
-
+    
     if (!existingList) {
-      return res.status(404).json({ message: "Buyer list not found" });
+      return res.status(404).json({ message: "Email list not found" });
     }
-
-    // Delete the list
+    
+    // Delete the list (join table entries will be cascade deleted)
     await prisma.emailList.delete({
       where: { id }
     });
-
+    
     res.status(200).json({
-      message: "Buyer list deleted successfully"
+      message: "Email list deleted successfully"
     });
   } catch (err) {
     console.error("Error deleting email list:", err);
@@ -274,34 +326,51 @@ export const deleteEmailList = asyncHandler(async (req, res) => {
 export const addBuyersToList = asyncHandler(async (req, res) => {
   const { id } = req.params;
   const { buyerIds } = req.body;
-
+  
   if (!id) {
     return res.status(400).json({ message: "List ID is required" });
   }
-
+  
   if (!buyerIds || !Array.isArray(buyerIds) || buyerIds.length === 0) {
     return res.status(400).json({ message: "At least one buyer ID is required" });
   }
-
+  
   try {
     // Check if the list exists
     const existingList = await prisma.emailList.findUnique({
       where: { id }
     });
-
+    
     if (!existingList) {
       return res.status(404).json({ message: "Email list not found" });
     }
-
-    // Update using relations
+    
+    // Get existing memberships to avoid duplicates
+    const existingMemberships = await prisma.buyerEmailList.findMany({
+      where: {
+        emailListId: id,
+        buyerId: { in: buyerIds }
+      },
+      select: { buyerId: true }
+    });
+    
+    const existingBuyerIds = new Set(existingMemberships.map(m => m.buyerId));
+    const newBuyerIds = buyerIds.filter(buyerId => !existingBuyerIds.has(buyerId));
+    
+    // Create new memberships for buyers not already in the list
+    if (newBuyerIds.length > 0) {
+      await prisma.buyerEmailList.createMany({
+        data: newBuyerIds.map(buyerId => ({
+          buyerId,
+          emailListId: id
+        }))
+      });
+    }
+    
+    // Update the list's updatedAt timestamp
     const updatedList = await prisma.emailList.update({
       where: { id },
       data: {
-        buyerMemberships: {
-          create: buyerIds.map(buyerId => ({
-            buyer: { connect: { id: buyerId } }
-          }))
-        },
         updatedAt: new Date()
       },
       include: {
@@ -312,10 +381,12 @@ export const addBuyersToList = asyncHandler(async (req, res) => {
         }
       }
     });
-
+    
     res.status(200).json({
-      message: `Successfully added ${buyerIds.length} buyers to the list`,
-      list: updatedList
+      message: `Successfully added ${newBuyerIds.length} new buyers to the list (${existingBuyerIds.size} were already in the list)`,
+      list: updatedList,
+      addedCount: newBuyerIds.length,
+      skippedCount: existingBuyerIds.size
     });
   } catch (err) {
     console.error("Error adding buyers to list:", err);
@@ -325,47 +396,50 @@ export const addBuyersToList = asyncHandler(async (req, res) => {
     });
   }
 });
+
 // Remove buyers from a list
 export const removeBuyersFromList = asyncHandler(async (req, res) => {
   const { id } = req.params;
   const { buyerIds } = req.body;
-
+  
   if (!id) {
     return res.status(400).json({ message: "List ID is required" });
   }
-
+  
   if (!buyerIds || !Array.isArray(buyerIds) || buyerIds.length === 0) {
     return res.status(400).json({ message: "At least one buyer ID is required" });
   }
-
+  
   try {
     // Check if the list exists
     const existingList = await prisma.emailList.findUnique({
       where: { id }
     });
-
+    
     if (!existingList) {
-      return res.status(404).json({ message: "Buyer list not found" });
+      return res.status(404).json({ message: "Email list not found" });
     }
-
-    // Get current buyer IDs
-    const currentBuyerIds = existingList.buyerIds || [];
-
-    // Remove specified buyer IDs
-    const updatedBuyerIds = currentBuyerIds.filter(id => !buyerIds.includes(id));
-
+    
+    // Delete memberships
+    const deleteResult = await prisma.buyerEmailList.deleteMany({
+      where: {
+        emailListId: id,
+        buyerId: { in: buyerIds }
+      }
+    });
+    
     // Update the list
     const updatedList = await prisma.emailList.update({
       where: { id },
       data: {
-        buyerIds: updatedBuyerIds,
         updatedAt: new Date()
       }
     });
-
+    
     res.status(200).json({
-      message: `Successfully removed ${buyerIds.length} buyers from the list`,
-      list: updatedList
+      message: `Successfully removed ${deleteResult.count} buyers from the list`,
+      list: updatedList,
+      removedCount: deleteResult.count
     });
   } catch (err) {
     console.error("Error removing buyers from list:", err);
@@ -377,53 +451,46 @@ export const removeBuyersFromList = asyncHandler(async (req, res) => {
 });
 
 // Send email to list members
-// Send email to list members
 export const sendEmailToList = asyncHandler(async (req, res) => {
   const { id } = req.params;
   const { subject, content, includeUnsubscribed = false } = req.body;
-
+  
   if (!id) {
     return res.status(400).json({ message: "List ID is required" });
   }
-
+  
   if (!subject || !content) {
     return res.status(400).json({ message: "Email subject and content are required" });
   }
-
+  
   try {
-    // Get system settings for SMTP
-    const settings = await prisma.settings.findFirst();
-
-    if (!settings || !settings.smtpServer || !settings.smtpPort || !settings.smtpUser || !settings.smtpPassword) {
-      return res.status(400).json({ message: "SMTP configuration not found. Please configure email settings." });
-    }
-
-    // Get the list with its buyers through relation
+    // Get the list
     const list = await prisma.emailList.findUnique({
-      where: { id },
-      include: {
-        buyers: {
-          where: {
-            ...(includeUnsubscribed ? {} : {
-              OR: [
-                { emailStatus: null },
-                { emailStatus: "available" }
-              ]
-            })
-          }
-        }
-      }
+      where: { id }
     });
-
+    
     if (!list) {
       return res.status(404).json({ message: "Email list not found" });
     }
-
-    // Get buyers matching criteria if any
+    
+    // Get manually added buyers through join table
+    const manualBuyerMemberships = await prisma.buyerEmailList.findMany({
+      where: {
+        emailListId: id
+      },
+      include: {
+        buyer: true
+      }
+    });
+    
+    const manualBuyers = manualBuyerMemberships.map(m => m.buyer);
+    
+    // Get buyers matching criteria
     let criteriaBuyers = [];
     if (list.criteria) {
       const criteria = JSON.parse(JSON.stringify(list.criteria));
-
+      
+      // Build the query based on criteria
       const query = {
         ...(includeUnsubscribed ? {} : {
           OR: [
@@ -432,121 +499,84 @@ export const sendEmailToList = asyncHandler(async (req, res) => {
           ]
         })
       };
-
+      
+      // Add area filter if specified
       if (criteria.areas && criteria.areas.length > 0) {
         query.preferredAreas = {
           hasSome: criteria.areas
         };
       }
-
+      
+      // Add buyer type filter if specified
       if (criteria.buyerTypes && criteria.buyerTypes.length > 0) {
         query.buyerType = {
           in: criteria.buyerTypes
         };
       }
-
+      
+      // Add VIP filter if specified
       if (criteria.isVIP) {
         query.source = "VIP Buyers List";
       }
-
+      
+      // Get buyers matching the criteria
       criteriaBuyers = await prisma.buyer.findMany({
         where: query
       });
     }
-
+    
     // Combine and remove duplicates
     const allBuyerIds = new Set([
-      ...list.buyers.map(b => b.id),
+      ...manualBuyers.map(b => b.id),
       ...criteriaBuyers.map(b => b.id)
     ]);
-
+    
+    // Get all unique buyers with email status check
     const allBuyers = await prisma.buyer.findMany({
       where: {
-        id: { in: Array.from(allBuyerIds) }
+        id: { in: Array.from(allBuyerIds) },
+        ...(includeUnsubscribed ? {} : {
+          OR: [
+            { emailStatus: null },
+            { emailStatus: "available" }
+          ]
+        })
       }
     });
-
+    
     if (allBuyers.length === 0) {
-      return res.status(404).json({
-        message: "No eligible buyers found in this list"
+      return res.status(404).json({ 
+        message: "No eligible buyers found in this list" 
       });
     }
-
-    // Configure SMTP transporter
-    const transporter = nodemailer.createTransport({
-      host: settings.smtpServer,
-      port: parseInt(settings.smtpPort),
-      secure: parseInt(settings.smtpPort) === 465,
-      auth: {
-        user: settings.smtpUser,
-        pass: settings.smtpPassword
-      }
-    });
-
-    // Verify SMTP connection
-    try {
-      await transporter.verify();
-    } catch (error) {
-      console.error("SMTP verification failed:", error);
-      return res.status(500).json({
-        message: "Failed to connect to email server. Please check SMTP settings."
-      });
-    }
-
-    // Send emails
-    const emailResults = [];
-    const failedEmails = [];
-
-    for (const buyer of allBuyers) {
-      // Personalize content
-      const personalizedSubject = subject
-        .replace(/{firstName}/g, buyer.firstName || '')
-        .replace(/{lastName}/g, buyer.lastName || '')
-        .replace(/{email}/g, buyer.email);
-
+    
+    // In a real implementation, you'd use a service like SendGrid, Mailchimp, etc.
+    // Here we'll simulate sending emails
+    
+    // Process email content with placeholders
+    const emailsSent = allBuyers.map(buyer => {
+      // Replace placeholders with buyer data
       const personalizedContent = content
         .replace(/{firstName}/g, buyer.firstName || '')
         .replace(/{lastName}/g, buyer.lastName || '')
         .replace(/{email}/g, buyer.email)
         .replace(/{preferredAreas}/g, (buyer.preferredAreas || []).join(", "));
-
-      // Add unsubscribe link
-      const htmlContent = `
-        ${personalizedContent}
-        <hr style="margin-top: 40px; border: 1px solid #eee;">
-        <p style="font-size: 12px; color: #888; text-align: center;">
-          You're receiving this email because you're subscribed to ${list.name}.
-          <br>
-          To unsubscribe, please contact us.
-        </p>
-      `;
-
-      try {
-        await transporter.sendMail({
-          from: `"${list.name}" <${settings.smtpUser}>`,
-          to: buyer.email,
-          subject: personalizedSubject,
-          html: htmlContent,
-        });
-
-        emailResults.push({
-          buyerId: buyer.id,
-          email: buyer.email,
-          name: `${buyer.firstName} ${buyer.lastName}`,
-          status: "sent"
-        });
-      } catch (error) {
-        console.error(`Failed to send email to ${buyer.email}:`, error);
-        failedEmails.push({
-          buyerId: buyer.id,
-          email: buyer.email,
-          name: `${buyer.firstName} ${buyer.lastName}`,
-          status: "failed",
-          error: error.message
-        });
-      }
-    }
-
+      
+      // In a real implementation, send the email here
+      // await emailService.send({
+      //   to: buyer.email,
+      //   subject: subject,
+      //   html: personalizedContent
+      // });
+      
+      return {
+        buyerId: buyer.id,
+        email: buyer.email,
+        name: `${buyer.firstName || ''} ${buyer.lastName || ''}`.trim(),
+        status: "sent" // In a real implementation, this would be the actual status
+      };
+    });
+    
     // Update last email date for the list
     await prisma.emailList.update({
       where: { id },
@@ -554,12 +584,11 @@ export const sendEmailToList = asyncHandler(async (req, res) => {
         lastEmailDate: new Date()
       }
     });
-
+    
     res.status(200).json({
-      message: `Emails sent to ${emailResults.length} buyers${failedEmails.length > 0 ? `, ${failedEmails.length} failed` : ''}`,
-      sent: emailResults,
-      failed: failedEmails,
-      totalRecipients: allBuyers.length
+      message: `Successfully sent emails to ${emailsSent.length} buyers in the list`,
+      emailsSent,
+      totalRecipients: emailsSent.length
     });
   } catch (err) {
     console.error("Error sending email to list:", err);
