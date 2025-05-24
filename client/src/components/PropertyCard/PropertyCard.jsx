@@ -51,10 +51,10 @@ export default function PropertyCard({ card }) {
   return (
     <Card
       onClick={() => navigate(`/properties/${card.id}`)}
-      className="w-full max-w-[360px] rounded-2xl overflow-hidden shadow-lg hover:shadow-xl transition-shadow cursor-pointer bg-white"
+      className="w-full w-96 rounded-xl overflow-hidden shadow-lg hover:shadow-xl transition-shadow cursor-pointer bg-white"
     >
       {/* Image Section */}
-      <div className="relative w-full h-48">
+      <div className="relative w-full h-64">
         <img
           src={firstImage}
           alt="Property"
@@ -80,7 +80,7 @@ export default function PropertyCard({ card }) {
             {card.streetAddress || "Address unavailable"}
           </h3>
           {monthlyPayment && (
-            <span className="text-[#D4A017] text-sm font-medium tracking-tight whitespace-nowrap">
+            <span className="text-[#D4A017] text-base font-medium tracking-tight whitespace-nowrap">
               ${monthlyPayment}/mo
             </span>
           )}
