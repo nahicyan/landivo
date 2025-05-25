@@ -96,24 +96,28 @@ export default function CreateListForm({
   };
 
   // Handle form submission
-  const handleSubmit = async () => {
-    if (!formData.name.trim()) {
-      toast.error("List name is required");
-      return;
-    }
+const handleSubmit = async () => {
+  if (!formData.name.trim()) {
+    toast.error("List name is required");
+    return;
+  }
 
-    try {
-      // Include imported buyer IDs in the creation
-      await onCreateList({
-        ...formData,
-        buyerIds: importedBuyers ? importedBuyers.map(b => b.id) : []
-      });
-      handleOpenChange(false);
-    } catch (error) {
-      // Error handling is done in the onCreateList function
-      console.error("Create list error:", error);
-    }
-  };
+  try {
+    await onCreateList({
+      ...formData,
+      buyerIds: importedBuyers ? importedBuyers.map(b => b.id) : [],
+      // Ensure criteria is explicitly set to avoid matching all buyers
+      criteria: formData.criteria.areas.length === 0 && 
+                formData.criteria.buyerTypes.length === 0 && 
+                !formData.criteria.isVIP 
+                ? null  // No criteria if nothing selected
+                : formData.criteria
+    });
+    handleOpenChange(false);
+  } catch (error) {
+    console.error("Create list error:", error);
+  }
+};
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>

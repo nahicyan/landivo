@@ -114,7 +114,7 @@ export default function EmailLists() {
         });
         
         // Get the created buyer IDs from the response
-        const createdBuyerIds = importResponse.data.results?.createdBuyerIds || [];
+        const createdBuyerIds = importResponse.data.results.createdBuyerIds || [];
         
         // Create the list with the imported buyer IDs
         await createList({
