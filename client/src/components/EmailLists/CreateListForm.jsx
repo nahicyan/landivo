@@ -40,7 +40,9 @@ export default function CreateListForm({
   open, 
   onOpenChange, 
   onCreateList,
-  onImportCsv 
+  onImportCsv,
+  importedBuyers, // Add this prop
+  onClearImportedBuyers // Add this prop
 }) {
   // Form state
   const [formData, setFormData] = useState({
@@ -85,6 +87,10 @@ export default function CreateListForm({
           isVIP: false
         }
       });
+      // Clear imported buyers when closing
+      if (onClearImportedBuyers) {
+        onClearImportedBuyers();
+      }
     }
     onOpenChange(open);
   };
@@ -97,7 +103,11 @@ export default function CreateListForm({
     }
 
     try {
-      await onCreateList(formData);
+      // Include imported buyer IDs in the creation
+      await onCreateList({
+        ...formData,
+        buyerIds: importedBuyers ? importedBuyers.map(b => b.id) : []
+      });
       handleOpenChange(false);
     } catch (error) {
       // Error handling is done in the onCreateList function
@@ -118,7 +128,14 @@ export default function CreateListForm({
         <Tabs defaultValue="details" className="w-full">
           <TabsList className="grid w-full grid-cols-2">
             <TabsTrigger value="details">List Details</TabsTrigger>
-            <TabsTrigger value="import">Import Buyers</TabsTrigger>
+            <TabsTrigger value="import">
+              Import Buyers
+              {importedBuyers && importedBuyers.length > 0 && (
+                <Badge className="ml-2" variant="secondary">
+                  {importedBuyers.length}
+                </Badge>
+              )}
+            </TabsTrigger>
           </TabsList>
           
           <TabsContent value="details" className="py-4">
@@ -229,6 +246,14 @@ export default function CreateListForm({
                 </Button>
               </div>
               
+              {importedBuyers && importedBuyers.length > 0 && (
+                <div className="p-3 bg-green-50 border border-green-200 rounded-lg">
+                  <p className="text-sm font-medium text-green-700">
+                    {importedBuyers.length} buyers imported and ready to be added to this list
+                  </p>
+                </div>
+              )}
+              
               <div className="p-3 bg-[#f0f5f4] rounded-lg">
                 <p className="text-sm font-medium text-[#324c48] mb-2">
                   CSV Format Requirements:
@@ -264,6 +289,9 @@ export default function CreateListForm({
           </Button>
           <Button onClick={handleSubmit} className="bg-[#324c48] text-white">
             Create List
+            {importedBuyers && importedBuyers.length > 0 && 
+              ` with ${importedBuyers.length} buyers`
+            }
           </Button>
         </DialogFooter>
       </DialogContent>

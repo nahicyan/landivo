@@ -277,7 +277,6 @@ export const deleteBuyer = asyncHandler(async (req, res) => {
  * @route POST /api/buyer/create
  * @access Public
  */
-// Update createBuyer function
 export const createBuyer = asyncHandler(async (req, res) => {
   const {
     email,
@@ -496,7 +495,8 @@ export const importBuyersFromCsv = asyncHandler(async (req, res) => {
       created: 0,
       updated: 0,
       failed: 0,
-      errors: []
+      errors: [],
+      createdBuyerIds: [] // Track created buyer IDs
     };
 
     // Process each buyer
@@ -510,30 +510,17 @@ export const importBuyersFromCsv = asyncHandler(async (req, res) => {
           buyerType,
           preferredAreas,
           emailStatus,
-          emailPermissionStatus,
-          emailLists
+          emailPermissionStatus
         } = buyerData;
 
         // Check required fields
-        if (!email || !phone || !firstName || !lastName) {
+        if (!email) {
           results.failed++;
           results.errors.push({
             data: buyerData,
-            reason: "Missing required fields"
+            reason: "Missing required email field"
           });
           continue;
-        }
-
-        // Find email lists by name
-        let emailListConnections = [];
-        if (emailLists && emailLists.length > 0) {
-          const lists = await prisma.emailList.findMany({
-            where: {
-              name: { in: emailLists }
-            },
-            select: { id: true }
-          });
-          emailListConnections = lists.map(list => ({ id: list.id }));
         }
 
         // Check if buyer already exists
@@ -541,7 +528,7 @@ export const importBuyersFromCsv = asyncHandler(async (req, res) => {
           where: {
             OR: [
               { email: email.toLowerCase() },
-              { phone }
+              ...(phone ? [{ phone }] : [])
             ]
           }
         });
@@ -551,41 +538,35 @@ export const importBuyersFromCsv = asyncHandler(async (req, res) => {
           await prisma.buyer.update({
             where: { id: existingBuyer.id },
             data: {
-              firstName,
-              lastName,
+              firstName: firstName || existingBuyer.firstName,
+              lastName: lastName || existingBuyer.lastName,
               buyerType: buyerType || existingBuyer.buyerType,
               preferredAreas: preferredAreas || existingBuyer.preferredAreas,
               source: source || existingBuyer.source,
               emailStatus: emailStatus || existingBuyer.emailStatus,
-              emailPermissionStatus: emailPermissionStatus || existingBuyer.emailPermissionStatus,
-              emailLists: {
-                set: [], // Clear existing connections
-                connect: emailListConnections // Add new connections
-              }
+              emailPermissionStatus: emailPermissionStatus || existingBuyer.emailPermissionStatus
             }
           });
 
           results.updated++;
         } else {
           // Create new buyer
-          await prisma.buyer.create({
+          const newBuyer = await prisma.buyer.create({
             data: {
               email: email.toLowerCase(),
-              phone,
-              buyerType,
-              firstName,
-              lastName,
-              source: source || "Manual Entry",
+              phone: phone || null,
+              buyerType: buyerType || null,
+              firstName: firstName || null,
+              lastName: lastName || null,
+              source: source,
               preferredAreas: preferredAreas || [],
-              emailStatus: emailStatus || "available", // Default to available
-              emailPermissionStatus,
-              emailLists: {
-                connect: emailListConnections
-              }
+              emailStatus: emailStatus || "available",
+              emailPermissionStatus: emailPermissionStatus || null
             }
           });
 
           results.created++;
+          results.createdBuyerIds.push(newBuyer.id); // Track created buyer ID
         }
       } catch (err) {
         results.failed++;

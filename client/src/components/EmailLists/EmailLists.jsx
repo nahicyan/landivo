@@ -1,6 +1,8 @@
 import React, { useState } from "react";
 import { Card } from "@/components/ui/card";
 import { PuffLoader } from "react-spinners";
+import { toast } from "react-toastify";
+import { api } from "@/utils/api";
 
 // Import core components for email lists
 import EmailListsTable from "./EmailListsTable";
@@ -25,6 +27,9 @@ export default function EmailLists() {
   const [csvUploadOpen, setCsvUploadOpen] = useState(false);
   const [selectedList, setSelectedList] = useState(null);
   const [searchQuery, setSearchQuery] = useState("");
+  
+  // Add state for imported buyers
+  const [importedBuyers, setImportedBuyers] = useState(null);
 
   // Use custom hooks for data fetching and management
   const {
@@ -38,12 +43,14 @@ export default function EmailLists() {
     addBuyersToList: addBuyersToListFn,
     removeBuyersFromList,
     setListFilters,
+    refetchLists,
   } = useEmailLists();
 
   const {
     buyers,
     availableBuyers,
     loading: buyersLoading,
+    refetchBuyers,
   } = useBuyers();
 
   // Handle search input changes
@@ -90,6 +97,48 @@ export default function EmailLists() {
     setCsvUploadOpen(true);
   };
 
+  // Handle clearing imported buyers
+  const handleClearImportedBuyers = () => {
+    setImportedBuyers(null);
+  };
+
+  // Handle creating a list (updated to handle imported buyers)
+  const handleCreateList = async (listData) => {
+    try {
+      // If there are imported buyers, first import them to the backend
+      if (importedBuyers && importedBuyers.length > 0) {
+        // Import buyers first
+        const importResponse = await api.post('/buyer/import', {
+          buyers: importedBuyers,
+          source: 'CSV Import'
+        });
+        
+        // Get the created buyer IDs from the response
+        const createdBuyerIds = importResponse.data.results?.createdBuyerIds || [];
+        
+        // Create the list with the imported buyer IDs
+        await createList({
+          ...listData,
+          buyerIds: createdBuyerIds
+        });
+        
+        toast.success(`List created with ${importedBuyers.length} imported buyers`);
+        
+        // Clear imported buyers
+        setImportedBuyers(null);
+        
+        // Refresh buyers data
+        await refetchBuyers();
+      } else {
+        // Create list without imported buyers
+        await createList(listData);
+      }
+    } catch (error) {
+      console.error("Error creating list:", error);
+      toast.error("Failed to create list");
+    }
+  };
+
   // Handle adding buyers to a list
   const handleAddBuyersToList = async (listId, buyerIds) => {
     try {
@@ -97,6 +146,19 @@ export default function EmailLists() {
       setAddBuyersOpen(false);
     } catch (error) {
       console.error("Error adding buyers to list:", error);
+    }
+  };
+
+  // Handle CSV import (updated to store imported buyers)
+  const handleCsvImport = async (csvData, options) => {
+    try {
+      // Store the CSV data as imported buyers instead of immediately importing
+      setImportedBuyers(csvData);
+      toast.success(`${csvData.length} buyers ready to import`);
+      setCsvUploadOpen(false);
+    } catch (error) {
+      toast.error('Failed to process CSV data');
+      console.error('CSV processing error:', error);
     }
   };
 
@@ -138,8 +200,10 @@ export default function EmailLists() {
       <CreateListForm
         open={createListOpen}
         onOpenChange={setCreateListOpen}
-        onCreateList={createList}
+        onCreateList={handleCreateList}
         onImportCsv={handleImportCsv}
+        importedBuyers={importedBuyers}
+        onClearImportedBuyers={handleClearImportedBuyers}
       />
 
       <EditListForm
@@ -177,27 +241,8 @@ export default function EmailLists() {
       <ImportCsvDialog
         open={csvUploadOpen}
         onOpenChange={setCsvUploadOpen}
-        existingLists={lists} // Pass existing email lists
-        onImport={async (csvData, options) => {
-          try {
-            // Import buyers via API
-            const response = await api.post('/buyer/import', {
-              buyers: csvData,
-              source: 'CSV Import'
-            });
-
-            toast.success(response.data.message);
-
-            // Refresh buyers and lists
-            await refetchBuyers();
-            await refetchLists();
-
-            setCsvUploadOpen(false);
-          } catch (error) {
-            toast.error('Failed to import buyers');
-            console.error('Import error:', error);
-          }
-        }}
+        existingLists={lists}
+        onImport={handleCsvImport}
       />
     </div>
   );

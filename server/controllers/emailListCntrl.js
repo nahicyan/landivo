@@ -210,6 +210,9 @@ export const createEmailList = asyncHandler(async (req, res) => {
   }
   
   try {
+    // Ensure buyerIds is an array
+    const buyerIdsArray = Array.isArray(buyerIds) ? buyerIds : [];
+    
     // Create the list with initial buyers if provided
     const newList = await prisma.emailList.create({
       data: {
@@ -217,9 +220,9 @@ export const createEmailList = asyncHandler(async (req, res) => {
         description,
         criteria,
         color,
-        createdBy: req.userId, // Assuming you have middleware that sets req.userId
+        createdBy: req.userId,
         buyerMemberships: {
-          create: buyerIds.map(buyerId => ({
+          create: buyerIdsArray.map(buyerId => ({
             buyer: { connect: { id: buyerId } }
           }))
         }
