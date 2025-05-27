@@ -132,7 +132,7 @@ const handleCreateList = async (listData) => {
       
       toast.success(`List created with ${createdBuyerIds.length} imported buyers`);
       setImportedBuyers(null);
-      await refetchBuyers();
+      // await refetchBuyers(); // Troubleshooting
     } else {
       // Create list without imported buyers
       await createList(listData);

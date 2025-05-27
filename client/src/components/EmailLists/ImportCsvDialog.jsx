@@ -118,7 +118,11 @@ export default function ImportCsvDialog({
                 (normalized === 'lastname' && field.id === 'lastName') ||
                 (normalized === 'emailstatus' && field.id === 'emailStatus') ||
                 (normalized === 'emailpermissionstatus' && field.id === 'emailPermissionStatus') ||
-                (normalized === 'emaillists' && field.id === 'emailLists')) {
+                (normalized === 'emaillists' && field.id === 'emailLists') ||
+                // new mappings:
+                (header.toLowerCase() === 'email address' && field.id === 'email') ||
+                (header.toLowerCase() === 'first name' && field.id === 'firstName') ||
+                (header.toLowerCase() === 'last name' && field.id === 'lastName')) {
                 autoMappings[header] = field.id;
               }
             });

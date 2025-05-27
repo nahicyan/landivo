@@ -221,8 +221,8 @@ enum OfferStatus {
 
 model Buyer {
   id             String          @id @default(auto()) @map("_id") @db.ObjectId
-  email          String          @unique
-  phone          String?         @unique
+  email          String          // @unique
+  phone          String?         // @unique
   buyerType      BuyerType?
   firstName      String?
   lastName       String?
