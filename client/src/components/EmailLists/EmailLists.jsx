@@ -103,41 +103,45 @@ export default function EmailLists() {
   };
 
   // Handle creating a list (updated to handle imported buyers)
-  const handleCreateList = async (listData) => {
-    try {
-      // If there are imported buyers, first import them to the backend
-      if (importedBuyers && importedBuyers.length > 0) {
-        // Import buyers first
-        const importResponse = await api.post('/buyer/import', {
-          buyers: importedBuyers,
-          source: 'CSV Import'
-        });
-        
-        // Get the created buyer IDs from the response
-        const createdBuyerIds = importResponse.data.results.createdBuyerIds || [];
-        
-        // Create the list with the imported buyer IDs
-        await createList({
-          ...listData,
-          buyerIds: createdBuyerIds
-        });
-        
-        toast.success(`List created with ${importedBuyers.length} imported buyers`);
-        
-        // Clear imported buyers
-        setImportedBuyers(null);
-        
-        // Refresh buyers data
-        await refetchBuyers();
-      } else {
-        // Create list without imported buyers
-        await createList(listData);
+const handleCreateList = async (listData) => {
+  try {
+    if (importedBuyers && importedBuyers.length > 0) {
+      // Import buyers first
+      const importResponse = await api.post('/buyer/import', {
+        buyers: importedBuyers,
+        source: 'CSV Import'
+      });
+      
+      console.log('Import response:', importResponse.data); // Debug log
+      
+      // Get the created buyer IDs from the response
+      const createdBuyerIds = importResponse.data.results.createdBuyerIds || [];
+      
+      if (createdBuyerIds.length === 0) {
+        toast.warning("No new buyers were created - they may already exist in the system");
+        return;
       }
-    } catch (error) {
-      console.error("Error creating list:", error);
-      toast.error("Failed to create list");
+      
+      // Create the list with only the imported buyer IDs
+      await createList({
+        ...listData,
+        buyerIds: createdBuyerIds,
+        // Don't include criteria that would match all buyers
+        criteria: {}
+      });
+      
+      toast.success(`List created with ${createdBuyerIds.length} imported buyers`);
+      setImportedBuyers(null);
+      await refetchBuyers();
+    } else {
+      // Create list without imported buyers
+      await createList(listData);
     }
-  };
+  } catch (error) {
+    console.error("Error creating list:", error);
+    toast.error("Failed to create list");
+  }
+};
 
   // Handle adding buyers to a list
   const handleAddBuyersToList = async (listId, buyerIds) => {

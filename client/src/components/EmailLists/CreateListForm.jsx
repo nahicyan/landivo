@@ -96,6 +96,7 @@ export default function CreateListForm({
   };
 
   // Handle form submission
+// In handleSubmit function:
 const handleSubmit = async () => {
   if (!formData.name.trim()) {
     toast.error("List name is required");
@@ -103,16 +104,20 @@ const handleSubmit = async () => {
   }
 
   try {
-    await onCreateList({
-      ...formData,
-      buyerIds: importedBuyers ? importedBuyers.map(b => b.id) : [],
-      // Ensure criteria is explicitly set to avoid matching all buyers
-      criteria: formData.criteria.areas.length === 0 && 
-                formData.criteria.buyerTypes.length === 0 && 
-                !formData.criteria.isVIP 
-                ? null  // No criteria if nothing selected
-                : formData.criteria
-    });
+    // If importing buyers, don't include criteria
+    const listData = importedBuyers && importedBuyers.length > 0
+      ? {
+          name: formData.name,
+          description: formData.description,
+          criteria: {}, // Empty criteria for imported lists
+          buyerIds: importedBuyers.map(b => b.id)
+        }
+      : {
+          ...formData,
+          buyerIds: []
+        };
+    
+    await onCreateList(listData);
     handleOpenChange(false);
   } catch (error) {
     console.error("Create list error:", error);

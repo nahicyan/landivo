@@ -12,18 +12,18 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
-import { 
-  Select, 
-  SelectContent, 
-  SelectItem, 
-  SelectTrigger, 
-  SelectValue 
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue
 } from "@/components/ui/select";
-import { 
-  FileText, 
-  UploadCloud, 
-  Trash2, 
-  AlertCircle, 
+import {
+  FileText,
+  UploadCloud,
+  Trash2,
+  AlertCircle,
   Check,
   Plus
 } from "lucide-react";
@@ -63,9 +63,9 @@ const AVAILABLE_FIELDS = [
   { id: 'emailPermissionStatus', label: 'Email Permission Status', required: false }
 ];
 
-export default function ImportCsvDialog({ 
-  open, 
-  onOpenChange, 
+export default function ImportCsvDialog({
+  open,
+  onOpenChange,
   onImport,
   existingLists = []
 }) {
@@ -74,11 +74,11 @@ export default function ImportCsvDialog({
   const [csvHeaders, setCsvHeaders] = useState([]);
   const [csvData, setCsvData] = useState([]);
   const [csvErrors, setCsvErrors] = useState([]);
-  
+
   // Column mapping state
   const [columnMappings, setColumnMappings] = useState({});
   const [showMapping, setShowMapping] = useState(false);
-  
+
   // Import options
   const [importOptions, setImportOptions] = useState({
     skipFirstRow: true,
@@ -90,14 +90,14 @@ export default function ImportCsvDialog({
   const handleFileChange = (e) => {
     const file = e.target.files[0];
     if (!file) return;
-    
+
     setCsvFile(file);
     setCsvData([]);
     setCsvHeaders([]);
     setCsvErrors([]);
     setColumnMappings({});
     setShowMapping(false);
-    
+
     // Parse CSV file to get headers
     Papa.parse(file, {
       preview: 5,
@@ -105,24 +105,25 @@ export default function ImportCsvDialog({
         if (results.data && results.data.length > 0) {
           const headers = Object.keys(results.data[0]);
           setCsvHeaders(headers);
-          
+
           // Auto-map columns with matching names
           const autoMappings = {};
           headers.forEach(header => {
             const normalized = header.toLowerCase().replace(/\s+/g, '');
             AVAILABLE_FIELDS.forEach(field => {
               const fieldNormalized = field.label.toLowerCase().replace(/\s+/g, '');
-              if (normalized === fieldNormalized || 
-                  (normalized === 'emailaddress' && field.id === 'email') ||
-                  (normalized === 'firstname' && field.id === 'firstName') ||
-                  (normalized === 'lastname' && field.id === 'lastName') ||
-                  (normalized === 'emailstatus' && field.id === 'emailStatus') ||
-                  (normalized === 'emailpermissionstatus' && field.id === 'emailPermissionStatus')) {
+              if (normalized === fieldNormalized ||
+                (normalized === 'emailaddress' && field.id === 'email') ||
+                (normalized === 'firstname' && field.id === 'firstName') ||
+                (normalized === 'lastname' && field.id === 'lastName') ||
+                (normalized === 'emailstatus' && field.id === 'emailStatus') ||
+                (normalized === 'emailpermissionstatus' && field.id === 'emailPermissionStatus') ||
+                (normalized === 'emaillists' && field.id === 'emailLists')) {
                 autoMappings[header] = field.id;
               }
             });
           });
-          
+
           setColumnMappings(autoMappings);
           setShowMapping(true);
         }
@@ -143,48 +144,48 @@ export default function ImportCsvDialog({
   // Process CSV with mappings
   const processCsvWithMappings = () => {
     if (!csvFile) return;
-    
+
     Papa.parse(csvFile, {
       header: true,
       skipEmptyLines: true,
       complete: (results) => {
         const errors = [];
         const validData = [];
-        
+
         results.data.forEach((row, index) => {
           const mappedRow = {};
           let hasErrors = false;
-          
+
           // Map CSV columns to fields
           Object.entries(columnMappings).forEach(([csvColumn, fieldId]) => {
             if (fieldId && row[csvColumn] !== undefined) {
               mappedRow[fieldId] = row[csvColumn];
             }
           });
-          
+
           // Check required fields - only email is required
           if (!mappedRow.email || mappedRow.email.trim() === '') {
             hasErrors = true;
             errors.push(`Row ${index + 2}: Missing email address`);
           }
-          
+
           if (!hasErrors) {
             // Apply defaults if not mapped
             if (!mappedRow.buyerType && importOptions.defaultBuyerType !== '_none') {
               mappedRow.buyerType = importOptions.defaultBuyerType;
             }
-            
+
             // Handle preferred areas (comma-separated)
             if (mappedRow.preferredAreas) {
               mappedRow.preferredAreas = mappedRow.preferredAreas.split(',').map(a => a.trim()).filter(a => a);
             } else if (importOptions.defaultArea !== '_none') {
               mappedRow.preferredAreas = [importOptions.defaultArea];
             }
-            
+
             validData.push(mappedRow);
           }
         });
-        
+
         setCsvData(validData);
         setCsvErrors(errors);
       }
@@ -220,7 +221,7 @@ export default function ImportCsvDialog({
         emailPermissionStatus: row.emailPermissionStatus || null,
         source: "CSV Import"
       };
-      
+
       return buyer;
     });
 
@@ -261,14 +262,14 @@ export default function ImportCsvDialog({
             Upload a CSV file and map columns to buyer fields
           </DialogDescription>
         </DialogHeader>
-        
+
         <div className="py-4 space-y-4">
           {/* File Upload */}
           <div className="flex items-center gap-4">
             <Label htmlFor="csv-upload-file">Select CSV File</Label>
-            <Button 
-              type="button" 
-              variant="outline" 
+            <Button
+              type="button"
+              variant="outline"
               className="border-[#324c48] text-[#324c48]"
               onClick={() => document.getElementById('csv-upload-file').click()}
             >
@@ -283,7 +284,7 @@ export default function ImportCsvDialog({
               onChange={handleFileChange}
             />
           </div>
-          
+
           {csvFile && (
             <div className="flex items-center gap-2 p-2 bg-[#f0f5f4] rounded-lg">
               <FileText className="h-5 w-5 text-[#324c48]" />
@@ -302,7 +303,7 @@ export default function ImportCsvDialog({
               </Button>
             </div>
           )}
-          
+
           {/* Column Mapping */}
           {showMapping && csvHeaders.length > 0 && (
             <div className="space-y-3">
@@ -330,7 +331,7 @@ export default function ImportCsvDialog({
                   </div>
                 ))}
               </div>
-              
+
               <Button
                 onClick={processCsvWithMappings}
                 className="w-full bg-[#324c48] text-white"
@@ -339,14 +340,14 @@ export default function ImportCsvDialog({
               </Button>
             </div>
           )}
-          
+
           {/* Import Options */}
           {csvData.length > 0 && (
             <div className="bg-[#f0f5f4]/50 p-3 rounded-lg space-y-3">
               <p className="text-sm font-medium text-[#324c48]">
                 Default values for missing fields:
               </p>
-              
+
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-1">
                   <Label htmlFor="defaultBuyerType" className="text-sm">Default Buyer Type</Label>
@@ -366,7 +367,7 @@ export default function ImportCsvDialog({
                     </SelectContent>
                   </Select>
                 </div>
-                
+
                 <div className="space-y-1">
                   <Label htmlFor="defaultArea" className="text-sm">Default Area</Label>
                   <Select
@@ -388,7 +389,7 @@ export default function ImportCsvDialog({
               </div>
             </div>
           )}
-          
+
           {/* Errors */}
           {csvErrors.length > 0 && (
             <div className="p-3 bg-red-50 border border-red-200 rounded-lg">
@@ -403,7 +404,7 @@ export default function ImportCsvDialog({
               </ul>
             </div>
           )}
-          
+
           {/* Success Message */}
           {csvData.length > 0 && csvErrors.length === 0 && (
             <div className="p-3 bg-green-50 border border-green-200 rounded-lg">
@@ -415,7 +416,7 @@ export default function ImportCsvDialog({
               </div>
             </div>
           )}
-          
+
           {/* CSV Format Information */}
           <div className="p-3 bg-[#f0f5f4] rounded-lg">
             <p className="text-sm font-medium text-[#324c48] mb-2">
@@ -443,12 +444,12 @@ export default function ImportCsvDialog({
             </p>
           </div>
         </div>
-        
+
         <DialogFooter className="gap-2">
           <Button variant="outline" onClick={() => handleOpenChange(false)}>
             Cancel
           </Button>
-          <Button 
+          <Button
             className="bg-[#324c48] text-white"
             disabled={csvData.length === 0}
             onClick={handleImport}
