@@ -316,60 +316,62 @@ export const deleteBuyerActivity = async (buyerId, options = {}) => {
   }
 };
 
-// Get all buyer lists
-export const getBuyerLists = async () => {
+// Get all email lists
+export const getEmailLists = async () => {
   try {
-    const response = await api.get('/buyer-lists');
+    const response = await api.get('/email-lists');
     return response.data;
   } catch (error) {
-    handleRequestError(error, "Failed to fetch buyer lists");
+    handleRequestError(error, "Failed to fetch email lists");
   }
 };
 
-// Get a specific buyer list with its members
-export const getBuyerList = async (id) => {
+// Get a specific email list with its members
+export const getEmailList = async (id) => {
   try {
-    const response = await api.get(`/buyer-lists/${id}`);
+    const response = await api.get(`/email-lists/${id}`);
     return response.data;
   } catch (error) {
-    handleRequestError(error, "Failed to fetch buyer list");
+    handleRequestError(error, "Failed to fetch email list");
   }
 };
 
-// Create a new buyer list
-export const createBuyerList = async (listData) => {
+// Create a new email list
+export const createEmailList = async (listData) => {
   try {
-    const response = await api.post('/buyer-lists', listData);
+    const response = await api.post('/email-lists', listData);
     return response.data;
   } catch (error) {
-    handleRequestError(error, "Failed to create buyer list");
+    handleRequestError(error, "Failed to create email list");
   }
 };
 
-// Update a buyer list
-export const updateBuyerList = async (id, listData) => {
+// Update a email list
+export const updateEmailList = async (id, listData) => {
   try {
-    const response = await api.put(`/buyer-lists/${id}`, listData);
+    const response = await api.put(`/email-lists/${id}`, listData);
     return response.data;
   } catch (error) {
-    handleRequestError(error, "Failed to update buyer list");
+    handleRequestError(error, "Failed to update email list");
   }
 };
 
-// Delete a buyer list
-export const deleteBuyerList = async (id) => {
+// Delete a email list
+export const deleteEmailList = async (id, deleteBuyers = false) => {
   try {
-    const response = await api.delete(`/buyer-lists/${id}`);
+    const response = await api.delete(`/email-lists/${id}`, {
+      data: { deleteBuyers } // Send in request body
+    });
     return response.data;
   } catch (error) {
-    handleRequestError(error, "Failed to delete buyer list");
+    handleRequestError(error, "Failed to delete email list");
   }
 };
 
 // Add buyers to a list
 export const addBuyersToList = async (listId, buyerIds) => {
   try {
-    const response = await api.post(`/buyer-lists/${listId}/add-buyers`, { buyerIds });
+    const response = await api.post(`/email-lists/${listId}/add-buyers`, { buyerIds });
     return response.data;
   } catch (error) {
     handleRequestError(error, "Failed to add buyers to list");
@@ -379,7 +381,7 @@ export const addBuyersToList = async (listId, buyerIds) => {
 // Remove buyers from a list
 export const removeBuyersFromList = async (listId, buyerIds) => {
   try {
-    const response = await api.post(`/buyer-lists/${listId}/remove-buyers`, { buyerIds });
+    const response = await api.post(`/email-lists/${listId}/remove-buyers`, { buyerIds });
     return response.data;
   } catch (error) {
     handleRequestError(error, "Failed to remove buyers from list");
@@ -389,7 +391,7 @@ export const removeBuyersFromList = async (listId, buyerIds) => {
 // Send email to list members
 export const sendEmailToList = async (listId, emailData) => {
   try {
-    const response = await api.post(`/buyer-lists/${listId}/send-email`, emailData);
+    const response = await api.post(`/email-lists/${listId}/send-email`, emailData);
     return response.data;
   } catch (error) {
     handleRequestError(error, "Failed to send email to list");

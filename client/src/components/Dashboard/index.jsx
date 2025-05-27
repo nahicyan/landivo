@@ -10,7 +10,7 @@ import ActivityWidget from "./widgets/ActivityWidget";
 import OffersWidget from "./widgets/OffersWidget";
 import PropertiesWidget from "./widgets/PropertiesWidget";
 import BuyersWidget from "./widgets/BuyersWidget";
-import BuyerListsWidget from "./widgets/BuyerListsWidget";
+import EmailListsWidget from "./widgets/EmailListsWidget";
 import EmailReportWidget from "./widgets/EmailReportWidget";
 import QualificationsWidget from "./widgets/QualificationsWidget";
 import VisitorsWidget from "./widgets/VisitorsWidget";
@@ -27,7 +27,7 @@ export {
   OffersWidget,
   PropertiesWidget,
   BuyersWidget,
-  BuyerListsWidget,
+  EmailListsWidget,
   EmailReportWidget,
   QualificationsWidget,
   VisitorsWidget,

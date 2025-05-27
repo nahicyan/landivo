@@ -28,7 +28,7 @@ import {
 } from "lucide-react";
 
 // Define the list table component
-export default function BuyerListsTable({ 
+export default function EmailListsTable({ 
   lists, 
   searchQuery, 
   onSearchChange, 
@@ -43,7 +43,7 @@ export default function BuyerListsTable({
     <>
       <CardHeader className="bg-[#f0f5f4] border-b">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-          <CardTitle>Buyer Lists</CardTitle>
+          <CardTitle>Email Lists</CardTitle>
           
           <div className="flex gap-2">
             <Button
@@ -197,7 +197,7 @@ export default function BuyerListsTable({
               ) : (
                 <TableRow>
                   <TableCell colSpan={6} className="h-24 text-center">
-                    {searchQuery ? "No lists match your search." : "No buyer lists found. Create your first list!"}
+                    {searchQuery ? "No lists match your search." : "No email lists found. Create your first list!"}
                   </TableCell>
                 </TableRow>
               )}

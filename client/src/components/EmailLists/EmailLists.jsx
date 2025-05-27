@@ -1,21 +1,24 @@
 import React, { useState } from "react";
 import { Card } from "@/components/ui/card";
 import { PuffLoader } from "react-spinners";
+import { toast } from "react-toastify";
+import { api } from "@/utils/api";
 
-// Import core components for buyer lists
-import BuyerListsTable from "./BuyerListsTable";
+// Import core components for email lists
+import EmailListsTable from "./EmailListsTable";
 import CreateListForm from "./CreateListForm";
 import EditListForm from "./EditListForm";
 import EmailForm from "./EmailForm";
 import AddBuyersDialog from "./AddBuyersDialog";
 import ManageMembersDialog from "./ManageMembersDialog";
 import ImportCsvDialog from "./ImportCsvDialog";
+import DeleteListConfirmDialog from "./DeleteListConfirmDialog";
 
 // Import custom hooks from the proper location
-import { useBuyerLists } from "@/components/hooks/useBuyerLists";
+import { useEmailLists } from "@/components/hooks/useEmailLists";
 import useBuyers from "@/components/hooks/useBuyers.js";
 
-export default function BuyerLists() {
+export default function EmailLists() {
   // State for dialogs and selected list
   const [createListOpen, setCreateListOpen] = useState(false);
   const [editListOpen, setEditListOpen] = useState(false);
@@ -23,8 +26,13 @@ export default function BuyerLists() {
   const [addBuyersOpen, setAddBuyersOpen] = useState(false);
   const [manageBuyersOpen, setManageBuyersOpen] = useState(false);
   const [csvUploadOpen, setCsvUploadOpen] = useState(false);
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const [selectedList, setSelectedList] = useState(null);
+  const [listToDelete, setListToDelete] = useState(null);
   const [searchQuery, setSearchQuery] = useState("");
+  
+  // Add state for imported buyers
+  const [importedBuyers, setImportedBuyers] = useState(null);
 
   // Use custom hooks for data fetching and management
   const {
@@ -38,12 +46,14 @@ export default function BuyerLists() {
     addBuyersToList: addBuyersToListFn,
     removeBuyersFromList,
     setListFilters,
-  } = useBuyerLists();
+    refetchLists,
+  } = useEmailLists();
 
   const {
     buyers,
     availableBuyers,
     loading: buyersLoading,
+    refetchBuyers,
   } = useBuyers();
 
   // Handle search input changes
@@ -85,9 +95,74 @@ export default function BuyerLists() {
     setManageBuyersOpen(true);
   };
 
+  // Handle delete list confirmation
+  const handleDeleteList = (listId) => {
+    const list = lists.find(l => l.id === listId);
+    setListToDelete(list);
+    setDeleteConfirmOpen(true);
+  };
+
+  // Handle confirm delete
+  const handleConfirmDelete = async (deleteBuyers) => {
+    if (!listToDelete) return;
+    
+    try {
+      await deleteList(listToDelete.id, deleteBuyers);
+      setListToDelete(null);
+    } catch (error) {
+      console.error("Error deleting list:", error);
+    }
+  };
+
   // Handle CSV import
   const handleImportCsv = () => {
     setCsvUploadOpen(true);
+  };
+
+  // Handle clearing imported buyers
+  const handleClearImportedBuyers = () => {
+    setImportedBuyers(null);
+  };
+
+  // Handle creating a list (updated to handle imported buyers)
+  const handleCreateList = async (listData) => {
+    try {
+      if (importedBuyers && importedBuyers.length > 0) {
+        // Import buyers first
+        const importResponse = await api.post('/buyer/import', {
+          buyers: importedBuyers,
+          source: 'CSV Import'
+        });
+        
+        console.log('Import response:', importResponse.data); // Debug log
+        
+        // Get the created buyer IDs from the response
+        const createdBuyerIds = importResponse.data.results.createdBuyerIds || [];
+        
+        if (createdBuyerIds.length === 0) {
+          toast.warning("No new buyers were created - they may already exist in the system");
+          return;
+        }
+        
+        // Create the list with only the imported buyer IDs
+        await createList({
+          ...listData,
+          buyerIds: createdBuyerIds,
+          // Don't include criteria that would match all buyers
+          criteria: {}
+        });
+        
+        toast.success(`List created with ${createdBuyerIds.length} imported buyers`);
+        setImportedBuyers(null);
+        // await refetchBuyers(); // Troubleshooting
+      } else {
+        // Create list without imported buyers
+        await createList(listData);
+      }
+    } catch (error) {
+      console.error("Error creating list:", error);
+      toast.error("Failed to create list");
+    }
   };
 
   // Handle adding buyers to a list
@@ -97,6 +172,19 @@ export default function BuyerLists() {
       setAddBuyersOpen(false);
     } catch (error) {
       console.error("Error adding buyers to list:", error);
+    }
+  };
+
+  // Handle CSV import (updated to store imported buyers)
+  const handleCsvImport = async (csvData, options) => {
+    try {
+      // Store the CSV data as imported buyers instead of immediately importing
+      setImportedBuyers(csvData);
+      toast.success(`${csvData.length} buyers ready to import`);
+      setCsvUploadOpen(false);
+    } catch (error) {
+      toast.error('Failed to process CSV data');
+      console.error('CSV processing error:', error);
     }
   };
 
@@ -112,7 +200,7 @@ export default function BuyerLists() {
   return (
     <div className="max-w-screen-xl mx-auto p-4 sm:p-6">
       <div className="mb-6">
-        <h1 className="text-2xl font-bold text-[#324c48] mb-2">Buyer Lists</h1>
+        <h1 className="text-2xl font-bold text-[#324c48] mb-2">Email Lists</h1>
         <p className="text-gray-600">
           Create and manage lists of buyers grouped by area and type for targeted emails
         </p>
@@ -121,7 +209,7 @@ export default function BuyerLists() {
       {/* Main Content */}
       <Card className="border-[#324c48]/20">
         {/* Table with search and actions */}
-        <BuyerListsTable
+        <EmailListsTable
           lists={filteredLists}
           searchQuery={searchQuery}
           onSearchChange={handleSearchChange}
@@ -130,7 +218,7 @@ export default function BuyerLists() {
           onEmailList={handleEmailList}
           onAddBuyers={handleAddBuyers}
           onManageMembers={handleManageMembers}
-          onDeleteList={deleteList}
+          onDeleteList={handleDeleteList}
         />
       </Card>
 
@@ -138,8 +226,10 @@ export default function BuyerLists() {
       <CreateListForm
         open={createListOpen}
         onOpenChange={setCreateListOpen}
-        onCreateList={createList}
+        onCreateList={handleCreateList}
         onImportCsv={handleImportCsv}
+        importedBuyers={importedBuyers}
+        onClearImportedBuyers={handleClearImportedBuyers}
       />
 
       <EditListForm
@@ -177,14 +267,15 @@ export default function BuyerLists() {
       <ImportCsvDialog
         open={csvUploadOpen}
         onOpenChange={setCsvUploadOpen}
-        onImport={(csvData, options) => {
-          // Handle CSV import based on context
-          if (selectedList) {
-            // Add to existing list
-            addBuyersToListFn(selectedList.id, csvData.map(buyer => buyer.id));
-          }
-          setCsvUploadOpen(false);
-        }}
+        existingLists={lists}
+        onImport={handleCsvImport}
+      />
+
+      <DeleteListConfirmDialog
+        open={deleteConfirmOpen}
+        onOpenChange={setDeleteConfirmOpen}
+        selectedList={listToDelete}
+        onConfirmDelete={handleConfirmDelete}
       />
     </div>
   );

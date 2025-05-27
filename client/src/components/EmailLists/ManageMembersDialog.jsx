@@ -22,10 +22,14 @@ import {
 import { 
   Search, 
   UserPlus, 
-  Trash2 
+  Trash2,
+  ChevronLeft,
+  ChevronRight,
+  ChevronsLeft,
+  ChevronsRight
 } from "lucide-react";
 import { toast } from "react-toastify";
-import { getBuyerList } from "@/utils/api";
+import { getEmailList } from "@/utils/api";
 
 export default function ManageMembersDialog({ 
   open, 
@@ -34,12 +38,22 @@ export default function ManageMembersDialog({
   onRemoveMembers,
   onAddBuyers 
 }) {
-  // State for members
+  // State for members and pagination
   const [listMembers, setListMembers] = useState([]);
   const [filteredMembers, setFilteredMembers] = useState([]);
   const [selectedMembers, setSelectedMembers] = useState([]);
   const [memberSearchQuery, setMemberSearchQuery] = useState("");
   const [loading, setLoading] = useState(false);
+  
+  // Pagination state
+  const [currentPage, setCurrentPage] = useState(1);
+  const [membersPerPage] = useState(10);
+
+  // Calculate pagination values
+  const totalPages = Math.ceil(filteredMembers.length / membersPerPage);
+  const startIndex = (currentPage - 1) * membersPerPage;
+  const endIndex = startIndex + membersPerPage;
+  const currentMembers = filteredMembers.slice(startIndex, endIndex);
 
   // Fetch list members when dialog opens
   useEffect(() => {
@@ -48,8 +62,7 @@ export default function ManageMembersDialog({
 
       try {
         setLoading(true);
-        // Fetch list with its members
-        const listData = await getBuyerList(selectedList.id);
+        const listData = await getEmailList(selectedList.id);
         
         if (listData && listData.buyers) {
           setListMembers(listData.buyers);
@@ -75,6 +88,7 @@ export default function ManageMembersDialog({
     
     if (!memberSearchQuery.trim()) {
       setFilteredMembers(listMembers);
+      setCurrentPage(1);
       return;
     }
     
@@ -87,6 +101,7 @@ export default function ManageMembersDialog({
     );
     
     setFilteredMembers(filtered);
+    setCurrentPage(1);
   }, [listMembers, memberSearchQuery]);
 
   // Reset state when dialog closes
@@ -94,6 +109,7 @@ export default function ManageMembersDialog({
     if (!open) {
       setMemberSearchQuery("");
       setSelectedMembers([]);
+      setCurrentPage(1);
     }
   }, [open]);
 
@@ -111,7 +127,7 @@ export default function ManageMembersDialog({
   // Handle selecting/deselecting all visible members
   const handleSelectAll = (checked) => {
     if (checked) {
-      setSelectedMembers(filteredMembers.map(member => member.id));
+      setSelectedMembers(currentMembers.map(member => member.id));
     } else {
       setSelectedMembers([]);
     }
@@ -136,16 +152,27 @@ export default function ManageMembersDialog({
       );
       setSelectedMembers([]);
       
+      // Adjust current page if necessary
+      const newTotalPages = Math.ceil((filteredMembers.length - selectedMembers.length) / membersPerPage);
+      if (currentPage > newTotalPages && newTotalPages > 0) {
+        setCurrentPage(newTotalPages);
+      }
+      
       toast.success(`${selectedMembers.length} members removed from list`);
     } catch (error) {
-      // Error handling is done in the onRemoveMembers function
       console.error("Remove members error:", error);
     }
   };
 
+  // Pagination handlers
+  const goToFirstPage = () => setCurrentPage(1);
+  const goToPreviousPage = () => setCurrentPage(prev => Math.max(prev - 1, 1));
+  const goToNextPage = () => setCurrentPage(prev => Math.min(prev + 1, totalPages));
+  const goToLastPage = () => setCurrentPage(totalPages);
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-4xl">
+      <DialogContent className="max-w-4xl max-h-[90vh] flex flex-col">
         <DialogHeader>
           <DialogTitle>Manage List Members</DialogTitle>
           <DialogDescription>
@@ -156,7 +183,8 @@ export default function ManageMembersDialog({
             )}
           </DialogDescription>
         </DialogHeader>
-        <div className="py-4">
+        
+        <div className="flex-1 overflow-hidden py-4">
           <div className="flex items-center gap-4 mb-4">
             <div className="flex-1 relative">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
@@ -206,13 +234,13 @@ export default function ManageMembersDialog({
             </div>
           )}
           
-          <div className="border rounded-md">
+          <div className="border rounded-md overflow-hidden">
             <Table>
               <TableHeader>
                 <TableRow>
                   <TableHead className="w-[40px]">
                     <Checkbox
-                      checked={selectedMembers.length > 0 && selectedMembers.length === filteredMembers.length}
+                      checked={selectedMembers.length > 0 && selectedMembers.length === currentMembers.length}
                       onCheckedChange={handleSelectAll}
                     />
                   </TableHead>
@@ -230,8 +258,8 @@ export default function ManageMembersDialog({
                       Loading list members...
                     </TableCell>
                   </TableRow>
-                ) : filteredMembers.length > 0 ? (
-                  filteredMembers.map((buyer) => (
+                ) : currentMembers.length > 0 ? (
+                  currentMembers.map((buyer) => (
                     <TableRow key={buyer.id}>
                       <TableCell>
                         <Checkbox
@@ -291,7 +319,59 @@ export default function ManageMembersDialog({
               </TableBody>
             </Table>
           </div>
+
+          {/* Pagination Controls */}
+          {totalPages > 1 && (
+            <div className="flex items-center justify-between mt-4">
+              <div className="text-sm text-gray-500">
+                Showing {startIndex + 1} to {Math.min(endIndex, filteredMembers.length)} of {filteredMembers.length} members
+              </div>
+              
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={goToFirstPage}
+                  disabled={currentPage === 1}
+                >
+                  <ChevronsLeft className="h-4 w-4" />
+                </Button>
+                
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={goToPreviousPage}
+                  disabled={currentPage === 1}
+                >
+                  <ChevronLeft className="h-4 w-4" />
+                </Button>
+                
+                <span className="text-sm px-3">
+                  Page {currentPage} of {totalPages}
+                </span>
+                
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={goToNextPage}
+                  disabled={currentPage === totalPages}
+                >
+                  <ChevronRight className="h-4 w-4" />
+                </Button>
+                
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={goToLastPage}
+                  disabled={currentPage === totalPages}
+                >
+                  <ChevronsRight className="h-4 w-4" />
+                </Button>
+              </div>
+            </div>
+          )}
         </div>
+        
         <DialogFooter>
           <Button
             variant="outline"

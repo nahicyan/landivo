@@ -322,7 +322,7 @@ const BuyersContainer = () => {
     }
   }, [buyers, selectedBuyers, updateStats]);
 
-  // Export buyer list
+  // Export email list
   const handleExport = useCallback(() => {
     try {
       // Get the selected buyers (or all if none selected)
@@ -373,7 +373,7 @@ const BuyersContainer = () => {
       <Tabs defaultValue="list" className="mb-6">
         <TabsList className="bg-[#f0f5f4] p-1">
           <TabsTrigger value="list" className="data-[state=active]:bg-white">
-            Buyer List
+            Email List
           </TabsTrigger>
           <TabsTrigger value="areas" className="data-[state=active]:bg-white">
             By Area
@@ -383,7 +383,7 @@ const BuyersContainer = () => {
           </TabsTrigger>
         </TabsList>
         
-        {/* Buyer List Tab */}
+        {/* Email List Tab */}
         <TabsContent value="list">
           <Card className="border-[#324c48]/20">
             <BuyersTable 
@@ -425,7 +425,7 @@ const BuyersContainer = () => {
         <TabsContent value="analytics">
           <Card>
             <CardHeader>
-              <CardTitle>Buyer List Analytics</CardTitle>
+              <CardTitle>Email List Analytics</CardTitle>
               <CardDescription>
                 Insights into your buyer database
               </CardDescription>
@@ -491,7 +491,7 @@ const BuyersContainer = () => {
                 {/* Growth Over Time */}
                 <Card className="border border-[#324c48]/20 md:col-span-2">
                   <CardHeader className="bg-[#f0f5f4] border-b">
-                    <CardTitle>Buyer List Growth</CardTitle>
+                    <CardTitle>Email List Growth</CardTitle>
                   </CardHeader>
                   <CardContent className="p-4 min-h-[300px] flex items-center justify-center">
                     <div className="text-center text-gray-500">

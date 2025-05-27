@@ -28,7 +28,7 @@ router.get("/:id", getBuyerById);
 router.put("/update/:id", updateBuyer);
 router.delete("/delete/:id", deleteBuyer);
 
-// New buyer list management routes
+// New email list management routes
 router.get("/byArea/:areaId", getBuyersByArea);
 router.post("/sendEmail", sendEmailToBuyers);
 router.post("/import", importBuyersFromCsv);

@@ -130,7 +130,7 @@ export default function EditListForm({
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogContent className="sm:max-w-[700px]">
         <DialogHeader>
-          <DialogTitle>Edit Buyer List</DialogTitle>
+          <DialogTitle>Edit Email List</DialogTitle>
           <DialogDescription>
             Update list details and criteria
           </DialogDescription>
