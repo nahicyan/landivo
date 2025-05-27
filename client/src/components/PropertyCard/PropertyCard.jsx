@@ -22,13 +22,13 @@ export default function PropertyCard({ card }) {
     }
   })();
 
-  const firstImage = images.length > 0 
-    ? `${serverURL}/${images[0]}` 
+  const firstImage = images.length > 0
+    ? `${serverURL}/${images[0]}`
     : "/default-image.jpg";
 
   // Format prices
-  const formattedPrice = card.askingPrice 
-    ? formatPrice(card.askingPrice) 
+  const formattedPrice = card.askingPrice
+    ? formatPrice(card.askingPrice)
     : "0";
 
   // Calculate minimum monthly payment
@@ -88,10 +88,20 @@ export default function PropertyCard({ card }) {
 
         {/* City, State, Zip */}
         <p className="text-gray-500 text-base font-medium truncate">
-          {[card.city, card.state, card.zip]
-            .filter(Boolean)
-            .join(card.state && card.zip ? ", " : " ")
-            .trim() || "Location unavailable"}
+          {(() => {
+            const parts = [];
+            if (card.city) parts.push(card.city);
+            if (card.state) parts.push(card.state);
+            
+            if (parts.length === 0 && !card.zip) return "Location unavailable";
+            
+            let location = parts.join(", ");
+            if (card.zip) {
+              location = location ? `${location} ${card.zip}` : card.zip;
+            }
+            
+            return location || "Location unavailable";
+          })()}
         </p>
       </div>
     </Card>
