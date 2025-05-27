@@ -66,10 +66,10 @@ export default function PropertyCard({ card }) {
       <div className="px-3 pt-1.5 pb-2.5 space-y-0.5">
         {/* Acres and Price Row */}
         <div className="flex justify-between items-center">
-          <span className="text-gray-600 text-base font-normal truncate">
+          <span className="text-gray-600 text-lg font-normal truncate">
             {card.acre || "0"} Acres
           </span>
-          <span className="text-[#517b75] text-lg font-semibold whitespace-nowrap leading-tight tracking-tight">
+          <span className="text-[#517b75] text-xl font-semibold whitespace-nowrap leading-tight tracking-tight">
             ${formattedPrice}
           </span>
         </div>
@@ -87,7 +87,7 @@ export default function PropertyCard({ card }) {
         </div>
 
         {/* City, State, Zip */}
-        <p className="text-gray-500 text-sm font-medium truncate">
+        <p className="text-gray-500 text-base font-medium truncate">
           {[card.city, card.state, card.zip]
             .filter(Boolean)
             .join(card.state && card.zip ? ", " : " ")
