@@ -11,14 +11,13 @@ export const getAllEmailLists = asyncHandler(async (req, res) => {
       include: {
         buyerMemberships: {
           select: {
-            id: true
+            buyerId: true
           }
         }
       }
     });
 
     // For each list, count the buyers that match its criteria and manual members
-
     const listsWithCounts = await Promise.all(
       lists.map(async (list) => {
         // Get manually added buyers through join table
@@ -29,35 +28,43 @@ export const getAllEmailLists = asyncHandler(async (req, res) => {
         if (list.criteria) {
           const criteria = JSON.parse(JSON.stringify(list.criteria));
 
-          // Build the query based on criteria
-          const query = {};
+          // Check if criteria has any actual filters
+          const hasCriteriaFilters = 
+            (criteria.areas && criteria.areas.length > 0) ||
+            (criteria.buyerTypes && criteria.buyerTypes.length > 0) ||
+            criteria.isVIP;
 
-          // Add area filter if specified
-          if (criteria.areas && criteria.areas.length > 0) {
-            query.preferredAreas = {
-              hasSome: criteria.areas
-            };
+          if (hasCriteriaFilters) {
+            // Build the query based on criteria
+            const query = {};
+
+            // Add area filter if specified
+            if (criteria.areas && criteria.areas.length > 0) {
+              query.preferredAreas = {
+                hasSome: criteria.areas
+              };
+            }
+
+            // Add buyer type filter if specified
+            if (criteria.buyerTypes && criteria.buyerTypes.length > 0) {
+              query.buyerType = {
+                in: criteria.buyerTypes
+              };
+            }
+
+            // Add VIP filter if specified
+            if (criteria.isVIP) {
+              query.source = "VIP Buyers List";
+            }
+
+            // Get buyer IDs matching the criteria
+            const criteriaBuyers = await prisma.buyer.findMany({
+              where: query,
+              select: { id: true }
+            });
+
+            criteriaBuyerIds = criteriaBuyers.map(b => b.id);
           }
-
-          // Add buyer type filter if specified
-          if (criteria.buyerTypes && criteria.buyerTypes.length > 0) {
-            query.buyerType = {
-              in: criteria.buyerTypes
-            };
-          }
-
-          // Add VIP filter if specified
-          if (criteria.isVIP) {
-            query.source = "VIP Buyers List";
-          }
-
-          // Get buyer IDs matching the criteria
-          const criteriaBuyers = await prisma.buyer.findMany({
-            where: query,
-            select: { id: true }
-          });
-
-          criteriaBuyerIds = criteriaBuyers.map(b => b.id);
         }
 
         // Combine and remove duplicates using Set
@@ -125,39 +132,47 @@ export const getEmailList = asyncHandler(async (req, res) => {
     if (list.criteria) {
       const criteria = JSON.parse(JSON.stringify(list.criteria));
 
-      // Build the query based on criteria
-      const query = {};
+      // Check if criteria has any actual filters
+      const hasCriteriaFilters = 
+        (criteria.areas && criteria.areas.length > 0) ||
+        (criteria.buyerTypes && criteria.buyerTypes.length > 0) ||
+        criteria.isVIP;
 
-      // Add area filter if specified
-      if (criteria.areas && criteria.areas.length > 0) {
-        query.preferredAreas = {
-          hasSome: criteria.areas
-        };
-      }
+      if (hasCriteriaFilters) {
+        // Build the query based on criteria
+        const query = {};
 
-      // Add buyer type filter if specified
-      if (criteria.buyerTypes && criteria.buyerTypes.length > 0) {
-        query.buyerType = {
-          in: criteria.buyerTypes
-        };
-      }
+        // Add area filter if specified
+        if (criteria.areas && criteria.areas.length > 0) {
+          query.preferredAreas = {
+            hasSome: criteria.areas
+          };
+        }
 
-      // Add VIP filter if specified
-      if (criteria.isVIP) {
-        query.source = "VIP Buyers List";
-      }
+        // Add buyer type filter if specified
+        if (criteria.buyerTypes && criteria.buyerTypes.length > 0) {
+          query.buyerType = {
+            in: criteria.buyerTypes
+          };
+        }
 
-      // Get buyers matching the criteria
-      criteriaBuyers = await prisma.buyer.findMany({
-        where: query,
-        include: {
-          emailListMemberships: {
-            include: {
-              emailList: true
+        // Add VIP filter if specified
+        if (criteria.isVIP) {
+          query.source = "VIP Buyers List";
+        }
+
+        // Get buyers matching the criteria
+        criteriaBuyers = await prisma.buyer.findMany({
+          where: query,
+          include: {
+            emailListMemberships: {
+              include: {
+                emailList: true
+              }
             }
           }
-        }
-      });
+        });
+      }
     }
 
     // Combine and remove duplicates
@@ -497,39 +512,47 @@ export const sendEmailToList = asyncHandler(async (req, res) => {
     if (list.criteria) {
       const criteria = JSON.parse(JSON.stringify(list.criteria));
 
-      // Build the query based on criteria
-      const query = {
-        ...(includeUnsubscribed ? {} : {
-          OR: [
-            { emailStatus: null },
-            { emailStatus: "available" }
-          ]
-        })
-      };
+      // Check if criteria has any actual filters
+      const hasCriteriaFilters = 
+        (criteria.areas && criteria.areas.length > 0) ||
+        (criteria.buyerTypes && criteria.buyerTypes.length > 0) ||
+        criteria.isVIP;
 
-      // Add area filter if specified
-      if (criteria.areas && criteria.areas.length > 0) {
-        query.preferredAreas = {
-          hasSome: criteria.areas
+      if (hasCriteriaFilters) {
+        // Build the query based on criteria
+        const query = {
+          ...(includeUnsubscribed ? {} : {
+            OR: [
+              { emailStatus: null },
+              { emailStatus: "available" }
+            ]
+          })
         };
-      }
 
-      // Add buyer type filter if specified
-      if (criteria.buyerTypes && criteria.buyerTypes.length > 0) {
-        query.buyerType = {
-          in: criteria.buyerTypes
-        };
-      }
+        // Add area filter if specified
+        if (criteria.areas && criteria.areas.length > 0) {
+          query.preferredAreas = {
+            hasSome: criteria.areas
+          };
+        }
 
-      // Add VIP filter if specified
-      if (criteria.isVIP) {
-        query.source = "VIP Buyers List";
-      }
+        // Add buyer type filter if specified
+        if (criteria.buyerTypes && criteria.buyerTypes.length > 0) {
+          query.buyerType = {
+            in: criteria.buyerTypes
+          };
+        }
 
-      // Get buyers matching the criteria
-      criteriaBuyers = await prisma.buyer.findMany({
-        where: query
-      });
+        // Add VIP filter if specified
+        if (criteria.isVIP) {
+          query.source = "VIP Buyers List";
+        }
+
+        // Get buyers matching the criteria
+        criteriaBuyers = await prisma.buyer.findMany({
+          where: query
+        });
+      }
     }
 
     // Combine and remove duplicates
