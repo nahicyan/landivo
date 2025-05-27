@@ -51,8 +51,22 @@ export default function PropertyCard({ card }) {
   return (
     <Card
       onClick={() => navigate(`/properties/${card.id}`)}
-      className="w-full w-96 rounded-xl overflow-hidden shadow-lg hover:shadow-xl transition-shadow cursor-pointer bg-white"
+      className="w-full w-96 rounded-xl overflow-hidden shadow-lg hover:shadow-xl transition-shadow cursor-pointer bg-white relative"
     >
+      {/* Left Tag */}
+      {card.ltag && (
+        <div className="absolute top-3 left-3 z-10 bg-gradient-to-r from-blue-500 to-blue-600 text-white text-sm font-semibold px-3 py-1.5 rounded-lg shadow-lg">
+          {card.ltag}
+        </div>
+      )}
+      
+      {/* Right Tag */}
+      {card.rtag && (
+        <div className="absolute top-3 right-3 z-10 bg-gradient-to-r from-green-600 to-green-700 text-white text-sm font-semibold px-3 py-1.5 rounded-lg shadow-lg">
+          {card.rtag}
+        </div>
+      )}
+
       {/* Image Section */}
       <div className="relative w-full h-64">
         <img
