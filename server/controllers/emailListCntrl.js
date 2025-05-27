@@ -312,6 +312,7 @@ export const updateEmailList = asyncHandler(async (req, res) => {
 // Delete a email list
 export const deleteEmailList = asyncHandler(async (req, res) => {
   const { id } = req.params;
+  const { deleteBuyers = false } = req.body; // New parameter
 
   if (!id) {
     return res.status(400).json({ message: "List ID is required" });
@@ -327,13 +328,57 @@ export const deleteEmailList = asyncHandler(async (req, res) => {
       return res.status(404).json({ message: "Email list not found" });
     }
 
-    // Delete the list (join table entries will be cascade deleted)
+    let deletedBuyersCount = 0;
+
+    if (deleteBuyers) {
+      // Get all buyer IDs in this list
+      const buyerMemberships = await prisma.buyerEmailList.findMany({
+        where: { emailListId: id },
+        select: { buyerId: true }
+      });
+      
+      const buyerIds = buyerMemberships.map(m => m.buyerId);
+      
+      if (buyerIds.length > 0) {
+        // Delete offers first (foreign key constraint)
+        await prisma.offer.deleteMany({
+          where: { buyerId: { in: buyerIds } }
+        });
+        
+        // Delete buyer activities
+        await prisma.buyerActivity.deleteMany({
+          where: { buyerId: { in: buyerIds } }
+        });
+        
+        // Delete all buyer memberships for these buyers
+        await prisma.buyerEmailList.deleteMany({
+          where: { buyerId: { in: buyerIds } }
+        });
+        
+        // Delete the buyers
+        const deleteResult = await prisma.buyer.deleteMany({
+          where: { id: { in: buyerIds } }
+        });
+        
+        deletedBuyersCount = deleteResult.count;
+      }
+    } else {
+      // Just delete the memberships for this list
+      await prisma.buyerEmailList.deleteMany({
+        where: { emailListId: id }
+      });
+    }
+
+    // Delete the list
     await prisma.emailList.delete({
       where: { id }
     });
 
     res.status(200).json({
-      message: "Email list deleted successfully"
+      message: deleteBuyers 
+        ? `Email list and ${deletedBuyersCount} buyers deleted successfully`
+        : "Email list deleted successfully",
+      deletedBuyersCount
     });
   } catch (err) {
     console.error("Error deleting email list:", err);

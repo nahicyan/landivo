@@ -12,6 +12,7 @@ import EmailForm from "./EmailForm";
 import AddBuyersDialog from "./AddBuyersDialog";
 import ManageMembersDialog from "./ManageMembersDialog";
 import ImportCsvDialog from "./ImportCsvDialog";
+import DeleteListConfirmDialog from "./DeleteListConfirmDialog";
 
 // Import custom hooks from the proper location
 import { useEmailLists } from "@/components/hooks/useEmailLists";
@@ -25,7 +26,9 @@ export default function EmailLists() {
   const [addBuyersOpen, setAddBuyersOpen] = useState(false);
   const [manageBuyersOpen, setManageBuyersOpen] = useState(false);
   const [csvUploadOpen, setCsvUploadOpen] = useState(false);
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const [selectedList, setSelectedList] = useState(null);
+  const [listToDelete, setListToDelete] = useState(null);
   const [searchQuery, setSearchQuery] = useState("");
   
   // Add state for imported buyers
@@ -92,6 +95,25 @@ export default function EmailLists() {
     setManageBuyersOpen(true);
   };
 
+  // Handle delete list confirmation
+  const handleDeleteList = (listId) => {
+    const list = lists.find(l => l.id === listId);
+    setListToDelete(list);
+    setDeleteConfirmOpen(true);
+  };
+
+  // Handle confirm delete
+  const handleConfirmDelete = async (deleteBuyers) => {
+    if (!listToDelete) return;
+    
+    try {
+      await deleteList(listToDelete.id, deleteBuyers);
+      setListToDelete(null);
+    } catch (error) {
+      console.error("Error deleting list:", error);
+    }
+  };
+
   // Handle CSV import
   const handleImportCsv = () => {
     setCsvUploadOpen(true);
@@ -103,45 +125,45 @@ export default function EmailLists() {
   };
 
   // Handle creating a list (updated to handle imported buyers)
-const handleCreateList = async (listData) => {
-  try {
-    if (importedBuyers && importedBuyers.length > 0) {
-      // Import buyers first
-      const importResponse = await api.post('/buyer/import', {
-        buyers: importedBuyers,
-        source: 'CSV Import'
-      });
-      
-      console.log('Import response:', importResponse.data); // Debug log
-      
-      // Get the created buyer IDs from the response
-      const createdBuyerIds = importResponse.data.results.createdBuyerIds || [];
-      
-      if (createdBuyerIds.length === 0) {
-        toast.warning("No new buyers were created - they may already exist in the system");
-        return;
+  const handleCreateList = async (listData) => {
+    try {
+      if (importedBuyers && importedBuyers.length > 0) {
+        // Import buyers first
+        const importResponse = await api.post('/buyer/import', {
+          buyers: importedBuyers,
+          source: 'CSV Import'
+        });
+        
+        console.log('Import response:', importResponse.data); // Debug log
+        
+        // Get the created buyer IDs from the response
+        const createdBuyerIds = importResponse.data.results.createdBuyerIds || [];
+        
+        if (createdBuyerIds.length === 0) {
+          toast.warning("No new buyers were created - they may already exist in the system");
+          return;
+        }
+        
+        // Create the list with only the imported buyer IDs
+        await createList({
+          ...listData,
+          buyerIds: createdBuyerIds,
+          // Don't include criteria that would match all buyers
+          criteria: {}
+        });
+        
+        toast.success(`List created with ${createdBuyerIds.length} imported buyers`);
+        setImportedBuyers(null);
+        // await refetchBuyers(); // Troubleshooting
+      } else {
+        // Create list without imported buyers
+        await createList(listData);
       }
-      
-      // Create the list with only the imported buyer IDs
-      await createList({
-        ...listData,
-        buyerIds: createdBuyerIds,
-        // Don't include criteria that would match all buyers
-        criteria: {}
-      });
-      
-      toast.success(`List created with ${createdBuyerIds.length} imported buyers`);
-      setImportedBuyers(null);
-      // await refetchBuyers(); // Troubleshooting
-    } else {
-      // Create list without imported buyers
-      await createList(listData);
+    } catch (error) {
+      console.error("Error creating list:", error);
+      toast.error("Failed to create list");
     }
-  } catch (error) {
-    console.error("Error creating list:", error);
-    toast.error("Failed to create list");
-  }
-};
+  };
 
   // Handle adding buyers to a list
   const handleAddBuyersToList = async (listId, buyerIds) => {
@@ -196,7 +218,7 @@ const handleCreateList = async (listData) => {
           onEmailList={handleEmailList}
           onAddBuyers={handleAddBuyers}
           onManageMembers={handleManageMembers}
-          onDeleteList={deleteList}
+          onDeleteList={handleDeleteList}
         />
       </Card>
 
@@ -247,6 +269,13 @@ const handleCreateList = async (listData) => {
         onOpenChange={setCsvUploadOpen}
         existingLists={lists}
         onImport={handleCsvImport}
+      />
+
+      <DeleteListConfirmDialog
+        open={deleteConfirmOpen}
+        onOpenChange={setDeleteConfirmOpen}
+        selectedList={listToDelete}
+        onConfirmDelete={handleConfirmDelete}
       />
     </div>
   );

@@ -1,14 +1,14 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { toast } from "react-toastify";
-import { 
-  getEmailLists, 
+import {
+  getEmailLists,
   getEmailList,
-  createEmailList, 
-  updateEmailList, 
-  deleteEmailList, 
-  addBuyersToList as addBuyersApi, 
-  removeBuyersFromList as removeBuyersApi, 
-  sendEmailToList 
+  createEmailList,
+  updateEmailList,
+  deleteEmailList,
+  addBuyersToList as addBuyersApi,
+  removeBuyersFromList as removeBuyersApi,
+  sendEmailToList
 } from "@/utils/api";
 
 export function useEmailLists() {
@@ -20,25 +20,32 @@ export function useEmailLists() {
     search: "",
   });
 
-  // Fetch all email lists
-  useEffect(() => {
-    const fetchLists = async () => {
-      try {
-        setLoading(true);
-        const data = await getEmailLists();
-        setLists(data);
-        setFilteredLists(data);
-      } catch (err) {
-        console.error("Error fetching email lists:", err);
-        setError("Failed to load email lists");
-        toast.error("Failed to load email lists");
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchLists();
+  // Function to fetch lists
+  const fetchLists = useCallback(async () => {
+    try {
+      setLoading(true);
+      const data = await getEmailLists();
+      setLists(data);
+      setFilteredLists(data);
+      setError(null);
+    } catch (err) {
+      console.error("Error fetching email lists:", err);
+      setError("Failed to load email lists");
+      toast.error("Failed to load email lists");
+    } finally {
+      setLoading(false);
+    }
   }, []);
+
+  // Function to refetch lists
+  const refetchLists = useCallback(async () => {
+    await fetchLists();
+  }, [fetchLists]);
+
+  // Fetch all email lists on mount
+  useEffect(() => {
+    fetchLists();
+  }, [fetchLists]);
 
   // Apply filters when filters or lists change
   useEffect(() => {
@@ -49,13 +56,13 @@ export function useEmailLists() {
     // Apply search filter
     if (filters.search) {
       const searchTerm = filters.search.toLowerCase();
-      result = result.filter(list => 
+      result = result.filter(list =>
         list.name.toLowerCase().includes(searchTerm) ||
         (list.description && list.description.toLowerCase().includes(searchTerm)) ||
-        (list.criteria?.areas && list.criteria.areas.some(area => 
+        (list.criteria?.areas && list.criteria.areas.some(area =>
           area.toLowerCase().includes(searchTerm)
         )) ||
-        (list.criteria?.buyerTypes && list.criteria.buyerTypes.some(type => 
+        (list.criteria?.buyerTypes && list.criteria.buyerTypes.some(type =>
           type.toLowerCase().includes(searchTerm)
         ))
       );
@@ -82,7 +89,7 @@ export function useEmailLists() {
   const updateList = async (listId, listData) => {
     try {
       const response = await updateEmailList(listId, listData);
-      setLists(prev => 
+      setLists(prev =>
         prev.map(list => list.id === listId ? response.list : list)
       );
       toast.success("Buyer list updated successfully!");
@@ -95,15 +102,14 @@ export function useEmailLists() {
   };
 
   // Delete a list
-  const deleteList = async (listId) => {
+  const deleteList = async (listId, deleteBuyers = false) => {
     try {
-      await deleteEmailList(listId);
-      setLists(prev => prev.filter(list => list.id !== listId));
-      toast.success("Buyer list deleted successfully!");
-    } catch (err) {
-      console.error("Error deleting email list:", err);
+      await deleteEmailList(listId, deleteBuyers);
+      toast.success("Email list deleted successfully");
+      refetchLists();
+    } catch (error) {
       toast.error("Failed to delete email list");
-      throw err;
+      throw error;
     }
   };
 
@@ -111,20 +117,20 @@ export function useEmailLists() {
   const addBuyersToList = async (listId, buyerIds) => {
     try {
       await addBuyersApi(listId, buyerIds);
-      
+
       // Update the buyer count in the list
-      setLists(prev => 
+      setLists(prev =>
         prev.map(list => {
           if (list.id === listId) {
-            return { 
-              ...list, 
-              buyerCount: (list.buyerCount || 0) + buyerIds.length 
+            return {
+              ...list,
+              buyerCount: (list.buyerCount || 0) + buyerIds.length
             };
           }
           return list;
         })
       );
-      
+
       toast.success(`${buyerIds.length} buyers added to list!`);
     } catch (err) {
       console.error("Error adding buyers to list:", err);
@@ -137,20 +143,20 @@ export function useEmailLists() {
   const removeBuyersFromList = async (listId, buyerIds) => {
     try {
       await removeBuyersApi(listId, buyerIds);
-      
+
       // Update the buyer count in the list
-      setLists(prev => 
+      setLists(prev =>
         prev.map(list => {
           if (list.id === listId) {
-            return { 
-              ...list, 
+            return {
+              ...list,
               buyerCount: Math.max(0, (list.buyerCount || 0) - buyerIds.length)
             };
           }
           return list;
         })
       );
-      
+
       toast.success(`${buyerIds.length} buyers removed from list!`);
     } catch (err) {
       console.error("Error removing buyers from list:", err);
@@ -163,20 +169,20 @@ export function useEmailLists() {
   const sendEmail = async (listId, emailData) => {
     try {
       await sendEmailToList(listId, emailData);
-      
+
       // Update the last email date
-      setLists(prev => 
+      setLists(prev =>
         prev.map(list => {
           if (list.id === listId) {
-            return { 
-              ...list, 
-              lastEmailDate: new Date().toISOString() 
+            return {
+              ...list,
+              lastEmailDate: new Date().toISOString()
             };
           }
           return list;
         })
       );
-      
+
       toast.success("Email sent successfully!");
     } catch (err) {
       console.error("Error sending email:", err);
@@ -209,6 +215,7 @@ export function useEmailLists() {
     removeBuyersFromList,
     sendEmail,
     getListMembers,
+    refetchLists,
     setListFilters: setFilters
   };
 }

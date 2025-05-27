@@ -357,9 +357,11 @@ export const updateEmailList = async (id, listData) => {
 };
 
 // Delete a email list
-export const deleteEmailList = async (id) => {
+export const deleteEmailList = async (id, deleteBuyers = false) => {
   try {
-    const response = await api.delete(`/email-lists/${id}`);
+    const response = await api.delete(`/email-lists/${id}`, {
+      data: { deleteBuyers } // Send in request body
+    });
     return response.data;
   } catch (error) {
     handleRequestError(error, "Failed to delete email list");
