@@ -32,6 +32,8 @@ export const PERMISSIONS = {
     
     // Admin access permission
     ACCESS_ADMIN: 'access:admin',
+
+    OBSCURE_PROPERTIES: 'obscure:properties',
   };
   
   /**

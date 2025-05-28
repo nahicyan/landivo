@@ -7,6 +7,7 @@ import { parsePhoneNumber } from "libphonenumber-js";
 import ContactCard from "@/components/ContactCard/ContactCard";
 import { useAuth } from "@/components/hooks/useAuth";
 import { useVipBuyer } from '@/utils/VipBuyerContext';
+import { useShowAddress } from "@/utils/addressUtils";
 
 // ShadCN UI components
 import {
@@ -34,6 +35,8 @@ export default function Offer({ propertyData }) {
   }
 
   const navigate = useNavigate();
+  const showAddress = useShowAddress(propertyData?.toggleObscure);
+  
   const [offerPrice, setOfferPrice] = useState("");
   const [buyerType, setBuyerType] = useState("");
   const [firstName, setFirstName] = useState("");
@@ -651,7 +654,7 @@ return (
           {getCardTitle()}
         </CardTitle>
         <CardDescription className="text-[#324d49] text-sm">
-          For {propertyData.streetAddress || "This Property"}
+          For {(!propertyData.toggleObscure || showAddress) ? propertyData.streetAddress : "This Property"}
         </CardDescription>
       </CardHeader>
 

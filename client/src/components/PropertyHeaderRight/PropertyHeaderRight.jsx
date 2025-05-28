@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { useAuth0 } from "@auth0/auth0-react";
 import { useVipBuyer } from "@/utils/VipBuyerContext";
 import { useNavigate } from "react-router-dom";
+import { useShowAddress } from "@/utils/addressUtils";
 import { 
   Dialog, 
   DialogContent, 
@@ -36,6 +37,7 @@ export default function PropertyHeaderRight({ propertyData }) {
   const { isAuthenticated } = useAuth0();
   const { isVipBuyer } = useVipBuyer();
   const navigate = useNavigate();
+  const showAddress = useShowAddress(propertyData?.toggleObscure);
   
   // State for email dialog
   const [showDialog, setShowDialog] = useState(false);
@@ -70,6 +72,11 @@ export default function PropertyHeaderRight({ propertyData }) {
     setShowDialog(true);
   };
 
+  // Handle contact button click
+  const handleContactClick = () => {
+    navigate('/support');
+  };
+
   // Handle dialog submission
   const handleDialogSubmit = () => {
     if (!email.trim()) {
@@ -85,12 +92,6 @@ export default function PropertyHeaderRight({ propertyData }) {
     setShowDialog(false);
     // Navigate to subscription page with email parameter
     navigate(`/subscription?email=${encodeURIComponent(email)}`);
-  };
-
-  // Handle contact button click for obscured address
-  const handleContactClick = () => {
-    // You can customize this action - open contact form, navigate to contact page, etc.
-    navigate('/support');
   };
 
   return (
@@ -171,7 +172,7 @@ export default function PropertyHeaderRight({ propertyData }) {
       {/* Address Row */}
       {(streetAddress || city || state || zip) && (
         <div className="text-lg text-gray-700 mt-1">
-          {toggleObscure ? (
+          {toggleObscure && !showAddress ? (
             <div className="flex items-center gap-3">
               <span>
                 {[city, state, zip].filter(Boolean).join(", ")}

@@ -11,6 +11,7 @@ import {
 } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
+import { useShowAddress } from "@/utils/addressUtils";
 
 import {
   Accordion,
@@ -39,8 +40,9 @@ import PreQualification from "@/components/PreQualification/PreQualification";
 
 export default function PropertyDetailsDetails({ propertyData }) {
   const navigate = useNavigate();
+  const showAddress = useShowAddress(propertyData?.toggleObscure);
 
-  // Handle contact button click for obscured address
+  // Handle contact button click
   const handleContactClick = () => {
     navigate('/support');
   };
@@ -61,7 +63,7 @@ export default function PropertyDetailsDetails({ propertyData }) {
                   Street Address
                 </TableCell>
                 <TableCell>
-                  {propertyData.toggleObscure ? (
+                  {propertyData.toggleObscure && !showAddress ? (
                     <Button
                       onClick={handleContactClick}
                       className="bg-[#84aea8] hover:bg-[#517b75] text-white text-sm font-medium px-4 py-2 rounded-md transition-colors"
@@ -173,7 +175,7 @@ export default function PropertyDetailsDetails({ propertyData }) {
               {propertyData.direction && <span>{propertyData.direction}.</span>}
               <p>For driving directions,</p>
               
-               <a href={`https://www.google.com/maps/dir/?api=1&destination=${propertyData.latitude},${propertyData.longitude}`}
+              <a href={`https://www.google.com/maps/dir/?api=1&destination=${propertyData.latitude},${propertyData.longitude}`}
                 target="_blank"
                 rel="noopener noreferrer"
               >

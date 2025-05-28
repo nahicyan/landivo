@@ -2,10 +2,34 @@ import React from "react";
 import { useNavigate } from "react-router-dom";
 import { Card } from "@/components/ui/card";
 import { formatPrice } from "../../utils/format";
+import { useShowAddress } from "../../utils/addressUtils";
 const serverURL = import.meta.env.VITE_SERVER_URL;
+
+// Helper function to format county name
+const formatCountyName = (county) => {
+  if (!county) return "County unavailable";
+  
+  // Check if county already contains "County" (case insensitive)
+  if (county.toLowerCase().includes('county')) {
+    return county;
+  }
+  
+  // Add "County" to the name
+  return `${county} County`;
+};
+
+// Updated function to get display address with county fallback
+const getDisplayAddress = (streetAddress, toggleObscure, showAddress, county) => {
+  if (!toggleObscure || showAddress) {
+    return streetAddress || "Address unavailable";
+  }
+  
+  return formatCountyName(county);
+};
 
 export default function PropertyCard({ card }) {
   const navigate = useNavigate();
+  const showAddress = useShowAddress(card.toggleObscure);
 
   if (!card) return null;
 
@@ -48,24 +72,13 @@ export default function PropertyCard({ card }) {
 
   const monthlyPayment = getMonthlyPayment();
 
-  // Handle address display based on toggleObscure
-  const getDisplayAddress = () => {
-    if (card.toggleObscure) {
-      // Use county name instead of street address
-      if (card.county) {
-        // Check if county already contains "County" (case-insensitive)
-        const countyLower = card.county.toLowerCase();
-        if (countyLower.includes("county")) {
-          return card.county;
-        } else {
-          return `${card.county} County`;
-        }
-      }
-      return "County unavailable";
-    }
-    // Normal behavior - show street address
-    return card.streetAddress || "Address unavailable";
-  };
+  // Get display address based on permissions (with county fallback)
+  const displayAddress = getDisplayAddress(
+    card.streetAddress, 
+    card.toggleObscure, 
+    showAddress, 
+    card.county
+  );
 
   return (
     <Card
@@ -110,7 +123,7 @@ export default function PropertyCard({ card }) {
         {/* Address and Monthly Payment Row */}
         <div className="flex justify-between items-center gap-2">
           <h3 className="text-gray-800 text-base font-semibold truncate flex-1">
-            {getDisplayAddress()}
+            {displayAddress}
           </h3>
           {monthlyPayment && (
             <span className="text-[#D4A017] text-base font-medium tracking-tight whitespace-nowrap">

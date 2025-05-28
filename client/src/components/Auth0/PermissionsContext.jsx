@@ -44,6 +44,7 @@ export const PermissionsProvider = ({ children }) => {
     
     // Create boolean flags for common permission checks
     const check = {
+      canObscureProperties: hasPermission(userPermissions, PERMISSIONS.OBSCURE_PROPERTIES),
       canReadUsers: hasPermission(userPermissions, PERMISSIONS.READ_USERS),
       canWriteUsers: hasPermission(userPermissions, PERMISSIONS.WRITE_USERS),
       canDeleteUsers: hasPermission(userPermissions, PERMISSIONS.DELETE_USERS),
