@@ -227,11 +227,11 @@ const DisplayRow = ({
             ref={scrollRef}
             onScroll={updateScrollState}
           >
-            <div className="flex flex-col sm:flex-row space-y-5 sm:space-y-0 sm:space-x-5">
-              {filteredProperties.map((property) => (
+            <div className="flex flex-col sm:flex-row space-y-8 sm:space-y-0 sm:space-x-5 py-8">
+              {filteredProperties.map((property, index) => (
                 <div
                   key={property.id}
-                  className="flex-shrink-0 transition hover:scale-105"
+                  className={`flex-shrink-0 transition hover:scale-105 ${index === 0 ? 'ml-3' : ''}`}
                   onClick={() => handlePropertyClick(property)}
                 >
                   <PropertyCard card={property} />
