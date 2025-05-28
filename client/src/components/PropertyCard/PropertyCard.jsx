@@ -27,7 +27,7 @@ const getDisplayAddress = (streetAddress, toggleObscure, showAddress, county) =>
   return formatCountyName(county);
 };
 
-export default function PropertyCard({ card }) {
+export default function PropertyCardDiscounted({ card }) {
   const navigate = useNavigate();
   const showAddress = useShowAddress(card.toggleObscure);
 
@@ -50,21 +50,28 @@ export default function PropertyCard({ card }) {
     ? `${serverURL}/${images[0]}`
     : "/default-image.jpg";
 
-  // Format prices
-  const formattedPrice = card.askingPrice
+  // Format prices - FIXED: Using disPrice instead of discountedPrice
+  const formattedOriginalPrice = card.askingPrice
     ? formatPrice(card.askingPrice)
     : "0";
+    
+  const formattedDiscountedPrice = card.disPrice
+    ? formatPrice(card.disPrice)
+    : formattedOriginalPrice;
+
+  // Calculate discount percentage - FIXED: Using disPrice instead of discountedPrice
+  const discountPercentage = card.askingPrice && card.disPrice
+    ? Math.round(((card.askingPrice - card.disPrice) / card.askingPrice) * 100)
+    : 0;
 
   // Calculate minimum monthly payment
   const getMonthlyPayment = () => {
     if (!card.financing || card.financing !== "Available") return null;
-
     const payments = [
       card.monthlyPaymentOne,
       card.monthlyPaymentTwo,
       card.monthlyPaymentThree
     ].filter(payment => payment && !isNaN(payment));
-
     if (payments.length === 0) return null;
     const minPayment = Math.min(...payments);
     return Math.floor(minPayment).toLocaleString();
@@ -92,13 +99,20 @@ export default function PropertyCard({ card }) {
         </div>
       )}
       
-      {/* Right Tag */}
+      {/* Right Tag (Middle Position) */}
       {card.rtag && (
-        <div className="absolute top-3 right-3 z-10 bg-gradient-to-r from-green-600 to-green-700 text-white text-sm font-semibold px-3 py-1.5 rounded-lg shadow-lg">
+        <div className="absolute top-3 left-1/2 transform -translate-x-1/2 z-10 bg-gradient-to-r from-green-600 to-green-700 text-white text-sm font-semibold px-3 py-1.5 rounded-lg shadow-lg">
           {card.rtag}
         </div>
       )}
-
+      
+      {/* Discount Badge */}
+      {discountPercentage > 0 && (
+        <div className="absolute top-3 right-3 z-10 bg-gradient-to-r from-red-500 to-red-600 text-white text-sm font-semibold px-3 py-1.5 rounded-lg shadow-lg">
+          {discountPercentage}% OFF
+        </div>
+      )}
+      
       {/* Image Section */}
       <div className="relative w-full h-64">
         <img
@@ -107,7 +121,7 @@ export default function PropertyCard({ card }) {
           className="w-full h-full object-cover"
         />
       </div>
-
+      
       {/* Content Section */}
       <div className="px-3 pt-1.5 pb-2.5 space-y-0.5">
         {/* Acres and Price Row */}
@@ -115,11 +129,18 @@ export default function PropertyCard({ card }) {
           <span className="text-gray-600 text-lg font-normal truncate">
             {card.acre || "0"} Acres
           </span>
-          <span className="text-[#517b75] text-xl font-semibold whitespace-nowrap leading-tight tracking-tight">
-            ${formattedPrice}
-          </span>
+          <div className="text-right">
+            {card.disPrice && card.disPrice < card.askingPrice && (
+              <div className="text-gray-600 text-sm line-through">
+                ${formattedOriginalPrice}
+              </div>
+            )}
+            <span className="text-[#517b75] text-xl font-semibold whitespace-nowrap leading-tight tracking-tight">
+              ${formattedDiscountedPrice}
+            </span>
+          </div>
         </div>
-
+        
         {/* Address and Monthly Payment Row */}
         <div className="flex justify-between items-center gap-2">
           <h3 className="text-gray-800 text-base font-semibold truncate flex-1">
@@ -131,21 +152,18 @@ export default function PropertyCard({ card }) {
             </span>
           )}
         </div>
-
+        
         {/* City, State, Zip */}
         <p className="text-gray-500 text-base font-medium truncate">
           {(() => {
             const parts = [];
             if (card.city) parts.push(card.city);
             if (card.state) parts.push(card.state);
-            
             if (parts.length === 0 && !card.zip) return "Location unavailable";
-            
             let location = parts.join(", ");
             if (card.zip) {
               location = location ? `${location} ${card.zip}` : card.zip;
             }
-            
             return location || "Location unavailable";
           })()}
         </p>
