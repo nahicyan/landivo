@@ -51,6 +51,7 @@ export default function PropertyHeaderRight({ propertyData }) {
     city,
     state,
     zip,
+    toggleObscure,
   } = propertyData || {};
 
   const { circle, text } = getStatusClasses(status);
@@ -84,6 +85,12 @@ export default function PropertyHeaderRight({ propertyData }) {
     setShowDialog(false);
     // Navigate to subscription page with email parameter
     navigate(`/subscription?email=${encodeURIComponent(email)}`);
+  };
+
+  // Handle contact button click for obscured address
+  const handleContactClick = () => {
+    // You can customize this action - open contact form, navigate to contact page, etc.
+    navigate('/support');
   };
 
   return (
@@ -164,7 +171,21 @@ export default function PropertyHeaderRight({ propertyData }) {
       {/* Address Row */}
       {(streetAddress || city || state || zip) && (
         <div className="text-lg text-gray-700 mt-1">
-          {streetAddress}, {city}, {state} {zip}
+          {toggleObscure ? (
+            <div className="flex items-center gap-3">
+              <span>
+                {[city, state, zip].filter(Boolean).join(", ")}
+              </span>
+              <Button
+                onClick={handleContactClick}
+                className="bg-[#324c48] hover:bg-[#3f4f24] text-white text-base font-medium px-4 py-2 rounded-md transition-colors"
+              >
+                Contact For Full Details
+              </Button>
+            </div>
+          ) : (
+            `${streetAddress}, ${city}, ${state} ${zip}`
+          )}
         </div>
       )}
 

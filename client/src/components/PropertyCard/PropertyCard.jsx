@@ -48,6 +48,25 @@ export default function PropertyCard({ card }) {
 
   const monthlyPayment = getMonthlyPayment();
 
+  // Handle address display based on toggleObscure
+  const getDisplayAddress = () => {
+    if (card.toggleObscure) {
+      // Use county name instead of street address
+      if (card.county) {
+        // Check if county already contains "County" (case-insensitive)
+        const countyLower = card.county.toLowerCase();
+        if (countyLower.includes("county")) {
+          return card.county;
+        } else {
+          return `${card.county} County`;
+        }
+      }
+      return "County unavailable";
+    }
+    // Normal behavior - show street address
+    return card.streetAddress || "Address unavailable";
+  };
+
   return (
     <Card
       onClick={() => navigate(`/properties/${card.id}`)}
@@ -91,7 +110,7 @@ export default function PropertyCard({ card }) {
         {/* Address and Monthly Payment Row */}
         <div className="flex justify-between items-center gap-2">
           <h3 className="text-gray-800 text-base font-semibold truncate flex-1">
-            {card.streetAddress || "Address unavailable"}
+            {getDisplayAddress()}
           </h3>
           {monthlyPayment && (
             <span className="text-[#D4A017] text-base font-medium tracking-tight whitespace-nowrap">
