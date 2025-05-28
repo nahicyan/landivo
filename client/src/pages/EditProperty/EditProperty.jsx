@@ -80,6 +80,7 @@ export default function EditProperty() {
     survey: "",
     direction: "",
     streetAddress: "",
+    toggleObscure: false,
     city: "",
     county: "",
     state: "",
@@ -455,7 +456,7 @@ const validateStep = (stepIndex) => {
         "hasCma", "cmaData", "cmaFilePath",
         
         // Location
-        "direction", "streetAddress", "city", "county", "state", "zip",
+        "direction", "streetAddress", "toggleObscure", "city", "county", "state", "zip",
         "latitude", "longitude", "apnOrPin", "landId", "landIdLink",
         
         // Dimensions

@@ -204,7 +204,7 @@ export const updateResidency = asyncHandler(async (req, res) => {
   console.log("Received updateResidency request body:", req.body);
   try {
     const { id } = req.params;
-    let { imageUrls, videoUrls, viewCount, removeCmaFile, propertyRows, featuredPosition, profileId, ...restOfData } = req.body;
+    let { imageUrls, videoUrls, viewCount, removeCmaFile, propertyRows, featuredPosition, profileId, toggleObscure, ...restOfData } = req.body;
     // Get the authenticated user's ID from the req object (set by middleware)
     const updatedById = req.userId;
     
@@ -294,6 +294,11 @@ export const updateResidency = asyncHandler(async (req, res) => {
       restOfData.landId = restOfData.landId === true || 
                         restOfData.landId === "true" || 
                         restOfData.landId === "included";
+    }
+
+    // Add toggleObscure conversion
+    if (toggleObscure !== undefined) {
+      restOfData.toggleObscure = toggleObscure === true || toggleObscure === "true";
     }
 
     // Process newly uploaded images (if any) from multer
@@ -696,6 +701,9 @@ export const createResidencyWithMultipleFiles = asyncHandler(async (req, res) =>
       ltag,
       rtag,
       
+      // Display
+      toggleObscure,
+      
       // CMA fields
       hasCma,
       cmaData,
@@ -814,6 +822,9 @@ export const createResidencyWithMultipleFiles = asyncHandler(async (req, res) =>
         rtag: rtag ?? null,
         imageUrls: allImageUrls.length > 0 ? allImageUrls : null,
         videoUrls: allVideoUrls.length > 0 ? allVideoUrls : null,
+        
+        // Display
+        toggleObscure: toggleObscure === "true" || toggleObscure === true,
         
         // CMA fields
         hasCma: hasCma === "true" || hasCma === true,

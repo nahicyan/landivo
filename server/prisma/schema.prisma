@@ -102,6 +102,9 @@ model Residency {
 
   //4. Location & Identification
   streetAddress String
+    // Display
+  toggleObscure Boolean @default(false)
+  //
   city          String
   county        String
   state         String

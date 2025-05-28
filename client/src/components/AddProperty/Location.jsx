@@ -5,6 +5,7 @@ import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectTrigger, SelectContent, SelectItem, SelectValue } from "@/components/ui/select";
+import { Switch } from "@/components/ui/switch";
 import AddressAutocomplete from "@/components/AddressAutocomplete/AddressAutocomplete";
 
 export default function Location({ formData, handleChange, setFormData }) {
@@ -13,6 +14,14 @@ export default function Location({ formData, handleChange, setFormData }) {
     setFormData({
       ...formData,
       landId: value === "Available" // true if Available, false if Not Available
+    });
+  };
+
+  // Handle toggleObscure selection
+  const handleToggleObscure = (checked) => {
+    setFormData({
+      ...formData,
+      toggleObscure: checked
     });
   };
 
@@ -43,6 +52,25 @@ export default function Location({ formData, handleChange, setFormData }) {
             placeholder="Enter street address"
             className="mt-1"
           />
+        </div>
+
+        {/* Toggle Obscure Address */}
+        <div className="bg-gray-50 border border-gray-200 rounded-lg p-3">
+          <div className="flex items-center space-x-3">
+            <Switch
+              id="toggleObscure"
+              checked={formData.toggleObscure}
+              onCheckedChange={handleToggleObscure}
+            />
+            <div className="flex flex-col">
+              <Label htmlFor="toggleObscure" className="text-sm font-semibold text-gray-700 cursor-pointer">
+                Obscure Address
+              </Label>
+              <span className="text-xs text-gray-500">
+                Hide Street Address From Public View For Privacy
+              </span>
+            </div>
+          </div>
         </div>
 
         {/* City & County */}

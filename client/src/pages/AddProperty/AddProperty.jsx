@@ -81,6 +81,9 @@ export default function AddProperty() {
     // Address and Location
     direction: "",
     streetAddress: "",
+    // Display
+    toggleObscure: false, 
+    //
     city: "",
     county: "",
     state: "",
