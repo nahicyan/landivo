@@ -2,10 +2,11 @@
 
 import React, { useState, useEffect } from "react";
 import { PuffLoader } from "react-spinners";
-import { useSearchParams } from "react-router-dom";
+import { useSearchParams, Link } from "react-router-dom";
 import useProperties from "../../components/hooks/useProperties.js";
 import SearchWithTracking from "@/components/Search/SearchWithTracking";
 import DisplayRow, { createFilter } from "@/components/DisplayRow/DisplayRow";
+import { Button } from "@/components/ui/button";
 
 export default function Properties() {
   const { data, isError, isLoading } = useProperties();
@@ -52,8 +53,19 @@ export default function Properties() {
     );
   });
 
-  // Define the areas you want separate sections for
-  const areas = ["DFW", "Austin", "Houston", "San Antonio", "Other Areas"];
+  // Define the areas and their corresponding routes
+  const areas = [
+    { name: "DFW", route: "/DFW", displayName: "Dallas Fort Worth" },
+    { name: "Austin", route: "/Austin", displayName: "Austin" },
+    { name: "Houston", route: "/Houston", displayName: "Houston" },
+    { name: "San Antonio", route: "/SanAntonio", displayName: "San Antonio" },
+    { name: "Other Areas", route: "/OtherLands", displayName: "Other Areas" }
+  ];
+
+  // Helper function to get properties for an area
+  const getAreaProperties = (areaName) => {
+    return filteredData.filter(property => property.area === areaName);
+  };
 
   return (
     <div className="bg-[#FDF8F2] min-h-screen py-12 text-[#4b5b4d]">
@@ -78,18 +90,35 @@ export default function Properties() {
         {/* Small Separating Line */}
         <hr className="my-8 border-t border-[#4b5b4d]/20" />
 
-        {/* Location Sections using DisplayRow */}
-        {areas.map((area, index) => (
-          <DisplayRow
-            key={area}
-            properties={filteredData}
-            filter={{ ...createFilter.area(area), hideWhenEmpty: true }}
-            title={`Properties in ${area}`}
-            showDivider={index > 0}
-            emptyMessage=""
-            className="my-12"
-          />
-        ))}
+        {/* Location Sections using DisplayRow with Area Buttons */}
+        {areas.map((area, index) => {
+          const areaProperties = getAreaProperties(area.name);
+          
+          // Don't render section if no properties
+          if (areaProperties.length === 0) return null;
+
+          return (
+            <div key={area.name} className="my-12">
+              <DisplayRow
+                properties={filteredData}
+                filter={createFilter.area(area.name)}
+                title={`Properties in ${area.displayName}`}
+                showDivider={index > 0}
+                emptyMessage=""
+                className=""
+              />
+              
+              {/* All Properties in Area Button */}
+              <div className="flex justify-end mt-4 mb-8">
+                <Link to={area.route}>
+                  <Button className="bg-[#324c48] hover:bg-[#3f4f24] text-white px-6 py-2 rounded-lg shadow transition transform active:scale-95 focus:outline-none focus:ring-2 focus:ring-[#3f4f24] focus:ring-offset-2">
+                    All Properties in {area.displayName}
+                  </Button>
+                </Link>
+              </div>
+            </div>
+          );
+        })}
 
         {/* No matching properties */}
         {filteredData.length === 0 && (
