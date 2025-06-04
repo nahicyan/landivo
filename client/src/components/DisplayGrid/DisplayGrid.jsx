@@ -296,7 +296,7 @@ const DisplayGrid = ({
           <PuffLoader size={50} color="#D4A017" />
         </div>
       ) : filteredProperties.length > 0 ? (
-        <div className={`grid ${gridCols} gap-5 py-8`}>
+        <div className={`grid ${gridCols} gap-10 py-8`}>
           {filteredProperties.map((property) => (
             <div
               key={property.id}
