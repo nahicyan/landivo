@@ -71,7 +71,7 @@ export default function DFWProperty() {
     );
   }
 
-  // Filter and sort DFW properties
+  // Filter DFW properties
   const dfwProperties = data.filter(property => property.area === "DFW");
   const nonFeaturedDFWProperties = dfwProperties.filter(
     property => !featuredPropertyIds.includes(property.id)
@@ -127,10 +127,13 @@ export default function DFWProperty() {
         {/* Title, Subtitle & Search */}
         <div className="mb-10 text-center">
           <h1 className="text-3xl sm:text-4xl font-bold mb-4">
-            Properties in Dallas Fort Worth
+            {hasDFWProperties || hasFeaturedProperties ? "Properties in Dallas Fort Worth" : "All Properties"}
           </h1>
           <p className="text-lg mb-6">
-            Browse through properties available in Dallas Fort Worth.
+            {hasDFWProperties || hasFeaturedProperties 
+              ? "Browse through properties available in Dallas Fort Worth."
+              : "Sorry! We sold through everything in Dallas Fort Worth! Maybe you would be interested in these properties:"
+            }
           </p>
           <SearchAreaWithTracking
             query={areaQuery}
@@ -162,8 +165,6 @@ export default function DFWProperty() {
             properties={filteredDFWProperties}
             filter={{ type: 'all' }}
             title={hasFeaturedProperties ? "Other Properties In Dallas Fort Worth" : "All Properties in Dallas Fort Worth"}
-            showSorting={true}
-            initialSort="default"
           />
         )}
 
@@ -181,13 +182,11 @@ export default function DFWProperty() {
           </div>
         )}
 
-        {/* 3. All Properties Fallback - DisplayRow */}
+        {/* 3. All Properties Fallback - DisplayGrid */}
         {showFallback && (
-          <DisplayRow
+          <DisplayGrid
             properties={fallbackProperties}
-            filter={createFilter.all()}
-            title={areaQuery ? `All Properties Matching "${areaQuery}"` : "All Properties"}
-            subtitle="Maybe you would be interested in these properties"
+            filter={{ type: 'all' }}
             showDivider={true}
             emptyMessage="No properties found matching your search."
           />
