@@ -1,5 +1,5 @@
 import React from "react";
-import DisplayGrid from "../../components/DisplayGrid/DisplayGrid";
+import DisplayRow from "../../components/DisplayRow/DisplayRow";
 
 const NearbySimilarProperties = ({ 
   currentProperty,
@@ -26,14 +26,28 @@ const NearbySimilarProperties = ({
     return currentLandTypes.filter(type => propertyLandTypes.includes(type)).length;
   };
   
-  // Filter and sort properties based on priority system
+  // Create custom filter function for DisplayRow
+  const createSimilarPropertiesFilter = () => {
+    return {
+      type: 'custom',
+      filterFn: (property) => {
+        // Exclude current property
+        if (!property || !property.id || property.id === currentProperty.id) {
+          return false;
+        }
+        return true;
+      }
+    };
+  };
+
+  // Get filtered and sorted properties
   const getSimilarProperties = () => {
     // 1. First make sure we're only working with valid properties (All properties except this one)
     const validProperties = allProperties.filter(property => {
       return property && property.id && property.id !== currentProperty.id;
     });
     
-    // Create priority-based filtering
+    // Create priority-based filtering and sorting
     const prioritizedProperties = validProperties
       .map(property => {
         const areaMatch = property.area && currentProperty.area && property.area === currentProperty.area;
@@ -78,7 +92,7 @@ const NearbySimilarProperties = ({
         return b._matchingLandTypes - a._matchingLandTypes;
       });
     
-    return prioritizedProperties.slice(0, 20);
+    return prioritizedProperties.slice(0, 10);
   };
 
   const similarProperties = getSimilarProperties();
@@ -89,12 +103,11 @@ const NearbySimilarProperties = ({
   return (
     <div className="w-full bg-[#FDF8F2] py-12">
       <div className="mx-auto max-w-screen-xl px-4">
-        <DisplayGrid
+        <DisplayRow
           properties={similarProperties}
           filter={{ type: 'all' }}
           title="Nearby Similar Properties"
           subtitle="Properties you might be interested in"
-          gridCols="grid-cols-1 sm:grid-cols-2 lg:grid-cols-3"
           emptyMessage="No similar properties found."
           onPropertyClick={(property) => {
             if (navigate) {

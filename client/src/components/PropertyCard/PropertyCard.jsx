@@ -115,7 +115,7 @@ export default function PropertyCardDiscounted({ card }) {
       
       {/* Image Section */}
       <div className="relative w-full h-64">
-        <img
+        <img 
           src={firstImage}
           alt="Property"
           className="w-full h-full object-cover"
