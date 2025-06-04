@@ -161,7 +161,7 @@ export default function DFWProperty() {
           <DisplayGrid
             properties={filteredDFWProperties}
             filter={{ type: 'all' }}
-            title={hasFeaturedProperties ? "Other Properties" : "All Properties in Dallas Fort Worth"}
+            title={hasFeaturedProperties ? "Other Properties In Dallas Fort Worth" : "All Properties in Dallas Fort Worth"}
             showSorting={true}
             initialSort="default"
           />

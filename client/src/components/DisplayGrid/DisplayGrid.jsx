@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React from "react";
 import PropertyCard from "../PropertyCard/PropertyCard";
 import { PuffLoader } from "react-spinners";
 
@@ -16,7 +16,6 @@ import { PuffLoader } from "react-spinners";
  * @param {Function} props.onPropertyClick - Callback when property clicked (optional)
  * @param {number} props.maxProperties - Maximum number of properties to display (optional)
  * @param {string} props.gridCols - Custom grid columns class (optional)
- * @param {boolean} props.showSorting - Show sorting dropdown (optional)
  * @param {boolean} props.showCount - Show property count (optional)
  */
 const DisplayGrid = ({
@@ -30,57 +29,9 @@ const DisplayGrid = ({
   onPropertyClick,
   maxProperties,
   gridCols = "grid-cols-1 sm:grid-cols-2 lg:grid-cols-3",
-  showSorting = false,
   showCount = false,
   className = ""
 }) => {
-  const [sortBy, setSortBy] = useState("default");
-  // Sort properties based on sortBy value
-  const sortProperties = (props) => {
-    if (!props || props.length === 0) return [];
-    
-    const sorted = [...props];
-    
-    switch (sortBy) {
-      case "price-low-high":
-        return sorted.sort((a, b) => {
-          const priceA = a.disPrice || a.askingPrice || 0;
-          const priceB = b.disPrice || b.askingPrice || 0;
-          return priceA - priceB;
-        });
-        
-      case "price-high-low":
-        return sorted.sort((a, b) => {
-          const priceA = a.disPrice || a.askingPrice || 0;
-          const priceB = b.disPrice || b.askingPrice || 0;
-          return priceB - priceA;
-        });
-        
-      case "acres-low-high":
-        return sorted.sort((a, b) => {
-          const acresA = parseFloat(a.acre) || 0;
-          const acresB = parseFloat(b.acre) || 0;
-          return acresA - acresB;
-        });
-        
-      case "acres-high-low":
-        return sorted.sort((a, b) => {
-          const acresA = parseFloat(a.acre) || 0;
-          const acresB = parseFloat(b.acre) || 0;
-          return acresB - acresA;
-        });
-        
-      case "newest":
-        return sorted.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
-        
-      case "oldest":
-        return sorted.sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt));
-        
-      default:
-        return sorted;
-    }
-  };
-
   // Filter properties based on filter configuration
   const getFilteredProperties = () => {
     if (!properties || properties.length === 0) return [];
@@ -244,7 +195,7 @@ const DisplayGrid = ({
       {/* Title Section */}
       {title && (
         <div className="mb-6">
-          {/* Title and Sort Row */}
+          {/* Title and Count Row */}
           <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-4 mb-4">
             <div className="text-center sm:text-left">
               <h2 className="text-2xl sm:text-3xl font-bold mb-2">{title}</h2>
@@ -254,36 +205,12 @@ const DisplayGrid = ({
               {subtitle && <p className="text-[#324c48]/80">{subtitle}</p>}
             </div>
             
-            {/* Sort and Count Section */}
-            {(showSorting || showCount) && (
-              <div className="flex flex-col sm:flex-row sm:items-center gap-3">
-                {showCount && (
-                  <p className="text-sm text-gray-600 text-center sm:text-right">
-                    {filteredProperties.length} {filteredProperties.length === 1 ? 'property' : 'properties'} available
-                  </p>
-                )}
-                
-                {showSorting && (
-                  <div className="flex items-center gap-2">
-                    <label htmlFor="sort-select" className="text-sm font-medium text-gray-700 whitespace-nowrap">
-                      Sort by:
-                    </label>
-                    <select
-                      id="sort-select"
-                      value={sortBy}
-                      onChange={(e) => setSortBy(e.target.value)}
-                      className="block w-full sm:w-auto px-3 py-1 text-sm border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-[#324c48] focus:border-[#324c48] bg-white"
-                    >
-                      <option value="default">Default</option>
-                      <option value="price-low-high">Price: Low to High</option>
-                      <option value="price-high-low">Price: High to Low</option>
-                      <option value="acres-low-high">Acres: Low to High</option>
-                      <option value="acres-high-low">Acres: High to Low</option>
-                      <option value="newest">Newest First</option>
-                      <option value="oldest">Oldest First</option>
-                    </select>
-                  </div>
-                )}
+            {/* Count Section */}
+            {showCount && (
+              <div className="flex justify-center sm:justify-end">
+                <p className="text-sm text-gray-600">
+                  {filteredProperties.length} {filteredProperties.length === 1 ? 'property' : 'properties'} available
+                </p>
               </div>
             )}
           </div>
