@@ -29,10 +29,10 @@ export default function AustinProperty() {
         const response = await axios.get(`${import.meta.env.VITE_SERVER_URL}/api/property-rows?rowType=Austin`);
         
         if (Array.isArray(response.data) && response.data.length > 0) {
-          const AustinRow = response.data.find(row => row.rowType === "Austin");
+          const austinRow = response.data.find(row => row.rowType === "Austin");
           
-          if (AustinRow && Array.isArray(AustinRow.displayOrder) && AustinRow.displayOrder.length > 0) {
-            const orderedIds = AustinRow.displayOrder;
+          if (austinRow && Array.isArray(austinRow.displayOrder) && austinRow.displayOrder.length > 0) {
+            const orderedIds = austinRow.displayOrder;
             const propertiesMap = new Map(data.map(p => [p.id, p]));
             
             const featuredIds = orderedIds.filter(id => {
@@ -72,8 +72,8 @@ export default function AustinProperty() {
   }
 
   // Filter Austin properties
-  const AustinProperties = data.filter(property => property.area === "Austin");
-  const nonFeaturedAustinProperties = AustinProperties.filter(
+  const austinProperties = data.filter(property => property.area === "Austin");
+  const nonFeaturedAustinProperties = austinProperties.filter(
     property => !featuredPropertyIds.includes(property.id)
   );
 

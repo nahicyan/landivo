@@ -118,7 +118,7 @@ const Header = () => {
     { name: "Austin", path: "/Austin" },
     { name: "Houston", path: "/Houston" },
     { name: "San Antonio", path: "/SanAntonio" },
-    { name: "Other Lands", path: "/OtherLands" },
+    { name: "Other Areas", path: "/OtherLands" },
   ];
 
   return (

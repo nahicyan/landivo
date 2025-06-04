@@ -194,7 +194,7 @@ export const Lands = () => {
                 <div className="absolute inset-0 bg-black bg-opacity-30 flex items-center justify-center 
                                 opacity-0 group-hover:opacity-100 transition-opacity">
                   <button onClick={() => navigate("/OtherLands")} className="bg-white text-[#324c48] font-semibold py-2 px-4 rounded-lg shadow hover:shadow-lg">
-                    Other Lands
+                    Lands in Other Areas
                   </button>
                 </div>
               </div>
