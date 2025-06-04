@@ -163,14 +163,14 @@ const DisplayRow = ({
   // Scroll handlers
   const handleScrollLeft = () => {
     if (scrollRef.current) {
-      scrollRef.current.scrollBy({ left: -380, behavior: "smooth" });
+      scrollRef.current.scrollBy({ left: -404, behavior: "smooth" });
       setTimeout(updateScrollState, 300);
     }
   };
 
   const handleScrollRight = () => {
     if (scrollRef.current) {
-      scrollRef.current.scrollBy({ left: 380, behavior: "smooth" });
+      scrollRef.current.scrollBy({ left: 404, behavior: "smooth" });
       setTimeout(updateScrollState, 300);
     }
   };
