@@ -129,6 +129,17 @@ export const getBuyerById = asyncHandler(async (req, res) => {
           orderBy: {
             timestamp: "desc"
           }
+        },
+        emailListMemberships: {
+          include: {
+            emailList: {
+              select: {
+                id: true,
+                name: true,
+                description: true
+              }
+            }
+          }
         }
       }
     });
@@ -168,6 +179,11 @@ export const updateBuyer = asyncHandler(async (req, res) => {
     return res.status(400).json({ message: "Buyer ID is required" });
   }
 
+  // Only validate email as required
+  if (!email || !email.trim()) {
+    return res.status(400).json({ message: "Email is required" });
+  }
+
   try {
     // Check if buyer exists
     const existingBuyer = await prisma.buyer.findUnique({
@@ -179,23 +195,29 @@ export const updateBuyer = asyncHandler(async (req, res) => {
     }
 
     // Check if email is changing and if it's already in use
-    if (email !== existingBuyer.email) {
-      const emailExists = await prisma.buyer.findUnique({
-        where: { email: email.toLowerCase() }
+    if (email.toLowerCase() !== existingBuyer.email) {
+      const emailExists = await prisma.buyer.findFirst({
+        where: { 
+          email: email.toLowerCase(),
+          id: { not: id } // Exclude current buyer
+        }
       });
 
-      if (emailExists && emailExists.id !== id) {
+      if (emailExists) {
         return res.status(400).json({ message: "Email already in use by another buyer" });
       }
     }
 
-    // Check if phone is changing and if it's already in use
-    if (phone !== existingBuyer.phone) {
-      const phoneExists = await prisma.buyer.findUnique({
-        where: { phone }
+    // Check if phone is changing and if it's already in use (only if phone is provided)
+    if (phone && phone.trim() && phone !== existingBuyer.phone) {
+      const phoneExists = await prisma.buyer.findFirst({
+        where: { 
+          phone: phone,
+          id: { not: id } // Exclude current buyer
+        }
       });
 
-      if (phoneExists && phoneExists.id !== id) {
+      if (phoneExists) {
         return res.status(400).json({ message: "Phone number already in use by another buyer" });
       }
     }
@@ -204,16 +226,21 @@ export const updateBuyer = asyncHandler(async (req, res) => {
     const updatedBuyer = await prisma.buyer.update({
       where: { id },
       data: {
-        firstName,
-        lastName,
+        firstName: firstName || null,
+        lastName: lastName || null,
         email: email.toLowerCase(),
-        phone,
-        buyerType,
+        phone: phone && phone.trim() ? phone : null,
+        buyerType: buyerType || null,
         source,
         preferredAreas: preferredAreas || []
       },
       include: {
-        offers: true
+        offers: true,
+        emailListMemberships: {
+          include: {
+            emailList: true
+          }
+        }
       }
     });
 
