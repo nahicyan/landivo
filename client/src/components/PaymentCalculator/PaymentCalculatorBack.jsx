@@ -333,13 +333,13 @@ export default function PaymentCalculatorBack({ formData, handleChange }) {
 return (
     <Card className="border border-gray-200 shadow-sm rounded-lg w-full">
       <CardHeader>
-        <CardTitle className="text-2xl font-bold text-gray-800">
-          Landivo Payment Calculator v0.0.0.5
+        <CardTitle className="text-xl font-bold text-gray-800">
+          Landivo Payment Calculator v0.0.0.3
         </CardTitle>
       </CardHeader>
-      <CardContent className="space-y-6">
+      <CardContent className="space-y-2">
         {/* ------------------- Top Section (WARM GRAY THEME) ------------------- */}
-        <div className="p-4 bg-[#f5f5f3] border border-[#adadab] rounded-lg">
+        <div className="p-3 bg-[#f5f5f3] border border-[#adadab] rounded-lg">
           {/* ------------------- Row 1 ------------------- */}
           <div className="grid grid-cols-1 gap-2 md:grid-cols-4">
             {/* Asking Price (display-only) */}
@@ -410,7 +410,7 @@ return (
           </div>
 
           {/* ------------------- Row 2 ------------------- */}
-          <div className="grid grid-cols-1 gap-2 md:grid-cols-4 mt-3">
+          <div className="grid grid-cols-1 gap-2 md:grid-cols-4 mt-2">
             {/* Service Fee */}
             <div>
               <Label htmlFor="serviceFee" className="block text-sm font-semibold text-[#4a4a48] mb-1">
@@ -465,7 +465,7 @@ return (
           </div>
 
           {/* ------------------- Row 3: Term Slider ------------------- */}
-          <div className="grid grid-cols-1 gap-4 mt-3">
+          <div className="grid grid-cols-1 gap-2 mt-2">
             <div>
               <Label className="block text-sm font-semibold text-[#4a4a48] mb-2">
                 Term Slider (Months)
@@ -490,19 +490,19 @@ return (
         {/* ============================================================
             PAYMENT PLANS ACCORDION - ENHANCED STYLING
         ============================================================ */}
-        <Accordion type="single" collapsible defaultValue="plan1" className="w-full space-y-4">
+        <Accordion type="single" collapsible defaultValue="plan1" className="w-full space-y-2">
           {/* ============================================================
               PLAN 1 - ENHANCED SALMON THEME
           ============================================================ */}
           <AccordionItem value="plan1" className="border-0 shadow-md rounded-xl overflow-hidden">
-            <AccordionTrigger className="px-6 py-4 bg-gradient-to-r from-[#EF9C66] to-[#F4B07A] hover:from-[#E6906B] hover:to-[#F1A870] text-white hover:no-underline transition-all duration-300 rounded-t-xl data-[state=closed]:rounded-xl">
+            <AccordionTrigger className="px-6 py-3 bg-gradient-to-r from-[#EF9C66] to-[#F4B07A] hover:from-[#E6906B] hover:to-[#F1A870] text-white hover:no-underline transition-all duration-300 rounded-t-xl data-[state=closed]:rounded-xl">
               <div className="flex justify-between items-center w-full mr-4">
                 <div className="flex flex-col items-start">
                   <h3 className="text-lg font-bold text-white">Payment Plan 1</h3>
-                  {/* <span className="text-sm text-white/80 font-medium">Best Value Option</span> */}
+                  <span className="text-sm text-white/80 font-medium">Best Value Option</span>
                 </div>
                 <div className="text-right">
-                  <div className="text-2xl font-bold text-white">
+                  <div className="text-xl font-bold text-white">
                     ${formData.monthlyPaymentOne || '0'}/month
                   </div>
                   <div className="text-sm text-white/80">
@@ -511,9 +511,9 @@ return (
                 </div>
               </div>
             </AccordionTrigger>
-            <AccordionContent className="p-6 bg-gradient-to-b from-[#fdf1ea] to-[#fcede3] border-t-0">
+            <AccordionContent className="p-4 bg-gradient-to-b from-[#fdf1ea] to-[#fcede3] border-t-0">
               {/* Plan 1 Details */}
-              <div className="grid grid-cols-1 gap-4 md:grid-cols-4">
+              <div className="grid grid-cols-1 gap-3 md:grid-cols-4">
                 {/* Down Payment (Plan 1) */}
                 <div>
                   <Label htmlFor="downPaymentOne" className="block text-sm font-semibold text-[#c97745] mb-2">
@@ -597,7 +597,7 @@ return (
                 </div>
               </div>
               {/* Plan 1 Slider & Monthly Payment */}
-              <div className="grid grid-cols-4 gap-4 mt-6">
+              <div className="grid grid-cols-4 gap-3 mt-4">
                 {/* Slider (3/4 width) */}
                 <div className="col-span-3">
                   <Label className="block text-sm font-semibold text-[#c97745] mb-3">
@@ -641,14 +641,14 @@ return (
               PLAN 2 - ENHANCED SAGE THEME
           ============================================================ */}
           <AccordionItem value="plan2" className="border-0 shadow-md rounded-xl overflow-hidden">
-            <AccordionTrigger className="px-6 py-4 bg-gradient-to-r from-[#C8CFA0] to-[#D4DBA8] hover:from-[#BEC59A] hover:to-[#D0D7A2] text-white hover:no-underline transition-all duration-300 rounded-t-xl data-[state=closed]:rounded-xl">
+            <AccordionTrigger className="px-6 py-3 bg-gradient-to-r from-[#C8CFA0] to-[#D4DBA8] hover:from-[#BEC59A] hover:to-[#D0D7A2] text-white hover:no-underline transition-all duration-300 rounded-t-xl data-[state=closed]:rounded-xl">
               <div className="flex justify-between items-center w-full mr-4">
                 <div className="flex flex-col items-start">
                   <h3 className="text-lg font-bold text-[#4a5235]">Payment Plan 2</h3>
-                  {/* <span className="text-sm text-[#4a5235]/80 font-medium">Balanced Choice</span> */}
+                  <span className="text-sm text-[#4a5235]/80 font-medium">Balanced Choice</span>
                 </div>
                 <div className="text-right">
-                  <div className="text-2xl font-bold text-[#4a5235]">
+                  <div className="text-xl font-bold text-[#4a5235]">
                     ${formData.monthlyPaymentTwo || '0'}/month
                   </div>
                   <div className="text-sm text-[#4a5235]/80">
@@ -657,9 +657,9 @@ return (
                 </div>
               </div>
             </AccordionTrigger>
-            <AccordionContent className="p-6 bg-gradient-to-b from-[#f6f7ed] to-[#f3f4ea] border-t-0">
+            <AccordionContent className="p-4 bg-gradient-to-b from-[#f6f7ed] to-[#f3f4ea] border-t-0">
               {/* Plan 2 Details */}
-              <div className="grid grid-cols-1 gap-4 md:grid-cols-4">
+              <div className="grid grid-cols-1 gap-3 md:grid-cols-4">
                 {/* Down Payment (Plan 2) */}
                 <div>
                   <Label htmlFor="downPaymentTwo" className="block text-sm font-semibold text-[#7a8062] mb-2">
@@ -743,7 +743,7 @@ return (
                 </div>
               </div>
               {/* Plan 2 Slider & Monthly Payment */}
-              <div className="grid grid-cols-4 gap-4 mt-6">
+              <div className="grid grid-cols-4 gap-3 mt-4">
                 {/* Slider (3/4 width) */}
                 <div className="col-span-3">
                   <Label className="block text-sm font-semibold text-[#7a8062] mb-3">
@@ -787,14 +787,14 @@ return (
               PLAN 3 - ENHANCED GOLD THEME
           ============================================================ */}
           <AccordionItem value="plan3" className="border-0 shadow-md rounded-xl overflow-hidden">
-            <AccordionTrigger className="px-6 py-4 bg-gradient-to-r from-[#E7C05F] to-[#F0CE6F] hover:from-[#E1BA59] hover:to-[#EBC869] text-white hover:no-underline transition-all duration-300 rounded-t-xl data-[state=closed]:rounded-xl">
+            <AccordionTrigger className="px-6 py-3 bg-gradient-to-r from-[#E7C05F] to-[#F0CE6F] hover:from-[#E1BA59] hover:to-[#EBC869] text-white hover:no-underline transition-all duration-300 rounded-t-xl data-[state=closed]:rounded-xl">
               <div className="flex justify-between items-center w-full mr-4">
                 <div className="flex flex-col items-start">
                   <h3 className="text-lg font-bold text-[#5d4a1a]">Payment Plan 3</h3>
-                  {/* <span className="text-sm text-[#5d4a1a]/80 font-medium">Premium Option</span> */}
+                  <span className="text-sm text-[#5d4a1a]/80 font-medium">Premium Option</span>
                 </div>
                 <div className="text-right">
-                  <div className="text-2xl font-bold text-[#5d4a1a]">
+                  <div className="text-xl font-bold text-[#5d4a1a]">
                     ${formData.monthlyPaymentThree || '0'}/month
                   </div>
                   <div className="text-sm text-[#5d4a1a]/80">
@@ -803,9 +803,9 @@ return (
                 </div>
               </div>
             </AccordionTrigger>
-            <AccordionContent className="p-6 bg-gradient-to-b from-[#fdf7e8] to-[#fbf3e0] border-t-0">
+            <AccordionContent className="p-4 bg-gradient-to-b from-[#fdf7e8] to-[#fbf3e0] border-t-0">
               {/* Plan 3 Details */}
-              <div className="grid grid-cols-1 gap-4 md:grid-cols-4">
+              <div className="grid grid-cols-1 gap-3 md:grid-cols-4">
                 {/* Down Payment (Plan 3) */}
                 <div>
                   <Label htmlFor="downPaymentThree" className="block text-sm font-semibold text-[#b39032] mb-2">
