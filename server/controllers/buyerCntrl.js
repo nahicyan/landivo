@@ -523,7 +523,8 @@ export const importBuyersFromCsv = asyncHandler(async (req, res) => {
       updated: 0,
       failed: 0,
       errors: [],
-      createdBuyerIds: [] // Track created buyer IDs
+      createdBuyerIds: [],
+      updatedBuyerIds: []
     };
 
     // Process each buyer
@@ -537,7 +538,9 @@ export const importBuyersFromCsv = asyncHandler(async (req, res) => {
           buyerType,
           preferredAreas,
           emailStatus,
-          emailPermissionStatus
+          emailPermissionStatus,
+          isNew,
+          existingBuyerId
         } = buyerData;
 
         // Check required fields
@@ -550,33 +553,7 @@ export const importBuyersFromCsv = asyncHandler(async (req, res) => {
           continue;
         }
 
-        // Check if buyer already exists
-        const existingBuyer = await prisma.buyer.findFirst({
-          where: {
-            OR: [
-              { email: email.toLowerCase() },
-              ...(phone ? [{ phone }] : [])
-            ]
-          }
-        });
-
-        if (existingBuyer) {
-          // Update existing buyer
-          await prisma.buyer.update({
-            where: { id: existingBuyer.id },
-            data: {
-              firstName: firstName || existingBuyer.firstName,
-              lastName: lastName || existingBuyer.lastName,
-              buyerType: buyerType || existingBuyer.buyerType,
-              preferredAreas: preferredAreas || existingBuyer.preferredAreas,
-              source: source || existingBuyer.source,
-              emailStatus: emailStatus || existingBuyer.emailStatus,
-              emailPermissionStatus: emailPermissionStatus || existingBuyer.emailPermissionStatus
-            }
-          });
-
-          results.updated++;
-        } else {
+        if (isNew) {
           // Create new buyer
           const newBuyer = await prisma.buyer.create({
             data: {
@@ -593,8 +570,27 @@ export const importBuyersFromCsv = asyncHandler(async (req, res) => {
           });
 
           results.created++;
-          results.createdBuyerIds.push(newBuyer.id); // Track created buyer ID
+          results.createdBuyerIds.push(newBuyer.id);
+          
+        } else if (existingBuyerId) {
+          // Update existing buyer (duplicates are handled in the frontend)
+          await prisma.buyer.update({
+            where: { id: existingBuyerId },
+            data: {
+              firstName: firstName || undefined,
+              lastName: lastName || undefined,
+              buyerType: buyerType || undefined,
+              preferredAreas: preferredAreas || undefined,
+              source: source || undefined,
+              emailStatus: emailStatus || undefined,
+              emailPermissionStatus: emailPermissionStatus || undefined
+            }
+          });
+
+          results.updated++;
+          results.updatedBuyerIds.push(existingBuyerId);
         }
+        
       } catch (err) {
         results.failed++;
         results.errors.push({

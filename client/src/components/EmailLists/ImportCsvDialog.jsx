@@ -262,55 +262,70 @@ export default function ImportCsvDialog({
     setDuplicatesDialogOpen(false);
   };
 
-  // Handle import submission
-  const handleImport = () => {
-    if (duplicateBuyers.length > 0 && duplicateActions.size !== duplicateBuyers.length) {
-      toast.error("Please review and handle all duplicate buyers before importing");
-      return;
-    }
+// Handle import submission
+const handleImport = () => {
+  if (duplicateBuyers.length > 0 && duplicateActions.size !== duplicateBuyers.length) {
+    toast.error("Please review and handle all duplicate buyers before importing");
+    return;
+  }
 
-    if (csvData.length === 0) {
-      toast.error("No valid data to import");
-      return;
-    }
+  if (csvData.length === 0) {
+    toast.error("No valid data to import");
+    return;
+  }
 
-    // Prepare final import data
-    const finalImportData = [];
-    
-    // Add new buyers
-    newBuyers.forEach((buyer, index) => {
-      finalImportData.push({
-        ...buyer,
-        id: `csv-buyer-new-${Date.now()}-${index}`,
-        source: "CSV Import"
-      });
+  // Prepare final import data
+  const finalImportData = [];
+  
+  // Add new buyers
+  newBuyers.forEach((buyer, index) => {
+    finalImportData.push({
+      ...buyer,
+      id: `csv-buyer-new-${Date.now()}-${index}`,
+      source: "CSV Import",
+      isNew: true
     });
+  });
 
-    // Add duplicates that should be imported based on actions
-    duplicateBuyers.forEach((duplicate, index) => {
-      const action = duplicateActions.get(duplicate.existingBuyer.email);
-      if (action && action !== 'skip') {
-        finalImportData.push({
-          ...duplicate.csvData,
-          id: `csv-buyer-update-${Date.now()}-${index}`,
-          existingBuyerId: duplicate.existingBuyer.id,
-          action: action,
-          source: "CSV Import"
-        });
+  // Add duplicates with their actions
+  duplicateBuyers.forEach((duplicate, index) => {
+    const action = duplicateActions.get(duplicate.existingBuyer.email);
+    if (action) { // Include all actions, even 'skip' for tracking
+      finalImportData.push({
+        ...duplicate.csvData,
+        id: `csv-buyer-duplicate-${Date.now()}-${index}`,
+        existingBuyerId: duplicate.existingBuyer.id,
+        action: action,
+        source: "CSV Import",
+        isDuplicate: true,
+        originalBuyer: duplicate.existingBuyer // Include the full original buyer data
+      });
+    }
+  });
+
+  console.log('Final import data prepared:', {
+    total: finalImportData.length,
+    new: finalImportData.filter(b => b.isNew).length,
+    duplicates: finalImportData.filter(b => b.isDuplicate).length,
+    actions: Array.from(duplicateActions.entries())
+  });
+
+  try {
+    onImport(finalImportData, {
+      ...importOptions,
+      duplicateActions: Object.fromEntries(duplicateActions),
+      summary: {
+        newBuyers: newBuyers.length,
+        duplicates: duplicateBuyers.length,
+        actions: Object.fromEntries(duplicateActions)
       }
     });
-
-    try {
-      onImport(finalImportData, {
-        ...importOptions,
-        duplicateActions: Object.fromEntries(duplicateActions)
-      });
-      handleOpenChange(false);
-    } catch (error) {
-      console.error("Error formatting import data:", error);
-      toast.error("Failed to prepare import data");
-    }
-  };
+    handleOpenChange(false);
+  } catch (error) {
+    console.error("Error formatting import data:", error);
+    toast.error("Failed to prepare import data");
+  }
+};
 
   // Reset state when dialog closes
   const handleOpenChange = (open) => {
