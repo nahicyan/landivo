@@ -72,18 +72,10 @@ export function useEmailLists() {
   }, [lists, filters]);
 
   // Create a new list
-  const createList = async (listData) => {
-    try {
-      const response = await createEmailList(listData);
-      setLists(prev => [...prev, response.list]);
-      toast.success("Buyer list created successfully!");
-      return response.list;
-    } catch (err) {
-      console.error("Error creating email list:", err);
-      toast.error("Failed to create email list");
-      throw err;
-    }
-  };
+const createList = async (listData) => {
+  const response = await createEmailList(listData);
+  return response.list || response; // Return the list object directly
+};
 
   // Update an existing list
   const updateList = async (listId, listData) => {
