@@ -140,16 +140,26 @@ export default function EmailLists() {
         let allBuyerIds = [];
 
         // Step 1: Import new buyers first
+        // Ensure new buyers are always processed
         if (newBuyers.length > 0) {
-          const importResponse = await api.post('/buyer/import', {
-            buyers: newBuyers,
-            source: 'CSV Import'
-          });
+          try {
+            const importResponse = await api.post('/buyer/import', {
+              buyers: newBuyers.map(buyer => ({
+                ...buyer,
+                source: 'CSV Import',
+                isNew: true
+              })),
+              source: 'CSV Import'
+            });
 
-          const createdBuyerIds = importResponse.data.results?.createdBuyerIds || [];
-          allBuyerIds.push(...createdBuyerIds);
+            const createdBuyerIds = importResponse.data.results?.createdBuyerIds || [];
+            allBuyerIds.push(...createdBuyerIds);
 
-          console.log(`Created ${createdBuyerIds.length} new buyers`);
+            console.log(`Created ${createdBuyerIds.length} new buyers`);
+          } catch (error) {
+            console.error('Error importing new buyers:', error);
+            toast.error('Failed to import some buyers');
+          }
         }
 
         // Step 2: Create the email list first (needed for replace/update actions)
@@ -256,15 +266,13 @@ export default function EmailLists() {
         const totalProcessed = allBuyerIds.length;
         const skippedCount = duplicatesWithActions.filter(d => d.action === 'skip').length;
 
-        if (totalProcessed > 0) {
-          toast.success(
-            `List "${listData.name}" created successfully with ${totalProcessed} buyers` +
-            (skippedCount > 0 ? ` (${skippedCount} duplicates were skipped)` : '')
-          );
-        } else if (skippedCount > 0) {
-          toast.info(`List "${listData.name}" created, but all ${skippedCount} buyers were skipped due to duplicate handling`);
+        // At the end of handleCreateList (around line 265), replace existing toast calls with:
+        if (allBuyerIds.length > 0 || skippedCount > 0) {
+          const message = `List "${listData.name}" created with ${allBuyerIds.length} buyers` +
+            (skippedCount > 0 ? ` (${skippedCount} skipped)` : '');
+          toast.success(message);
         } else {
-          toast.warning("List created but no buyers were added");
+          toast.warning(`List "${listData.name}" created but no buyers were added`);
         }
 
         // Clear imported buyers

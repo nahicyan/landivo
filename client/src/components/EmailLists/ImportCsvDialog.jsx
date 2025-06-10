@@ -156,16 +156,17 @@ export default function ImportCsvDialog({
     }));
   };
 
-  // Process CSV with mappings and check for duplicates
   const processCsvWithMappings = async () => {
     if (!csvFile) return;
-
     setLoadingDuplicates(true);
 
     try {
-      // Get existing buyers to check for duplicates
+      // Get all buyers who are members of at least one email list
       const existingBuyersData = await getAllBuyers();
-      setExistingBuyers(existingBuyersData);
+      const buyersInLists = existingBuyersData.filter(buyer =>
+        buyer.emailListMemberships && buyer.emailListMemberships.length > 0
+      );
+      setExistingBuyers(buyersInLists);
 
       Papa.parse(csvFile, {
         header: true,
@@ -208,23 +209,34 @@ export default function ImportCsvDialog({
             }
           });
 
-          // Check for duplicates by email
-          const csvEmails = validData.map(buyer => buyer.email.toLowerCase());
-          const existingEmails = new Set(existingBuyersData.map(buyer => buyer.email.toLowerCase()));
-          
+          // Check for duplicates only against buyers in lists
+          const buyersInListsEmails = new Set(buyersInLists.map(buyer => buyer.email.toLowerCase()));
+          const allExistingEmails = new Set(existingBuyersData.map(buyer => buyer.email.toLowerCase()));
+
           const duplicates = [];
           const newBuyersData = [];
+          const existingUnlistedBuyers = [];
 
           validData.forEach(csvBuyer => {
             const email = csvBuyer.email.toLowerCase();
-            if (existingEmails.has(email)) {
-              // Find the existing buyer
-              const existingBuyer = existingBuyersData.find(b => b.email.toLowerCase() === email);
+
+            if (buyersInListsEmails.has(email)) {
+              // Buyer exists and is in other lists - treat as duplicate
+              const existingBuyer = buyersInLists.find(b => b.email.toLowerCase() === email);
               duplicates.push({
                 csvData: csvBuyer,
                 existingBuyer: existingBuyer
               });
+            } else if (allExistingEmails.has(email)) {
+              // Buyer exists but not in any lists - just add to new list
+              const existingBuyer = existingBuyersData.find(b => b.email.toLowerCase() === email);
+              existingUnlistedBuyers.push({
+                ...csvBuyer,
+                existingBuyerId: existingBuyer.id,
+                isExistingUnlisted: true
+              });
             } else {
+              // New buyer
               newBuyersData.push(csvBuyer);
             }
           });
@@ -232,7 +244,7 @@ export default function ImportCsvDialog({
           setCsvData(validData);
           setCsvErrors(errors);
           setDuplicateBuyers(duplicates);
-          setNewBuyers(newBuyersData);
+          setNewBuyers([...newBuyersData, ...existingUnlistedBuyers]);
         }
       });
     } catch (error) {
@@ -262,70 +274,70 @@ export default function ImportCsvDialog({
     setDuplicatesDialogOpen(false);
   };
 
-// Handle import submission
-const handleImport = () => {
-  if (duplicateBuyers.length > 0 && duplicateActions.size !== duplicateBuyers.length) {
-    toast.error("Please review and handle all duplicate buyers before importing");
-    return;
-  }
-
-  if (csvData.length === 0) {
-    toast.error("No valid data to import");
-    return;
-  }
-
-  // Prepare final import data
-  const finalImportData = [];
-  
-  // Add new buyers
-  newBuyers.forEach((buyer, index) => {
-    finalImportData.push({
-      ...buyer,
-      id: `csv-buyer-new-${Date.now()}-${index}`,
-      source: "CSV Import",
-      isNew: true
-    });
-  });
-
-  // Add duplicates with their actions
-  duplicateBuyers.forEach((duplicate, index) => {
-    const action = duplicateActions.get(duplicate.existingBuyer.email);
-    if (action) { // Include all actions, even 'skip' for tracking
-      finalImportData.push({
-        ...duplicate.csvData,
-        id: `csv-buyer-duplicate-${Date.now()}-${index}`,
-        existingBuyerId: duplicate.existingBuyer.id,
-        action: action,
-        source: "CSV Import",
-        isDuplicate: true,
-        originalBuyer: duplicate.existingBuyer // Include the full original buyer data
-      });
+  // Handle import submission
+  const handleImport = () => {
+    if (duplicateBuyers.length > 0 && duplicateActions.size !== duplicateBuyers.length) {
+      toast.error("Please review and handle all duplicate buyers before importing");
+      return;
     }
-  });
 
-  console.log('Final import data prepared:', {
-    total: finalImportData.length,
-    new: finalImportData.filter(b => b.isNew).length,
-    duplicates: finalImportData.filter(b => b.isDuplicate).length,
-    actions: Array.from(duplicateActions.entries())
-  });
+    if (csvData.length === 0) {
+      toast.error("No valid data to import");
+      return;
+    }
 
-  try {
-    onImport(finalImportData, {
-      ...importOptions,
-      duplicateActions: Object.fromEntries(duplicateActions),
-      summary: {
-        newBuyers: newBuyers.length,
-        duplicates: duplicateBuyers.length,
-        actions: Object.fromEntries(duplicateActions)
+    // Prepare final import data
+    const finalImportData = [];
+
+    // Add new buyers
+    newBuyers.forEach((buyer, index) => {
+      finalImportData.push({
+        ...buyer,
+        id: `csv-buyer-new-${Date.now()}-${index}`,
+        source: "CSV Import",
+        isNew: true
+      });
+    });
+
+    // Add duplicates with their actions
+    duplicateBuyers.forEach((duplicate, index) => {
+      const action = duplicateActions.get(duplicate.existingBuyer.email);
+      if (action) { // Include all actions, even 'skip' for tracking
+        finalImportData.push({
+          ...duplicate.csvData,
+          id: `csv-buyer-duplicate-${Date.now()}-${index}`,
+          existingBuyerId: duplicate.existingBuyer.id,
+          action: action,
+          source: "CSV Import",
+          isDuplicate: true,
+          originalBuyer: duplicate.existingBuyer // Include the full original buyer data
+        });
       }
     });
-    handleOpenChange(false);
-  } catch (error) {
-    console.error("Error formatting import data:", error);
-    toast.error("Failed to prepare import data");
-  }
-};
+
+    console.log('Final import data prepared:', {
+      total: finalImportData.length,
+      new: finalImportData.filter(b => b.isNew).length,
+      duplicates: finalImportData.filter(b => b.isDuplicate).length,
+      actions: Array.from(duplicateActions.entries())
+    });
+
+    try {
+      onImport(finalImportData, {
+        ...importOptions,
+        duplicateActions: Object.fromEntries(duplicateActions),
+        summary: {
+          newBuyers: newBuyers.length,
+          duplicates: duplicateBuyers.length,
+          actions: Object.fromEntries(duplicateActions)
+        }
+      });
+      handleOpenChange(false);
+    } catch (error) {
+      console.error("Error formatting import data:", error);
+      toast.error("Failed to prepare import data");
+    }
+  };
 
   // Reset state when dialog closes
   const handleOpenChange = (open) => {
@@ -465,7 +477,7 @@ const handleImport = () => {
                       <p className="text-lg font-bold text-green-900">{newBuyers.length}</p>
                     </div>
                   </div>
-                  
+
                   <div className="flex items-center gap-2 p-3 bg-orange-50 rounded-lg border border-orange-200">
                     <Users className="h-5 w-5 text-orange-600" />
                     <div>
@@ -473,7 +485,7 @@ const handleImport = () => {
                       <p className="text-lg font-bold text-orange-900">{duplicateBuyers.length}</p>
                     </div>
                   </div>
-                  
+
                   <div className="flex items-center gap-2 p-3 bg-blue-50 rounded-lg border border-blue-200">
                     <Check className="h-5 w-5 text-blue-600" />
                     <div>
@@ -490,7 +502,7 @@ const handleImport = () => {
                         {duplicateBuyers.length} duplicate{duplicateBuyers.length !== 1 ? 's' : ''} detected
                       </p>
                       <p className="text-sm text-orange-600">
-                        {duplicateActions.size > 0 
+                        {duplicateActions.size > 0
                           ? `${duplicateActions.size} of ${duplicateBuyers.length} duplicates handled`
                           : "Review duplicates to choose how to handle them"
                         }
