@@ -156,7 +156,7 @@ export default function PaymentCalculatorBack({ formData, handleChange }) {
     const interestRateField = `interest${planKey}`;
     const monthlyPaymentField = `monthlyPayment${planKey}`;
     const totalInterestField = `totalInterest${planKey}`;
-    const totalcostField = `totalcost${planKey}`;
+    const totalCostField = `totalCost${planKey}`;
     const sliderField = `downPayment${planKey}Slider`;
     const sourceField = `downPayment${planKey}Source`;
 
@@ -375,7 +375,7 @@ return (
     <Card className="border border-gray-200 shadow-sm rounded-lg w-full">
       <CardHeader>
         <CardTitle className="text-xl font-bold text-gray-800">
-          Landivo Payment Calculator v0.0.0.4
+          Landivo Payment Calculator v0.0.0.8
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-2">
