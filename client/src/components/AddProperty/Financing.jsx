@@ -31,9 +31,8 @@ export default function Financing({ formData, handleChange, updateFormData, erro
   // State for number of payment plans - default to "0" (Not Available)
   const [numberOfPlans, setNumberOfPlans] = useState(() => {
     // Initialize based on current formData, default to "0"
-    // Check for both "Available" and handle null values
-    if (formData.financeThree === "Available") return "3";
-    if (formData.financeTwo === "Available") return "2";
+    if (formData.financingThree === "Available") return "3";
+    if (formData.financingTwo === "Available") return "2";
     if (formData.financing === "Available") return "1";
     return "0"; // Default to Not Available
   });
@@ -47,15 +46,32 @@ export default function Financing({ formData, handleChange, updateFormData, erro
   const handleNumberOfPlansChange = (value) => {
     setNumberOfPlans(value);
     
-    // Create a completely new object to force update
-    const updatedData = {
-      ...formData,
-      financing: value >= "1" ? "Available" : "Not-Available",
-      financeTwo: value >= "2" ? "Available" : "Not-Available", 
-      financeThree: value >= "3" ? "Available" : "Not-Available"
-    };
+    // Update the financing fields based on selection
+    const updatedData = { ...formData };
     
-    console.log("Financing update:", updatedData); // Debug log
+    switch (value) {
+      case "1":
+        updatedData.financing = "Available";
+        updatedData.financingTwo = "Not-Available";
+        updatedData.financingThree = "Not-Available";
+        break;
+      case "2":
+        updatedData.financing = "Available";
+        updatedData.financingTwo = "Available";
+        updatedData.financingThree = "Not-Available";
+        break;
+      case "3":
+        updatedData.financing = "Available";
+        updatedData.financingTwo = "Available";
+        updatedData.financingThree = "Available";
+        break;
+      default: // "0"
+        updatedData.financing = "Not-Available";
+        updatedData.financingTwo = "Not-Available";
+        updatedData.financingThree = "Not-Available";
+        break;
+    }
+    
     updateFormData(updatedData);
   };
 

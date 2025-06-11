@@ -8,8 +8,8 @@ import { Input } from "@/components/ui/input";
 export default function PaymentCalculatorEntry({ formData, handleChange, numberOfPlans = 3 }) {
   // Determine which plans are available
   const isPlan1Available = formData.financing === "Available";
-  const isPlan2Available = formData.financeTwo === "Available";
-  const isPlan3Available = formData.financeThree === "Available";
+  const isPlan2Available = formData.financingTwo === "Available";
+  const isPlan3Available = formData.financingThree === "Available";
 
   return (
     <Card className="border border-gray-200 shadow-sm rounded-lg">
