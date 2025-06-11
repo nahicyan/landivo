@@ -42,6 +42,27 @@ const formatTerm = (term) => {
   return result || "";
 };
 
+// Utility: Calculate total interest and total cost
+const calculateTotals = (monthlyPayment, loanAmount, downPayment, term) => {
+  const payment = parseCurrencyToNumber(monthlyPayment);
+  const loan = parseCurrencyToNumber(loanAmount);
+  const down = parseCurrencyToNumber(downPayment);
+  const months = Number(term) || 0;
+  
+  if (payment <= 0 || loan <= 0 || months <= 0) {
+    return { totalInterest: 0, totalCost: 0 };
+  }
+  
+  const totalLoanPayments = payment * months;
+  const totalInterest = totalLoanPayments - loan;
+  const totalCost = down + totalLoanPayments;
+  
+  return {
+    totalInterest: Math.max(0, totalInterest),
+    totalCost: totalCost
+  };
+};
+
 export default function PaymentCalculatorBack({ formData, handleChange }) {
   // Sorting options state
   const [sortOption, setSortOption] = useState("");
@@ -134,6 +155,8 @@ export default function PaymentCalculatorBack({ formData, handleChange }) {
     const loanAmountField = `loanAmount${planKey}`;
     const interestRateField = `interest${planKey}`;
     const monthlyPaymentField = `monthlyPayment${planKey}`;
+    const totalInterestField = `totalInterest${planKey}`;
+    const totalcostField = `totalcost${planKey}`;
     const sliderField = `downPayment${planKey}Slider`;
     const sourceField = `downPayment${planKey}Source`;
 
@@ -160,6 +183,9 @@ export default function PaymentCalculatorBack({ formData, handleChange }) {
     // Calculate Monthly Payment using the amortization formula
     const newMonthlyPayment = calculateMonthlyPayment(newLoanAmount, interestRateVal, Number(term));
 
+    // Calculate totals
+    const totals = calculateTotals(newMonthlyPayment, newLoanAmount, newDownPayment, term);
+
     // Update state with formatted values for display
     handleChange({ 
       target: { 
@@ -179,6 +205,21 @@ export default function PaymentCalculatorBack({ formData, handleChange }) {
       target: { 
         name: monthlyPaymentField, 
         value: formatInputCurrency(newMonthlyPayment.toFixed(2)) 
+      } 
+    });
+
+    // Update total interest and total cost
+    handleChange({ 
+      target: { 
+        name: totalInterestField, 
+        value: formatInputCurrency(totals.totalInterest.toFixed(2)) 
+      } 
+    });
+    
+    handleChange({ 
+      target: { 
+        name: totalCostField, 
+        value: formatInputCurrency(totals.totalCost.toFixed(2)) 
       } 
     });
   };
@@ -334,7 +375,7 @@ return (
     <Card className="border border-gray-200 shadow-sm rounded-lg w-full">
       <CardHeader>
         <CardTitle className="text-xl font-bold text-gray-800">
-          Landivo Payment Calculator v0.0.0.3
+          Landivo Payment Calculator v0.0.0.4
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-2">
@@ -598,6 +639,35 @@ return (
                   </Select>
                 </div>
               </div>
+
+              {/* Plan 1 Total Interest and Total Cost Row */}
+              <div className="grid grid-cols-1 gap-3 md:grid-cols-2 mt-3">
+                {/* Total Interest (Plan 1) */}
+                <div>
+                  <Label className="block text-sm font-semibold text-[#c97745] mb-2">
+                    Total Interest
+                  </Label>
+                  <Input
+                    type="text"
+                    readOnly
+                    value={formData.totalInterestOne || '0'}
+                    className="w-full bg-gradient-to-r from-[#fae6d9] to-[#f8e0d1] text-[#c97745] font-semibold shadow-sm"
+                  />
+                </div>
+                {/* Total Cost (Plan 1) */}
+                <div>
+                  <Label className="block text-sm font-semibold text-[#c97745] mb-2">
+                    Total Cost
+                  </Label>
+                  <Input
+                    type="text"
+                    readOnly
+                    value={formData.totalCostOne || '0'}
+                    className="w-full bg-gradient-to-r from-[#fae6d9] to-[#f8e0d1] text-[#c97745] font-semibold shadow-sm"
+                  />
+                </div>
+              </div>
+
               {/* Plan 1 Slider & Monthly Payment */}
               <div className="grid grid-cols-4 gap-3 mt-4">
                 {/* Slider (3/4 width) */}
@@ -746,6 +816,35 @@ return (
                   </Select>
                 </div>
               </div>
+
+              {/* Plan 2 Total Interest and Total Cost Row */}
+              <div className="grid grid-cols-1 gap-3 md:grid-cols-2 mt-3">
+                {/* Total Interest (Plan 2) */}
+                <div>
+                  <Label className="block text-sm font-semibold text-[#7a8062] mb-2">
+                    Total Interest
+                  </Label>
+                  <Input
+                    type="text"
+                    readOnly
+                    value={formData.totalInterestTwo || '0'}
+                    className="w-full bg-gradient-to-r from-[#eceed9] to-[#e9ebd4] text-[#7a8062] font-semibold shadow-sm"
+                  />
+                </div>
+                {/* Total Cost (Plan 2) */}
+                <div>
+                  <Label className="block text-sm font-semibold text-[#7a8062] mb-2">
+                    Total Cost
+                  </Label>
+                  <Input
+                    type="text"
+                    readOnly
+                    value={formData.totalCostTwo || '0'}
+                    className="w-full bg-gradient-to-r from-[#eceed9] to-[#e9ebd4] text-[#7a8062] font-semibold shadow-sm"
+                  />
+                </div>
+              </div>
+
               {/* Plan 2 Slider & Monthly Payment */}
               <div className="grid grid-cols-4 gap-3 mt-4">
                 {/* Slider (3/4 width) */}
@@ -894,6 +993,35 @@ return (
                   </Select>
                 </div>
               </div>
+
+              {/* Plan 3 Total Interest and Total Cost Row */}
+              <div className="grid grid-cols-1 gap-3 md:grid-cols-2 mt-3">
+                {/* Total Interest (Plan 3) */}
+                <div>
+                  <Label className="block text-sm font-semibold text-[#b39032] mb-2">
+                    Total Interest
+                  </Label>
+                  <Input
+                    type="text"
+                    readOnly
+                    value={formData.totalInterestThree || '0'}
+                    className="w-full bg-gradient-to-r from-[#fbecc9] to-[#f9e6c1] text-[#b39032] font-semibold shadow-sm"
+                  />
+                </div>
+                {/* Total Cost (Plan 3) */}
+                <div>
+                  <Label className="block text-sm font-semibold text-[#b39032] mb-2">
+                    Total Cost
+                  </Label>
+                  <Input
+                    type="text"
+                    readOnly
+                    value={formData.totalCostThree || '0'}
+                    className="w-full bg-gradient-to-r from-[#fbecc9] to-[#f9e6c1] text-[#b39032] font-semibold shadow-sm"
+                  />
+                </div>
+              </div>
+
               {/* Plan 3 Slider & Monthly Payment */}
               <div className="grid grid-cols-4 gap-4 mt-6">
                 {/* Slider (3/4 width) */}
