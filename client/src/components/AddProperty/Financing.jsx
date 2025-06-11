@@ -43,7 +43,7 @@ export default function Financing({ formData, handleChange, updateFormData }) {
     }
     
     // Ensure other required fields are initialized
-    if (!calculatorData.term) calculatorData.term = "60"; // Default to 15 years
+    if (!calculatorData.term) calculatorData.term = "60"; // Default to 5 years
     if (!calculatorData.interestOne) calculatorData.interestOne = "4.99";
     if (!calculatorData.interestTwo) calculatorData.interestTwo = "5.99";
     if (!calculatorData.interestThree) calculatorData.interestThree = "6.99";
