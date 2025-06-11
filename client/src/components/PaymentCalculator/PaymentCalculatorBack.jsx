@@ -69,8 +69,8 @@ export default function PaymentCalculatorBack({ formData, handleChange }) {
 
   // Determine which plans are available
   const isPlan1Available = formData.financing === "Available";
-  const isPlan2Available = formData.financeTwo === "Available";
-  const isPlan3Available = formData.financeThree === "Available";
+  const isPlan2Available = formData.financingTwo === "Available";
+  const isPlan3Available = formData.financingThree === "Available";
 
   // Enhanced input handler for currency formatting
   const handleCurrencyInputChange = (e) => {

@@ -7,7 +7,6 @@ import {
   CardContent,
   CardFooter,
 } from "@/components/ui/card";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { PieChart, Pie, Cell, Label as RechartsLabel, Tooltip } from "recharts";
@@ -54,6 +53,26 @@ export default function PaymentCalculatorFront({ propertyData }) {
     taxColor: "#ffa500",    // Bright orange
   };
 
+  // Determine which plans are available
+  const isPlan1Available = propertyData.financing === "Available";
+  const isPlan2Available = propertyData.financingTwo === "Available";
+  const isPlan3Available = propertyData.financingThree === "Available";
+
+  // Determine if we should show plan selection UI
+  const showPlanSelection = isPlan2Available || isPlan3Available;
+  
+  // Get available plans for the selection UI
+  const availablePlans = useMemo(() => {
+    const plans = [];
+    if (isPlan1Available) plans.push({ id: "option1", value: "1", label: "Plan 1" });
+    if (isPlan2Available) plans.push({ id: "option2", value: "2", label: "Plan 2" });
+    if (isPlan3Available) plans.push({ id: "option3", value: "3", label: "Plan 3" });
+    return plans;
+  }, [isPlan1Available, isPlan2Available, isPlan3Available]);
+
+  // Determine grid columns based on number of available plans
+  const gridCols = availablePlans.length === 2 ? "grid-cols-2" : "grid-cols-3";
+
   // Pick data based on selected option, including loanAmount
   const { interest, monthlyPayment, downPayment, loanAmount } = useMemo(() => {
     switch (selectedOption) {
@@ -71,8 +90,7 @@ export default function PaymentCalculatorFront({ propertyData }) {
           downPayment: propertyData.downPaymentThree,
           loanAmount: propertyData.loanAmountThree,
         };
-      default:
-        // "1"
+      default: // "1"
         return {
           interest: propertyData.interestOne,
           monthlyPayment: propertyData.monthlyPaymentOne,
@@ -115,74 +133,71 @@ export default function PaymentCalculatorFront({ propertyData }) {
           Payment Calculator
         </CardTitle>
         <CardDescription className="text-sm" style={{ color: "#576756" }}>
-          <span>Compare Payment Plans For This Property</span>
-          <div>
-            <Label className="text-sm font-semibold mb-3 block" style={{ color: themeColors.text }}>
-              Choose a Payment Plan
-            </Label>
-            
-            <div className="grid grid-cols-3 gap-3 mt-2">
-              {[
-                { id: "option1", value: "1", label: "Plan 1" },
-                { id: "option2", value: "2", label: "Plan 2" },
-                { id: "option3", value: "3", label: "Plan 3" }
-              ].map((option) => (
-                <div 
-                  key={option.id}
-                  className={`
-                    relative overflow-hidden rounded-lg transition-all duration-300 cursor-pointer
-                    ${selectedOption === option.value 
-                      ? 'ring-2 ring-offset-1' 
-                      : 'hover:shadow-md'}
-                  `}
-                  style={{
-                    backgroundColor: selectedOption === option.value ? themeColors.primaryLight : 'white',
-                    borderColor: selectedOption === option.value ? themeColors.primary : '#e2e8f0',
-                    ringColor: themeColors.primary,
-                    boxShadow: selectedOption === option.value ? '0 1px 3px rgba(0,0,0,0.12)' : 'none'
-                  }}
-                  onClick={() => setSelectedOption(option.value)}
-                >
-                  {/* Hidden radio input */}
-                  <input
-                    type="radio"
-                    id={option.id}
-                    value={option.value}
-                    checked={selectedOption === option.value}
-                    onChange={() => setSelectedOption(option.value)}
-                    className="sr-only"
-                  />
-                  
-                  {/* Content */}
-                  <div className="p-3 text-center relative">
-                    {/* Selected indicator dot */}
-                    {selectedOption === option.value && (
+          <span>{showPlanSelection ? "Compare Payment Plans For This Property" : "View Payment Details For This Property"}</span>
+          
+          {showPlanSelection && (
+            <div>
+              <Label className="text-sm font-semibold mb-3 block" style={{ color: themeColors.text }}>
+                Choose a Payment Plan
+              </Label>
+              
+              <div className={`grid ${gridCols} gap-3 mt-2`}>
+                {availablePlans.map((option) => (
+                  <div 
+                    key={option.id}
+                    className={`
+                      relative overflow-hidden rounded-lg transition-all duration-300 cursor-pointer
+                      ${selectedOption === option.value 
+                        ? 'ring-2 ring-offset-1' 
+                        : 'hover:shadow-md'}
+                    `}
+                    style={{
+                      backgroundColor: selectedOption === option.value ? themeColors.primaryLight : 'white',
+                      borderColor: selectedOption === option.value ? themeColors.primary : '#e2e8f0',
+                      ringColor: themeColors.primary,
+                      boxShadow: selectedOption === option.value ? '0 1px 3px rgba(0,0,0,0.12)' : 'none'
+                    }}
+                    onClick={() => setSelectedOption(option.value)}
+                  >
+                    {/* Hidden radio input */}
+                    <input
+                      type="radio"
+                      id={option.id}
+                      value={option.value}
+                      checked={selectedOption === option.value}
+                      onChange={() => setSelectedOption(option.value)}
+                      className="sr-only"
+                    />
+                    
+                    {/* Content */}
+                    <div className="p-3 text-center relative">
+                      {/* Selected indicator dot */}
+                      {selectedOption === option.value && (
+                        <div 
+                          className="absolute top-2 right-2 w-2 h-2 rounded-full"
+                          style={{ backgroundColor: themeColors.primary }}
+                        />
+                      )}
+                      
                       <div 
-                        className="absolute top-2 right-2 w-2 h-2 rounded-full"
-                        style={{ backgroundColor: themeColors.primary }}
-                      />
-                    )}
-                    
-                    <div 
-                      className={`font-medium text-sm mb-1 ${selectedOption === option.value ? 'text-primary' : 'text-gray-500'}`}
-                      style={{ color: selectedOption === option.value ? themeColors.primary : '#4b5563' }}
-                    >
-                      {option.label}
-                    </div>
-                    
-                    {/* add pricing info here */}
-                    <div 
-                      className="text-xs"
-                      style={{ color: themeColors.secondary }}
-                    >
-                      {selectedOption === option.value ? 'Selected' : 'Click to select'}
+                        className={`font-medium text-sm mb-1 ${selectedOption === option.value ? 'text-primary' : 'text-gray-500'}`}
+                        style={{ color: selectedOption === option.value ? themeColors.primary : '#4b5563' }}
+                      >
+                        {option.label}
+                      </div>
+                      
+                      <div 
+                        className="text-xs"
+                        style={{ color: themeColors.secondary }}
+                      >
+                        {selectedOption === option.value ? 'Selected' : 'Click to select'}
+                      </div>
                     </div>
                   </div>
-                </div>
-              ))}
+                ))}
+              </div>
             </div>
-          </div>
-          
+          )}
         </CardDescription>
       </CardHeader>
 
@@ -202,7 +217,6 @@ export default function PaymentCalculatorFront({ propertyData }) {
                   outerRadius={100}
                   strokeWidth={3}
                   stroke="#FDF8F2" // Background color for gaps
-                  // paddingAngle={1} // This creates gaps between segments
                 >
                   {chartData.map((entry, index) => (
                     <Cell 
