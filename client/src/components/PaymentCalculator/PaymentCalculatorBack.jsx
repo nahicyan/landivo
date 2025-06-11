@@ -163,7 +163,7 @@ export default function PaymentCalculatorBack({ formData, handleChange }) {
     // Parse the down payment value, removing any commas
     const dpManual = parseCurrencyToNumber(formData[downPaymentField]);
     const dpPercentVal = Number(formData[downPaymentPercentField]) || 5;
-    const sliderVal = Number(formData[sliderField]) || 1;
+    const sliderVal = Number(formData[sliderField]) || 0;
     const interestRateVal = Number(formData[interestRateField]) || 0;
 
     // Determine new down payment based on the last update source
@@ -676,9 +676,9 @@ return (
                     Down Payment vs. Loan Amount
                   </Label>
                   <Slider
-                    value={[Number(formData.downPaymentOneSlider) || 1]}
-                    min={0.5}
-                    max={99.5}
+                    value={[Number(formData.downPaymentOneSlider) || 0]}
+                    min={0}
+                    max={100}
                     step={0.5}
                     onValueChange={(val) => {
                       handleSliderChange("downPaymentOneSlider", val);
@@ -687,7 +687,7 @@ return (
                     className="bg-gradient-to-r from-[#EF9C66] to-[#F4B07A]"
                   />
                   <p className="text-xs text-[#c97745] mt-2 font-medium">
-                    Currently: {formData.downPaymentOneSlider || 1}%
+                    Currently: {formData.downPaymentOneSlider || 0}%
                   </p>
                 </div>
                 {/* Monthly Payment (1/4 width) */}
@@ -853,9 +853,9 @@ return (
                     Down Payment vs. Loan Amount
                   </Label>
                   <Slider
-                    value={[Number(formData.downPaymentTwoSlider) || 1]}
-                    min={0.5}
-                    max={99.5}
+                    value={[Number(formData.downPaymentTwoSlider) || 0]}
+                    min={0}
+                    max={100}
                     step={0.5}
                     onValueChange={(val) => {
                       handleSliderChange("downPaymentTwoSlider", val);
@@ -864,7 +864,7 @@ return (
                     className="bg-gradient-to-r from-[#C8CFA0] to-[#D4DBA8]"
                   />
                   <p className="text-xs text-[#7a8062] mt-2 font-medium">
-                    Currently: {formData.downPaymentTwoSlider || 1}%
+                    Currently: {formData.downPaymentTwoSlider || 0}%
                   </p>
                 </div>
                 {/* Monthly Payment (1/4 width) */}
@@ -1030,9 +1030,9 @@ return (
                     Down Payment vs. Loan Amount
                   </Label>
                   <Slider
-                    value={[Number(formData.downPaymentThreeSlider) || 1]}
-                    min={0.5}
-                    max={99.5}
+                    value={[Number(formData.downPaymentThreeSlider) || 0]}
+                    min={0}
+                    max={100}
                     step={0.5}
                     onValueChange={(val) => {
                       handleSliderChange("downPaymentThreeSlider", val);
@@ -1041,7 +1041,7 @@ return (
                     className="bg-gradient-to-r from-[#E7C05F] to-[#F0CE6F]"
                   />
                   <p className="text-xs text-[#b39032] mt-2 font-medium">
-                    Currently: {formData.downPaymentThreeSlider || 1}%
+                    Currently: {formData.downPaymentThreeSlider || 0}%
                   </p>
                 </div>
                 {/* Monthly Payment (1/4 width) */}
