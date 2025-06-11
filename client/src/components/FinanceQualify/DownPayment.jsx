@@ -14,6 +14,14 @@ export default function DownPayment({ surveyData, updateSurveyData, onNext, onBa
   // Track if user has interacted with the calculator
   const [hasInteracted, setHasInteracted] = useState(false);
   
+  // Check how many plans are available
+  const isPlan1Available = surveyData.propertyData?.financing === "Available";
+  const isPlan2Available = surveyData.propertyData?.financingTwo === "Available";
+  const isPlan3Available = surveyData.propertyData?.financingThree === "Available";
+  
+  const availablePlansCount = [isPlan1Available, isPlan2Available, isPlan3Available].filter(Boolean).length;
+  const hasMultiplePlans = availablePlansCount > 1;
+  
   // Function to grab data from PaymentCalculator
   const capturePaymentDetails = () => {
     // Get values based on selected option
@@ -87,14 +95,18 @@ export default function DownPayment({ surveyData, updateSurveyData, onNext, onBa
   // Translation object based on selected language
   const translations = {
     en: {
-      title: "Choose your payment plan",
-      infoText: "Select one of the payment plans and click Next to continue",
+      title: hasMultiplePlans ? "Choose your payment plan" : "Review your payment plan",
+      infoText: hasMultiplePlans 
+        ? "Select one of the payment plans and click Next to continue"
+        : "Review the payment details below and click Next to continue",
       back: "Back",
       next: "Next"
     },
     es: {
-      title: "Elija su plan de pago",
-      infoText: "Seleccione uno de los planes de pago y haga clic en Siguiente para continuar",
+      title: hasMultiplePlans ? "Elija su plan de pago" : "Revise su plan de pago",
+      infoText: hasMultiplePlans 
+        ? "Seleccione uno de los planes de pago y haga clic en Siguiente para continuar"
+        : "Revise los detalles del pago a continuación y haga clic en Siguiente para continuar",
       back: "Atrás",
       next: "Siguiente"
     }
