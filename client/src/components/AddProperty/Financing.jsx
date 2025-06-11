@@ -152,7 +152,7 @@ export default function Financing({ formData, handleChange, updateFormData }) {
             <DialogHeader>
               <DialogTitle className="text-2xl font-bold text-gray-800">
                 {planType === "CALC"
-                  ? "Calculate Monthly Payments & Create Payment Plans"
+                  ? "Calculate Monthly Payments & Create Payment Plans (Payment Calculator Backend v0.8)"
                   : "Payment Plan Entry"}
               </DialogTitle>
             </DialogHeader>

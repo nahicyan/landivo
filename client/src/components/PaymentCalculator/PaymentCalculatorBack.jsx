@@ -374,9 +374,9 @@ export default function PaymentCalculatorBack({ formData, handleChange }) {
 return (
     <Card className="border border-gray-200 shadow-sm rounded-lg w-full">
       <CardHeader>
-        <CardTitle className="text-xl font-bold text-gray-800">
+        {/* <CardTitle className="text-xl font-bold text-gray-800">
           Landivo Payment Calculator v0.0.0.8
-        </CardTitle>
+        </CardTitle> */}
       </CardHeader>
       <CardContent className="space-y-2">
         {/* ------------------- Top Section (WARM GRAY THEME) ------------------- */}
