@@ -540,7 +540,7 @@ return (
               <div className="flex justify-between items-center w-full mr-4">
                 <div className="flex flex-col items-start">
                   <h3 className="text-lg font-bold text-white">Payment Plan 1</h3>
-                  <span className="text-base text-white/80 font-medium">
+                  <span className="text-base text-white font-medium">
                     Down Payment: ${formData.downPaymentOne || '0'}
                   </span>
                 </div>
@@ -548,7 +548,7 @@ return (
                   <div className="text-xl font-bold text-white">
                     ${formData.monthlyPaymentOne || '0'}/month
                   </div>
-                  <div className="text-base text-white/80">
+                  <div className="text-base text-white">
                     {formData.interestOne}% APR
                   </div>
                 </div>
@@ -611,7 +611,7 @@ return (
                     type="text"
                     readOnly
                     value={formData.loanAmountOne}
-                    className="w-full bg-gradient-to-r from-[#fae6d9] to-[#f8e0d1] text-[#c97745] font-semibold shadow-sm"
+                    className="w-full bg-gradient-to-r from-[#fceae0] to-[#fae4d7] text-[#c97745] font-semibold shadow-sm border-[#EF9C66] border-2"
                   />
                 </div>
                 {/* Interest Rate (Plan 1) */}
@@ -651,8 +651,8 @@ return (
                     type="text"
                     readOnly
                     value={formData.totalInterestOne || '0'}
-                    className="w-full bg-gradient-to-r from-[#fae6d9] to-[#f8e0d1] text-[#c97745] font-semibold shadow-sm"
-                  />
+                    className="w-full bg-gradient-to-r from-[#fceae0] to-[#fae4d7] text-[#c97745] font-semibold shadow-sm border-[#EF9C66] border-2"
+                    />
                 </div>
                 {/* Total Cost (Plan 1) */}
                 <div>
@@ -663,8 +663,8 @@ return (
                     type="text"
                     readOnly
                     value={formData.totalCostOne || '0'}
-                    className="w-full bg-gradient-to-r from-[#fae6d9] to-[#f8e0d1] text-[#c97745] font-semibold shadow-sm"
-                  />
+                    className="w-full bg-gradient-to-r from-[#fceae0] to-[#fae4d7] text-[#c97745] font-semibold shadow-sm border-[#EF9C66] border-2"
+                    />
                 </div>
               </div>
 
@@ -717,7 +717,7 @@ return (
               <div className="flex justify-between items-center w-full mr-4">
                 <div className="flex flex-col items-start">
                   <h3 className="text-lg font-bold text-[#4a5235]">Payment Plan 2</h3>
-                  <span className="text-base text-[#4a5235]/80 font-medium">
+                  <span className="text-base text-[#4a5235] font-medium">
                     Down Payment: ${formData.downPaymentTwo || '0'}
                   </span>
                 </div>
@@ -725,7 +725,7 @@ return (
                   <div className="text-xl font-bold text-[#4a5235]">
                     ${formData.monthlyPaymentTwo || '0'}/month
                   </div>
-                  <div className="text-base text-[#4a5235]/80">
+                  <div className="text-base text-[#4a5235]">
                     {formData.interestTwo}% APR
                   </div>
                 </div>
@@ -788,7 +788,7 @@ return (
                     type="text"
                     readOnly
                     value={formData.loanAmountTwo}
-                    className="w-full bg-gradient-to-r from-[#eceed9] to-[#e9ebd4] text-[#7a8062] font-semibold shadow-sm"
+                    className="w-full bg-gradient-to-r from-[#f4f5ee] to-[#f2f3ec] text-[#7a8062] font-semibold shadow-sm border-[#C8CFA0] border-2"
                   />
                 </div>
                 {/* Interest Rate (Plan 2) */}
@@ -828,8 +828,8 @@ return (
                     type="text"
                     readOnly
                     value={formData.totalInterestTwo || '0'}
-                    className="w-full bg-gradient-to-r from-[#eceed9] to-[#e9ebd4] text-[#7a8062] font-semibold shadow-sm"
-                  />
+                    className="w-full bg-gradient-to-r from-[#f4f5ee] to-[#f2f3ec] text-[#7a8062] font-semibold shadow-sm border-[#C8CFA0] border-2"
+                    />
                 </div>
                 {/* Total Cost (Plan 2) */}
                 <div>
@@ -840,8 +840,8 @@ return (
                     type="text"
                     readOnly
                     value={formData.totalCostTwo || '0'}
-                    className="w-full bg-gradient-to-r from-[#eceed9] to-[#e9ebd4] text-[#7a8062] font-semibold shadow-sm"
-                  />
+                    className="w-full bg-gradient-to-r from-[#f4f5ee] to-[#f2f3ec] text-[#7a8062] font-semibold shadow-sm border-[#C8CFA0] border-2"
+                    />
                 </div>
               </div>
 
@@ -894,7 +894,7 @@ return (
               <div className="flex justify-between items-center w-full mr-4">
                 <div className="flex flex-col items-start">
                   <h3 className="text-lg font-bold text-[#5d4a1a]">Payment Plan 3</h3>
-                  <span className="text-base text-[#5d4a1a]/80 font-medium">
+                  <span className="text-base text-[#5d4a1a] font-medium">
                    Down Payment: ${formData.downPaymentThree || '0'}
                   </span>
                 </div>
@@ -902,7 +902,7 @@ return (
                   <div className="text-xl font-bold text-[#5d4a1a]">
                     ${formData.monthlyPaymentThree || '0'}/month
                   </div>
-                  <div className="text-base text-[#5d4a1a]/80">
+                  <div className="text-base text-[#5d4a1a]">
                     {formData.interestThree}% APR
                   </div>
                 </div>
@@ -965,7 +965,7 @@ return (
                     type="text"
                     readOnly
                     value={formData.loanAmountThree}
-                    className="w-full bg-gradient-to-r from-[#fbecc9] to-[#f9e6c1] text-[#b39032] font-semibold shadow-sm"
+                    className="w-full bg-gradient-to-r from-[#fdf0d1] to-[#fbecc9] text-[#b39032] font-semibold shadow-sm border-[#E7C05F] border-2"
                   />
                 </div>
                 {/* Interest Rate (Plan 3) */}
@@ -1005,8 +1005,8 @@ return (
                     type="text"
                     readOnly
                     value={formData.totalInterestThree || '0'}
-                    className="w-full bg-gradient-to-r from-[#fbecc9] to-[#f9e6c1] text-[#b39032] font-semibold shadow-sm"
-                  />
+                    className="w-full bg-gradient-to-r from-[#fdf0d1] to-[#fbecc9] text-[#b39032] font-semibold shadow-sm border-[#E7C05F] border-2"
+                    />      
                 </div>
                 {/* Total Cost (Plan 3) */}
                 <div>
@@ -1017,8 +1017,8 @@ return (
                     type="text"
                     readOnly
                     value={formData.totalCostThree || '0'}
-                    className="w-full bg-gradient-to-r from-[#fbecc9] to-[#f9e6c1] text-[#b39032] font-semibold shadow-sm"
-                  />
+                    className="w-full bg-gradient-to-r from-[#fdf0d1] to-[#fbecc9] text-[#b39032] font-semibold shadow-sm border-[#E7C05F] border-2"
+                    />
                 </div>
               </div>
 
