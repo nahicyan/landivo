@@ -5,7 +5,12 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 
-export default function PaymentCalculatorEntry({ formData, handleChange }) {
+export default function PaymentCalculatorEntry({ formData, handleChange, numberOfPlans = 3 }) {
+  // Determine which plans are available
+  const isPlan1Available = formData.financing === "Available";
+  const isPlan2Available = formData.financeTwo === "Available";
+  const isPlan3Available = formData.financeThree === "Available";
+
   return (
     <Card className="border border-gray-200 shadow-sm rounded-lg">
       <CardContent className="space-y-6">
@@ -101,8 +106,10 @@ export default function PaymentCalculatorEntry({ formData, handleChange }) {
         {/* Payment Plans Section */}
         <div className="space-y-6">
           {/* Plan One */}
-          <div className="border-t pt-4">
-            <h3 className="text-lg font-bold text-gray-800 mb-2">Plan One</h3>
+          <div className={`border-t pt-4 ${!isPlan1Available ? 'opacity-50' : ''}`}>
+            <h3 className="text-lg font-bold text-gray-800 mb-2">
+              Plan One {!isPlan1Available ? '(Disabled)' : ''}
+            </h3>
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               <div>
                 <Label className="text-sm font-semibold text-gray-700">
@@ -114,7 +121,10 @@ export default function PaymentCalculatorEntry({ formData, handleChange }) {
                   name="downPaymentOne"
                   value={formData.downPaymentOne}
                   onChange={handleChange}
-                  className="w-full border-gray-300 focus:border-[#D4A017] focus:ring-1 focus:ring-[#D4A017] rounded-md"
+                  disabled={!isPlan1Available}
+                  className={`w-full focus:border-[#D4A017] focus:ring-1 focus:ring-[#D4A017] rounded-md ${
+                    !isPlan1Available ? 'bg-gray-100 border-gray-200' : 'border-gray-300'
+                  }`}
                 />
               </div>
               <div>
@@ -127,7 +137,10 @@ export default function PaymentCalculatorEntry({ formData, handleChange }) {
                   name="monthlyPaymentOne"
                   value={formData.monthlyPaymentOne}
                   onChange={handleChange}
-                  className="w-full border-gray-300 focus:border-[#D4A017] focus:ring-1 focus:ring-[#D4A017] rounded-md"
+                  disabled={!isPlan1Available}
+                  className={`w-full focus:border-[#D4A017] focus:ring-1 focus:ring-[#D4A017] rounded-md ${
+                    !isPlan1Available ? 'bg-gray-100 border-gray-200' : 'border-gray-300'
+                  }`}
                 />
               </div>
               <div>
@@ -140,15 +153,20 @@ export default function PaymentCalculatorEntry({ formData, handleChange }) {
                   name="interestOne"
                   value={formData.interestOne}
                   onChange={handleChange}
-                  className="w-full border-gray-300 focus:border-[#D4A017] focus:ring-1 focus:ring-[#D4A017] rounded-md"
+                  disabled={!isPlan1Available}
+                  className={`w-full focus:border-[#D4A017] focus:ring-1 focus:ring-[#D4A017] rounded-md ${
+                    !isPlan1Available ? 'bg-gray-100 border-gray-200' : 'border-gray-300'
+                  }`}
                 />
               </div>
             </div>
           </div>
 
           {/* Plan Two */}
-          <div className="border-t pt-4">
-            <h3 className="text-lg font-bold text-gray-800 mb-2">Plan Two</h3>
+          <div className={`border-t pt-4 ${!isPlan2Available ? 'opacity-50' : ''}`}>
+            <h3 className="text-lg font-bold text-gray-800 mb-2">
+              Plan Two {!isPlan2Available ? '(Disabled)' : ''}
+            </h3>
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               <div>
                 <Label className="text-sm font-semibold text-gray-700">
@@ -160,7 +178,10 @@ export default function PaymentCalculatorEntry({ formData, handleChange }) {
                   name="downPaymentTwo"
                   value={formData.downPaymentTwo}
                   onChange={handleChange}
-                  className="w-full border-gray-300 focus:border-[#D4A017] focus:ring-1 focus:ring-[#D4A017] rounded-md"
+                  disabled={!isPlan2Available}
+                  className={`w-full focus:border-[#D4A017] focus:ring-1 focus:ring-[#D4A017] rounded-md ${
+                    !isPlan2Available ? 'bg-gray-100 border-gray-200' : 'border-gray-300'
+                  }`}
                 />
               </div>
               <div>
@@ -173,7 +194,10 @@ export default function PaymentCalculatorEntry({ formData, handleChange }) {
                   name="monthlyPaymentTwo"
                   value={formData.monthlyPaymentTwo}
                   onChange={handleChange}
-                  className="w-full border-gray-300 focus:border-[#D4A017] focus:ring-1 focus:ring-[#D4A017] rounded-md"
+                  disabled={!isPlan2Available}
+                  className={`w-full focus:border-[#D4A017] focus:ring-1 focus:ring-[#D4A017] rounded-md ${
+                    !isPlan2Available ? 'bg-gray-100 border-gray-200' : 'border-gray-300'
+                  }`}
                 />
               </div>
               <div>
@@ -186,15 +210,20 @@ export default function PaymentCalculatorEntry({ formData, handleChange }) {
                   name="interestTwo"
                   value={formData.interestTwo}
                   onChange={handleChange}
-                  className="w-full border-gray-300 focus:border-[#D4A017] focus:ring-1 focus:ring-[#D4A017] rounded-md"
+                  disabled={!isPlan2Available}
+                  className={`w-full focus:border-[#D4A017] focus:ring-1 focus:ring-[#D4A017] rounded-md ${
+                    !isPlan2Available ? 'bg-gray-100 border-gray-200' : 'border-gray-300'
+                  }`}
                 />
               </div>
             </div>
           </div>
 
           {/* Plan Three */}
-          <div className="border-t pt-4">
-            <h3 className="text-lg font-bold text-gray-800 mb-2">Plan Three</h3>
+          <div className={`border-t pt-4 ${!isPlan3Available ? 'opacity-50' : ''}`}>
+            <h3 className="text-lg font-bold text-gray-800 mb-2">
+              Plan Three {!isPlan3Available ? '(Disabled)' : ''}
+            </h3>
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               <div>
                 <Label className="text-sm font-semibold text-gray-700">
@@ -206,7 +235,10 @@ export default function PaymentCalculatorEntry({ formData, handleChange }) {
                   name="downPaymentThree"
                   value={formData.downPaymentThree}
                   onChange={handleChange}
-                  className="w-full border-gray-300 focus:border-[#D4A017] focus:ring-1 focus:ring-[#D4A017] rounded-md"
+                  disabled={!isPlan3Available}
+                  className={`w-full focus:border-[#D4A017] focus:ring-1 focus:ring-[#D4A017] rounded-md ${
+                    !isPlan3Available ? 'bg-gray-100 border-gray-200' : 'border-gray-300'
+                  }`}
                 />
               </div>
               <div>
@@ -219,7 +251,10 @@ export default function PaymentCalculatorEntry({ formData, handleChange }) {
                   name="monthlyPaymentThree"
                   value={formData.monthlyPaymentThree}
                   onChange={handleChange}
-                  className="w-full border-gray-300 focus:border-[#D4A017] focus:ring-1 focus:ring-[#D4A017] rounded-md"
+                  disabled={!isPlan3Available}
+                  className={`w-full focus:border-[#D4A017] focus:ring-1 focus:ring-[#D4A017] rounded-md ${
+                    !isPlan3Available ? 'bg-gray-100 border-gray-200' : 'border-gray-300'
+                  }`}
                 />
               </div>
               <div>
@@ -232,7 +267,10 @@ export default function PaymentCalculatorEntry({ formData, handleChange }) {
                   name="interestThree"
                   value={formData.interestThree}
                   onChange={handleChange}
-                  className="w-full border-gray-300 focus:border-[#D4A017] focus:ring-1 focus:ring-[#D4A017] rounded-md"
+                  disabled={!isPlan3Available}
+                  className={`w-full focus:border-[#D4A017] focus:ring-1 focus:ring-[#D4A017] rounded-md ${
+                    !isPlan3Available ? 'bg-gray-100 border-gray-200' : 'border-gray-300'
+                  }`}
                 />
               </div>
             </div>

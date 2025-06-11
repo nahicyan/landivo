@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
@@ -67,6 +67,11 @@ export default function PaymentCalculatorBack({ formData, handleChange }) {
   // Sorting options state
   const [sortOption, setSortOption] = useState("");
 
+  // Determine which plans are available
+  const isPlan1Available = formData.financing === "Available";
+  const isPlan2Available = formData.financeTwo === "Available";
+  const isPlan3Available = formData.financeThree === "Available";
+
   // Enhanced input handler for currency formatting
   const handleCurrencyInputChange = (e) => {
     const { name, value } = e.target;
@@ -90,10 +95,10 @@ export default function PaymentCalculatorBack({ formData, handleChange }) {
   
   // Handle blur for general currency inputs
   const handleCurrencyBlur = () => {
-    // Trigger recalculation for all plans to ensure consistency
-    recalcPlan("One");
-    recalcPlan("Two");
-    recalcPlan("Three");
+    // Trigger recalculation for all available plans to ensure consistency
+    if (isPlan1Available) recalcPlan("One");
+    if (isPlan2Available) recalcPlan("Two");
+    if (isPlan3Available) recalcPlan("Three");
   };
 
   // For Down Payment manual input with special handling
@@ -229,9 +234,11 @@ export default function PaymentCalculatorBack({ formData, handleChange }) {
     // Skip if no sort option is selected
     if (!sortOption) return;
 
-    // Create plan data objects to sort
-    const planData = [
-      {
+    // Create plan data objects to sort (only for available plans)
+    const planData = [];
+    
+    if (isPlan1Available) {
+      planData.push({
         key: "One",
         downPayment: parseCurrencyToNumber(formData.downPaymentOne),
         interest: formData.interestOne,
@@ -239,8 +246,11 @@ export default function PaymentCalculatorBack({ formData, handleChange }) {
         downPaymentPercent: formData.downPaymentOnePercent,
         downPaymentSlider: formData.downPaymentOneSlider,
         downPaymentSource: formData.downPaymentOneSource || "manual"
-      },
-      {
+      });
+    }
+    
+    if (isPlan2Available) {
+      planData.push({
         key: "Two",
         downPayment: parseCurrencyToNumber(formData.downPaymentTwo),
         interest: formData.interestTwo,
@@ -248,8 +258,11 @@ export default function PaymentCalculatorBack({ formData, handleChange }) {
         downPaymentPercent: formData.downPaymentTwoPercent,
         downPaymentSlider: formData.downPaymentTwoSlider,
         downPaymentSource: formData.downPaymentTwoSource || "manual"
-      },
-      {
+      });
+    }
+    
+    if (isPlan3Available) {
+      planData.push({
         key: "Three",
         downPayment: parseCurrencyToNumber(formData.downPaymentThree),
         interest: formData.interestThree,
@@ -257,8 +270,8 @@ export default function PaymentCalculatorBack({ formData, handleChange }) {
         downPaymentPercent: formData.downPaymentThreePercent,
         downPaymentSlider: formData.downPaymentThreeSlider,
         downPaymentSource: formData.downPaymentThreeSource || "manual"
-      }
-    ];
+      });
+    }
 
     // Sort based on the selected option
     let sortedPlans = [...planData];
@@ -286,45 +299,50 @@ export default function PaymentCalculatorBack({ formData, handleChange }) {
         return; // No sorting needed
     }
 
-    // New order for plans (e.g., "One", "Two", "Three")
-    const planOrder = ["One", "Two", "Three"];
+    // Get available plan keys in order
+    const availableKeys = [];
+    if (isPlan1Available) availableKeys.push("One");
+    if (isPlan2Available) availableKeys.push("Two");
+    if (isPlan3Available) availableKeys.push("Three");
     
-    // Apply the sorted values to the plans in order
+    // Apply the sorted values to the available plans in order
     sortedPlans.forEach((plan, index) => {
-      const targetPlanKey = planOrder[index];
-      
-      // Update the down payment, interest rate, etc. for each plan based on sorted order
-      handleChange({ target: { 
-        name: `downPayment${targetPlanKey}`, 
-        value: formatInputCurrency(plan.downPayment.toFixed(2)) 
-      }});
-      
-      handleChange({ target: { 
-        name: `interest${targetPlanKey}`, 
-        value: plan.interest 
-      }});
-      
-      // Also update the percent selector, slider, and source to maintain consistency
-      handleChange({ target: { 
-        name: `downPayment${targetPlanKey}Percent`, 
-        value: plan.downPaymentPercent 
-      }});
-      
-      handleChange({ target: { 
-        name: `downPayment${targetPlanKey}Slider`, 
-        value: plan.downPaymentSlider 
-      }});
-      
-      handleChange({ target: { 
-        name: `downPayment${targetPlanKey}Source`, 
-        value: plan.downPaymentSource 
-      }});
+      if (index < availableKeys.length) {
+        const targetPlanKey = availableKeys[index];
+        
+        // Update the down payment, interest rate, etc. for each plan based on sorted order
+        handleChange({ target: { 
+          name: `downPayment${targetPlanKey}`, 
+          value: formatInputCurrency(plan.downPayment.toFixed(2)) 
+        }});
+        
+        handleChange({ target: { 
+          name: `interest${targetPlanKey}`, 
+          value: plan.interest 
+        }});
+        
+        // Also update the percent selector, slider, and source to maintain consistency
+        handleChange({ target: { 
+          name: `downPayment${targetPlanKey}Percent`, 
+          value: plan.downPaymentPercent 
+        }});
+        
+        handleChange({ target: { 
+          name: `downPayment${targetPlanKey}Slider`, 
+          value: plan.downPaymentSlider 
+        }});
+        
+        handleChange({ target: { 
+          name: `downPayment${targetPlanKey}Source`, 
+          value: plan.downPaymentSource 
+        }});
+      }
     });
     
-    // Recalculate all plans to ensure consistency
-    recalcPlan("One");
-    recalcPlan("Two");
-    recalcPlan("Three");
+    // Recalculate all available plans to ensure consistency
+    if (isPlan1Available) recalcPlan("One");
+    if (isPlan2Available) recalcPlan("Two");
+    if (isPlan3Available) recalcPlan("Three");
   };
 
   // Handle sort option change
@@ -339,7 +357,7 @@ export default function PaymentCalculatorBack({ formData, handleChange }) {
 
   // Recalculate each plan when relevant fields change:
   useEffect(() => {
-    recalcPlan("One");
+    if (isPlan1Available) recalcPlan("One");
   }, [
     formData.financingPrice,
     formData.downPaymentOnePercent,
@@ -350,7 +368,7 @@ export default function PaymentCalculatorBack({ formData, handleChange }) {
   ]);
 
   useEffect(() => {
-    recalcPlan("Two");
+    if (isPlan2Available) recalcPlan("Two");
   }, [
     formData.financingPrice,
     formData.downPaymentTwoPercent,
@@ -361,7 +379,7 @@ export default function PaymentCalculatorBack({ formData, handleChange }) {
   ]);
 
   useEffect(() => {
-    recalcPlan("Three");
+    if (isPlan3Available) recalcPlan("Three");
   }, [
     formData.financingPrice,
     formData.downPaymentThreePercent,
@@ -371,7 +389,7 @@ export default function PaymentCalculatorBack({ formData, handleChange }) {
     formData.downPaymentThreeSource,
   ]);
 
-return (
+  return (
     <Card className="border border-gray-200 shadow-sm rounded-lg w-full">
       <CardHeader>
         {/* <CardTitle className="text-xl font-bold text-gray-800">
@@ -535,11 +553,20 @@ return (
           {/* ============================================================
               PLAN 1 - ENHANCED SALMON THEME
           ============================================================ */}
-          <AccordionItem value="plan1" className="border-0 shadow-md rounded-xl overflow-hidden">
-            <AccordionTrigger className="px-6 py-3 bg-gradient-to-r from-[#EF9C66] to-[#F4B07A] hover:from-[#E6906B] hover:to-[#F1A870] text-white hover:no-underline transition-all duration-300 rounded-t-xl data-[state=closed]:rounded-xl">
+          <AccordionItem value="plan1" className={`border-0 shadow-md rounded-xl overflow-hidden ${
+            !isPlan1Available ? 'opacity-50 pointer-events-none' : ''
+          }`}>
+            <AccordionTrigger 
+              className={`px-6 py-3 bg-gradient-to-r from-[#EF9C66] to-[#F4B07A] hover:from-[#E6906B] hover:to-[#F1A870] text-white hover:no-underline transition-all duration-300 rounded-t-xl data-[state=closed]:rounded-xl ${
+                !isPlan1Available ? 'cursor-not-allowed' : ''
+              }`}
+              disabled={!isPlan1Available}
+            >
               <div className="flex justify-between items-center w-full mr-4">
                 <div className="flex flex-col items-start">
-                  <h3 className="text-lg font-bold text-white">Payment Plan 1</h3>
+                  <h3 className="text-lg font-bold text-white">
+                    Payment Plan 1 {!isPlan1Available ? '(Disabled)' : ''}
+                  </h3>
                   <span className="text-base text-white font-medium">
                     Down Payment: ${formData.downPaymentOne || '0'}
                   </span>
@@ -571,6 +598,7 @@ return (
                     onChange={(e) => handleDownPaymentChange("One", e)}
                     onBlur={() => handleDownPaymentBlur("One")}
                     className="w-full border-[#EF9C66] focus:border-[#E6906B] bg-white shadow-sm"
+                    disabled={!isPlan1Available}
                   />
                 </div>
                 {/* Down Payment Selector (Plan 1) */}
@@ -584,6 +612,7 @@ return (
                       handleSelectChange("downPaymentOnePercent", val);
                       handleSelectChange("downPaymentOneSource", "selector");
                     }}
+                    disabled={!isPlan1Available}
                   >
                     <SelectTrigger className="w-full border-[#EF9C66] focus:border-[#E6906B] bg-white shadow-sm">
                       <SelectValue placeholder="Select %" />
@@ -622,6 +651,7 @@ return (
                   <Select
                     value={formData.interestOne}
                     onValueChange={(val) => handleSelectChange("interestOne", val)}
+                    disabled={!isPlan1Available}
                   >
                     <SelectTrigger className="w-full border-[#EF9C66] focus:border-[#E6906B] bg-white shadow-sm">
                       <SelectValue placeholder="Select Rate" />
@@ -685,6 +715,7 @@ return (
                       handleSelectChange("downPaymentOneSource", "slider");
                     }}
                     className="bg-gradient-to-r from-[#EF9C66] to-[#F4B07A]"
+                    disabled={!isPlan1Available}
                   />
                   <p className="text-xs text-[#c97745] mt-2 font-medium">
                     Currently: {formData.downPaymentOneSlider || 0}%
@@ -712,11 +743,20 @@ return (
           {/* ============================================================
               PLAN 2 - ENHANCED SAGE THEME
           ============================================================ */}
-          <AccordionItem value="plan2" className="border-0 shadow-md rounded-xl overflow-hidden">
-            <AccordionTrigger className="px-6 py-3 bg-gradient-to-r from-[#C8CFA0] to-[#D4DBA8] hover:from-[#BEC59A] hover:to-[#D0D7A2] text-white hover:no-underline transition-all duration-300 rounded-t-xl data-[state=closed]:rounded-xl">
+          <AccordionItem value="plan2" className={`border-0 shadow-md rounded-xl overflow-hidden ${
+            !isPlan2Available ? 'opacity-50 pointer-events-none' : ''
+          }`}>
+            <AccordionTrigger 
+              className={`px-6 py-3 bg-gradient-to-r from-[#C8CFA0] to-[#D4DBA8] hover:from-[#BEC59A] hover:to-[#D0D7A2] text-white hover:no-underline transition-all duration-300 rounded-t-xl data-[state=closed]:rounded-xl ${
+                !isPlan2Available ? 'cursor-not-allowed' : ''
+              }`}
+              disabled={!isPlan2Available}
+            >
               <div className="flex justify-between items-center w-full mr-4">
                 <div className="flex flex-col items-start">
-                  <h3 className="text-lg font-bold text-[#4a5235]">Payment Plan 2</h3>
+                  <h3 className="text-lg font-bold text-[#4a5235]">
+                    Payment Plan 2 {!isPlan2Available ? '(Disabled)' : ''}
+                  </h3>
                   <span className="text-base text-[#4a5235] font-medium">
                     Down Payment: ${formData.downPaymentTwo || '0'}
                   </span>
@@ -748,6 +788,7 @@ return (
                     onChange={(e) => handleDownPaymentChange("Two", e)}
                     onBlur={() => handleDownPaymentBlur("Two")}
                     className="w-full border-[#C8CFA0] focus:border-[#BEC59A] bg-white shadow-sm"
+                    disabled={!isPlan2Available}
                   />
                 </div>
                 {/* Down Payment Selector (Plan 2) */}
@@ -761,6 +802,7 @@ return (
                       handleSelectChange("downPaymentTwoPercent", val);
                       handleSelectChange("downPaymentTwoSource", "selector");
                     }}
+                    disabled={!isPlan2Available}
                   >
                     <SelectTrigger className="w-full border-[#C8CFA0] focus:border-[#BEC59A] bg-white shadow-sm">
                       <SelectValue placeholder="Select %" />
@@ -799,6 +841,7 @@ return (
                   <Select
                     value={formData.interestTwo}
                     onValueChange={(val) => handleSelectChange("interestTwo", val)}
+                    disabled={!isPlan2Available}
                   >
                     <SelectTrigger className="w-full border-[#C8CFA0] focus:border-[#BEC59A] bg-white shadow-sm">
                       <SelectValue placeholder="Select Rate" />
@@ -862,6 +905,7 @@ return (
                       handleSelectChange("downPaymentTwoSource", "slider");
                     }}
                     className="bg-gradient-to-r from-[#C8CFA0] to-[#D4DBA8]"
+                    disabled={!isPlan2Available}
                   />
                   <p className="text-xs text-[#7a8062] mt-2 font-medium">
                     Currently: {formData.downPaymentTwoSlider || 0}%
@@ -889,11 +933,20 @@ return (
           {/* ============================================================
               PLAN 3 - ENHANCED GOLD THEME
           ============================================================ */}
-          <AccordionItem value="plan3" className="border-0 shadow-md rounded-xl overflow-hidden">
-            <AccordionTrigger className="px-6 py-3 bg-gradient-to-r from-[#E7C05F] to-[#F0CE6F] hover:from-[#E1BA59] hover:to-[#EBC869] text-white hover:no-underline transition-all duration-300 rounded-t-xl data-[state=closed]:rounded-xl">
+          <AccordionItem value="plan3" className={`border-0 shadow-md rounded-xl overflow-hidden ${
+            !isPlan3Available ? 'opacity-50 pointer-events-none' : ''
+          }`}>
+            <AccordionTrigger 
+              className={`px-6 py-3 bg-gradient-to-r from-[#E7C05F] to-[#F0CE6F] hover:from-[#E1BA59] hover:to-[#EBC869] text-white hover:no-underline transition-all duration-300 rounded-t-xl data-[state=closed]:rounded-xl ${
+                !isPlan3Available ? 'cursor-not-allowed' : ''
+              }`}
+              disabled={!isPlan3Available}
+            >
               <div className="flex justify-between items-center w-full mr-4">
                 <div className="flex flex-col items-start">
-                  <h3 className="text-lg font-bold text-[#5d4a1a]">Payment Plan 3</h3>
+                  <h3 className="text-lg font-bold text-[#5d4a1a]">
+                    Payment Plan 3 {!isPlan3Available ? '(Disabled)' : ''}
+                  </h3>
                   <span className="text-base text-[#5d4a1a] font-medium">
                    Down Payment: ${formData.downPaymentThree || '0'}
                   </span>
@@ -925,6 +978,7 @@ return (
                     onChange={(e) => handleDownPaymentChange("Three", e)}
                     onBlur={() => handleDownPaymentBlur("Three")}
                     className="w-full border-[#E7C05F] focus:border-[#E1BA59] bg-white shadow-sm"
+                    disabled={!isPlan3Available}
                   />
                 </div>
                 {/* Down Payment Selector (Plan 3) */}
@@ -938,6 +992,7 @@ return (
                       handleSelectChange("downPaymentThreePercent", val);
                       handleSelectChange("downPaymentThreeSource", "selector");
                     }}
+                    disabled={!isPlan3Available}
                   >
                     <SelectTrigger className="w-full border-[#E7C05F] focus:border-[#E1BA59] bg-white shadow-sm">
                       <SelectValue placeholder="Select %" />
@@ -976,6 +1031,7 @@ return (
                   <Select
                     value={formData.interestThree}
                     onValueChange={(val) => handleSelectChange("interestThree", val)}
+                    disabled={!isPlan3Available}
                   >
                     <SelectTrigger className="w-full border-[#E7C05F] focus:border-[#E1BA59] bg-white shadow-sm">
                       <SelectValue placeholder="Select Rate" />
@@ -1039,6 +1095,7 @@ return (
                       handleSelectChange("downPaymentThreeSource", "slider");
                     }}
                     className="bg-gradient-to-r from-[#E7C05F] to-[#F0CE6F]"
+                    disabled={!isPlan3Available}
                   />
                   <p className="text-xs text-[#b39032] mt-2 font-medium">
                     Currently: {formData.downPaymentThreeSlider || 0}%
