@@ -105,6 +105,8 @@ export default function AddProperty() {
 
     // Financing and Payment Calculation
     financing: "Not-Available", // Default value
+    financingTwo: "Not-Available", // Default value
+    financingThree: "Not-Available", // Default value
     tax: "",
     hoaMonthly: "",
     serviceFee: "35",

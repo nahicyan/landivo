@@ -96,6 +96,8 @@ export default function EditProperty() {
     minPrice: "",
     disPrice: "",
     financing: "",
+    financingTwo: "",
+    financingThree: "",
     tax: "",
     hoaMonthly: "",
     serviceFee: "",
@@ -466,7 +468,7 @@ const validateStep = (stepIndex) => {
         "askingPrice", "minPrice", "disPrice",
         
         // Financing
-        "financing", "tax", "hoaMonthly", "serviceFee", "term",
+        "financing", "financingTwo", "financingThree", "tax", "hoaMonthly", "serviceFee", "term",
         "interestOne", "interestTwo", "interestThree",
         "monthlyPaymentOne", "monthlyPaymentTwo", "monthlyPaymentThree",
         "downPaymentOne", "downPaymentTwo", "downPaymentThree",

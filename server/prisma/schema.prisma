@@ -131,6 +131,8 @@ model Residency {
 
 //7. Financing & Pricing Calculations
   financing           String
+  financingTwo        String?
+  financingThree      String?
   serviceFee          Float?
   term                Int?
   hoaMonthly          Float?

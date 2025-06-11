@@ -671,6 +671,8 @@ export const createResidencyWithMultipleFiles = asyncHandler(async (req, res) =>
 
       // Financing and Payment Calculation 
       financing,
+      financingTwo,
+      financingThree,
       tax,
       hoaMonthly,
       serviceFee,
@@ -791,6 +793,8 @@ export const createResidencyWithMultipleFiles = asyncHandler(async (req, res) =>
     
         // Financing and Payment Calculation 
         financing: financing ?? "Not-Available",
+        financingTwo: financingTwo ?? "Not-Available",
+        financingThree: financingThree ?? "Not-Available",
         tax: tax ? parseFloat(tax) : null,
         hoaMonthly: hoaMonthly ? parseFloat(hoaMonthly) : null,
         serviceFee: serviceFee ? parseFloat(serviceFee) : null,
