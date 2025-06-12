@@ -185,19 +185,19 @@ export default function Financing({ formData, handleChange, updateFormData, erro
                 </SelectItem>
                 <SelectItem value="1" className="text-base py-2">
                   <div className="flex items-center gap-2">
-                    <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
+                    <div className="w-2 h-2 bg-[#EF9C66] rounded-full"></div>
                     <span>1 Payment Plan</span>
                   </div>
                 </SelectItem>
                 <SelectItem value="2" className="text-base py-2">
                   <div className="flex items-center gap-2">
-                    <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                    <div className="w-2 h-2 bg-[#C8CFA0] rounded-full"></div>
                     <span>2 Payment Plans</span>
                   </div>
                 </SelectItem>
                 <SelectItem value="3" className="text-base py-2">
                   <div className="flex items-center gap-2">
-                    <div className="w-2 h-2 bg-purple-500 rounded-full"></div>
+                    <div className="w-2 h-2 bg-[#E7C05F] rounded-full"></div>
                     <span>3 Payment Plans</span>
                   </div>
                 </SelectItem>
