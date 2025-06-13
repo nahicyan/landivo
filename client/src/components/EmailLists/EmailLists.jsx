@@ -138,6 +138,7 @@ const handleCreateList = async (listData) => {
 
       let allBuyerIds = [];
       let buyersToAddToNewList = []; // Batch buyer IDs for single API call
+      let totalRemovedFromLists = 0; // Track total removals for single notification
 
       // Step 1: Import new buyers first
       if (newBuyers.length > 0) {
@@ -254,25 +255,34 @@ const handleCreateList = async (listData) => {
         }
       }
 
-      // Handle 'replace' action: Remove from existing lists first
+      // Handle 'replace' action: Remove from existing lists first (BATCHED)
+      const allRemovalPromises = [];
       for (const buyerId of replaceBuyerIds) {
         const duplicate = duplicatesWithActions.find(d => d.existingBuyerId === buyerId);
         if (duplicate && duplicate.originalBuyer?.emailListMemberships) {
           const currentListIds = duplicate.originalBuyer.emailListMemberships.map(m => m.emailListId);
+          totalRemovedFromLists += currentListIds.length; // Count total removals
           
-          // Remove from all current lists (parallel operations)
+          // Add removal promises to batch (suppress individual notifications)
           const removePromises = currentListIds.map(listId => 
-            removeBuyersFromList(listId, [buyerId]).catch(error => 
-              console.warn(`Failed to remove buyer ${buyerId} from list ${listId}:`, error)
-            )
+            api.post(`/email-lists/${listId}/remove-buyers`, { buyerIds: [buyerId] })
+              .catch(error => {
+                console.warn(`Failed to remove buyer ${buyerId} from list ${listId}:`, error);
+                totalRemovedFromLists--; // Adjust count for failed removals
+              })
           );
           
-          try {
-            await Promise.all(removePromises);
-            console.log(`Removed buyer ${buyerId} from ${currentListIds.length} existing lists`);
-          } catch (error) {
-            console.warn(`Some list removals failed for buyer ${buyerId}:`, error);
-          }
+          allRemovalPromises.push(...removePromises);
+        }
+      }
+
+      // Execute all removals in parallel without individual notifications
+      if (allRemovalPromises.length > 0) {
+        try {
+          await Promise.all(allRemovalPromises);
+          console.log(`Removed ${replaceBuyerIds.length} buyers from ${totalRemovedFromLists} existing list memberships`);
+        } catch (error) {
+          console.warn('Some list removals failed:', error);
         }
       }
 
@@ -289,13 +299,21 @@ const handleCreateList = async (listData) => {
         }
       }
 
-      // Step 5: Show single success message
+      // Step 5: Show SINGLE success message with summary
       const totalProcessed = allBuyerIds.length;
       const skippedCount = duplicatesWithActions.filter(d => d.action === 'skip').length;
 
       if (allBuyerIds.length > 0 || skippedCount > 0) {
-        const message = `List "${listData.name}" created successfully with ${allBuyerIds.length} buyers` +
-          (skippedCount > 0 ? ` (${skippedCount} duplicates skipped)` : '');
+        let message = `List "${listData.name}" created successfully with ${allBuyerIds.length} buyers`;
+        
+        if (totalRemovedFromLists > 0) {
+          message += `. Removed ${replaceBuyerIds.length} buyers from ${totalRemovedFromLists} existing list memberships`;
+        }
+        
+        if (skippedCount > 0) {
+          message += ` (${skippedCount} duplicates skipped)`;
+        }
+        
         toast.success(message);
       } else {
         toast.warning(`List "${listData.name}" created but no buyers were added`);

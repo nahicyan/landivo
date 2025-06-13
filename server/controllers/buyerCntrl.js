@@ -86,6 +86,18 @@ export const getAllBuyers = asyncHandler(async (req, res) => {
           orderBy: {
             timestamp: "desc"
           }
+        },
+        // Add email list memberships to include current list associations
+        emailListMemberships: {
+          include: {
+            emailList: {
+              select: {
+                id: true,
+                name: true,
+                description: true
+              }
+            }
+          }
         }
       },
       orderBy: {
