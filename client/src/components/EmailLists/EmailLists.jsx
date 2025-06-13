@@ -124,8 +124,7 @@ export default function EmailLists() {
     setImportedBuyers(null);
   };
 
-  // Handle creating a list (updated to handle imported buyers with duplicate actions)
-  const handleCreateList = async (listData) => {
+const handleCreateList = async (listData) => {
   try {
     if (importedBuyers && importedBuyers.length > 0) {
       // Separate new buyers from duplicates with actions
@@ -138,6 +137,7 @@ export default function EmailLists() {
       });
 
       let allBuyerIds = [];
+      let buyersToAddToNewList = []; // Batch buyer IDs for single API call
 
       // Step 1: Import new buyers first
       if (newBuyers.length > 0) {
@@ -153,6 +153,7 @@ export default function EmailLists() {
 
           const createdBuyerIds = importResponse.data.results?.createdBuyerIds || [];
           allBuyerIds.push(...createdBuyerIds);
+          buyersToAddToNewList.push(...createdBuyerIds);
 
           console.log(`Created ${createdBuyerIds.length} new buyers`);
         } catch (error) {
@@ -164,11 +165,10 @@ export default function EmailLists() {
       // Step 2: Create the email list first (needed for replace/update actions)
       const createResponse = await createList({
         ...listData,
-        buyerIds: allBuyerIds,
+        buyerIds: buyersToAddToNewList,
         criteria: {}
       });
       
-      // Fix: Handle the response structure correctly
       const newList = createResponse.list || createResponse;
       const newListId = newList.id;
 
@@ -176,7 +176,11 @@ export default function EmailLists() {
         throw new Error('Failed to get new list ID from response');
       }
 
-      // Step 3: Process duplicate actions
+      // Step 3: Process duplicate actions (batch operations)
+      const updateBuyerIds = [];
+      const replaceBuyerIds = [];
+      const updatePromises = [];
+
       for (const duplicate of duplicatesWithActions) {
         const existingBuyerId = duplicate.existingBuyerId;
         const action = duplicate.action;
@@ -187,18 +191,15 @@ export default function EmailLists() {
         }
 
         try {
-          // Prepare update data - only include fields that have values
+          // Prepare update data
           const updateData = {};
 
-          // Always include email (required by backend)
           if (duplicate.email) {
             updateData.email = duplicate.email;
           } else {
-            // If no email in CSV data, get it from the original buyer
             updateData.email = duplicate.originalBuyer?.email;
           }
 
-          // Only include other fields if they have actual values
           if (duplicate.firstName && duplicate.firstName.trim()) {
             updateData.firstName = duplicate.firstName.trim();
           }
@@ -221,61 +222,80 @@ export default function EmailLists() {
             updateData.emailPermissionStatus = duplicate.emailPermissionStatus;
           }
 
-          // Update the existing buyer with new CSV data (only if we have meaningful updates)
-          if (Object.keys(updateData).length > 1) { // More than just email
+          // Queue update if we have meaningful changes
+          if (Object.keys(updateData).length > 1) {
             console.log(`Updating buyer ${existingBuyerId} with data:`, updateData);
-            await api.put(`/buyer/update/${existingBuyerId}`, updateData);
+            updatePromises.push(api.put(`/buyer/update/${existingBuyerId}`, updateData));
           }
 
-          // Handle list membership based on action
+          // Batch buyer IDs based on action
           if (action === 'update') {
-            // Add to new list while keeping on existing lists
-            await addBuyersToListFn(newListId, [existingBuyerId]);
+            updateBuyerIds.push(existingBuyerId);
             allBuyerIds.push(existingBuyerId);
-
           } else if (action === 'replace') {
-            // Remove from all existing lists, then add to new list
-
-            // Get the buyer's current list memberships from the original buyer data
-            const currentListIds = duplicate.originalBuyer?.emailListMemberships?.map(m => m.emailListId) || [];
-
-            // Remove from all current lists
-            for (const listId of currentListIds) {
-              try {
-                await removeBuyersFromList(listId, [existingBuyerId]);
-                console.log(`Removed buyer ${existingBuyerId} from list ${listId}`);
-              } catch (error) {
-                console.warn(`Failed to remove buyer ${existingBuyerId} from list ${listId}:`, error);
-              }
-            }
-
-            // Add to new list
-            await addBuyersToListFn(newListId, [existingBuyerId]);
+            replaceBuyerIds.push(existingBuyerId);
             allBuyerIds.push(existingBuyerId);
           }
-          // For 'skip' action, we don't add the buyer to any list
 
         } catch (error) {
           console.error(`Error processing duplicate buyer ${existingBuyerId}:`, error);
-
-          // Log more details about the error
-          if (error.response) {
-            console.error('Response data:', error.response.data);
-            console.error('Response status:', error.response.status);
-            console.error('Response headers:', error.response.headers);
-          }
-
           toast.warning(`Failed to process buyer: ${duplicate.firstName || 'Unknown'} ${duplicate.lastName || 'Unknown'} - ${error.response?.data?.message || error.message}`);
         }
       }
 
-      // Step 4: Show success message
+      // Execute all buyer updates in parallel
+      if (updatePromises.length > 0) {
+        try {
+          await Promise.all(updatePromises);
+          console.log(`Updated ${updatePromises.length} buyers`);
+        } catch (error) {
+          console.error('Error updating some buyers:', error);
+          toast.warning('Some buyer updates failed');
+        }
+      }
+
+      // Handle 'replace' action: Remove from existing lists first
+      for (const buyerId of replaceBuyerIds) {
+        const duplicate = duplicatesWithActions.find(d => d.existingBuyerId === buyerId);
+        if (duplicate && duplicate.originalBuyer?.emailListMemberships) {
+          const currentListIds = duplicate.originalBuyer.emailListMemberships.map(m => m.emailListId);
+          
+          // Remove from all current lists (parallel operations)
+          const removePromises = currentListIds.map(listId => 
+            removeBuyersFromList(listId, [buyerId]).catch(error => 
+              console.warn(`Failed to remove buyer ${buyerId} from list ${listId}:`, error)
+            )
+          );
+          
+          try {
+            await Promise.all(removePromises);
+            console.log(`Removed buyer ${buyerId} from ${currentListIds.length} existing lists`);
+          } catch (error) {
+            console.warn(`Some list removals failed for buyer ${buyerId}:`, error);
+          }
+        }
+      }
+
+      // Step 4: Add all duplicate buyers to new list in single batch operation
+      const allDuplicateBuyersToAdd = [...updateBuyerIds, ...replaceBuyerIds];
+      
+      if (allDuplicateBuyersToAdd.length > 0) {
+        try {
+          await addBuyersToListFn(newListId, allDuplicateBuyersToAdd);
+          console.log(`Added ${allDuplicateBuyersToAdd.length} duplicate buyers to new list`);
+        } catch (error) {
+          console.error('Error adding duplicate buyers to list:', error);
+          toast.error('Failed to add some duplicate buyers to the list');
+        }
+      }
+
+      // Step 5: Show single success message
       const totalProcessed = allBuyerIds.length;
       const skippedCount = duplicatesWithActions.filter(d => d.action === 'skip').length;
 
       if (allBuyerIds.length > 0 || skippedCount > 0) {
-        const message = `List "${listData.name}" created with ${allBuyerIds.length} buyers` +
-          (skippedCount > 0 ? ` (${skippedCount} skipped)` : '');
+        const message = `List "${listData.name}" created successfully with ${allBuyerIds.length} buyers` +
+          (skippedCount > 0 ? ` (${skippedCount} duplicates skipped)` : '');
         toast.success(message);
       } else {
         toast.warning(`List "${listData.name}" created but no buyers were added`);
@@ -293,13 +313,6 @@ export default function EmailLists() {
     }
   } catch (error) {
     console.error("Error creating list:", error);
-
-    // Log more details about the error
-    if (error.response) {
-      console.error('Response data:', error.response.data);
-      console.error('Response status:', error.response.status);
-    }
-
     toast.error(`Failed to create list: ${error.response?.data?.message || error.message || 'Unknown error'}`);
   }
 };
