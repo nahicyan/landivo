@@ -157,103 +157,90 @@ export default function ImportCsvDialog({
   };
 
   const processCsvWithMappings = async () => {
-    if (!csvFile) return;
-    setLoadingDuplicates(true);
+  if (!csvFile) return;
+  setLoadingDuplicates(true);
 
-    try {
-      // Get all buyers who are members of at least one email list
-      const existingBuyersData = await getAllBuyers();
-      const buyersInLists = existingBuyersData.filter(buyer =>
-        buyer.emailListMemberships && buyer.emailListMemberships.length > 0
-      );
-      setExistingBuyers(buyersInLists);
+  try {
+    // Get ALL existing buyers (not just those in lists)
+    const existingBuyersData = await getAllBuyers();
+    setExistingBuyers(existingBuyersData);
 
-      Papa.parse(csvFile, {
-        header: true,
-        skipEmptyLines: true,
-        complete: (results) => {
-          const errors = [];
-          const validData = [];
+    Papa.parse(csvFile, {
+      header: true,
+      skipEmptyLines: true,
+      complete: (results) => {
+        const errors = [];
+        const validData = [];
 
-          results.data.forEach((row, index) => {
-            const mappedRow = {};
-            let hasErrors = false;
+        results.data.forEach((row, index) => {
+          const mappedRow = {};
+          let hasErrors = false;
 
-            // Map CSV columns to fields
-            Object.entries(columnMappings).forEach(([csvColumn, fieldId]) => {
-              if (fieldId && row[csvColumn] !== undefined) {
-                mappedRow[fieldId] = row[csvColumn];
-              }
+          // Map CSV columns to fields
+          Object.entries(columnMappings).forEach(([csvColumn, fieldId]) => {
+            if (fieldId && row[csvColumn] !== undefined) {
+              mappedRow[fieldId] = row[csvColumn];
+            }
+          });
+
+          // Check required fields - only email is required
+          if (!mappedRow.email || mappedRow.email.trim() === '') {
+            hasErrors = true;
+            errors.push(`Row ${index + 2}: Missing email address`);
+          }
+
+          if (!hasErrors) {
+            // Apply defaults if not mapped
+            if (!mappedRow.buyerType && importOptions.defaultBuyerType !== '_none') {
+              mappedRow.buyerType = importOptions.defaultBuyerType;
+            }
+
+            // Handle preferred areas (comma-separated)
+            if (mappedRow.preferredAreas) {
+              mappedRow.preferredAreas = mappedRow.preferredAreas.split(',').map(a => a.trim()).filter(a => a);
+            } else if (importOptions.defaultArea !== '_none') {
+              mappedRow.preferredAreas = [importOptions.defaultArea];
+            }
+
+            validData.push(mappedRow);
+          }
+        });
+
+        // Create set of all existing buyer emails for duplicate detection
+        const allExistingEmails = new Set(existingBuyersData.map(buyer => buyer.email.toLowerCase()));
+
+        const duplicates = [];
+        const newBuyersData = [];
+
+        validData.forEach(csvBuyer => {
+          const email = csvBuyer.email.toLowerCase();
+
+          // Check if buyer exists (treat ALL existing buyers as potential duplicates)
+          if (allExistingEmails.has(email)) {
+            const existingBuyer = existingBuyersData.find(b => b.email.toLowerCase() === email);
+            duplicates.push({
+              csvData: csvBuyer,
+              existingBuyer: existingBuyer
             });
+          } else {
+            // New buyer
+            newBuyersData.push(csvBuyer);
+          }
+        });
 
-            // Check required fields - only email is required
-            if (!mappedRow.email || mappedRow.email.trim() === '') {
-              hasErrors = true;
-              errors.push(`Row ${index + 2}: Missing email address`);
-            }
-
-            if (!hasErrors) {
-              // Apply defaults if not mapped
-              if (!mappedRow.buyerType && importOptions.defaultBuyerType !== '_none') {
-                mappedRow.buyerType = importOptions.defaultBuyerType;
-              }
-
-              // Handle preferred areas (comma-separated)
-              if (mappedRow.preferredAreas) {
-                mappedRow.preferredAreas = mappedRow.preferredAreas.split(',').map(a => a.trim()).filter(a => a);
-              } else if (importOptions.defaultArea !== '_none') {
-                mappedRow.preferredAreas = [importOptions.defaultArea];
-              }
-
-              validData.push(mappedRow);
-            }
-          });
-
-          // Check for duplicates only against buyers in lists
-          const buyersInListsEmails = new Set(buyersInLists.map(buyer => buyer.email.toLowerCase()));
-          const allExistingEmails = new Set(existingBuyersData.map(buyer => buyer.email.toLowerCase()));
-
-          const duplicates = [];
-          const newBuyersData = [];
-          const existingUnlistedBuyers = [];
-
-          validData.forEach(csvBuyer => {
-            const email = csvBuyer.email.toLowerCase();
-
-            if (buyersInListsEmails.has(email)) {
-              // Buyer exists and is in other lists - treat as duplicate
-              const existingBuyer = buyersInLists.find(b => b.email.toLowerCase() === email);
-              duplicates.push({
-                csvData: csvBuyer,
-                existingBuyer: existingBuyer
-              });
-            } else if (allExistingEmails.has(email)) {
-              // Buyer exists but not in any lists - just add to new list
-              const existingBuyer = existingBuyersData.find(b => b.email.toLowerCase() === email);
-              existingUnlistedBuyers.push({
-                ...csvBuyer,
-                existingBuyerId: existingBuyer.id,
-                isExistingUnlisted: true
-              });
-            } else {
-              // New buyer
-              newBuyersData.push(csvBuyer);
-            }
-          });
-
-          setCsvData(validData);
-          setCsvErrors(errors);
-          setDuplicateBuyers(duplicates);
-          setNewBuyers([...newBuyersData, ...existingUnlistedBuyers]);
-        }
-      });
-    } catch (error) {
-      console.error("Error processing CSV:", error);
-      toast.error("Failed to process CSV data");
-    } finally {
-      setLoadingDuplicates(false);
-    }
-  };
+        setCsvData(validData);
+        setCsvErrors(errors);
+        setDuplicateBuyers(duplicates);
+        setNewBuyers(newBuyersData);
+      }
+    });
+  } catch (error) {
+    console.error("Error processing CSV:", error);
+    toast.error("Failed to process CSV data");
+  } finally {
+    setLoadingDuplicates(false);
+  }
+};
 
   // Handle option changes
   const handleOptionChange = (name, value) => {
