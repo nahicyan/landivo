@@ -165,7 +165,7 @@ export default function EmailLists() {
         // Step 2: Create the email list first (needed for replace/update actions)
         const createResponse = await createList({
           ...listData,
-          buyerIds: [],
+          buyerIds: allBuyerIds, // Fixed,
           criteria: {}
         });
         const newList = createResponse.list || createResponse;
