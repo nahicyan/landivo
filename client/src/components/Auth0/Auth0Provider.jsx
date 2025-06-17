@@ -41,7 +41,7 @@ export const Auth0ProviderWithNavigate = ({ children }) => {
       clientId={import.meta.env.VITE_AUTH0_CLIENT_ID}
       authorizationParams={{
         redirect_uri: window.location.origin,
-        scope: "openid profile email",
+        scope: "openid profile email offline_access", 
         audience: import.meta.env.VITE_AUTH0_AUDIENCE
       }}
       cacheLocation="localstorage"
