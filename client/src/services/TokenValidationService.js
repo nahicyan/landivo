@@ -4,8 +4,22 @@ class TokenValidationService {
   constructor() {
     this.isValidating = false;
     this.lastValidation = null;
-    this.validationInterval = 5 * 60 * 1000; // Check every 5 minutes instead of 1
+    this.validationInterval = 5 * 60 * 1000; // Check every 5 minutes
     this.graceInterval = 30000; // 30 seconds between checks
+    this.expiryWarningTime = 2 * 60 * 1000; // Warn 2 minutes before expiry
+  }
+
+  parseJwt(token) {
+    try {
+      const base64Url = token.split('.')[1];
+      const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+      const jsonPayload = decodeURIComponent(atob(base64).split('').map(c => 
+        '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2)
+      ).join(''));
+      return JSON.parse(jsonPayload);
+    } catch (e) {
+      return null;
+    }
   }
 
   async validateToken(getAccessTokenSilently, isAuthenticated) {
@@ -24,20 +38,56 @@ class TokenValidationService {
     this.lastValidation = now;
 
     try {
-      // First try with cache to avoid unnecessary API calls
-      await getAccessTokenSilently({ 
+      // First try with cache to check expiry
+      const token = await getAccessTokenSilently({ 
         cacheMode: 'cache-only',
         timeoutInSeconds: 5 
       });
+      
+      // Check if token is about to expire
+      const payload = this.parseJwt(token);
+      if (payload && payload.exp) {
+        const expiryTime = payload.exp * 1000;
+        const timeUntilExpiry = expiryTime - now;
+        
+        // If token expires in less than 2 minutes, show warning
+        if (timeUntilExpiry < this.expiryWarningTime && timeUntilExpiry > 0) {
+          this.isValidating = false;
+          return {
+            isValid: false,
+            error: 'Your session will expire soon',
+            requiresLogin: true,
+            timeUntilExpiry
+          };
+        }
+      }
       
       this.isValidating = false;
       return { isValid: true };
     } catch (cacheError) {
       // Only if cache fails, try without cache
       try {
-        await getAccessTokenSilently({ 
+        const token = await getAccessTokenSilently({ 
           timeoutInSeconds: 10 
         });
+        
+        // Check expiry on fresh token too
+        const payload = this.parseJwt(token);
+        if (payload && payload.exp) {
+          const expiryTime = payload.exp * 1000;
+          const timeUntilExpiry = expiryTime - now;
+          
+          if (timeUntilExpiry < this.expiryWarningTime && timeUntilExpiry > 0) {
+            this.isValidating = false;
+            return {
+              isValid: false,
+              error: 'Your session will expire soon',
+              requiresLogin: true,
+              timeUntilExpiry
+            };
+          }
+        }
+        
         this.isValidating = false;
         return { isValid: true };
       } catch (error) {
@@ -54,7 +104,6 @@ class TokenValidationService {
           };
         }
         
-        // Don't invalidate on network/timeout errors
         return { isValid: true };
       }
     }
