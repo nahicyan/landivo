@@ -46,7 +46,7 @@ export const TokenValidationProvider = ({ children }) => {
   useEffect(() => {
     if (!isAuthenticated || isLoading) return;
 
-    const interval = setInterval(validateToken, 60000); // Check every minute
+    const interval = setInterval(validateToken, 5000); // Check every 5 Second
     
     return () => clearInterval(interval);
   }, [isAuthenticated, isLoading, validateToken]);

@@ -4,12 +4,11 @@ class TokenValidationService {
   constructor() {
     this.isValidating = false;
     this.lastValidation = null;
-    this.validationInterval = 60000; // Check every minute
-    this.graceInterval = 5000; // 5 seconds between checks minimum
+    this.validationInterval = 5 * 60 * 1000; // Check every 5 minutes instead of 1
+    this.graceInterval = 30000; // 30 seconds between checks
   }
 
   async validateToken(getAccessTokenSilently, isAuthenticated) {
-    // Prevent validation loops
     if (this.isValidating) return { isValid: true };
     
     const now = Date.now();
@@ -18,38 +17,46 @@ class TokenValidationService {
     }
 
     if (!isAuthenticated) {
-      return { isValid: true }; // Not logged in, no need to validate
+      return { isValid: true };
     }
 
     this.isValidating = true;
     this.lastValidation = now;
 
     try {
+      // First try with cache to avoid unnecessary API calls
       await getAccessTokenSilently({ 
-        cacheMode: 'off',
+        cacheMode: 'cache-only',
         timeoutInSeconds: 5 
       });
+      
       this.isValidating = false;
       return { isValid: true };
-    } catch (error) {
-      this.isValidating = false;
-      
-      // Check if it's a refresh token error
-      if (error.message?.includes('Missing Refresh Token') || 
-          error.error === 'login_required' ||
-          error.error === 'consent_required') {
-        return { 
-          isValid: false, 
-          error: 'Your session has expired',
-          requiresLogin: true
-        };
+    } catch (cacheError) {
+      // Only if cache fails, try without cache
+      try {
+        await getAccessTokenSilently({ 
+          timeoutInSeconds: 10 
+        });
+        this.isValidating = false;
+        return { isValid: true };
+      } catch (error) {
+        this.isValidating = false;
+        
+        if (error.message?.includes('Missing Refresh Token') || 
+            error.error === 'login_required' ||
+            error.error === 'consent_required' ||
+            error.error === 'invalid_grant') {
+          return { 
+            isValid: false, 
+            error: 'Your session has expired',
+            requiresLogin: true
+          };
+        }
+        
+        // Don't invalidate on network/timeout errors
+        return { isValid: true };
       }
-      
-      // Other errors - might be network issues
-      return { 
-        isValid: true, // Don't force logout on network errors
-        error: error.message 
-      };
     }
   }
 

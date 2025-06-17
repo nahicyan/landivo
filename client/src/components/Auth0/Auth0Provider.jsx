@@ -5,7 +5,7 @@ import { useNavigate } from 'react-router-dom';
 
 export const Auth0ProviderWithNavigate = ({ children }) => {
   const navigate = useNavigate();
-  
+
   // Log auth0 configuration on load (sanitized for security)
   useEffect(() => {
     console.log('Auth0 Provider Configuration:', {
@@ -21,9 +21,9 @@ export const Auth0ProviderWithNavigate = ({ children }) => {
   };
 
   // Ensure all required properties are present
-  if (!import.meta.env.VITE_AUTH0_DOMAIN || 
-      !import.meta.env.VITE_AUTH0_CLIENT_ID || 
-      !import.meta.env.VITE_AUTH0_AUDIENCE) {
+  if (!import.meta.env.VITE_AUTH0_DOMAIN ||
+    !import.meta.env.VITE_AUTH0_CLIENT_ID ||
+    !import.meta.env.VITE_AUTH0_AUDIENCE) {
     console.error('Auth0 configuration incomplete. Check your environment variables.');
     return (
       <div className="p-4 bg-red-50 border border-red-300 rounded-md mt-4">
@@ -35,20 +35,21 @@ export const Auth0ProviderWithNavigate = ({ children }) => {
     );
   }
 
-  return (
-    <Auth0Provider
-      domain={import.meta.env.VITE_AUTH0_DOMAIN}
-      clientId={import.meta.env.VITE_AUTH0_CLIENT_ID}
-      authorizationParams={{
-        redirect_uri: window.location.origin,
-        scope: "openid profile email offline_access", 
-        audience: import.meta.env.VITE_AUTH0_AUDIENCE
-      }}
-      cacheLocation="localstorage"
-      useRefreshTokens={true}
-      onRedirectCallback={onRedirectCallback}
-    >
-      {children}
-    </Auth0Provider>
-  );
+return (
+  <Auth0Provider
+    domain={import.meta.env.VITE_AUTH0_DOMAIN}
+    clientId={import.meta.env.VITE_AUTH0_CLIENT_ID}
+    authorizationParams={{
+      redirect_uri: window.location.origin,
+      scope: "openid profile email offline_access", 
+      audience: import.meta.env.VITE_AUTH0_AUDIENCE
+    }}
+    cacheLocation="localstorage"
+    useRefreshTokens={true}
+    useRefreshTokensFallback={true}
+    onRedirectCallback={onRedirectCallback}
+  >
+    {children}
+  </Auth0Provider>
+);
 };
