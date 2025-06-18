@@ -117,36 +117,41 @@ export default function CreateListForm({
     return errors;
   };
 
-  // Handle form submission
-  const handleSubmit = async () => {
-    // Validate form
-    const validationErrors = validateForm();
-    
-    if (validationErrors.length > 0) {
-      validationErrors.forEach(error => toast.error(error));
-      return;
-    }
+// Handle form submission
+const handleSubmit = async () => {
+  // Validate form
+  const validationErrors = validateForm();
+  
+  if (validationErrors.length > 0) {
+    validationErrors.forEach(error => toast.error(error));
+    return;
+  }
 
-    try {
-      // If importing buyers, include them in the list data
-      const listData = importedBuyers && importedBuyers.length > 0
-        ? {
-            name: formData.name,
-            description: formData.description,
-            criteria: formData.criteria, // Include criteria even when importing
-            buyerIds: importedBuyers.map(b => b.id)
-          }
-        : {
-            ...formData,
-            buyerIds: []
-          };
-      
-      await onCreateList(listData);
-      handleOpenChange(false);
-    } catch (error) {
-      console.error("Create list error:", error);
-    }
-  };
+  try {
+    // Determine source based on whether buyers are imported from CSV
+    const source = importedBuyers && importedBuyers.length > 0 ? "CSV" : "Manual";
+    
+    // If importing buyers, include them in the list data
+    const listData = importedBuyers && importedBuyers.length > 0
+      ? {
+          name: formData.name,
+          description: formData.description,
+          criteria: formData.criteria,
+          source: source, // Add source field
+          buyerIds: importedBuyers.map(b => b.id)
+        }
+      : {
+          ...formData,
+          source: source, // Add source field
+          buyerIds: []
+        };
+    
+    await onCreateList(listData);
+    handleOpenChange(false);
+  } catch (error) {
+    console.error("Create list error:", error);
+  }
+};
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>

@@ -222,7 +222,7 @@ export const getEmailList = asyncHandler(async (req, res) => {
 
 // Create a new email list
 export const createEmailList = asyncHandler(async (req, res) => {
-  const { name, description, criteria, buyerIds = [], color } = req.body;
+  const { name, description, criteria, buyerIds = [], color, source } = req.body;
 
   if (!name) {
     return res.status(400).json({ message: "List name is required" });
@@ -239,6 +239,7 @@ export const createEmailList = asyncHandler(async (req, res) => {
         description,
         criteria,
         color,
+        source: source || "Manual", // Add source field with default fallback
         createdBy: req.userId,
         buyerMemberships: {
           create: buyerIdsArray.map(buyerId => ({

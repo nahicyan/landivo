@@ -154,6 +154,7 @@ export default function EditListForm({
                   className="border-[#324c48]/30"
                 />
               </div>
+              
               <div className="space-y-2">
                 <Label htmlFor="edit-description">Description</Label>
                 <Textarea
@@ -162,6 +163,16 @@ export default function EditListForm({
                   value={formData.description}
                   onChange={handleFormChange}
                   className="border-[#324c48]/30"
+                />
+              </div>
+
+              {/* Source field - read-only */}
+              <div className="space-y-2">
+                <Label>Source</Label>
+                <Input
+                  value={selectedList?.source || "Unknown"}
+                  disabled
+                  className="border-[#324c48]/30 bg-gray-50 text-gray-600"
                 />
               </div>
               
