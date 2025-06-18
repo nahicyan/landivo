@@ -1,5 +1,8 @@
+// server/controllers/buyerCntrl.js
 import asyncHandler from "express-async-handler";
 import { prisma } from "../config/prismaConfig.js";
+// Add this import
+import { handleVipBuyerEmailList } from "../services/buyer/vipBuyerEmailListService.js";
 
 /**
  * Create a VIP buyer with Auth0 ID
@@ -52,6 +55,27 @@ export const createVipBuyer = asyncHandler(async (req, res) => {
           auth0Id  // Add Auth0 user ID to the buyer record
         },
       });
+    }
+
+    // Handle VIP buyer email list management for each preferred area
+    try {
+      const emailListResults = [];
+      
+      for (const area of preferredAreas) {
+        const emailListResult = await handleVipBuyerEmailList(
+          buyer, 
+          "VIP", 
+          area, 
+          buyerType
+        );
+        emailListResults.push(emailListResult);
+        console.log(`VIP email list result for ${area}:`, emailListResult);
+      }
+      
+      console.log("All VIP email list management completed:", emailListResults);
+    } catch (emailListError) {
+      console.error("VIP email list management failed:", emailListError);
+      // Don't fail registration if email list fails
     }
 
     res.status(201).json({
