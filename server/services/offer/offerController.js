@@ -15,6 +15,8 @@ import {
   updatedOfferTemplate,
   lowOfferTemplate
 } from "./offerEmailService.js";
+// Add this import
+import { handleOfferEmailList } from "./offerEmailListService.js";
 
 /**
  * Make an offer on a property
@@ -40,7 +42,7 @@ export const makeOffer = asyncHandler(async (req, res) => {
       buyerType, 
       firstName, 
       lastName,
-      auth0Id  // Pass Auth0 ID if provided in request body
+      auth0Id
     });
 
     // 3. Retrieve property details for notifications
@@ -62,6 +64,14 @@ export const makeOffer = asyncHandler(async (req, res) => {
           req.userId || null,
           req.user?.name || null
         );
+
+        // Handle email list management for updated offers
+        try {
+          await handleOfferEmailList(buyer, property, "Offer");
+        } catch (emailListError) {
+          console.error("Email list management failed:", emailListError);
+          // Don't fail the offer update if email list fails
+        }
 
         // Send response first
         res.status(200).json({
@@ -93,7 +103,16 @@ export const makeOffer = asyncHandler(async (req, res) => {
       req.user?.name || null
     );
 
-    // 6. Check if the offer is below the minimum price
+    // 6. Handle email list management for new offers
+    try {
+      const emailListResult = await handleOfferEmailList(buyer, property, "Offer");
+      console.log("Email list management result:", emailListResult);
+    } catch (emailListError) {
+      console.error("Email list management failed:", emailListError);
+      // Don't fail the offer creation if email list fails
+    }
+
+    // 7. Check if the offer is below the minimum price
     const isBelowMinimum = checkOfferBelowMinimum(offeredPrice, property);
     
     if (isBelowMinimum) {
@@ -111,13 +130,13 @@ export const makeOffer = asyncHandler(async (req, res) => {
       return;
     }
 
-    // 7. Send response for successful offer submission
+    // 8. Send response for successful offer submission
     res.status(201).json({
       message: "Offer created successfully.",
       offer: newOffer,
     });
 
-    // 8. Send new offer notification in the background
+    // 9. Send new offer notification in the background
     await sendOfferNotification(
       "New Offer Submitted",
       newOfferTemplate(property, buyer, offeredPrice)

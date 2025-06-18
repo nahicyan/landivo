@@ -9,7 +9,13 @@ import {
   getRecentOfferActivity
 } from './offerController.js';
 
-// Export all controller functions from a single point
+// For Email List
+import { 
+  handleOfferEmailList, 
+  getOfferEmailLists 
+} from './offerEmailListService.js';
+
+// Export all controller functions and services
 export {
   makeOffer,
   getOffersOnProperty,
@@ -17,5 +23,8 @@ export {
   updateOfferStatus,
   getOfferHistory,
   getAllOffers,
-  getRecentOfferActivity
+  getRecentOfferActivity,
+  // Add these exports
+  handleOfferEmailList,
+  getOfferEmailLists
 };
