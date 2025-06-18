@@ -262,6 +262,7 @@ model EmailList {
   id            String    @id @default(auto()) @map("_id") @db.ObjectId
   name          String
   description   String?
+  source        String
   createdBy     String?   @db.ObjectId
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
