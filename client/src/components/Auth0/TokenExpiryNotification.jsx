@@ -60,7 +60,7 @@ const TokenExpiryNotification = ({ onClose }) => {
           <Button
             size="sm"
             onClick={handleRelogin}
-            className="bg-primary hover:bg-primary-600"
+            className="bg-[#3f4f24] hover:bg-[#27423e]"
           >
             <LogIn className="mr-2 h-4 w-4" />
             Login Now
