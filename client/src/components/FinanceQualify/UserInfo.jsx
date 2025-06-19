@@ -10,6 +10,13 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
   Dialog,
   DialogContent,
   DialogHeader,
@@ -24,7 +31,8 @@ export default function UserInfo({ surveyData, updateSurveyData, onSubmit, onBac
     firstName: surveyData.firstName || "",
     lastName: surveyData.lastName || "",
     email: surveyData.email || "",
-    phone: surveyData.phone || ""
+    phone: surveyData.phone || "",
+    buyerType: surveyData.buyerType || ""  // Add buyerType
   });
 
   // Track if form has been populated to prevent multiple API calls
@@ -45,7 +53,8 @@ export default function UserInfo({ surveyData, updateSurveyData, onSubmit, onBac
       firstName: surveyData.firstName || "",
       lastName: surveyData.lastName || "",
       email: surveyData.email || "",
-      phone: surveyData.phone || ""
+      phone: surveyData.phone || "",
+      buyerType: surveyData.buyerType || ""  // Add buyerType
     });
   }, [surveyData]);
 
@@ -83,6 +92,12 @@ export default function UserInfo({ surveyData, updateSurveyData, onSubmit, onBac
       
       if (vipBuyerData.phone && !newData.phone) {
         newData.phone = formatPhoneNumber(vipBuyerData.phone);
+        dataChanged = true;
+      }
+      
+      // Add buyerType population from VIP data
+      if (vipBuyerData.buyerType && !newData.buyerType) {
+        newData.buyerType = vipBuyerData.buyerType;
         dataChanged = true;
       }
     }
@@ -145,6 +160,17 @@ export default function UserInfo({ surveyData, updateSurveyData, onSubmit, onBac
     updateSurveyData(name, value);
   };
 
+  // Handle buyer type selection
+  const handleBuyerTypeChange = (value) => {
+    setFormData(prev => ({
+      ...prev,
+      buyerType: value
+    }));
+    
+    // Update parent state
+    updateSurveyData("buyerType", value);
+  };
+
   // Phone number validation using libphonenumber-js
   const validatePhone = (phoneInput) => {
     try {
@@ -201,11 +227,19 @@ export default function UserInfo({ surveyData, updateSurveyData, onSubmit, onBac
       return;
     }
     
+    // Validate buyer type
+    if (!formData.buyerType) {
+      setDialogMessage("Please select a buyer type.");
+      setDialogOpen(true);
+      return;
+    }
+    
     // Update parent state with all values
     updateSurveyData("firstName", formData.firstName);
     updateSurveyData("lastName", formData.lastName);
     updateSurveyData("email", formData.email);
     updateSurveyData("phone", formData.phone);
+    updateSurveyData("buyerType", formData.buyerType);
     
     // Move to the next step after a short delay to ensure state updates are processed
     setTimeout(() => {
@@ -221,6 +255,7 @@ export default function UserInfo({ surveyData, updateSurveyData, onSubmit, onBac
       lastName: "Last Name",
       email: "Email Address",
       phone: "Phone Number (US only)",
+      buyerType: "Buyer Type",
       submit: "Submit Application",
       back: "Back",
       warning: "Warning",
@@ -232,78 +267,113 @@ export default function UserInfo({ surveyData, updateSurveyData, onSubmit, onBac
       lastName: "Apellido",
       email: "Correo electrónico",
       phone: "Número de teléfono (solo EE.UU.)",
+      buyerType: "Tipo de Comprador",
       submit: "Enviar solicitud",
       back: "Atrás",
       warning: "Advertencia",
-      okay: "Aceptar"
+      okay: "OK"
     }
   };
 
-  // Get translations based on selected language
-  const t = translations[surveyData.language || "en"];
+  // Use the appropriate translation based on the selected language
+  const t = translations[surveyData.language || 'en'];
 
   return (
-    <Card className="border-none shadow-none bg-transparent">
-      <CardContent className="p-0">
-        <div className="text-center">
-          <h2 className="text-2xl font-semibold text-[#324c48] mb-6">
-            {t.title}
-          </h2>
-          
-          <form onSubmit={handleSubmit} className="space-y-4 max-w-md mx-auto">
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div className="space-y-2 text-left">
-                <Label htmlFor="firstName" className="text-[#324c48]">{t.firstName}</Label>
+    <Card className="max-w-2xl mx-auto border-[#324c48]/20 shadow-lg bg-white">
+      <CardContent className="p-8">
+        <div className="mb-8">
+          <h2 className="text-3xl font-bold text-[#3f4f24] mb-2">{t.title}</h2>
+          <div className="h-1 w-20 bg-[#324c48] rounded-full"></div>
+        </div>
+        
+        <div className="space-y-6">
+          <form onSubmit={handleSubmit}>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+              <div>
+                <Label htmlFor="firstName" className="block mb-2 text-[#324c48] font-medium">
+                  {t.firstName} <span className="text-red-500">*</span>
+                </Label>
                 <Input
                   id="firstName"
                   name="firstName"
                   type="text"
+                  required
                   value={formData.firstName}
                   onChange={handleChange}
-                  className="border-[#c1d7d3] focus:border-[#324c48] focus:ring-[#324c48]"
-                  required
+                  className="w-full px-4 py-2 border border-[#324c48]/30 rounded-lg focus:ring-2 focus:ring-[#3f4f24] focus:border-transparent"
                 />
               </div>
               
-              <div className="space-y-2 text-left">
-                <Label htmlFor="lastName" className="text-[#324c48]">{t.lastName}</Label>
+              <div>
+                <Label htmlFor="lastName" className="block mb-2 text-[#324c48] font-medium">
+                  {t.lastName} <span className="text-red-500">*</span>
+                </Label>
                 <Input
                   id="lastName"
                   name="lastName"
                   type="text"
+                  required
                   value={formData.lastName}
                   onChange={handleChange}
-                  className="border-[#c1d7d3] focus:border-[#324c48] focus:ring-[#324c48]"
-                  required
+                  className="w-full px-4 py-2 border border-[#324c48]/30 rounded-lg focus:ring-2 focus:ring-[#3f4f24] focus:border-transparent"
                 />
               </div>
             </div>
             
-            <div className="space-y-2 text-left">
-              <Label htmlFor="email" className="text-[#324c48]">{t.email}</Label>
+            <div className="mb-6">
+              <Label htmlFor="email" className="block mb-2 text-[#324c48] font-medium">
+                {t.email} <span className="text-red-500">*</span>
+              </Label>
               <Input
                 id="email"
                 name="email"
                 type="email"
+                required
                 value={formData.email}
                 onChange={handleChange}
-                className="border-[#c1d7d3] focus:border-[#324c48] focus:ring-[#324c48]"
-                required
+                className="w-full px-4 py-2 border border-[#324c48]/30 rounded-lg focus:ring-2 focus:ring-[#3f4f24] focus:border-transparent"
               />
             </div>
             
-            <div className="space-y-2 text-left">
-              <Label htmlFor="phone" className="text-[#324c48]">{t.phone}</Label>
-              <Input
-                id="phone"
-                name="phone"
-                type="tel"
-                placeholder="(555) 555-5555"
-                value={formData.phone}
-                onChange={handlePhoneChange}
-                className="border-[#c1d7d3] focus:border-[#324c48] focus:ring-[#324c48]"
-                required
-              />
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+              <div>
+                <Label htmlFor="phone" className="block mb-2 text-[#324c48] font-medium">
+                  {t.phone} <span className="text-red-500">*</span>
+                </Label>
+                <Input
+                  id="phone"
+                  name="phone"
+                  type="tel"
+                  required
+                  value={formData.phone}
+                  onChange={handlePhoneChange}
+                  placeholder="(555) 555-5555"
+                  className="w-full px-4 py-2 border border-[#324c48]/30 rounded-lg focus:ring-2 focus:ring-[#3f4f24] focus:border-transparent"
+                />
+              </div>
+              
+              <div>
+                <Label htmlFor="buyerType" className="block mb-2 text-[#324c48] font-medium">
+                  {t.buyerType} <span className="text-red-500">*</span>
+                </Label>
+                <Select
+                  value={formData.buyerType}
+                  onValueChange={handleBuyerTypeChange}
+                  required
+                >
+                  <SelectTrigger className="w-full px-4 py-2 border border-[#324c48]/30 rounded-lg focus:ring-2 focus:ring-[#3f4f24] focus:border-transparent">
+                    <SelectValue placeholder="Select buyer type" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="CashBuyer">Cash Buyer</SelectItem>
+                    <SelectItem value="Builder">Builder</SelectItem>
+                    <SelectItem value="Developer">Developer</SelectItem>
+                    <SelectItem value="Realtor">Realtor</SelectItem>
+                    <SelectItem value="Investor">Investor</SelectItem>
+                    <SelectItem value="Wholesaler">Wholesaler</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
             
             <div className="flex justify-between mt-8">
@@ -327,7 +397,7 @@ export default function UserInfo({ surveyData, updateSurveyData, onSubmit, onBac
         </div>
       </CardContent>
 
-      {/* Dialog for phone validation errors */}
+      {/* Dialog for validation errors */}
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
         <DialogContent className="bg-[#FFF] text-[#050002] border border-[#405025]/30 shadow-lg">
           <DialogHeader>

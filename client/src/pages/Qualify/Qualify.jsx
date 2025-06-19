@@ -104,6 +104,7 @@ export default function Qualify() {
     lastName: "",
     email: "",
     phone: "",
+    buyerType: "",
   });
 
   // Fetch property data if propertyId is available
@@ -230,6 +231,7 @@ const handleSubmitSurvey = async () => {
       lastName: surveyData.lastName,
       email: surveyData.email,
       phone: surveyData.phone,
+      buyerType: surveyData.buyerType,
       
       // Property Details
       propertyAddress: surveyData.propertyData?.streetAddress || '',
