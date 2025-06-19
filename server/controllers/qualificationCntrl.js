@@ -2,6 +2,7 @@
 import asyncHandler from "express-async-handler";
 import { prisma } from "../config/prismaConfig.js";
 import nodemailer from "nodemailer";
+import { handleFinanceQualificationEmailList } from "../services/qualification/financeQualificationEmailListService.js";
 
 // Create a new qualification entry
 export const createQualification = asyncHandler(async (req, res) => {
@@ -136,6 +137,27 @@ export const createQualification = asyncHandler(async (req, res) => {
       }
     });
 
+    // Handle finance qualification email list management
+    try {
+      // Get property data - using AREA field, not city
+      const property = await prisma.residency.findUnique({
+        where: { id: propertyId },
+        select: { area: true, city: true, state: true, id: true }
+      });
+
+      if (property && buyer) {
+        const emailListResult = await handleFinanceQualificationEmailList(
+          buyer,
+          property,
+          "Finance Qualification"
+        );
+        console.log("Finance qualification email list result:", emailListResult);
+      }
+    } catch (emailListError) {
+      console.error("Finance qualification email list management failed:", emailListError);
+      // Don't fail qualification if email list fails
+    }
+
     // Send email notification to administrators
     sendQualificationEmail(qualification);
 
@@ -159,6 +181,7 @@ export const createQualification = asyncHandler(async (req, res) => {
     });
   }
 });
+
 
 /**
  * Find existing buyer or create a new one
