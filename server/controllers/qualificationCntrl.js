@@ -38,6 +38,7 @@ export const createQualification = asyncHandler(async (req, res) => {
       lastName,
       email,
       phone,
+      buyerType,
       auth0Id,
       // Property info
       propertyAddress,
@@ -55,7 +56,7 @@ export const createQualification = asyncHandler(async (req, res) => {
       firstName,
       lastName,
       auth0Id,
-      buyerType: null // Default to null for qualification leads
+      buyerType
     });
     
     console.log(`Qualification for buyer: ${buyer.id}, ${buyer.firstName} ${buyer.lastName}`);
