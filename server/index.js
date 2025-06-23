@@ -18,6 +18,13 @@ import { settingsRoute } from "./routes/settingsRoute.js";
 import { visitorRoute } from "./routes/visitorRoute.js";
 import { initScheduledTasks } from "./services/scheduledTasks.js";
 
+// Email campaign functionality
+import { emailCampaignRoute } from "./routes/emailCampaignRoute.js";
+import { emailTemplateRoute } from "./routes/emailTemplateRoute.js";
+import { emailTrackingRoute } from "./routes/emailTrackingRoute.js";
+import { emailAutomationRoute } from "./routes/emailAutomationRoute.js";
+import { initEmailScheduler } from "./services/emailScheduler.js";
+
 const app = express();
 const PORT = process.env.PORT || 8200;
 
@@ -39,7 +46,7 @@ app.use(
 
 // CORS headers
 app.use((req, res, next) => {
-  res.header("Access-Control-Allow-Origin", "https://landivo.com"); // Fixed origin
+  res.header("Access-Control-Allow-Origin", "https://landivo.com");
   res.header("Access-Control-Allow-Credentials", "true");
   res.header("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS");
   res.header("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept, Authorization");
@@ -64,6 +71,12 @@ app.use("/api/property-rows", propertyRowRoute);
 app.use("/api/settings", settingsRoute);
 app.use("/api/visitors", visitorRoute);
 
+// Add email campaign routes
+app.use("/api/email-campaigns", emailCampaignRoute);
+app.use("/api/email-templates", emailTemplateRoute);
+app.use("/api/email-tracking", emailTrackingRoute);
+app.use("/api/email-automation", emailAutomationRoute);
+
 // Auth test route
 app.get("/auth/test-jwt", jwtCheck, extractUserFromToken, (req, res) => {
   console.log("Authenticated user:", req.user);
@@ -75,6 +88,12 @@ app.get("/auth/test-jwt", jwtCheck, extractUserFromToken, (req, res) => {
 
 // Initialize scheduled tasks
 initScheduledTasks();
+
+// Initialize email scheduler
+if (process.env.NODE_ENV !== 'test') {
+  initEmailScheduler();
+  console.log('Email scheduler initialized');
+}
 
 // Start the server
 app.listen(PORT, () => {

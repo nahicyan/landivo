@@ -23,6 +23,11 @@ model User {
   lastLoginAt      DateTime?
   loginCount       Int         @default(0)
 
+    // Email marketing relations
+  emailCampaigns     EmailCampaign[]     @relation("UserEmailCampaigns")
+  emailTemplates     EmailTemplate[]     @relation("UserEmailTemplates")
+  automationRules    EmailAutomationRule[] @relation("UserEmailAutomation")
+
   // Existing relations and fields
   createdResidencies   Residency[]      @relation("CreatedByRelation")
   updatedResidencies   Residency[]      @relation("UpdatedByRelation")
@@ -172,6 +177,13 @@ model Residency {
   // Miscellaneous
   viewCount Int?    @default(0) // View count for unique views
 
+  // Email marketing relations
+  emailCampaigns     EmailCampaign[]     @relation("PropertyEmailCampaigns")
+  
+  // Email notification settings for properties
+  autoNotifyOnUpload Boolean @default(false)
+  autoNotifyOnPriceChange Boolean @default(false)
+
   // Timestamps
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -240,6 +252,17 @@ model Buyer {
   emailStatus           String?     // "available" or "unsubscribe"
   emailPermissionStatus String?
   emailListMemberships  BuyerEmailList[] @relation("BuyerEmailLists")
+
+  // Email marketing relations
+  campaignRecipients CampaignRecipient[] @relation("BuyerCampaignRecipients")
+  emailTrackingEvents EmailTracking[]    @relation("BuyerEmailTracking")
+  
+  // Email preferences
+  emailOptIn         Boolean @default(true)
+  emailFrequency     EmailFrequency @default(ALL)
+  lastEmailSent      DateTime?
+  emailEngagementScore Float? // 0-100 score based on email interactions
+
   
   // Audit fields
   createdById    String?         @db.ObjectId
@@ -267,6 +290,13 @@ model EmailList {
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
   lastEmailDate DateTime?
+  campaigns          String[] @db.ObjectId // Campaign IDs that used this list
+  
+  // Email list performance tracking
+  lastCampaignDate   DateTime?
+  totalEmailsSent    Int @default(0)
+  averageOpenRate    Float? // Percentage
+  averageClickRate   Float? // Percentage
 
   // Criteria for automatic membership
   criteria Json?
@@ -581,4 +611,255 @@ model VisitorStat {
   deviceBreakdown Json?
   createdAt       DateTime  @default(now())
   updatedAt       DateTime  @updatedAt
+}
+
+
+//---------------------- Email Marketing Models ----------------------//
+
+// Email Campaign Model
+model EmailCampaign {
+  id             String   @id @default(auto()) @map("_id") @db.ObjectId
+  userId         String   @db.ObjectId
+  user           User     @relation("UserEmailCampaigns", fields: [userId], references: [id])
+  propertyId     String?  @db.ObjectId
+  property       Residency? @relation("PropertyEmailCampaigns", fields: [propertyId], references: [id])
+  
+  name           String
+  subject        String
+  fromName       String
+  fromEmail      String
+  
+  templateId     String   @db.ObjectId
+  template       EmailTemplate @relation(fields: [templateId], references: [id])
+  
+  campaignType   CampaignType @default(MANUAL)
+  status         CampaignStatus @default(DRAFT)
+  
+  // Targeting
+  targetLists    String[] @db.ObjectId // References to EmailList IDs
+  
+  // Scheduling
+  scheduledAt    DateTime?
+  sentAt         DateTime?
+  completedAt    DateTime?
+  
+  // Metrics (calculated fields)
+  totalSent      Int?     @default(0)
+  totalFailed    Int?     @default(0)
+  
+  // Error handling
+  error          String?
+  
+  // Relations
+  recipients     CampaignRecipient[]
+  tracking       EmailTracking[]
+  
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  
+  @@index([userId, status])
+  @@index([scheduledAt])
+  @@index([campaignType])
+}
+
+// Email Template Model
+model EmailTemplate {
+  id             String   @id @default(auto()) @map("_id") @db.ObjectId
+  userId         String?  @db.ObjectId
+  user           User?    @relation("UserEmailTemplates", fields: [userId], references: [id])
+  
+  name           String
+  description    String?
+  category       String   @default("General")
+  subject        String
+  htmlContent    String
+  variables      String[] // Array of variable names used in template
+  
+  isActive       Boolean  @default(true)
+  isSystemTemplate Boolean @default(false) // System-provided templates
+  
+  // Relations
+  campaigns      EmailCampaign[]
+  automationRules EmailAutomationRule[]
+  
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  
+  @@index([userId, category])
+  @@index([isSystemTemplate, isActive])
+}
+
+// Campaign Recipients Model
+model CampaignRecipient {
+  id         String   @id @default(auto()) @map("_id") @db.ObjectId
+  campaignId String   @db.ObjectId
+  campaign   EmailCampaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  buyerId    String   @db.ObjectId
+  buyer      Buyer    @relation("BuyerCampaignRecipients", fields: [buyerId], references: [id])
+  
+  status     RecipientStatus @default(PENDING)
+  sentAt     DateTime?
+  error      String?
+  
+  createdAt  DateTime @default(now())
+  
+  @@unique([campaignId, buyerId])
+  @@index([campaignId])
+  @@index([buyerId])
+  @@index([status])
+}
+
+// Email Tracking Model
+model EmailTracking {
+  id             String   @id @default(auto()) @map("_id") @db.ObjectId
+  campaignId     String   @db.ObjectId
+  campaign       EmailCampaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  recipientId    String   @db.ObjectId
+  recipient      Buyer    @relation("BuyerEmailTracking", fields: [recipientId], references: [id])
+  
+  eventType      EmailEventType
+  eventTimestamp DateTime @default(now())
+  
+  // Tracking metadata
+  ipAddress      String?
+  userAgent      String?
+  deviceType     DeviceType?
+  emailClient    String?
+  clickUrl       String?
+  locationData   Json?
+  metadata       Json?
+  
+  createdAt      DateTime @default(now())
+  
+  @@index([campaignId, eventType])
+  @@index([recipientId, eventType])
+  @@index([eventTimestamp])
+  @@index([eventType])
+}
+
+// Email Automation Rule Model
+model EmailAutomationRule {
+  id               String   @id @default(auto()) @map("_id") @db.ObjectId
+  userId           String   @db.ObjectId
+  user             User     @relation("UserEmailAutomation", fields: [userId], references: [id])
+  
+  name             String
+  description      String?
+  triggerType      TriggerType
+  triggerConditions Json    // Flexible conditions storage
+  
+  templateId       String   @db.ObjectId
+  template         EmailTemplate @relation(fields: [templateId], references: [id])
+  
+  targetLists      String[] @db.ObjectId // References to EmailList IDs
+  
+  // Execution settings
+  isActive         Boolean  @default(true)
+  delay            Int      @default(0) // Delay in specified unit
+  delayUnit        DelayUnit @default(MINUTES)
+  
+  // Relations
+  executionHistory AutomationExecution[]
+  
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+  
+  @@index([userId, triggerType])
+  @@index([isActive])
+  @@index([triggerType])
+}
+
+// Automation Execution History Model
+model AutomationExecution {
+  id             String   @id @default(auto()) @map("_id") @db.ObjectId
+  ruleId         String   @db.ObjectId
+  rule           EmailAutomationRule @relation(fields: [ruleId], references: [id], onDelete: Cascade)
+  
+  triggeredBy    Json     // Data that triggered the automation
+  recipientCount Int      @default(0)
+  status         ExecutionStatus @default(PENDING)
+  error          String?
+  
+  executedAt     DateTime @default(now())
+  
+  @@index([ruleId])
+  @@index([executedAt])
+  @@index([status])
+}
+
+//---------------------- Enums ----------------------//
+
+enum CampaignType {
+  MANUAL
+  AUTOMATED
+  TRIGGERED
+}
+
+enum CampaignStatus {
+  DRAFT
+  SCHEDULED
+  QUEUED
+  SENDING
+  COMPLETED
+  PAUSED
+  FAILED
+}
+
+enum RecipientStatus {
+  PENDING
+  SENT
+  DELIVERED
+  FAILED
+  BOUNCED
+}
+
+enum EmailEventType {
+  SENT
+  DELIVERED
+  OPENED
+  CLICKED
+  BOUNCED
+  UNSUBSCRIBED
+  SPAM
+  DEFERRED
+  FAILED
+}
+
+enum DeviceType {
+  MOBILE
+  DESKTOP
+  TABLET
+  UNKNOWN
+}
+
+enum TriggerType {
+  BUYER_REGISTERED
+  PROPERTY_UPLOADED
+  PROPERTY_PRICE_DROP
+  PROPERTY_VIEWED
+  BUYER_INACTIVE
+  OFFER_SUBMITTED
+  DEAL_CLOSED
+  SCHEDULED
+}
+
+enum DelayUnit {
+  MINUTES
+  HOURS
+  DAYS
+}
+
+enum ExecutionStatus {
+  PENDING
+  QUEUED
+  COMPLETED
+  FAILED
+}
+
+enum EmailFrequency {
+  ALL
+  DAILY
+  WEEKLY
+  MONTHLY
+  NONE
 }
