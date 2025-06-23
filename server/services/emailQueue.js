@@ -1,6 +1,6 @@
 // server/services/emailQueue.js
 import Bull from 'bull';
-import prisma from '../config/prisma.js';
+import { prisma } from '../config/prismaConfig.js';
 import { sendBulkEmails } from './emailService.js';
 
 // Create email queue

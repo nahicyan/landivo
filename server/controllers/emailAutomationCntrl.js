@@ -1,6 +1,6 @@
 // server/controllers/emailAutomationCntrl.js
 import asyncHandler from "express-async-handler";
-import prisma from "../config/prisma.js";
+import { prisma } from '../config/prismaConfig.js';
 import { queueBulkEmails } from "../services/emailQueue.js";
 import { sendSingleEmail } from "../services/emailService.js";
 

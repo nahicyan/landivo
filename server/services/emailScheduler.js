@@ -1,6 +1,6 @@
 // server/services/emailScheduler.js
 import cron from 'node-cron';
-import prisma from '../config/prisma.js';
+import { prisma } from '../config/prismaConfig.js';
 import { queueEmailCampaign } from './emailQueue.js';
 import { executeAutomationRule } from '../controllers/emailAutomationCntrl.js';
 import { sendWelcomeEmail } from './emailService.js';

@@ -1,7 +1,7 @@
 // server/services/emailService.js
 import sgMail from '@sendgrid/mail';
 import Handlebars from 'handlebars';
-import prisma from '../config/prisma.js';
+import { prisma } from '../config/prismaConfig.js';
 
 // Initialize SendGrid
 sgMail.setApiKey(process.env.SENDGRID_API_KEY);

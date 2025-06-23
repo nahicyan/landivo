@@ -1,6 +1,6 @@
 // server/controllers/emailTrackingCntrl.js
 import asyncHandler from "express-async-handler";
-import prisma from "../config/prisma.js";
+import { prisma } from '../config/prismaConfig.js';
 import { decodeTrackingToken, verifyUnsubscribeToken, handleSendGridWebhook } from "../services/emailService.js";
 
 /**
