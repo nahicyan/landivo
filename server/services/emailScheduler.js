@@ -69,7 +69,7 @@ async function processScheduledCampaigns() {
     // Find campaigns that should be sent now
     const campaignsToSend = await prisma.emailCampaign.findMany({
       where: {
-        status: 'scheduled',
+        status: 'SCHEDULED',
         scheduledAt: {
           lte: now
         }
@@ -93,7 +93,7 @@ async function processScheduledCampaigns() {
         // Update status to queued
         await prisma.emailCampaign.update({
           where: { id: campaign.id },
-          data: { status: 'queued' }
+          data: { status: 'QUEUED' }
         });
 
         // Queue the campaign
@@ -107,7 +107,7 @@ async function processScheduledCampaigns() {
         await prisma.emailCampaign.update({
           where: { id: campaign.id },
           data: { 
-            status: 'failed',
+            status: 'FAILED',
             error: error.message
           }
         });
