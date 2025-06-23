@@ -64,7 +64,7 @@ import "react-toastify/dist/ReactToastify.css";
 import TrafficPage from "./pages/Traffic/TrafficPage";
 import { TokenValidationProvider } from "./components/Auth0/TokenValidationProvider";
 import AuthErrorBoundary from "./components/Auth0/AuthErrorBoundary";
-
+import AdminEmailMarketing from "./pages/AdminEmailMarketing/AdminEmailMarketing";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -280,6 +280,10 @@ function App() {
                                 {/* Qualification dashboard */}
                                 <Route path="financing" element={<AdminFinancing />} />
                                 <Route path="financing/applications" element={<OfferTable />} />
+
+                                 {/* Email Marketing */}
+                                 <Route path="email-marketing" element={<AdminEmailMarketing />} />
+                                 
 
                                 {/* Settings */}
                                 <Route path="settings" element={<AdminSettings />} />

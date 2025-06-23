@@ -18,7 +18,9 @@ import {
   DollarSign,
   Settings,
   ChevronRight,
-  HelpCircle
+  HelpCircle,
+  MailIcon,
+  SendIcon
 } from "lucide-react";
 
 export default function AdminLayout() {
@@ -55,6 +57,7 @@ export default function AdminLayout() {
     {
       name: "Communications",
       items: [
+        { text: "Email Marketing", icon: <MailIcon className="h-5 w-5" />, path: "/admin/email-marketing" },
         { text: "Email Lists", icon: <ListChecks className="h-5 w-5" />, path: "/admin/email-lists" },
       ]
     },
