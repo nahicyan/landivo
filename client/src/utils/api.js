@@ -696,7 +696,6 @@ export const testSmtpConnection = async (smtpData) => {
   }
 };
 
-
 /**
  * Get visitor statistics for dashboard
  * @param {Object} options - Query options
