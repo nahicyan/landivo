@@ -15,7 +15,6 @@ export default function PropertyHeaderLeft({ propertyData }) {
             <span className="mx-1 text-gray-400">·</span>
             {" "}{propertyData.city},{" "}{propertyData.state}{" "}{propertyData.zip}
           </CardDescription> */}
-
           {/* Second Line: Title (Rich Text) */}
           <CardTitle
             className="text-xl sm:text-2xl text-gray-800 subpixel-antialiased font-normal"
@@ -23,53 +22,51 @@ export default function PropertyHeaderLeft({ propertyData }) {
           />
         </CardHeader>
       </Card>
-
-      {/* Tags */}
-      {(propertyData.ltag || propertyData.rtag) && (
-        <div className="flex items-center gap-3 px-4 py-2">
-          {propertyData.ltag && (
-            <Badge
-              className="
-                bg-[#d03c0b]
-                text-white
-                px-3
-                py-2
-                text-xs
-                font-semibold
-                uppercase
-                rounded-full
-                shadow-md
-                hover:bg-[#b5310a]
-                transition-shadow
-              "
-            >
-              {propertyData.ltag}
-            </Badge>
-          )}
-          {propertyData.rtag && (
-            <Badge
-              className="
-                bg-[#01783e]
-                text-white
-                px-3
-                py-2
-                text-xs
-                font-semibold
-                uppercase
-                rounded-full
-                shadow-md
-                hover:shadow-lg
-                transition-shadow
-              "
-            >
-              {propertyData.rtag}
-            </Badge>
-          )}
-          
-          {/* Quick Action - shown after all other tags with WRITE:PROPERTIES permission */}
-          <ActionTab propertyData={propertyData} />
-        </div>
-      )}
+      
+      {/* Tags and Actions - Always show container */}
+      <div className="flex items-center gap-3 px-4 py-2">
+        {propertyData.ltag && (
+          <Badge
+            className="
+              bg-[#d03c0b]
+              text-white
+              px-3
+              py-2
+              text-xs
+              font-semibold
+              uppercase
+              rounded-full
+              shadow-md
+              hover:bg-[#b5310a]
+              transition-shadow
+            "
+          >
+            {propertyData.ltag}
+          </Badge>
+        )}
+        {propertyData.rtag && (
+          <Badge
+            className="
+              bg-[#01783e]
+              text-white
+              px-3
+              py-2
+              text-xs
+              font-semibold
+              uppercase
+              rounded-full
+              shadow-md
+              hover:shadow-lg
+              transition-shadow
+            "
+          >
+            {propertyData.rtag}
+          </Badge>
+        )}
+        
+        {/* Quick Action - always shown */}
+        <ActionTab propertyData={propertyData} />
+      </div>
     </div>
   );
 }
