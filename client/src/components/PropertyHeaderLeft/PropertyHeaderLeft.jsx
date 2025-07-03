@@ -1,6 +1,7 @@
 import React from "react";
 import { Card, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import ActionTab from "@/components/ActionTab/ActionTab";
 
 export default function PropertyHeaderLeft({ propertyData }) {
   return (
@@ -64,6 +65,9 @@ export default function PropertyHeaderLeft({ propertyData }) {
               {propertyData.rtag}
             </Badge>
           )}
+          
+          {/* Quick Action - shown after all other tags with WRITE:PROPERTIES permission */}
+          <ActionTab propertyData={propertyData} />
         </div>
       )}
     </div>

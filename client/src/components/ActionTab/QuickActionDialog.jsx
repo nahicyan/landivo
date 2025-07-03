@@ -18,7 +18,7 @@ export default function QuickActionDialog({ isOpen, onClose, propertyData }) {
   const navigate = useNavigate();
 
   const handleEdit = () => {
-    navigate(`/property/edit/${propertyData.id}`);
+    navigate(`/admin/edit-property/${propertyData.id}`);
     onClose();
   };
 
