@@ -30,7 +30,7 @@ export default function ActionTab({ propertyData }) {
     navigate(`/admin/edit-property/${propertyData.id}`);
   };
   const handleCampaign = () => {
-    navigate(`Mailivo Campaign Link Using ${propertyData.id}`);
+    navigate(`http://localhost:3000/dashboard/campaigns/run/${propertyData.id}`);
   };
 
   const openDialog = (dialogType) => {
