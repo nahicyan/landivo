@@ -30,9 +30,13 @@ export default function ActionTab({ propertyData }) {
     navigate(`/admin/edit-property/${propertyData.id}`);
   };
   const handleCampaign = () => {
-    navigate(`http://localhost:3000/dashboard/campaigns/run/${propertyData.id}`);
+    const mailivoUrl =
+      import.meta.env.VITE_MAILIVO_URL || "http://localhost:3000";
+    window.open(
+      `${mailivoUrl}/dashboard/campaigns/run/${propertyData.id}`,
+      "_blank"
+    );
   };
-
   const openDialog = (dialogType) => {
     setActiveDialog(dialogType);
   };
