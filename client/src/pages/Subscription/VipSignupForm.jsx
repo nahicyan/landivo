@@ -44,6 +44,7 @@ export default function VipSignupForm() {
   
   // Form state
   const [formData, setFormData] = useState({
+    email: '', // Add email to form data
     firstName: '',
     lastName: '',
     phone: '',
@@ -53,6 +54,7 @@ export default function VipSignupForm() {
 
   // Form validation errors
   const [validationErrors, setValidationErrors] = useState({
+    email: '', // Add email validation
     firstName: '',
     lastName: '',
     phone: '',
@@ -66,47 +68,24 @@ export default function VipSignupForm() {
     const emailParam = searchParams.get('email');
     if (emailParam) {
       setEmail(emailParam);
-      
-      // Check for saved form data first - retrieve it but don't set it yet
-      const savedData = localStorage.getItem('vipSignupData');
-      let parsedData = null;
-      
-      if (savedData) {
-        try {
-          parsedData = JSON.parse(savedData);
-        } catch (e) {
-          console.error("Error parsing saved form data:", e);
-        }
-      }
-      
-      // Only use Auth0 data if we don't have saved form data
-      if (isAuthenticated && user && !parsedData) {
-        setFormData(prev => ({
-          ...prev,
-          firstName: user.given_name || user.name?.split(' ')[0] || '',
-          lastName: user.family_name || user.name?.split(' ').slice(1).join(' ') || '',
-        }));
-      }
-    } else {
-      // If no email, redirect back to homepage
-      navigate('/');
+      setFormData(prev => ({ ...prev, email: emailParam }));
     }
-  }, [location, navigate, isAuthenticated, user]);
+  }, [location]);
 
-  // Handle input changes
+  // Update handleInputChange to include email
   const handleInputChange = (e) => {
     const { name, value } = e.target;
+    setFormData(prev => ({ ...prev, [name]: value }));
     
-    // Clear validation error when user starts typing
-    setValidationErrors(prev => ({
-      ...prev,
-      [name]: ''
-    }));
-
-    setFormData(prev => ({
-      ...prev,
-      [name]: value
-    }));
+    // Update email state if email field changes
+    if (name === 'email') {
+      setEmail(value);
+    }
+    
+    // Clear validation error for this field
+    if (validationErrors[name]) {
+      setValidationErrors(prev => ({ ...prev, [name]: '' }));
+    }
   };
 
   // Handle buyer type selection
@@ -147,69 +126,25 @@ export default function VipSignupForm() {
     });
   };
 
-  // Phone number validation based on Offer.jsx implementation
-  const validatePhone = (phoneInput) => {
-    try {
-      // Try to parse the phone number using libphonenumber-js
-      const phoneNumber = parsePhoneNumber(phoneInput, 'US');
-      return phoneNumber?.isValid();
-    } catch (error) {
-      console.error("Phone validation error:", error);
-      return false;
-    }
+  // Add email validation helper
+  const validateEmail = (email) => {
+    const re = /^(([^<>()[\]\\.,;:\s@"]+(\.[^<>()[\]\\.,;:\s@"]+)*)|(".+"))@((\[[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\])|(([a-zA-Z\-0-9]+\.)+[a-zA-Z]{2,}))$/;
+    return re.test(String(email).toLowerCase());
   };
 
-  // Handle phone number input specifically
-  const handlePhoneChange = (e) => {
-    // Get the raw input value
-    const rawInput = e.target.value;
-    
-    // Clear validation error when user starts typing
-    setValidationErrors(prev => ({
-      ...prev,
-      phone: ''
-    }));
-    
-    // Format the phone number
-    const formatted = formatPhoneNumber(rawInput);
-    
-    setFormData(prev => ({
-      ...prev,
-      phone: formatted
-    }));
-  };
-
-  // Format phone number as user types (matching implementation from Offer.jsx)
-  const formatPhoneNumber = (input) => {
-    // Strip all non-numeric characters
-    const digitsOnly = input.replace(/\D/g, '');
-    
-    // Format the number as user types
-    let formattedNumber = '';
-    if (digitsOnly.length === 0) {
-      return '';
-    } else if (digitsOnly.length <= 3) {
-      formattedNumber = digitsOnly;
-    } else if (digitsOnly.length <= 6) {
-      formattedNumber = `(${digitsOnly.slice(0, 3)}) ${digitsOnly.slice(3)}`;
-    } else {
-      formattedNumber = `(${digitsOnly.slice(0, 3)}) ${digitsOnly.slice(3, 6)}-${digitsOnly.slice(6, Math.min(10, digitsOnly.length))}`;
-    }
-    
-    return formattedNumber;
-  };
-
-  // Validate the entire form
+  // Update validateForm to include email validation
   const validateForm = () => {
-    const errors = {
-      firstName: '',
-      lastName: '',
-      phone: '',
-      buyerType: '',
-      preferredAreas: ''
-    };
-    
+    const errors = {};
     let isValid = true;
+
+    // Email validation
+    if (!email.trim()) {
+      errors.email = 'Email is required';
+      isValid = false;
+    } else if (!validateEmail(email)) {
+      errors.email = 'Please enter a valid email address';
+      isValid = false;
+    }
 
     // First name validation
     if (!formData.firstName.trim()) {
@@ -227,9 +162,17 @@ export default function VipSignupForm() {
     if (!formData.phone.trim()) {
       errors.phone = 'Phone number is required';
       isValid = false;
-    } else if (!validatePhone(formData.phone)) {
-      errors.phone = 'Please enter a valid phone number';
-      isValid = false;
+    } else {
+      try {
+        const phoneNumber = parsePhoneNumber(formData.phone, 'US');
+        if (!phoneNumber.isValid()) {
+          errors.phone = 'Please enter a valid phone number';
+          isValid = false;
+        }
+      } catch (err) {
+        errors.phone = 'Please enter a valid phone number';
+        isValid = false;
+      }
     }
 
     // Buyer type validation
@@ -240,7 +183,7 @@ export default function VipSignupForm() {
 
     // Preferred areas validation
     if (formData.preferredAreas.length === 0) {
-      errors.preferredAreas = 'Please select at least one area';
+      errors.preferredAreas = 'Please select at least one preferred area';
       isValid = false;
     }
 
@@ -251,103 +194,86 @@ export default function VipSignupForm() {
   // Handle form submission
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setError('');
-
-    // Validate form
+    
     if (!validateForm()) {
       return;
     }
 
+    // Check if user is authenticated
+    if (!isAuthenticated) {
+      // Save form data to localStorage before redirecting to Auth0
+      localStorage.setItem('vipSignupData', JSON.stringify({
+        ...formData,
+        email: email
+      }));
+      
+      loginWithRedirect({
+        authorizationParams: {
+          screen_hint: 'signup',
+          redirect_uri: `${window.location.origin}/vip-signup${email ? `?email=${encodeURIComponent(email)}` : ''}`
+        },
+        appState: { returnTo: `/vip-signup${email ? `?email=${encodeURIComponent(email)}` : ''}` }
+      });
+      return;
+    }
+
+    setLoading(true);
+    setError('');
+
     try {
-      setLoading(true);
-      
-      // If user is not authenticated, store form data in localStorage and redirect to Auth0 signup
-      if (!isAuthenticated) {
-        // Save form data to localStorage
-        localStorage.setItem('vipSignupData', JSON.stringify({
-          email,
-          ...formData
-        }));
-        
-        // Redirect to Auth0 signup with redirect back to this page
-        loginWithRedirect({
-          authorizationParams: {
-            screen_hint: 'signup',
-            redirect_uri: `${window.location.origin}/vip-signup?email=${encodeURIComponent(email)}`
-          },
-          appState: { returnTo: `/vip-signup?email=${encodeURIComponent(email)}` }
-        });
-        return; // Don't proceed with API call yet
+      // Format phone number for storage
+      let formattedPhone = formData.phone;
+      try {
+        const phoneNumber = parsePhoneNumber(formData.phone, 'US');
+        if (phoneNumber.isValid()) {
+          formattedPhone = phoneNumber.formatNational();
+        }
+      } catch (err) {
+        console.warn('Phone number formatting failed, using original value');
       }
-      
-      // If authenticated, include user's Auth0 ID in the submission
+
       const buyerData = {
-        email,
+        email: email,
         firstName: formData.firstName,
         lastName: formData.lastName,
-        phone: formData.phone,
+        phone: formattedPhone,
         buyerType: formData.buyerType,
         preferredAreas: formData.preferredAreas,
-        auth0Id: user.sub // Include Auth0 user ID to link buyer record
+        status: 'active'
       };
+
+      await createVipBuyer(buyerData);
       
-      // Make API call to create the VIP buyer
-      const response = await fetch(`${import.meta.env.VITE_SERVER_URL}/api/buyer/createVipBuyer`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(buyerData),
-      });
-  
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.message || 'Failed to create VIP profile');
-      }
-      
-      const data = await response.json();
-      navigate('/vip-signup-success', { 
-        state: { 
-          firstName: formData.firstName 
-        } 
-      });
-      
-      // Clear stored form data after successful submission
+      // Clear saved form data
       localStorage.removeItem('vipSignupData');
       
+      setSuccess(true);
+      
+      // Redirect to success page or properties page after a delay
+      setTimeout(() => {
+        navigate('/subscription');
+      }, 2000);
+      
     } catch (err) {
-      console.error("Error creating VIP buyer profile:", err);
-      setError(err.message || 'An error occurred while creating your profile');
+      console.error('Failed to create VIP buyer:', err);
+      setError(err.message || 'Something went wrong. Please try again.');
     } finally {
       setLoading(false);
     }
   };
 
-  // Check for saved form data when returning from Auth0
+  // Load saved form data after authentication
   useEffect(() => {
-    // Only run this if user is authenticated and we're not in a success state
-    if (isAuthenticated && !success) {
+    if (isAuthenticated && email && !success) {
       const savedData = localStorage.getItem('vipSignupData');
       if (savedData) {
         try {
           const parsedData = JSON.parse(savedData);
-          // Make sure we're on the right email before restoring data
-          if (parsedData.email === email) {
-            // Always use the user's entered data from before Auth0 redirect
-            setFormData({
-              firstName: parsedData.firstName || '',
-              lastName: parsedData.lastName || '',
-              phone: parsedData.phone || '',
-              buyerType: parsedData.buyerType || '',
-              preferredAreas: parsedData.preferredAreas || []
-            });
-            
-            // Automatically submit the form if it's coming back from Auth0
-            setTimeout(() => {
-              const submitButton = document.querySelector('button[type="submit"]');
-              if (submitButton) submitButton.click();
-            }, 500);
-          }
+          setFormData(prev => ({
+            ...prev,
+            ...parsedData
+          }));
+          localStorage.removeItem('vipSignupData');
         } catch (e) {
           console.error("Error parsing saved form data:", e);
         }
@@ -371,6 +297,21 @@ export default function VipSignupForm() {
             <AlertDescription>{error}</AlertDescription>
           </Alert>
         )}
+
+        {success ? (
+          <Card className="border-green-300 bg-green-50">
+            <CardContent className="text-center py-8">
+              <StarIcon className="h-16 w-16 text-green-600 mx-auto mb-4" />
+              <h2 className="text-2xl font-bold text-green-800 mb-2">Welcome to Our VIP Buyers List!</h2>
+              <p className="text-green-700 mb-4">
+                Your profile has been successfully created. You will now receive exclusive access to our best property deals.
+              </p>
+              <p className="text-green-600">
+                Redirecting you to your subscription dashboard...
+              </p>
+            </CardContent>
+          </Card>
+        ) : (
           <Card className="border-[#324c48]/20">
             <CardHeader className="border-b pb-6">
               <CardTitle className="text-xl text-[#3f4f24] flex items-center">
@@ -378,11 +319,34 @@ export default function VipSignupForm() {
                 Your Information
               </CardTitle>
               <CardDescription>
-                Your email: <span className="font-medium">{email}</span>
+                Please fill in your details to join our VIP Buyers List
               </CardDescription>
             </CardHeader>
             <CardContent className="pt-6">
               <form onSubmit={handleSubmit} className="space-y-6">
+                {/* Email Field */}
+                <div className="space-y-2">
+                  <Label htmlFor="email" className="text-[#324c48] flex items-center">
+                    <EnvelopeIcon className="w-4 h-4 mr-1" />
+                    Email Address <span className="text-red-500">*</span>
+                  </Label>
+                  <Input
+                    id="email"
+                    name="email"
+                    type="email"
+                    value={email}
+                    onChange={handleInputChange}
+                    placeholder="john@example.com"
+                    className={`border-[#324c48]/30 focus:border-[#D4A017] focus:ring-[#D4A017] ${
+                      validationErrors.email ? 'border-red-500' : ''
+                    }`}
+                    disabled={loading}
+                  />
+                  {validationErrors.email && (
+                    <p className="text-sm text-red-500">{validationErrors.email}</p>
+                  )}
+                </div>
+                
                 <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
                   {/* First Name */}
                   <div className="space-y-2">
@@ -398,9 +362,10 @@ export default function VipSignupForm() {
                       className={`border-[#324c48]/30 focus:border-[#D4A017] focus:ring-[#D4A017] ${
                         validationErrors.firstName ? 'border-red-500' : ''
                       }`}
+                      disabled={loading}
                     />
                     {validationErrors.firstName && (
-                      <p className="text-red-500 text-sm mt-1">{validationErrors.firstName}</p>
+                      <p className="text-sm text-red-500">{validationErrors.firstName}</p>
                     )}
                   </div>
 
@@ -418,84 +383,84 @@ export default function VipSignupForm() {
                       className={`border-[#324c48]/30 focus:border-[#D4A017] focus:ring-[#D4A017] ${
                         validationErrors.lastName ? 'border-red-500' : ''
                       }`}
+                      disabled={loading}
                     />
                     {validationErrors.lastName && (
-                      <p className="text-red-500 text-sm mt-1">{validationErrors.lastName}</p>
-                    )}
-                  </div>
-
-                  {/* Phone */}
-                  <div className="space-y-2">
-                    <Label htmlFor="phone" className="text-[#324c48]">
-                      Phone Number <span className="text-red-500">*</span>
-                    </Label>
-                    <Input
-                      id="phone"
-                      name="phone"
-                      value={formData.phone}
-                      onChange={handlePhoneChange}
-                      placeholder="(555) 555-5555"
-                      className={`border-[#324c48]/30 focus:border-[#D4A017] focus:ring-[#D4A017] ${
-                        validationErrors.phone ? 'border-red-500' : ''
-                      }`}
-                    />
-                    {validationErrors.phone && (
-                      <p className="text-red-500 text-sm mt-1">{validationErrors.phone}</p>
-                    )}
-                  </div>
-
-                  {/* Buyer Type */}
-                  <div className="space-y-2">
-                    <Label htmlFor="buyerType" className="text-[#324c48]">
-                      Buyer Type <span className="text-red-500">*</span>
-                    </Label>
-                    <Select
-                      value={formData.buyerType}
-                      onValueChange={handleBuyerTypeChange}
-                    >
-                      <SelectTrigger 
-                        className={`border-[#324c48]/30 focus:border-[#D4A017] focus:ring-[#D4A017] ${
-                          validationErrors.buyerType ? 'border-red-500' : ''
-                        }`}
-                      >
-                        <SelectValue placeholder="Select buyer type" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="CashBuyer">Cash Buyer</SelectItem>
-                        <SelectItem value="Builder">Builder</SelectItem>
-                        <SelectItem value="Developer">Developer</SelectItem>
-                        <SelectItem value="Realtor">Realtor</SelectItem>
-                        <SelectItem value="Investor">Investor</SelectItem>
-                        <SelectItem value="Wholesaler">Wholesaler</SelectItem>
-                      </SelectContent>
-                    </Select>
-                    {validationErrors.buyerType && (
-                      <p className="text-red-500 text-sm mt-1">{validationErrors.buyerType}</p>
+                      <p className="text-sm text-red-500">{validationErrors.lastName}</p>
                     )}
                   </div>
                 </div>
 
-                {/* Preferred Areas (Multi-select using checkboxes) */}
+                {/* Phone Number */}
                 <div className="space-y-2">
-                  <div className="flex items-center">
-                    <MapPinIcon className="w-5 h-5 mr-2 text-[#324c48]" />
-                    <Label className="text-[#324c48] font-medium">
-                      Preferred Areas <span className="text-red-500">*</span>
-                    </Label>
-                  </div>
-                  <p className="text-sm text-[#324c48]/80 mb-2">Select all areas you're interested in</p>
-                  
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  <Label htmlFor="phone" className="text-[#324c48] flex items-center">
+                    <PhoneIcon className="w-4 h-4 mr-1" />
+                    Phone Number <span className="text-red-500">*</span>
+                  </Label>
+                  <Input
+                    id="phone"
+                    name="phone"
+                    type="tel"
+                    value={formData.phone}
+                    onChange={handleInputChange}
+                    placeholder="(555) 123-4567"
+                    className={`border-[#324c48]/30 focus:border-[#D4A017] focus:ring-[#D4A017] ${
+                      validationErrors.phone ? 'border-red-500' : ''
+                    }`}
+                    disabled={loading}
+                  />
+                  {validationErrors.phone && (
+                    <p className="text-sm text-red-500">{validationErrors.phone}</p>
+                  )}
+                </div>
+
+                {/* Buyer Type */}
+                <div className="space-y-2">
+                  <Label className="text-[#324c48] flex items-center">
+                    <StarIcon className="w-4 h-4 mr-1" />
+                    Buyer Type <span className="text-red-500">*</span>
+                  </Label>
+                  <Select 
+                    value={formData.buyerType} 
+                    onValueChange={handleBuyerTypeChange}
+                    disabled={loading}
+                  >
+                    <SelectTrigger className={`border-[#324c48]/30 focus:border-[#D4A017] focus:ring-[#D4A017] ${
+                      validationErrors.buyerType ? 'border-red-500' : ''
+                    }`}>
+                      <SelectValue placeholder="Select your buyer type" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {BUYER_TYPES.map((type) => (
+                        <SelectItem key={type.id} value={type.id}>
+                          {type.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  {validationErrors.buyerType && (
+                    <p className="text-sm text-red-500">{validationErrors.buyerType}</p>
+                  )}
+                </div>
+
+                {/* Preferred Areas */}
+                <div className="space-y-2">
+                  <Label className="text-[#324c48] flex items-center">
+                    <MapPinIcon className="w-4 h-4 mr-1" />
+                    Preferred Areas <span className="text-red-500">*</span>
+                  </Label>
+                  <div className="space-y-3">
                     {AREAS.map((area) => (
                       <div key={area.id} className="flex items-center space-x-2">
                         <Checkbox
-                          id={`area-${area.id}`}
+                          id={area.id}
                           checked={formData.preferredAreas.includes(area.id)}
                           onCheckedChange={() => handleAreaChange(area.id)}
-                          className="border-[#324c48]/50 data-[state=checked]:bg-[#D4A017] data-[state=checked]:border-[#D4A017]"
+                          disabled={loading}
+                          className="border-[#324c48]/30 data-[state=checked]:bg-[#D4A017] data-[state=checked]:border-[#D4A017]"
                         />
-                        <Label
-                          htmlFor={`area-${area.id}`}
+                        <Label 
+                          htmlFor={area.id} 
                           className="text-[#324c48] cursor-pointer"
                         >
                           {area.label}
@@ -503,39 +468,24 @@ export default function VipSignupForm() {
                       </div>
                     ))}
                   </div>
-                  
                   {validationErrors.preferredAreas && (
-                    <p className="text-red-500 text-sm mt-1">{validationErrors.preferredAreas}</p>
+                    <p className="text-sm text-red-500">{validationErrors.preferredAreas}</p>
                   )}
                 </div>
 
-                <div className="pt-4">
-                  <Button
-                    type="submit"
-                    className="w-full bg-[#D4A017] hover:bg-[#D4A017]/90 text-white font-medium py-3 text-lg"
+                <CardFooter className="px-0 pt-6">
+                  <Button 
+                    type="submit" 
+                    className="w-full bg-[#D4A017] hover:bg-[#B8890F] text-white font-semibold py-3"
                     disabled={loading}
                   >
-                    {loading ? (
-                      <span className="flex items-center justify-center">
-                        <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                        </svg>
-                        Processing...
-                      </span>
-                    ) : (
-                      "Complete VIP Registration"
-                    )}
+                    {loading ? 'Creating Profile...' : 'Join VIP Buyers List'}
                   </Button>
-                </div>
+                </CardFooter>
               </form>
             </CardContent>
-            <CardFooter className="border-t pt-6 pb-4 text-sm text-[#324c48]/80 text-center">
-              By submitting this form, you agree to receive exclusive property alerts and special offers from Landivo.
-              <br />
-              We respect your privacy and will never share your information with third parties.
-            </CardFooter>
           </Card>
+        )}
       </div>
     </div>
   );
