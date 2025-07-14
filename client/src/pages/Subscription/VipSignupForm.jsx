@@ -8,9 +8,11 @@ import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Checkbox } from '@/components/ui/checkbox';
-import { UserIcon, EnvelopeIcon, PhoneIcon, StarIcon, MapPinIcon } from '@heroicons/react/24/outline';
+import { UserIcon, EnvelopeIcon, PhoneIcon, StarIcon, MapPinIcon, CheckCircleIcon } from '@heroicons/react/24/outline';
 import { parsePhoneNumber } from 'libphonenumber-js';
 import { createVipBuyer } from "@/utils/api";
+import { useVipBuyer } from '@/utils/VipBuyerContext';
+import VipAlreadyMember from '@/components/GetStarted/VipAlreadyMember';
 
 // Define the available areas
 const AREAS = [
@@ -34,17 +36,24 @@ const BUYER_TYPES = [
 export default function VipSignupForm() {
   const navigate = useNavigate();
   const location = useLocation();
-  const [email, setEmail] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState(false);
+  const [showVipPopup, setShowVipPopup] = useState(false);
   
   // Auth0 authentication hooks
-  const { isAuthenticated, loginWithRedirect, user } = useAuth0();
+  const { isAuthenticated, loginWithRedirect, user, isLoading } = useAuth0();
+  
+  // VIP buyer status check
+  const { 
+    isVipBuyer, 
+    isLoading: vipLoading, 
+    vipBuyerData 
+  } = useVipBuyer();
   
   // Form state
   const [formData, setFormData] = useState({
-    email: '', // Add email to form data
+    email: '',
     firstName: '',
     lastName: '',
     phone: '',
@@ -54,7 +63,7 @@ export default function VipSignupForm() {
 
   // Form validation errors
   const [validationErrors, setValidationErrors] = useState({
-    email: '', // Add email validation
+    email: '',
     firstName: '',
     lastName: '',
     phone: '',
@@ -62,27 +71,63 @@ export default function VipSignupForm() {
     preferredAreas: ''
   });
 
-  // Get email from URL parameters on component mount
+  // Check if user is already VIP when component mounts
+  useEffect(() => {
+    if (!vipLoading && isAuthenticated && isVipBuyer) {
+      setShowVipPopup(true);
+    }
+  }, [isAuthenticated, isVipBuyer, vipLoading]);
+
+  // Handle VIP popup close - redirect to home
+  const handleVipPopupClose = () => {
+    setShowVipPopup(false);
+    navigate('/');
+  };
+
+  // Set email from Auth0 user or URL parameter
   useEffect(() => {
     const searchParams = new URLSearchParams(location.search);
     const emailParam = searchParams.get('email');
-    if (emailParam) {
-      setEmail(emailParam);
-      setFormData(prev => ({ ...prev, email: emailParam }));
+    
+    let emailToUse = '';
+    
+    if (isAuthenticated && user?.email) {
+      emailToUse = user.email;
+    } else if (emailParam) {
+      emailToUse = emailParam;
     }
-  }, [location]);
+    
+    if (emailToUse) {
+      setFormData(prev => ({ ...prev, email: emailToUse }));
+    }
+  }, [location, isAuthenticated, user]);
 
-  // Update handleInputChange to include email
+  // Redirect to Auth0 if not authenticated (but avoid redirect loops)
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const hasAuthCode = urlParams.has('code');
+    const hasAuthState = urlParams.has('state');
+    
+    if (isLoading || hasAuthCode || hasAuthState || isAuthenticated) {
+      return;
+    }
+    
+    if (!isAuthenticated && !isLoading) {
+      loginWithRedirect({
+        authorizationParams: {
+          screen_hint: 'signup',
+          redirect_uri: `${window.location.origin}/vip-signup`
+        },
+        appState: { returnTo: '/vip-signup' }
+      });
+    }
+  }, [isAuthenticated, isLoading, loginWithRedirect]);
+
+  // Handle input changes
   const handleInputChange = (e) => {
     const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: value }));
     
-    // Update email state if email field changes
-    if (name === 'email') {
-      setEmail(value);
-    }
-    
-    // Clear validation error for this field
     if (validationErrors[name]) {
       setValidationErrors(prev => ({ ...prev, [name]: '' }));
     }
@@ -90,34 +135,21 @@ export default function VipSignupForm() {
 
   // Handle buyer type selection
   const handleBuyerTypeChange = (value) => {
-    setValidationErrors(prev => ({
-      ...prev,
-      buyerType: ''
-    }));
-    
-    setFormData(prev => ({
-      ...prev,
-      buyerType: value
-    }));
+    setValidationErrors(prev => ({ ...prev, buyerType: '' }));
+    setFormData(prev => ({ ...prev, buyerType: value }));
   };
 
   // Handle preferred areas selection (checkboxes)
   const handleAreaChange = (areaId) => {
-    setValidationErrors(prev => ({
-      ...prev,
-      preferredAreas: ''
-    }));
+    setValidationErrors(prev => ({ ...prev, preferredAreas: '' }));
 
     setFormData(prev => {
-      // Check if the area is already selected
       if (prev.preferredAreas.includes(areaId)) {
-        // If it is, remove it
         return {
           ...prev,
           preferredAreas: prev.preferredAreas.filter(id => id !== areaId)
         };
       } else {
-        // If it's not, add it
         return {
           ...prev,
           preferredAreas: [...prev.preferredAreas, areaId]
@@ -126,39 +158,35 @@ export default function VipSignupForm() {
     });
   };
 
-  // Add email validation helper
+  // Email validation helper
   const validateEmail = (email) => {
     const re = /^(([^<>()[\]\\.,;:\s@"]+(\.[^<>()[\]\\.,;:\s@"]+)*)|(".+"))@((\[[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\])|(([a-zA-Z\-0-9]+\.)+[a-zA-Z]{2,}))$/;
     return re.test(String(email).toLowerCase());
   };
 
-  // Update validateForm to include email validation
+  // Form validation
   const validateForm = () => {
     const errors = {};
     let isValid = true;
 
-    // Email validation
-    if (!email.trim()) {
+    if (!formData.email.trim()) {
       errors.email = 'Email is required';
       isValid = false;
-    } else if (!validateEmail(email)) {
+    } else if (!validateEmail(formData.email)) {
       errors.email = 'Please enter a valid email address';
       isValid = false;
     }
 
-    // First name validation
     if (!formData.firstName.trim()) {
       errors.firstName = 'First name is required';
       isValid = false;
     }
 
-    // Last name validation
     if (!formData.lastName.trim()) {
       errors.lastName = 'Last name is required';
       isValid = false;
     }
 
-    // Phone validation
     if (!formData.phone.trim()) {
       errors.phone = 'Phone number is required';
       isValid = false;
@@ -175,13 +203,11 @@ export default function VipSignupForm() {
       }
     }
 
-    // Buyer type validation
     if (!formData.buyerType) {
       errors.buyerType = 'Please select a buyer type';
       isValid = false;
     }
 
-    // Preferred areas validation
     if (formData.preferredAreas.length === 0) {
       errors.preferredAreas = 'Please select at least one preferred area';
       isValid = false;
@@ -199,21 +225,8 @@ export default function VipSignupForm() {
       return;
     }
 
-    // Check if user is authenticated
-    if (!isAuthenticated) {
-      // Save form data to localStorage before redirecting to Auth0
-      localStorage.setItem('vipSignupData', JSON.stringify({
-        ...formData,
-        email: email
-      }));
-      
-      loginWithRedirect({
-        authorizationParams: {
-          screen_hint: 'signup',
-          redirect_uri: `${window.location.origin}/vip-signup${email ? `?email=${encodeURIComponent(email)}` : ''}`
-        },
-        appState: { returnTo: `/vip-signup${email ? `?email=${encodeURIComponent(email)}` : ''}` }
-      });
+    if (!isAuthenticated || !user) {
+      setError('You must be logged in to complete VIP signup');
       return;
     }
 
@@ -221,272 +234,290 @@ export default function VipSignupForm() {
     setError('');
 
     try {
-      // Format phone number for storage
-      let formattedPhone = formData.phone;
-      try {
-        const phoneNumber = parsePhoneNumber(formData.phone, 'US');
-        if (phoneNumber.isValid()) {
-          formattedPhone = phoneNumber.formatNational();
-        }
-      } catch (err) {
-        console.warn('Phone number formatting failed, using original value');
-      }
-
-      const buyerData = {
-        email: email,
-        firstName: formData.firstName,
-        lastName: formData.lastName,
-        phone: formattedPhone,
-        buyerType: formData.buyerType,
-        preferredAreas: formData.preferredAreas,
-        status: 'active'
-      };
-
-      await createVipBuyer(buyerData);
-      
-      // Clear saved form data
-      localStorage.removeItem('vipSignupData');
+      await createVipBuyer({
+        ...formData,
+        auth0Id: user.sub
+      });
       
       setSuccess(true);
       
-      // Redirect to success page or properties page after a delay
       setTimeout(() => {
-        navigate('/subscription');
+        navigate('/vip-signup-success');
       }, 2000);
       
     } catch (err) {
-      console.error('Failed to create VIP buyer:', err);
-      setError(err.message || 'Something went wrong. Please try again.');
+      console.error('Error creating VIP buyer:', err);
+      setError(err.response?.data?.message || 'An error occurred while processing your request');
     } finally {
       setLoading(false);
     }
   };
 
-  // Load saved form data after authentication
-  useEffect(() => {
-    if (isAuthenticated && email && !success) {
-      const savedData = localStorage.getItem('vipSignupData');
-      if (savedData) {
-        try {
-          const parsedData = JSON.parse(savedData);
-          setFormData(prev => ({
-            ...prev,
-            ...parsedData
-          }));
-          localStorage.removeItem('vipSignupData');
-        } catch (e) {
-          console.error("Error parsing saved form data:", e);
-        }
-      }
-    }
-  }, [isAuthenticated, email, success]);
-
-  return (
-    <div className="bg-[#FDF8F2] min-h-screen py-16">
-      <div className="max-w-3xl mx-auto px-4">
-        <div className="text-center mb-8">
-          <StarIcon className="h-12 w-12 text-[#D4A017] mx-auto mb-2" />
-          <h1 className="text-3xl font-bold text-[#3f4f24] mb-2">One Last Step to Join Our VIP Buyers List</h1>
-          <p className="text-lg text-[#324c48]">
-            Please complete your profile to get access to exclusive property deals
+  // Show loading while checking auth status or processing callback
+  if (isLoading || vipLoading || (!isAuthenticated && !new URLSearchParams(window.location.search).has('code'))) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-[#FDF8F2] via-[#FDF8F2] to-[#F5F0E8] flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#D4A017] mx-auto mb-4"></div>
+          <p className="text-[#324c48]">
+            {new URLSearchParams(window.location.search).has('code') 
+              ? 'Completing authentication...' 
+              : 'Checking your status...'
+            }
           </p>
         </div>
+      </div>
+    );
+  }
 
-        {error && (
-          <Alert className="mb-6 bg-red-50 border-red-300 text-red-800">
-            <AlertDescription>{error}</AlertDescription>
-          </Alert>
-        )}
+  return (
+    <>
+      <div className="min-h-screen bg-gradient-to-br from-[#FDF8F2] via-[#FDF8F2] to-[#F5F0E8] py-12 px-4">
+        <div className="max-w-5xl mx-auto">
+          <div className="bg-white rounded-2xl shadow-xl overflow-hidden">
+            <div className="grid lg:grid-cols-2">
+              {/* Left Side - Form */}
+              <div className="p-8">
+                <div className="mb-6">
+                  <h1 className="text-2xl font-bold text-[#3f4f24] mb-2">
+                    One Last Step To Join<br/> Our Exclusive Buyers List
+                  </h1>
+                  <p className="text-[#324c48] text-sm">
+                    Get notified before everyone else, receive instant discounts on properties, and stay up to date with notifications only in the areas you care about.
+                  </p>
+                </div>
 
-        {success ? (
-          <Card className="border-green-300 bg-green-50">
-            <CardContent className="text-center py-8">
-              <StarIcon className="h-16 w-16 text-green-600 mx-auto mb-4" />
-              <h2 className="text-2xl font-bold text-green-800 mb-2">Welcome to Our VIP Buyers List!</h2>
-              <p className="text-green-700 mb-4">
-                Your profile has been successfully created. You will now receive exclusive access to our best property deals.
-              </p>
-              <p className="text-green-600">
-                Redirecting you to your subscription dashboard...
-              </p>
-            </CardContent>
-          </Card>
-        ) : (
-          <Card className="border-[#324c48]/20">
-            <CardHeader className="border-b pb-6">
-              <CardTitle className="text-xl text-[#3f4f24] flex items-center">
-                <UserIcon className="w-5 h-5 mr-2" />
-                Your Information
-              </CardTitle>
-              <CardDescription>
-                Please fill in your details to join our VIP Buyers List
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="pt-6">
-              <form onSubmit={handleSubmit} className="space-y-6">
-                {/* Email Field */}
-                <div className="space-y-2">
-                  <Label htmlFor="email" className="text-[#324c48] flex items-center">
-                    <EnvelopeIcon className="w-4 h-4 mr-1" />
-                    Email Address <span className="text-red-500">*</span>
-                  </Label>
-                  <Input
-                    id="email"
-                    name="email"
-                    type="email"
-                    value={email}
-                    onChange={handleInputChange}
-                    placeholder="john@example.com"
-                    className={`border-[#324c48]/30 focus:border-[#D4A017] focus:ring-[#D4A017] ${
-                      validationErrors.email ? 'border-red-500' : ''
-                    }`}
+                {error && (
+                  <Alert className="mb-4 border-red-200 bg-red-50 text-red-800">
+                    <AlertDescription>{error}</AlertDescription>
+                  </Alert>
+                )}
+
+                {success && (
+                  <Alert className="mb-4 border-green-200 bg-green-50 text-green-800">
+                    <AlertDescription>
+                      Success! You've been added to our VIP list. Redirecting...
+                    </AlertDescription>
+                  </Alert>
+                )}
+
+                <form onSubmit={handleSubmit} className="space-y-4">
+                  {/* Email field */}
+                  <div>
+                    <Label htmlFor="email" className="text-[#324c48] font-medium text-sm mb-1 block">
+                      Email Address *
+                      {isAuthenticated && (
+                        <span className="text-xs text-gray-500 ml-1 font-normal">(from your account)</span>
+                      )}
+                    </Label>
+                    <Input
+                      id="email"
+                      name="email"
+                      type="email"
+                      value={formData.email}
+                      onChange={handleInputChange}
+                      placeholder="nathan@landersinvestment.com"
+                      className={`h-10 text-gray-700 border-gray-300 focus:border-[#D4A017] focus:ring-[#D4A017] ${
+                        isAuthenticated ? 'bg-gray-50 text-gray-600' : ''
+                      } ${validationErrors.email ? 'border-red-500' : ''}`}
+                      disabled={isAuthenticated || loading}
+                      readOnly={isAuthenticated}
+                    />
+                    {validationErrors.email && (
+                      <p className="text-xs text-red-500 mt-1">{validationErrors.email}</p>
+                    )}
+                  </div>
+                  
+                  {/* Name fields */}
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <Label htmlFor="firstName" className="text-[#324c48] font-medium text-sm mb-1 block">
+                        First Name *
+                      </Label>
+                      <Input
+                        id="firstName"
+                        name="firstName"
+                        value={formData.firstName}
+                        onChange={handleInputChange}
+                        placeholder="John"
+                        className={`h-10 border-gray-300 focus:border-[#D4A017] focus:ring-[#D4A017] ${
+                          validationErrors.firstName ? 'border-red-500' : ''
+                        }`}
+                        disabled={loading}
+                      />
+                      {validationErrors.firstName && (
+                        <p className="text-xs text-red-500 mt-1">{validationErrors.firstName}</p>
+                      )}
+                    </div>
+
+                    <div>
+                      <Label htmlFor="lastName" className="text-[#324c48] font-medium text-sm mb-1 block">
+                        Last Name *
+                      </Label>
+                      <Input
+                        id="lastName"
+                        name="lastName"
+                        value={formData.lastName}
+                        onChange={handleInputChange}
+                        placeholder="Doe"
+                        className={`h-10 border-gray-300 focus:border-[#D4A017] focus:ring-[#D4A017] ${
+                          validationErrors.lastName ? 'border-red-500' : ''
+                        }`}
+                        disabled={loading}
+                      />
+                      {validationErrors.lastName && (
+                        <p className="text-xs text-red-500 mt-1">{validationErrors.lastName}</p>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Phone */}
+                  <div>
+                    <Label htmlFor="phone" className="text-[#324c48] font-medium text-sm mb-1 block">
+                      Phone Number *
+                    </Label>
+                    <Input
+                      id="phone"
+                      name="phone"
+                      type="tel"
+                      value={formData.phone}
+                      onChange={handleInputChange}
+                      placeholder="(555) 123-4567"
+                      className={`h-10 border-gray-300 focus:border-[#D4A017] focus:ring-[#D4A017] ${
+                        validationErrors.phone ? 'border-red-500' : ''
+                      }`}
+                      disabled={loading}
+                    />
+                    {validationErrors.phone && (
+                      <p className="text-xs text-red-500 mt-1">{validationErrors.phone}</p>
+                    )}
+                  </div>
+
+                  {/* Buyer Type */}
+                  <div>
+                    <Label className="text-[#324c48] font-medium text-sm mb-1 block">
+                      Buyer Type *
+                    </Label>
+                    <Select
+                      value={formData.buyerType}
+                      onValueChange={handleBuyerTypeChange}
+                      disabled={loading}
+                    >
+                      <SelectTrigger className={`h-10 border-gray-300 focus:border-[#D4A017] focus:ring-[#D4A017] ${
+                        validationErrors.buyerType ? 'border-red-500' : ''
+                      }`}>
+                        <SelectValue placeholder="Select buyer type" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {BUYER_TYPES.map((type) => (
+                          <SelectItem key={type.id} value={type.id}>
+                            {type.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    {validationErrors.buyerType && (
+                      <p className="text-xs text-red-500 mt-1">{validationErrors.buyerType}</p>
+                    )}
+                  </div>
+
+                  {/* Preferred Areas */}
+                  <div>
+                    <Label className="text-[#324c48] font-medium text-sm mb-2 block">
+                      Preferred Areas *
+                    </Label>
+                    <div className="space-y-2">
+                      {AREAS.map((area) => (
+                        <div key={area.id} className="flex items-center space-x-2">
+                          <Checkbox
+                            id={area.id}
+                            checked={formData.preferredAreas.includes(area.id)}
+                            onCheckedChange={() => handleAreaChange(area.id)}
+                            disabled={loading}
+                            className="border-gray-400 data-[state=checked]:bg-[#D4A017] data-[state=checked]:border-[#D4A017]"
+                          />
+                          <Label
+                            htmlFor={area.id}
+                            className="text-sm cursor-pointer text-[#324c48]"
+                          >
+                            {area.label}
+                          </Label>
+                        </div>
+                      ))}
+                    </div>
+                    {validationErrors.preferredAreas && (
+                      <p className="text-xs text-red-500 mt-1">{validationErrors.preferredAreas}</p>
+                    )}
+                  </div>
+
+                  {/* Submit Button */}
+                  <Button
+                    type="submit"
                     disabled={loading}
-                  />
-                  {validationErrors.email && (
-                    <p className="text-sm text-red-500">{validationErrors.email}</p>
-                  )}
+                    className="w-full bg-[#3f4f24] hover:bg-[#324c48] text-white py-3 h-12 text-base font-semibold rounded-lg transition-all duration-300 shadow-lg hover:shadow-xl mt-6"
+                  >
+                    {loading ? 'Processing...' : 'Join VIP List'}
+                  </Button>
+
+                  {/* Privacy Notice */}
+                  <p className="text-xs text-[#324c48]/70 text-center mt-3">
+                    Your email is 100% confidential and we won't spam you.
+                  </p>
+                </form>
+              </div>
+
+              {/* Right Side - Benefits */}
+              <div className="bg-gradient-to-br from-[#3f4f24] via-[#324c48] to-[#2a3f3c] p-8 flex flex-col justify-center relative overflow-hidden">
+                {/* Background Pattern */}
+                <div className="absolute inset-0 opacity-10">
+                  <div className="absolute top-8 right-8 w-32 h-32 bg-[#D4A017] rounded-full blur-3xl"></div>
+                  <div className="absolute bottom-8 left-8 w-24 h-24 bg-[#D4A017] rounded-full blur-2xl"></div>
                 </div>
                 
-                <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
-                  {/* First Name */}
-                  <div className="space-y-2">
-                    <Label htmlFor="firstName" className="text-[#324c48]">
-                      First Name <span className="text-red-500">*</span>
-                    </Label>
-                    <Input
-                      id="firstName"
-                      name="firstName"
-                      value={formData.firstName}
-                      onChange={handleInputChange}
-                      placeholder="John"
-                      className={`border-[#324c48]/30 focus:border-[#D4A017] focus:ring-[#D4A017] ${
-                        validationErrors.firstName ? 'border-red-500' : ''
-                      }`}
-                      disabled={loading}
-                    />
-                    {validationErrors.firstName && (
-                      <p className="text-sm text-red-500">{validationErrors.firstName}</p>
-                    )}
+                <div className="relative z-10">
+                  <div className="text-center mb-6">
+                    <div className="inline-block bg-red-500 text-white text-xs px-2 py-1 rounded mb-2 font-medium">
+                      Listed Price
+                    </div>
+                    <h2 className="text-4xl font-bold text-[#D4A017] mb-4">
+                      Big Discount
+                    </h2>
                   </div>
 
-                  {/* Last Name */}
-                  <div className="space-y-2">
-                    <Label htmlFor="lastName" className="text-[#324c48]">
-                      Last Name <span className="text-red-500">*</span>
-                    </Label>
-                    <Input
-                      id="lastName"
-                      name="lastName"
-                      value={formData.lastName}
-                      onChange={handleInputChange}
-                      placeholder="Doe"
-                      className={`border-[#324c48]/30 focus:border-[#D4A017] focus:ring-[#D4A017] ${
-                        validationErrors.lastName ? 'border-red-500' : ''
-                      }`}
-                      disabled={loading}
-                    />
-                    {validationErrors.lastName && (
-                      <p className="text-sm text-red-500">{validationErrors.lastName}</p>
-                    )}
-                  </div>
-                </div>
-
-                {/* Phone Number */}
-                <div className="space-y-2">
-                  <Label htmlFor="phone" className="text-[#324c48] flex items-center">
-                    <PhoneIcon className="w-4 h-4 mr-1" />
-                    Phone Number <span className="text-red-500">*</span>
-                  </Label>
-                  <Input
-                    id="phone"
-                    name="phone"
-                    type="tel"
-                    value={formData.phone}
-                    onChange={handleInputChange}
-                    placeholder="(555) 123-4567"
-                    className={`border-[#324c48]/30 focus:border-[#D4A017] focus:ring-[#D4A017] ${
-                      validationErrors.phone ? 'border-red-500' : ''
-                    }`}
-                    disabled={loading}
-                  />
-                  {validationErrors.phone && (
-                    <p className="text-sm text-red-500">{validationErrors.phone}</p>
-                  )}
-                </div>
-
-                {/* Buyer Type */}
-                <div className="space-y-2">
-                  <Label className="text-[#324c48] flex items-center">
-                    <StarIcon className="w-4 h-4 mr-1" />
-                    Buyer Type <span className="text-red-500">*</span>
-                  </Label>
-                  <Select 
-                    value={formData.buyerType} 
-                    onValueChange={handleBuyerTypeChange}
-                    disabled={loading}
-                  >
-                    <SelectTrigger className={`border-[#324c48]/30 focus:border-[#D4A017] focus:ring-[#D4A017] ${
-                      validationErrors.buyerType ? 'border-red-500' : ''
-                    }`}>
-                      <SelectValue placeholder="Select your buyer type" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {BUYER_TYPES.map((type) => (
-                        <SelectItem key={type.id} value={type.id}>
-                          {type.label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  {validationErrors.buyerType && (
-                    <p className="text-sm text-red-500">{validationErrors.buyerType}</p>
-                  )}
-                </div>
-
-                {/* Preferred Areas */}
-                <div className="space-y-2">
-                  <Label className="text-[#324c48] flex items-center">
-                    <MapPinIcon className="w-4 h-4 mr-1" />
-                    Preferred Areas <span className="text-red-500">*</span>
-                  </Label>
                   <div className="space-y-3">
-                    {AREAS.map((area) => (
-                      <div key={area.id} className="flex items-center space-x-2">
-                        <Checkbox
-                          id={area.id}
-                          checked={formData.preferredAreas.includes(area.id)}
-                          onCheckedChange={() => handleAreaChange(area.id)}
-                          disabled={loading}
-                          className="border-[#324c48]/30 data-[state=checked]:bg-[#D4A017] data-[state=checked]:border-[#D4A017]"
-                        />
-                        <Label 
-                          htmlFor={area.id} 
-                          className="text-[#324c48] cursor-pointer"
-                        >
-                          {area.label}
-                        </Label>
-                      </div>
-                    ))}
+                    <div className="flex items-center">
+                      <CheckCircleIcon className="h-5 w-5 text-[#D4A017] mr-3 flex-shrink-0" />
+                      <span className="text-white font-medium">
+                        Early access to new listings
+                      </span>
+                    </div>
+                    
+                    <div className="flex items-center">
+                      <CheckCircleIcon className="h-5 w-5 text-[#D4A017] mr-3 flex-shrink-0" />
+                      <span className="text-white font-medium">
+                        Member-only special pricing
+                      </span>
+                    </div>
+                    
+                    <div className="flex items-center">
+                      <CheckCircleIcon className="h-5 w-5 text-[#D4A017] mr-3 flex-shrink-0" />
+                      <span className="text-white font-medium">
+                        Exclusive property alerts
+                      </span>
+                    </div>
                   </div>
-                  {validationErrors.preferredAreas && (
-                    <p className="text-sm text-red-500">{validationErrors.preferredAreas}</p>
-                  )}
                 </div>
-
-                <CardFooter className="px-0 pt-6">
-                  <Button 
-                    type="submit" 
-                    className="w-full bg-[#D4A017] hover:bg-[#B8890F] text-white font-semibold py-3"
-                    disabled={loading}
-                  >
-                    {loading ? 'Creating Profile...' : 'Join VIP Buyers List'}
-                  </Button>
-                </CardFooter>
-              </form>
-            </CardContent>
-          </Card>
-        )}
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
-    </div>
+
+      {/* VIP Already Member Popup */}
+      <VipAlreadyMember 
+        isOpen={showVipPopup} 
+        onClose={handleVipPopupClose} 
+      />
+    </>
   );
 }
