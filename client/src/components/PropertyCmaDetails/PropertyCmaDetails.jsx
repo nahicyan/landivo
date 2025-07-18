@@ -24,7 +24,7 @@ export default function PropertyCmaDetails({ propertyData }) {
     if (!propertyData.id || !propertyData.cmaFilePath) return;
     
     // Construct the URL for downloading the CMA document
-    const downloadUrl = `${import.meta.env.VITE_SERVER_URL}/api/residency/${propertyData.id}/cma-document`;
+    const downloadUrl = `${import.meta.env.VITE_SERVER_URL}/residency/${propertyData.id}/cma-document`;
     
     // Open the document in a new tab
     window.open(downloadUrl, '_blank');

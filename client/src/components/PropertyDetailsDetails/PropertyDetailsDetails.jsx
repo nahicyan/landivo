@@ -336,7 +336,7 @@ export default function PropertyDetailsDetails({ propertyData }) {
                       </div>
                       <Button
                         className="bg-[#324c48] text-white hover:bg-[#263938] transition-colors"
-                        onClick={() => window.open(`${import.meta.env.VITE_SERVER_URL}/api/residency/${propertyData.id}/cma-document`, '_blank')}
+                        onClick={() => window.open(`${import.meta.env.VITE_SERVER_URL}/residency/${propertyData.id}/cma-document`, '_blank')}
                       >
                         <Download className="h-4 w-4 mr-2" />
                         Download

@@ -26,7 +26,7 @@ export default function DFWProperty() {
     const fetchDFWRow = async () => {
       setLoadingFeatured(true);
       try {
-        const response = await axios.get(`${import.meta.env.VITE_SERVER_URL}/api/property-rows?rowType=DFW`);
+        const response = await axios.get(`${import.meta.env.VITE_SERVER_URL}/property-rows?rowType=DFW`);
         
         if (Array.isArray(response.data) && response.data.length > 0) {
           const dfwRow = response.data.find(row => row.rowType === "DFW");

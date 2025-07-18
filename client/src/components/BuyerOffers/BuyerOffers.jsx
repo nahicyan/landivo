@@ -52,7 +52,7 @@ export default function BuyerOffers() {
           // Fetch property details for each property
           for (const propertyId of uniquePropertyIds) {
             try {
-              const propertyData = await fetch(`${import.meta.env.VITE_SERVER_URL}/api/residency/${propertyId}`);
+              const propertyData = await fetch(`${import.meta.env.VITE_SERVER_URL}/residency/${propertyId}`);
               if (propertyData.ok) {
                 const property = await propertyData.json();
                 propertyDetails[propertyId] = property;

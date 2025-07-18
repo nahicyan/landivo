@@ -34,7 +34,7 @@ export const VipBuyerProvider = ({ children }) => {
         
         // Make API call to check if the Auth0 ID matches a VIP buyer
         const response = await axios.get(
-          `${import.meta.env.VITE_SERVER_URL}/api/buyer/byAuth0Id?auth0Id=${encodeURIComponent(user.sub)}`,
+          `${import.meta.env.VITE_SERVER_URL}/buyer/byAuth0Id?auth0Id=${encodeURIComponent(user.sub)}`,
           {
             headers: {
               Authorization: `Bearer ${token}`

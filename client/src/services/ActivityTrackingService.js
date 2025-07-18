@@ -11,7 +11,7 @@ class ActivityTrackingService {
     this.isTracking = false;
     this.vipBuyerId = null;
     this.auth0UserId = null;
-    this.apiEndpoint = `${import.meta.env.VITE_SERVER_URL}/api/buyer/activity`;
+    this.apiEndpoint = `${import.meta.env.VITE_SERVER_URL}/buyer/activity`;
     this.pendingEvents = [];
     this.sessionStartTime = null;
     this.lastActivityTime = null;

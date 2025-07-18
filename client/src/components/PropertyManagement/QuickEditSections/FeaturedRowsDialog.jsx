@@ -36,7 +36,7 @@ export default function FeaturedRowsDialog({
   const fetchPropertyRows = async () => {
     setIsLoadingRows(true);
     try {
-      const response = await axios.get(`${import.meta.env.VITE_SERVER_URL}/api/property-rows`);
+      const response = await axios.get(`${import.meta.env.VITE_SERVER_URL}/property-rows`);
       setPropertyRows(response.data || []);
     } catch (error) {
       console.error("Error fetching property rows:", error);
@@ -51,7 +51,7 @@ export default function FeaturedRowsDialog({
     
     setLoadingRowProperties(true);
     try {
-      const response = await axios.get(`${import.meta.env.VITE_SERVER_URL}/api/property-rows/${rowId}`);
+      const response = await axios.get(`${import.meta.env.VITE_SERVER_URL}/property-rows/${rowId}`);
       
       if (response.data && response.data.propertyDetails) {
         const allProperties = response.data.propertyDetails || [];

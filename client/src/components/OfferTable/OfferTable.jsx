@@ -19,7 +19,7 @@ import { format } from "date-fns";
 
 const fetchOffers = async (propertyId) => {
   const { data } = await axios.get(
-    `${import.meta.env.VITE_SERVER_URL}/api/offer/property/${propertyId}`
+    `${import.meta.env.VITE_SERVER_URL}/offer/property/${propertyId}`
   );
   return data;
 };

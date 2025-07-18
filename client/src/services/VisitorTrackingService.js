@@ -9,7 +9,7 @@ class VisitorTrackingService {
   constructor() {
     this.visitorId = this.getOrCreateVisitorId();
     this.sessionId = this.createSessionId();
-    this.apiEndpoint = `${import.meta.env.VITE_SERVER_URL}/api/visitors/track`;
+    this.apiEndpoint = `${import.meta.env.VITE_SERVER_URL}/visitors/track`;
     this.currentPage = window.location.pathname;
     this.lastActivity = Date.now();
   }

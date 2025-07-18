@@ -7,7 +7,7 @@ import { useAuth0 } from '@auth0/auth0-react';
 import { useCallback } from 'react';
 
 export const api = axios.create({
-  baseURL: `${import.meta.env.VITE_SERVER_URL}/api`, //
+  baseURL: import.meta.env.VITE_SERVER_URL,
   withCredentials: true, // Enable cookies for cross-origin requests
 });
 

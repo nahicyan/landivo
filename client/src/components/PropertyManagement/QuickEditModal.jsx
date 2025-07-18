@@ -92,7 +92,7 @@ export function QuickEditModal({ property, isOpen, onClose, onSave }) {
     if (!propertyId) return;
     
     try {
-      const response = await axios.get(`${import.meta.env.VITE_SERVER_URL}/api/property-rows`);
+      const response = await axios.get(`${import.meta.env.VITE_SERVER_URL}/property-rows`);
       const rows = response.data || [];
       
       const propertyAssociations = [];

@@ -26,7 +26,7 @@ export default function OtherLandsProperty() {
     const fetchOtherLandsRow = async () => {
       setLoadingFeatured(true);
       try {
-        const response = await axios.get(`${import.meta.env.VITE_SERVER_URL}/api/property-rows?rowType=OtherLands`);
+        const response = await axios.get(`${import.meta.env.VITE_SERVER_URL}/property-rows?rowType=OtherLands`);
         
         if (Array.isArray(response.data) && response.data.length > 0) {
           const otherLandsRow = response.data.find(row => row.rowType === "OtherLands");

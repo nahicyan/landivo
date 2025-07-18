@@ -230,7 +230,7 @@ export default function CreateBuyer() {
       setLoading(true);
       
       // Create API request to create a buyer
-      const response = await fetch(`${import.meta.env.VITE_SERVER_URL}/api/buyer/create`, {
+      const response = await fetch(`${import.meta.env.VITE_SERVER_URL}/buyer/create`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

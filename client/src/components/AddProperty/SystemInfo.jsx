@@ -76,7 +76,7 @@ const fetchUserProfiles = async () => {
 
     // Use the new endpoint that works with write:properties permission
     const response = await axios.get(
-      `${import.meta.env.VITE_SERVER_URL}/api/user/property-profiles`, 
+      `${import.meta.env.VITE_SERVER_URL}/user/property-profiles`, 
       {
         headers: {
           Authorization: `Bearer ${token}`
@@ -110,7 +110,7 @@ const fetchUserProfiles = async () => {
   const fetchPropertyRows = async () => {
     setIsLoadingRows(true);
     try {
-      const response = await axios.get(`${import.meta.env.VITE_SERVER_URL}/api/property-rows`);
+      const response = await axios.get(`${import.meta.env.VITE_SERVER_URL}/property-rows`);
       setPropertyRows(response.data || []);
     } catch (error) {
       console.error("Error fetching property rows:", error);
@@ -125,7 +125,7 @@ const fetchUserProfiles = async () => {
     setLoadingPropertyRows(true);
     try {
       // Find which rows include this property
-      const response = await axios.get(`${import.meta.env.VITE_SERVER_URL}/api/property-rows`);
+      const response = await axios.get(`${import.meta.env.VITE_SERVER_URL}/property-rows`);
       const rows = response.data || [];
 
       const propertyAssociations = [];
@@ -163,7 +163,7 @@ const fetchUserProfiles = async () => {
 
     setLoadingRowProperties(true);
     try {
-      const response = await axios.get(`${import.meta.env.VITE_SERVER_URL}/api/property-rows/${rowId}`);
+      const response = await axios.get(`${import.meta.env.VITE_SERVER_URL}/property-rows/${rowId}`);
 
       if (response.data && response.data.propertyDetails) {
         // Store complete list of properties in this row

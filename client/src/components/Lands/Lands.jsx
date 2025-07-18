@@ -32,7 +32,7 @@ export const Lands = () => {
       setLoadingFeatured(true);
       try {
         // Fetch the homepage PropertyRow to get the order
-        const response = await axios.get(`${import.meta.env.VITE_SERVER_URL}/api/property-rows?rowType=homepage`);
+        const response = await axios.get(`${import.meta.env.VITE_SERVER_URL}/property-rows?rowType=homepage`);
         
         if (response.data && Array.isArray(response.data.displayOrder)) {
           // Get the display order

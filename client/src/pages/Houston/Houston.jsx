@@ -26,7 +26,7 @@ export default function HoustonProperty() {
     const fetchHoustonRow = async () => {
       setLoadingFeatured(true);
       try {
-        const response = await axios.get(`${import.meta.env.VITE_SERVER_URL}/api/property-rows?rowType=Houston`);
+        const response = await axios.get(`${import.meta.env.VITE_SERVER_URL}/property-rows?rowType=Houston`);
         
         if (Array.isArray(response.data) && response.data.length > 0) {
           const houstonRow = response.data.find(row => row.rowType === "Houston");

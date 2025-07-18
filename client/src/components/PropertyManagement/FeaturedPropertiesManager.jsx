@@ -132,7 +132,7 @@ export function FeaturedPropertiesManager() {
       // Update the property row's display order
       const updatedOrder = properties.map(property => property.id);
       
-      await axios.put(`${import.meta.env.VITE_SERVER_URL}/api/property-rows/${selectedRow}`, {
+      await axios.put(`${import.meta.env.VITE_SERVER_URL}/property-rows/${selectedRow}`, {
         displayOrder: updatedOrder
       });
       

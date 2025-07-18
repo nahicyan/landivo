@@ -12,7 +12,7 @@ export default defineConfig({
     },
   },
   server: {
-    allowedHosts: ['landivo.com'],
+    allowedHosts: ['landivo.com',],
     host: true, // Set to true to listen on all addresses
     port: 5173,
     

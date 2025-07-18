@@ -15,7 +15,7 @@ export function useAuthApi() {
     if (isLoading) return;
     
     const instance = axios.create({
-      baseURL: `${import.meta.env.VITE_SERVER_URL}/api`,
+      baseURL: import.meta.env.VITE_SERVER_URL,
       withCredentials: true,
     });
     

@@ -121,7 +121,7 @@ const Profile = () => {
 
       // Send to API
       const token = await getAccessTokenSilently();
-      const response = await fetch(`${import.meta.env.VITE_SERVER_URL}/api/user/profile`, {
+      const response = await fetch(`${import.meta.env.VITE_SERVER_URL}/user/profile`, {
         method: "PUT",
         headers: {
           Authorization: `Bearer ${token}`

@@ -253,7 +253,7 @@ const handleSubmitSurvey = async () => {
     console.log("Submitting qualification data:", qualificationData);
     
     // Submit to backend
-    const response = await fetch(`${import.meta.env.VITE_SERVER_URL}/api/qualification/create`, {
+    const response = await fetch(`${import.meta.env.VITE_SERVER_URL}/qualification/create`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',

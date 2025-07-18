@@ -65,7 +65,7 @@ export function PropertyRowManager() {
 
   const handleCreateRow = async () => {
     try {
-      const response = await axios.post(`${import.meta.env.VITE_SERVER_URL}/api/property-rows`, newRowData);
+      const response = await axios.post(`${import.meta.env.VITE_SERVER_URL}/property-rows`, newRowData);
       toast.success("Property row created successfully");
       setNewRowData({
         name: "",
@@ -83,7 +83,7 @@ export function PropertyRowManager() {
 
   const handleUpdateRow = async () => {
     try {
-      await axios.put(`${import.meta.env.VITE_SERVER_URL}/api/property-rows/${selectedRow.id}`, newRowData);
+      await axios.put(`${import.meta.env.VITE_SERVER_URL}/property-rows/${selectedRow.id}`, newRowData);
       toast.success("Property row updated successfully");
       setIsEditing(false);
       fetchPropertyRows();
@@ -95,7 +95,7 @@ export function PropertyRowManager() {
 
   const handleDeleteRow = async (rowId) => {
     try {
-      await axios.delete(`${import.meta.env.VITE_SERVER_URL}/api/property-rows/${rowId}`);
+      await axios.delete(`${import.meta.env.VITE_SERVER_URL}/property-rows/${rowId}`);
       toast.success("Property row deleted successfully");
       if (selectedRow && selectedRow.id === rowId) {
         setSelectedRow(null);
