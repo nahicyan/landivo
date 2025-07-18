@@ -153,12 +153,12 @@ export const trackModifications = (entityType) => {
  * Helper function to extract entity type from URL
  */
 function getEntityTypeFromUrl(url) {
-  if (url.includes('/api/residency')) return 'Residency';
-  if (url.includes('/api/buyer')) return 'Buyer';
-  if (url.includes('/api/deal')) return 'Deal';
-  if (url.includes('/api/user')) return 'User';
-  if (url.includes('/api/qualification')) return 'Qualification';
-  if (url.includes('/api/email-list')) return 'EmailList';
+  if (url.includes('/residency')) return 'Residency';
+  if (url.includes('/buyer')) return 'Buyer';
+  if (url.includes('/deal')) return 'Deal';
+  if (url.includes('/user')) return 'User';
+  if (url.includes('/qualification')) return 'Qualification';
+  if (url.includes('/email-list')) return 'EmailList';
   return null;
 }
 
@@ -166,9 +166,9 @@ function getEntityTypeFromUrl(url) {
  * Helper function to extract entity ID from URL
  */
 function getEntityIdFromUrl(url) {
-  // Match patterns like /api/entity/ID or /api/entity/action/ID
-  const match = url.match(/\/api\/[^\/]+\/([^\/]+)$/) || 
-                url.match(/\/api\/[^\/]+\/[^\/]+\/([^\/]+)$/);
+  // Match patterns like /entity/ID or /entity/action/ID
+  const match = url.match(/\/[^\/]+\/([^\/]+)$/) || 
+                url.match(/\/[^\/]+\/[^\/]+\/([^\/]+)$/);
   
   if (match && match[1] && !['create', 'all', 'profile', 'sync'].includes(match[1])) {
     return match[1];

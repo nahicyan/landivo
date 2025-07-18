@@ -51,18 +51,18 @@ app.use("/uploads", express.static(path.join(__dirname, "uploads")));
 
 // API routes
 app.use(trackActivity);
-app.use("/api/user", userManagementRoute);
-app.use("/api/residency", residencyRoute);
-app.use("/api/property-rows", propertyRowRoute);
-app.use("/api/buyer", buyerRoute);
-app.use("/api/offer", offerRoute);
-app.use("/api/buyer", buyerActivityRoute);
-app.use("/api/qualification", qualificationRoute);
-app.use("/api/email-lists", emailListRoute);
-app.use("/api/deal", dealRoute);
-app.use("/api/property-rows", propertyRowRoute);
-app.use("/api/settings", settingsRoute);
-app.use("/api/visitors", visitorRoute);
+app.use("/user", userManagementRoute);
+app.use("/residency", residencyRoute);
+app.use("/property-rows", propertyRowRoute);
+app.use("/buyer", buyerRoute);
+app.use("/offer", offerRoute);
+app.use("/buyer", buyerActivityRoute);
+app.use("/qualification", qualificationRoute);
+app.use("/email-lists", emailListRoute);
+app.use("/deal", dealRoute);
+app.use("/property-rows", propertyRowRoute);
+app.use("/settings", settingsRoute);
+app.use("/visitors", visitorRoute);
 
 // Auth test route
 app.get("/auth/test-jwt", jwtCheck, extractUserFromToken, (req, res) => {
