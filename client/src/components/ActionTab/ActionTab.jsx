@@ -33,7 +33,7 @@ export default function ActionTab({ propertyData }) {
     const mailivoUrl =
       import.meta.env.VITE_MAILIVO_URL;
     window.open(
-      `${mailivoUrl}/dashboard/campaigns/run/${propertyData.id}`,
+      `${mailivoUrl}/dashboard/landivo/run/${propertyData.id}`,
       "_blank"
     );
   };
