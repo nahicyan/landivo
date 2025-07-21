@@ -15,7 +15,7 @@ export const textFieldStyle = {
 
 export const sectionStyle = {
   borderRadius: "20px",
-  padding: "16px 0",              // Padding only for top and bottom
+  padding: "16px 0",
   background: "#f9f9f9",
   boxShadow: "0 2px 12px rgba(0, 0, 0, 0.05)",
   border: "1px solid rgba(220, 220, 220, 0.8)",

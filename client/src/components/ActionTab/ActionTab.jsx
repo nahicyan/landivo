@@ -31,7 +31,7 @@ export default function ActionTab({ propertyData }) {
   };
   const handleCampaign = () => {
     const mailivoUrl =
-      import.meta.env.VITE_MAILIVO_URL || "http://localhost:3000";
+      import.meta.env.VITE_MAILIVO_URL;
     window.open(
       `${mailivoUrl}/dashboard/campaigns/run/${propertyData.id}`,
       "_blank"

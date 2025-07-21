@@ -30,7 +30,7 @@ app.use(express.json({ limit: '5mb' }));
 app.use(cookieParser());
 app.use(
   cors({
-    origin: ["https://landivo.com","https://api.landivo.com"], 
+    origin: ["https://landivo.com","https://api.landivo.com","https://mailivo.landivo.com"], 
     credentials: true,
     methods: "GET,POST,PUT,DELETE,OPTIONS",
     allowedHeaders: "Origin, X-Requested-With, Content-Type, Accept, Authorization",
@@ -39,7 +39,7 @@ app.use(
 
 // CORS headers
 app.use((req, res, next) => {
-  res.header("Access-Control-Allow-Origin", "https://landivo.com","https://api.landivo.com" ); // Fixed origin
+  res.header("Access-Control-Allow-Origin", "https://landivo.com","https://api.landivo.com","https://mailivo.landivo.com" ); // Fixed origin
   res.header("Access-Control-Allow-Credentials", "true");
   res.header("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS");
   res.header("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept, Authorization");
