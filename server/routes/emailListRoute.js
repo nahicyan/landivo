@@ -10,73 +10,33 @@ import {
   removeBuyersFromList,
   sendEmailToList
 } from "../controllers/emailListCntrl.js";
-import { 
-  jwtCheck, 
-  extractUserFromToken, 
-  checkPermissions 
-} from "../middlewares/authMiddleware.js";
 
 const router = express.Router();
 
-// All routes require authentication and appropriate permissions
+// Public Email List Routes
 
-// Read operations - require read:buyers permission
-router.get("/", 
-  jwtCheck, 
-  extractUserFromToken, 
-  checkPermissions(['read:buyers']), 
-  getAllEmailLists
-);
+// Read all email lists
+router.get("/", getAllEmailLists);
 
-router.get("/:id", 
-  jwtCheck, 
-  extractUserFromToken, 
-  checkPermissions(['read:buyers']), 
-  getEmailList
-);
+// Read a single email list by ID
+router.get("/:id", getEmailList);
 
-// Write operations - require write:buyers permission
-router.post("/", 
-  jwtCheck, 
-  extractUserFromToken, 
-  checkPermissions(['write:buyers']), 
-  createEmailList
-);
+// Create a new email list
+router.post("/", createEmailList);
 
-router.put("/:id", 
-  jwtCheck, 
-  extractUserFromToken, 
-  checkPermissions(['write:buyers']), 
-  updateEmailList
-);
+// Update an existing email list by ID
+router.put("/:id", updateEmailList);
 
-router.post("/:id/add-buyers", 
-  jwtCheck, 
-  extractUserFromToken, 
-  checkPermissions(['write:buyers']), 
-  addBuyersToList
-);
+// Add buyers to a list
+router.post("/:id/add-buyers", addBuyersToList);
 
-router.post("/:id/remove-buyers", 
-  jwtCheck, 
-  extractUserFromToken, 
-  checkPermissions(['write:buyers']), 
-  removeBuyersFromList
-);
+// Remove buyers from a list
+router.post("/:id/remove-buyers", removeBuyersFromList);
 
-router.post("/:id/send-email", 
-  jwtCheck, 
-  extractUserFromToken, 
-  checkPermissions(['write:buyers']), 
-  sendEmailToList
-);
+// Send an email to all buyers in a list
+router.post("/:id/send-email", sendEmailToList);
 
-// Delete operations - require delete:buyers permission
-router.delete("/:id", 
-  jwtCheck, 
-  extractUserFromToken, 
-  checkPermissions(['delete:buyers']), 
-  deleteEmailList
-);
+// Delete an email list
+router.delete("/:id", deleteEmailList);
 
 export { router as emailListRoute };
