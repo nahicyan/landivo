@@ -17,6 +17,8 @@ import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { deleteBuyer } from "@/utils/api";
+import { toast } from "react-toastify";
 
 import {
   ArrowLeft,
@@ -85,22 +87,21 @@ export default function BuyerDetail() {
   };
 
   // Handle buyer deletion
-  const handleDeleteBuyer = async () => {
-    if (confirm("Are you sure you want to delete this buyer? This action cannot be undone.")) {
-      setDeletingBuyer(true);
-      
-      try {
-        // In a real app, this would be an API call to delete the buyer
-        // await deleteBuyer(buyerId);
-        alert("Buyer deleted successfully");
-        navigate("/admin/buyers");
-      } catch (error) {
-        console.error("Error deleting buyer:", error);
-        alert("Failed to delete buyer. Please try again.");
-        setDeletingBuyer(false);
-      }
+const handleDeleteBuyer = async () => {
+  if (window.confirm("Are you sure you want to delete this buyer? This action cannot be undone.")) {
+    setDeletingBuyer(true);
+    
+    try {
+      await deleteBuyer(buyerId);
+      toast.success("Buyer deleted successfully");
+      navigate("/admin/buyers");
+    } catch (error) {
+      console.error("Error deleting buyer:", error);
+      toast.error("Failed to delete buyer. Please try again.");
+      setDeletingBuyer(false);
     }
-  };
+  }
+};
 
   if (isError) {
     return (

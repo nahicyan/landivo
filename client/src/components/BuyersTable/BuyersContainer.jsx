@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
-import { getAllBuyers } from "@/utils/api";
+import { getAllBuyers, deleteBuyer } from "@/utils/api";
 import { PuffLoader } from "react-spinners";
 import { toast } from "react-toastify";
 
@@ -304,23 +304,26 @@ const BuyersContainer = () => {
   }, []);
 
   // Confirm and process buyer deletion
-  const confirmDeleteSelected = useCallback(async () => {
-    try {
-      // In a real app, you would call an API to delete these buyers
-      // For now, just remove them from the local state
-      const updatedBuyers = buyers.filter(buyer => !selectedBuyers.includes(buyer.id));
-      setBuyers(updatedBuyers);
-      setFilteredBuyers(prev => prev.filter(buyer => !selectedBuyers.includes(buyer.id)));
-      setSelectedBuyers([]);
-      updateStats(updatedBuyers);
-      
-      toast.success(`${selectedBuyers.length} buyer${selectedBuyers.length !== 1 ? 's' : ''} deleted successfully`);
-      setDeleteConfirmOpen(false);
-    } catch (error) {
-      console.error("Error deleting buyers:", error);
-      toast.error("Failed to delete selected buyers");
-    }
-  }, [buyers, selectedBuyers, updateStats]);
+const confirmDeleteSelected = useCallback(async () => {
+  try {
+    // Delete each selected buyer from the database
+    const deletePromises = selectedBuyers.map(buyerId => deleteBuyer(buyerId));
+    await Promise.all(deletePromises);
+    
+    // Refresh the buyers list from the server
+    const updatedBuyers = await getAllBuyers();
+    setBuyers(updatedBuyers);
+    setFilteredBuyers(updatedBuyers);
+    setSelectedBuyers([]);
+    updateStats(updatedBuyers);
+    
+    toast.success(`${selectedBuyers.length} buyer${selectedBuyers.length !== 1 ? 's' : ''} deleted successfully`);
+    setDeleteConfirmOpen(false);
+  } catch (error) {
+    console.error("Error deleting buyers:", error);
+    toast.error("Failed to delete selected buyers");
+  }
+}, [buyers, selectedBuyers, updateStats]);
 
   // Export email list
   const handleExport = useCallback(() => {

@@ -312,18 +312,30 @@ export const deleteBuyer = asyncHandler(async (req, res) => {
       return res.status(404).json({ message: "Buyer not found" });
     }
 
-    // First delete all offers from this buyer (due to foreign key constraint)
+    // Delete all related records first (due to foreign key constraints)
+    
+    // 1. Delete email list memberships
+    await prisma.buyerEmailList.deleteMany({
+      where: { buyerId: id }
+    });
+
+    // 2. Delete buyer activities
+    await prisma.buyerActivity.deleteMany({
+      where: { buyerId: id }
+    });
+
+    // 3. Delete offers from this buyer
     await prisma.offer.deleteMany({
       where: { buyerId: id }
     });
 
-    // Then delete the buyer
+    // 4. Finally delete the buyer
     const deletedBuyer = await prisma.buyer.delete({
       where: { id }
     });
 
     res.status(200).json({
-      message: "Buyer and associated offers deleted successfully",
+      message: "Buyer and all associated records deleted successfully",
       buyer: deletedBuyer
     });
   } catch (err) {
@@ -756,6 +768,54 @@ export const getBuyerByAuth0Id = asyncHandler(async (req, res) => {
     console.error("Error fetching buyer by Auth0 ID:", err);
     res.status(500).json({
       message: "An error occurred while fetching buyer information",
+      error: err.message
+    });
+  }
+});
+
+/**
+ * Bulk delete buyers
+ * @route DELETE /api/buyer/bulk-delete
+ * @access Private
+ */
+export const bulkDeleteBuyers = asyncHandler(async (req, res) => {
+  const { buyerIds } = req.body;
+
+  if (!buyerIds || !Array.isArray(buyerIds) || buyerIds.length === 0) {
+    return res.status(400).json({ message: "Buyer IDs array is required" });
+  }
+
+  try {
+    // Delete all related records first (due to foreign key constraints)
+    
+    // 1. Delete email list memberships
+    await prisma.buyerEmailList.deleteMany({
+      where: { buyerId: { in: buyerIds } }
+    });
+
+    // 2. Delete buyer activities
+    await prisma.buyerActivity.deleteMany({
+      where: { buyerId: { in: buyerIds } }
+    });
+
+    // 3. Delete offers
+    await prisma.offer.deleteMany({
+      where: { buyerId: { in: buyerIds } }
+    });
+
+    // 4. Delete buyers
+    const result = await prisma.buyer.deleteMany({
+      where: { id: { in: buyerIds } }
+    });
+
+    res.status(200).json({
+      message: `${result.count} buyers and all associated records deleted successfully`,
+      deletedCount: result.count
+    });
+  } catch (err) {
+    console.error("Error bulk deleting buyers:", err);
+    res.status(500).json({
+      message: "An error occurred while deleting buyers",
       error: err.message
     });
   }
