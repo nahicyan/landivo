@@ -239,6 +239,9 @@ model Buyer {
   // Email List fields
   emailStatus           String?     // "available" or "unsubscribe"
   emailPermissionStatus String?
+  weeklyUpdates String? // "available" or "unsubscribe"
+  holidayDeals String? // "available" or "unsubscribe"
+  specialDiscounts String? // "available" or "unsubscribe"
   emailListMemberships  BuyerEmailList[] @relation("BuyerEmailLists")
   
   // Audit fields
