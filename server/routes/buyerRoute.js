@@ -15,7 +15,7 @@ import {
   updateSubscriptionPreferences,
   completeUnsubscribe,
   getBuyerForUnsubscribe,
- // resubscribeBuyer
+ resubscribeBuyer
 } from "../controllers/buyerCntrl.js";
 import { getBuyerByAuth0Id } from '../controllers/buyerCntrl.js';
 
@@ -43,6 +43,6 @@ router.get("/stats", getBuyerStats);
 router.get("/unsubscribe/:id/data", getBuyerForUnsubscribe);
 router.put("/unsubscribe/:id", updateSubscriptionPreferences);
 router.put("/unsubscribe/:id/complete", completeUnsubscribe);
-//router.put("/resubscribe/:id", resubscribeBuyer);
+router.put("/resubscribe/:id", resubscribeBuyer);
 
 export { router as buyerRoute };
