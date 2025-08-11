@@ -59,16 +59,16 @@ import { useApiAuthInterceptor } from "./utils/apiInterceptor";
 import AdminProperties from "./pages/AdminProperties/AdminProperties";
 import AdminSettings from "./pages/AdminSettings/AdminSettings";
 import AdminHelp from "./pages/AdminHelp/AdminHelp";
-import visitorTracking from './services/VisitorTrackingService';
+import visitorTracking from "./services/VisitorTrackingService";
 import "react-toastify/dist/ReactToastify.css";
 import TrafficPage from "./pages/Traffic/TrafficPage";
 import { TokenValidationProvider } from "./components/Auth0/TokenValidationProvider";
 import AuthErrorBoundary from "./components/Auth0/AuthErrorBoundary";
 import ApprovePropertyDeletion from "./pages/ApprovePropertyDeletion/ApprovePropertyDeletion";
-import Offer from './pages/AdminOffer/Offer';
+import Offer from "./pages/AdminOffer/Offer";
 import JoinVip from "./pages/JoinVip/JoinVip";
 import Discount from "./pages/Discount/Discount";
-
+import Unsubscribe from "./pages/Subscription/Unsubscribe";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -145,6 +145,8 @@ function App() {
                                 <Route path="/unauthorized" element={<Unauthorized />} />
                                 <Route path="/property-deletion/:token" element={<ApprovePropertyDeletion />} />
                                 <Route path="/join-vip" element={<JoinVip />} />
+                                {/* Unsubscribe route - standalone without main layout */}
+                                <Route path="/unsubscribe/:id" element={<Unsubscribe />} />
                                 {/* Protected route for profile */}
                                 <Route
                                   path="/profile"
@@ -161,15 +163,10 @@ function App() {
                               <Route
                                 path="/admin"
                                 element={
-                                  <ProtectedRoute
-                                    requiredPermissions={[PERMISSIONS.ACCESS_ADMIN]}
-                                    fallbackToRoles={true}
-                                    allowedRoles={['Admin']}
-                                  >
+                                  <ProtectedRoute requiredPermissions={[PERMISSIONS.ACCESS_ADMIN]} fallbackToRoles={true} allowedRoles={["Admin"]}>
                                     <AdminLayout />
                                   </ProtectedRoute>
-                                }
-                              >
+                                }>
                                 <Route index element={<Admin />} />
                                 <Route path="add-property" element={<AddProperty />} />
                                 <Route path="edit-property/:propertyId" element={<EditProperty />} />
@@ -191,11 +188,7 @@ function App() {
                                 <Route
                                   path="users"
                                   element={
-                                    <ProtectedRoute
-                                      requiredPermissions={[PERMISSIONS.READ_USERS]}
-                                      fallbackToRoles={true}
-                                      allowedRoles={['Admin']}
-                                    >
+                                    <ProtectedRoute requiredPermissions={[PERMISSIONS.READ_USERS]} fallbackToRoles={true} allowedRoles={["Admin"]}>
                                       <AdminUsers />
                                     </ProtectedRoute>
                                   }
@@ -203,11 +196,7 @@ function App() {
                                 <Route
                                   path="users/:userId"
                                   element={
-                                    <ProtectedRoute
-                                      requiredPermissions={[PERMISSIONS.READ_USERS]}
-                                      fallbackToRoles={true}
-                                      allowedRoles={['Admin']}
-                                    >
+                                    <ProtectedRoute requiredPermissions={[PERMISSIONS.READ_USERS]} fallbackToRoles={true} allowedRoles={["Admin"]}>
                                       <UserDetail />
                                     </ProtectedRoute>
                                   }
@@ -217,11 +206,7 @@ function App() {
                                 <Route
                                   path="buyers"
                                   element={
-                                    <ProtectedRoute
-                                      requiredPermissions={[PERMISSIONS.READ_BUYERS]}
-                                      fallbackToRoles={true}
-                                      allowedRoles={['Admin']}
-                                    >
+                                    <ProtectedRoute requiredPermissions={[PERMISSIONS.READ_BUYERS]} fallbackToRoles={true} allowedRoles={["Admin"]}>
                                       <AdminBuyers />
                                     </ProtectedRoute>
                                   }
@@ -229,11 +214,7 @@ function App() {
                                 <Route
                                   path="buyers/create"
                                   element={
-                                    <ProtectedRoute
-                                      requiredPermissions={[PERMISSIONS.WRITE_BUYERS]}
-                                      fallbackToRoles={true}
-                                      allowedRoles={['Admin']}
-                                    >
+                                    <ProtectedRoute requiredPermissions={[PERMISSIONS.WRITE_BUYERS]} fallbackToRoles={true} allowedRoles={["Admin"]}>
                                       <CreateBuyer />
                                     </ProtectedRoute>
                                   }
@@ -241,11 +222,7 @@ function App() {
                                 <Route
                                   path="buyers/:buyerId"
                                   element={
-                                    <ProtectedRoute
-                                      requiredPermissions={[PERMISSIONS.READ_BUYERS]}
-                                      fallbackToRoles={true}
-                                      allowedRoles={['Admin']}
-                                    >
+                                    <ProtectedRoute requiredPermissions={[PERMISSIONS.READ_BUYERS]} fallbackToRoles={true} allowedRoles={["Admin"]}>
                                       <BuyerDetail />
                                     </ProtectedRoute>
                                   }
@@ -253,11 +230,7 @@ function App() {
                                 <Route
                                   path="buyers/:buyerId/edit"
                                   element={
-                                    <ProtectedRoute
-                                      requiredPermissions={[PERMISSIONS.WRITE_BUYERS]}
-                                      fallbackToRoles={true}
-                                      allowedRoles={['Admin']}
-                                    >
+                                    <ProtectedRoute requiredPermissions={[PERMISSIONS.WRITE_BUYERS]} fallbackToRoles={true} allowedRoles={["Admin"]}>
                                       <EditBuyer />
                                     </ProtectedRoute>
                                   }
@@ -265,11 +238,7 @@ function App() {
                                 <Route
                                   path="buyers/:buyerId/offers"
                                   element={
-                                    <ProtectedRoute
-                                      requiredPermissions={[PERMISSIONS.READ_OFFERS]}
-                                      fallbackToRoles={true}
-                                      allowedRoles={['Admin']}
-                                    >
+                                    <ProtectedRoute requiredPermissions={[PERMISSIONS.READ_OFFERS]} fallbackToRoles={true} allowedRoles={["Admin"]}>
                                       <BuyerOffers />
                                     </ProtectedRoute>
                                   }
@@ -277,11 +246,7 @@ function App() {
                                 <Route
                                   path="email-lists"
                                   element={
-                                    <ProtectedRoute
-                                      requiredPermissions={[PERMISSIONS.READ_BUYERS]}
-                                      fallbackToRoles={true}
-                                      allowedRoles={['Admin']}
-                                    >
+                                    <ProtectedRoute requiredPermissions={[PERMISSIONS.READ_BUYERS]} fallbackToRoles={true} allowedRoles={["Admin"]}>
                                       <EmailLists />
                                     </ProtectedRoute>
                                   }
@@ -301,16 +266,10 @@ function App() {
                               <Route
                                 path="/agent"
                                 element={
-                                  <ProtectedRoute
-                                    requiredPermissions={[PERMISSIONS.WRITE_PROPERTIES]}
-                                    fallbackToRoles={true}
-                                    allowedRoles={['Admin', 'Agent']}
-                                  >
+                                  <ProtectedRoute requiredPermissions={[PERMISSIONS.WRITE_PROPERTIES]} fallbackToRoles={true} allowedRoles={["Admin", "Agent"]}>
                                     <AdminLayout />
                                   </ProtectedRoute>
-                                }
-                              >
-                              </Route>
+                                }></Route>
                             </Routes>
                           </TrackingProvider>
                         </ActivityTrackingProvider>
