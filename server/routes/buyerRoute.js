@@ -6,11 +6,16 @@ import {
   getBuyerById,
   updateBuyer,
   deleteBuyer,
-  // New email-related endpoints
+  // Email-related endpoints
   getBuyersByArea,
   sendEmailToBuyers,
   importBuyersFromCsv,
-  getBuyerStats
+  getBuyerStats,
+    //Unsubscribe endpoints
+  updateSubscriptionPreferences,
+  completeUnsubscribe,
+  getBuyerForUnsubscribe,
+ // resubscribeBuyer
 } from "../controllers/buyerCntrl.js";
 import { getBuyerByAuth0Id } from '../controllers/buyerCntrl.js';
 
@@ -33,5 +38,11 @@ router.get("/byArea/:areaId", getBuyersByArea);
 router.post("/sendEmail", sendEmailToBuyers);
 router.post("/import", importBuyersFromCsv);
 router.get("/stats", getBuyerStats);
+
+// Unsubscribe management routes (Public endpoints)
+router.get("/unsubscribe/:id/data", getBuyerForUnsubscribe);
+router.put("/unsubscribe/:id", updateSubscriptionPreferences);
+router.put("/unsubscribe/:id/complete", completeUnsubscribe);
+//router.put("/resubscribe/:id", resubscribeBuyer);
 
 export { router as buyerRoute };

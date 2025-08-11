@@ -65,6 +65,7 @@ import TrafficPage from "./pages/Traffic/TrafficPage";
 import { TokenValidationProvider } from "./components/Auth0/TokenValidationProvider";
 import AuthErrorBoundary from "./components/Auth0/AuthErrorBoundary";
 import JoinVip from "./pages/JoinVip/JoinVip";
+import Unsubscribe from "./pages/Subscription/Unsubscribe";
 
 
 const queryClient = new QueryClient({
@@ -140,7 +141,9 @@ function App() {
                                 <Route path="/SanAntonio" element={<SanAntonio />} />
                                 <Route path="/OtherLands" element={<OtherLands />} />
                                 <Route path="/unauthorized" element={<Unauthorized />} />
-                                <Route path="/join-vip" element={<JoinVip />} />
+                                <Route path="/join-vip" element={<JoinVip />} />                    
+                                {/* Unsubscribe route - standalone without main layout */}
+                                <Route path="/unsubscribe/:id" element={<Unsubscribe />} />
                                 {/* Protected route for profile */}
                                 <Route
                                   path="/profile"
