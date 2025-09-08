@@ -10,6 +10,7 @@ import {
   updateUserStatus,
   updateUserProfiles,
   getPublicProfileById,
+  getPublicProfiles,
   getProfilesForPropertyAssignment,
   getPropertiesUsingProfile,
   getPropertiesCountByProfile,
@@ -21,6 +22,7 @@ const router = express.Router();
 // Routes with all auth checks removed
 router.get("/byAuth0Id", getUserByAuth0Id);
 router.post("/sync", createOrUpdateUser);
+router.get("/public-profiles", getPublicProfiles); 
 router.get("/public-profile/:id", getPublicProfileById);
 
 // Protected routes (require authentication)

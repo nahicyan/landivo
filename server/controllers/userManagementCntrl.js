@@ -586,3 +586,79 @@ export const reassignProperties = asyncHandler(async (req, res) => {
     });
   }
 });
+
+/**
+ * Get all enabled public profiles
+ * This endpoint is public and doesn't require authentication
+ * Returns only active users with their public profile information
+ */
+export const getPublicProfiles = asyncHandler(async (req, res) => {
+  try {
+    // Query parameters for optional filtering
+    const { 
+      limit = 50, 
+      offset = 0, 
+      profileRole 
+    } = req.query;
+
+    // Build where clause
+    const whereClause = {
+      isActive: true, // Only return enabled/active users
+      // Ensure user has basic profile info
+      AND: [
+        {
+          OR: [
+            { firstName: { not: null } },
+            { lastName: { not: null } }
+          ]
+        }
+      ]
+    };
+
+    // Add profileRole filter if provided
+    if (profileRole) {
+      whereClause.profileRole = profileRole;
+    }
+
+    const users = await prisma.user.findMany({
+      where: whereClause,
+      select: {
+        id: true,
+        firstName: true,
+        lastName: true,
+        email: true,
+        phone: true,
+        profileRole: true,
+        avatarUrl: true
+      },
+      orderBy: [
+        { profileRole: "asc" },
+        { firstName: "asc" },
+        { lastName: "asc" }
+      ],
+      take: parseInt(limit),
+      skip: parseInt(offset)
+    });
+
+    // Get total count for pagination
+    const totalCount = await prisma.user.count({
+      where: whereClause
+    });
+
+    res.status(200).json({
+      profiles: users,
+      pagination: {
+        total: totalCount,
+        limit: parseInt(limit),
+        offset: parseInt(offset),
+        hasMore: parseInt(offset) + users.length < totalCount
+      }
+    });
+  } catch (error) {
+    console.error("Error fetching public profiles:", error);
+    res.status(500).json({
+      message: "An error occurred while fetching profiles",
+      error: error.message
+    });
+  }
+});
