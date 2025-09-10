@@ -1,5 +1,5 @@
 // client/src/components/PropertyManagement/PropertyDeletionModal.jsx
-import React, { useState } from 'react';
+import React, { useState } from "react";
 import {
   Dialog,
   DialogContent,
@@ -20,14 +20,14 @@ export const PropertyDeletionModal = ({
   onConfirm,
   isLoading,
 }) => {
-  const [reason, setReason] = useState('');
+  const [reason, setReason] = useState("");
 
   const handleConfirm = () => {
     onConfirm(reason);
   };
 
   const handleClose = () => {
-    setReason('');
+    setReason("");
     onClose();
   };
 
@@ -49,7 +49,12 @@ export const PropertyDeletionModal = ({
         <div className="space-y-4">
           {/* Property Info */}
           <div className="p-3 bg-gray-50 rounded-lg">
-            <h4 className="font-medium text-sm">{property.title}</h4>
+            <h4
+              className="font-medium text-sm"
+              dangerouslySetInnerHTML={{
+                __html: property.title || "Untitled Property",
+              }}
+            />
             <p className="text-sm text-gray-600">
               {property.streetAddress}, {property.city}, {property.state}
             </p>
@@ -62,7 +67,8 @@ export const PropertyDeletionModal = ({
           <Alert>
             <AlertTriangle className="h-4 w-4" />
             <AlertDescription>
-              An email will be sent to the admin. The property will only be deleted after admin approval.
+              An email will be sent to the admin. The property will only be
+              deleted after admin approval.
             </AlertDescription>
           </Alert>
 
