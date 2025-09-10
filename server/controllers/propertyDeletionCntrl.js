@@ -108,21 +108,12 @@ export const approvePropertyDeletion = asyncHandler(async (req, res) => {
 
     // Use transaction to handle both operations
     await prisma.$transaction(async (tx) => {
-      // First update the deletion request status
-      await tx.propertyDeletionRequest.update({
-        where: { id: deletionRequest.id },
-        data: {
-          status: "APPROVED",
-          approvedAt: new Date()
-        }
-      });
-
-      // Then delete all related deletion requests for this property
+      // First delete all deletion requests for this property
       await tx.propertyDeletionRequest.deleteMany({
         where: { propertyId: deletionRequest.propertyId }
       });
 
-      // Finally delete the property
+      // Then delete the property
       await tx.residency.delete({
         where: { id: deletionRequest.propertyId }
       });
