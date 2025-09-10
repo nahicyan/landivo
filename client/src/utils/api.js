@@ -736,3 +736,15 @@ export const getCurrentVisitorCount = async () => {
     return { currentVisitors: 0 };
   }
 };
+
+
+export const requestPropertyDeletion = async (propertyId, reason) => {
+  try {
+    const response = await api.post(`/residency/request-deletion/${propertyId}`, {
+      reason
+    });
+    return response.data;
+  } catch (error) {
+    handleRequestError(error, "Failed to request property deletion");
+  }
+};

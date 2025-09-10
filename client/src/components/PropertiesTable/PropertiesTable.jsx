@@ -1,4 +1,4 @@
-// PropertiesTable.jsx
+// client/src/components/PropertiesTable/PropertiesTable.jsx
 "use client";
 
 import React, { useState, useEffect, useMemo } from "react";
@@ -7,13 +7,17 @@ import useProperties from "../../components/hooks/useProperties.js";
 import { DataTable } from "../DataTable/DataTable";
 import PropertiesTableFilter from "../PropertiesTableFilter/PropertiesTableFilter";
 import { QuickEditModal } from "@/components/PropertyManagement/QuickEditModal";
+import { usePropertyDeletion } from '@/hooks/usePropertyDeletion';
+import { PropertyDeletionModal } from '@/components/PropertyManagement/PropertyDeletionModal';
 import { 
   MoreHorizontal, 
   PencilIcon, 
   TrashIcon, 
   Eye,
   ChevronDown,
-  ChevronUp
+  ChevronUp,
+  Trash2,
+  PencilLine
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -43,6 +47,17 @@ export default function PropertiesTable({ propertyData }) {
   // For quick edit modal
   const [selectedProperty, setSelectedProperty] = useState(null);
   const [isQuickEditOpen, setIsQuickEditOpen] = useState(false);
+  
+  // Add property deletion hook
+  const {
+    isConfirmOpen,
+    selectedProperty: selectedPropertyForDeletion,
+    isLoading: isDeletionLoading,
+    canDeleteProperty,
+    openDeletionConfirm,
+    closeDeletionConfirm,
+    requestPropertyDeletion,
+  } = usePropertyDeletion();
   
   // All available columns from schema
   const allAvailableColumns = [
@@ -121,6 +136,11 @@ export default function PropertiesTable({ propertyData }) {
     }, 500);
   };
 
+  // Handle view property
+  const handleViewProperty = (property) => {
+    window.open(`/properties/${property.id}`, '_blank');
+  };
+
   // Helper function to toggle cell expansion
   const toggleCellExpansion = (rowId, columnId) => {
     const cellKey = `${rowId}-${columnId}`;
@@ -148,8 +168,7 @@ export default function PropertiesTable({ propertyData }) {
     const needsTruncation = textContent.length > maxLength;
     
     // Create a safe version of the content for display
-    const displayContent = isExpanded || !needsTruncation ? 
-      content : 
+    const displayContent = isExpanded || !needsTruncation ? content : 
       content.substring(0, maxLength) + '...';
     
     return (
@@ -236,6 +255,8 @@ export default function PropertiesTable({ propertyData }) {
       {
         id: "actions",
         cell: ({ row }) => {
+          const property = row.original;
+          
           return (
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
@@ -246,15 +267,41 @@ export default function PropertiesTable({ propertyData }) {
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
                 <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={() => window.open(`/properties/${row.original.id}`, '_blank')}>
-                  <Eye className="mr-2 h-4 w-4" /> View
+                
+                <DropdownMenuItem
+                  onClick={() => handleQuickEdit(property)}
+                  className="cursor-pointer"
+                >
+                  <PencilLine className="mr-2 h-4 w-4" />
+                  Quick Edit
                 </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => handleQuickEdit(row.original)}>
-                  <PencilIcon className="mr-2 h-4 w-4" /> Quick Edit
+                
+                <DropdownMenuItem
+                  onClick={() => handleViewProperty(property)}
+                  className="cursor-pointer"
+                >
+                  <Eye className="mr-2 h-4 w-4" />
+                  View Details
                 </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => window.open(`/admin/edit-property/${row.original.id}`, '_blank')}>
+                
+                <DropdownMenuItem onClick={() => window.open(`/admin/edit-property/${property.id}`, '_blank')}>
                   <PencilIcon className="mr-2 h-4 w-4" /> Full Edit
+                </DropdownMenuItem>
+                
+                <DropdownMenuSeparator />
+                
+                {/* Delete option - only show if property can be deleted */}
+                <DropdownMenuItem
+                  onClick={() => canDeleteProperty(property) ? openDeletionConfirm(property) : null}
+                  className={`cursor-pointer ${
+                    canDeleteProperty(property) 
+                      ? "text-red-600 hover:text-red-700 hover:bg-red-50" 
+                      : "text-gray-400 cursor-not-allowed"
+                  }`}
+                  disabled={!canDeleteProperty(property)}
+                >
+                  <Trash2 className="mr-2 h-4 w-4" />
+                  {canDeleteProperty(property) ? "Request Deletion" : "Cannot Delete"}
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
@@ -264,7 +311,7 @@ export default function PropertiesTable({ propertyData }) {
     ];
     
     return columns;
-  }, [visibleColumns, expandedCells]);
+  }, [visibleColumns, expandedCells, canDeleteProperty, openDeletionConfirm]);
 
   // Parse filtered data
   const filteredData = useMemo(() => {
@@ -508,6 +555,15 @@ export default function PropertiesTable({ propertyData }) {
           onSave={handleQuickEditSave}
         />
       )}
+      
+      {/* Property Deletion Modal */}
+      <PropertyDeletionModal
+        isOpen={isConfirmOpen}
+        onClose={closeDeletionConfirm}
+        property={selectedPropertyForDeletion}
+        onConfirm={requestPropertyDeletion}
+        isLoading={isDeletionLoading}
+      />
     </div>
   );
 }

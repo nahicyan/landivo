@@ -79,6 +79,9 @@ model Residency {
   
   //Deals
   deals     Deal[]
+
+    // Deletion
+  deletionRequests PropertyDeletionRequest[]
   
   // 1. System Information
   ownerId            Int?
@@ -182,6 +185,30 @@ model Residency {
   // Unique Constraints
   @@unique(fields: [apnOrPin, streetAddress, city, state]) // Modified to remove userEmail
   @@unique(fields: [latitude, longitude]) // Ensure no duplicate geolocations
+
+
+}
+
+//---------------------- Deletion ----------------------//
+
+model PropertyDeletionRequest {
+  id          String   @id @default(auto()) @map("_id") @db.ObjectId
+  propertyId  String   @db.ObjectId
+  property    Residency @relation(fields: [propertyId], references: [id])
+  reason      String?
+  token       String   @unique
+  status      DeletionStatus @default(PENDING)
+  expiresAt   DateTime
+  approvedAt  DateTime?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+enum DeletionStatus {
+  PENDING
+  APPROVED
+  EXPIRED
+  REJECTED
 }
 
 //---------------------- Offer ----------------------//
