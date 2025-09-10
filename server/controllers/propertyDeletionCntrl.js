@@ -79,82 +79,63 @@ export const approvePropertyDeletion = asyncHandler(async (req, res) => {
     // Find deletion request by token
     const deletionRequest = await prisma.propertyDeletionRequest.findUnique({
       where: { token },
-      include: {
-        property: true
-      }
+      include: { property: true }
     });
 
     if (!deletionRequest) {
-      return res.status(404).send(`
-        <html>
-          <body style="font-family: Arial, sans-serif; padding: 40px; text-align: center;">
-            <h1 style="color: #dc3545;">Invalid Request</h1>
-            <p>This deletion request is invalid or has already been processed.</p>
-          </body>
-        </html>
-      `);
+      return res.status(404).json({
+        message: "This deletion request is invalid or has already been processed."
+      });
     }
 
-    // Check if token has expired
     if (new Date() > deletionRequest.expiresAt) {
-      return res.status(400).send(`
-        <html>
-          <body style="font-family: Arial, sans-serif; padding: 40px; text-align: center;">
-            <h1 style="color: #dc3545;">Request Expired</h1>
-            <p>This deletion request has expired.</p>
-          </body>
-        </html>
-      `);
+      return res.status(400).json({
+        message: "This deletion request has expired."
+      });
     }
 
-    // Check if already processed
     if (deletionRequest.status !== "PENDING") {
-      return res.status(400).send(`
-        <html>
-          <body style="font-family: Arial, sans-serif; padding: 40px; text-align: center;">
-            <h1 style="color: #dc3545;">Already Processed</h1>
-            <p>This deletion request has already been processed.</p>
-          </body>
-        </html>
-      `);
+      return res.status(400).json({
+        message: "This deletion request has already been processed."
+      });
     }
 
-    // Delete the property
-    await prisma.residency.delete({
-      where: { id: deletionRequest.propertyId }
+    // Store property info before deletion
+    const propertyInfo = {
+      title: deletionRequest.property.title,
+      address: deletionRequest.property.streetAddress
+    };
+
+    // Use transaction to handle both operations
+    await prisma.$transaction(async (tx) => {
+      // First update the deletion request status
+      await tx.propertyDeletionRequest.update({
+        where: { id: deletionRequest.id },
+        data: {
+          status: "APPROVED",
+          approvedAt: new Date()
+        }
+      });
+
+      // Then delete all related deletion requests for this property
+      await tx.propertyDeletionRequest.deleteMany({
+        where: { propertyId: deletionRequest.propertyId }
+      });
+
+      // Finally delete the property
+      await tx.residency.delete({
+        where: { id: deletionRequest.propertyId }
+      });
     });
 
-    // Update deletion request status
-    await prisma.propertyDeletionRequest.update({
-      where: { id: deletionRequest.id },
-      data: {
-        status: "APPROVED",
-        approvedAt: new Date()
-      }
+    res.status(200).json({
+      message: `Property "${propertyInfo.title}" at ${propertyInfo.address} has been permanently deleted.`
     });
-
-    // Return success page
-    res.status(200).send(`
-      <html>
-        <body style="font-family: Arial, sans-serif; padding: 40px; text-align: center;">
-          <h1 style="color: #28a745;">Property Deleted Successfully</h1>
-          <p>Property "${deletionRequest.property.title}" has been permanently deleted.</p>
-          <p style="color: #6c757d;">Address: ${deletionRequest.property.streetAddress}</p>
-          <hr style="margin: 30px 0;">
-          <p><a href="https://landivo.com" style="color: #324c48;">Return to Landivo</a></p>
-        </body>
-      </html>
-    `);
 
   } catch (error) {
     console.error("Error approving property deletion:", error);
-    res.status(500).send(`
-      <html>
-        <body style="font-family: Arial, sans-serif; padding: 40px; text-align: center;">
-          <h1 style="color: #dc3545;">Error</h1>
-          <p>Failed to delete property. Please try again or contact support.</p>
-        </body>
-      </html>
-    `);
+    res.status(500).json({
+      message: "Failed to delete property. Please try again or contact support."
+    });
   }
 });

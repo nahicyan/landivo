@@ -64,6 +64,7 @@ import "react-toastify/dist/ReactToastify.css";
 import TrafficPage from "./pages/Traffic/TrafficPage";
 import { TokenValidationProvider } from "./components/Auth0/TokenValidationProvider";
 import AuthErrorBoundary from "./components/Auth0/AuthErrorBoundary";
+import ApprovePropertyDeletion from "./pages/ApprovePropertyDeletion/ApprovePropertyDeletion";
 import JoinVip from "./pages/JoinVip/JoinVip";
 
 
@@ -140,6 +141,7 @@ function App() {
                                 <Route path="/SanAntonio" element={<SanAntonio />} />
                                 <Route path="/OtherLands" element={<OtherLands />} />
                                 <Route path="/unauthorized" element={<Unauthorized />} />
+                                <Route path="/property-deletion/:token" element={<ApprovePropertyDeletion />} />
                                 <Route path="/join-vip" element={<JoinVip />} />
                                 {/* Protected route for profile */}
                                 <Route

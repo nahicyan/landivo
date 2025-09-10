@@ -21,7 +21,7 @@ router.get("/:id", getResidency);
 router.get("/:id/image", getResidencyImages);
 router.get("/:id/video", getResidencyVideos); // New endpoint for videos
 router.get("/:id/cma-document", getCmaDocument);
-router.get("/approve-deletion/:token", approvePropertyDeletion);
+router.post("/approve-deletion/:token", approvePropertyDeletion);
 
 // Protected routes with updated uploadWithMedia middleware
 router.post(
