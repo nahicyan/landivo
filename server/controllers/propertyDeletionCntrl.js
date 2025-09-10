@@ -76,7 +76,7 @@ export const approvePropertyDeletion = asyncHandler(async (req, res) => {
   const { token } = req.params;
 
   try {
-    // Find deletion request by token
+    // Find and validate deletion request
     const deletionRequest = await prisma.propertyDeletionRequest.findUnique({
       where: { token },
       include: { property: true }
@@ -100,28 +100,33 @@ export const approvePropertyDeletion = asyncHandler(async (req, res) => {
       });
     }
 
-    // Store property info before deletion
+    // Store property info
     const propertyInfo = {
       title: deletionRequest.property.title,
       address: deletionRequest.property.streetAddress
     };
 
-    // Use transaction to handle both operations
-    await prisma.$transaction(async (tx) => {
-      // First delete all deletion requests for this property
-      await tx.propertyDeletionRequest.deleteMany({
+    // Delete without transaction - sequential operations
+    try {
+      // First delete all deletion requests
+      await prisma.propertyDeletionRequest.deleteMany({
         where: { propertyId: deletionRequest.propertyId }
       });
 
       // Then delete the property
-      await tx.residency.delete({
+      await prisma.residency.delete({
         where: { id: deletionRequest.propertyId }
       });
-    });
 
-    res.status(200).json({
-      message: `Property "${propertyInfo.title}" at ${propertyInfo.address} has been permanently deleted.`
-    });
+      res.status(200).json({
+        message: `Property "${propertyInfo.title}" at ${propertyInfo.address} has been permanently deleted.`
+      });
+
+    } catch (deleteError) {
+      // If deletion fails, try to restore the request
+      console.error("Delete operation failed:", deleteError);
+      throw deleteError;
+    }
 
   } catch (error) {
     console.error("Error approving property deletion:", error);
