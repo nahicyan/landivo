@@ -85,17 +85,38 @@ export const approvePropertyDeletion = asyncHandler(async (req, res) => {
     });
 
     if (!deletionRequest) {
-      return res.status(404).json({ message: "Invalid deletion request" });
+      return res.status(404).send(`
+        <html>
+          <body style="font-family: Arial, sans-serif; padding: 40px; text-align: center;">
+            <h1 style="color: #dc3545;">Invalid Request</h1>
+            <p>This deletion request is invalid or has already been processed.</p>
+          </body>
+        </html>
+      `);
     }
 
     // Check if token has expired
     if (new Date() > deletionRequest.expiresAt) {
-      return res.status(400).json({ message: "Deletion request has expired" });
+      return res.status(400).send(`
+        <html>
+          <body style="font-family: Arial, sans-serif; padding: 40px; text-align: center;">
+            <h1 style="color: #dc3545;">Request Expired</h1>
+            <p>This deletion request has expired.</p>
+          </body>
+        </html>
+      `);
     }
 
     // Check if already processed
     if (deletionRequest.status !== "PENDING") {
-      return res.status(400).json({ message: "Deletion request already processed" });
+      return res.status(400).send(`
+        <html>
+          <body style="font-family: Arial, sans-serif; padding: 40px; text-align: center;">
+            <h1 style="color: #dc3545;">Already Processed</h1>
+            <p>This deletion request has already been processed.</p>
+          </body>
+        </html>
+      `);
     }
 
     // Delete the property
@@ -112,17 +133,28 @@ export const approvePropertyDeletion = asyncHandler(async (req, res) => {
       }
     });
 
-    // Return success page or redirect
-    res.status(200).json({
-      message: "Property deleted successfully",
-      property: deletionRequest.property
-    });
+    // Return success page
+    res.status(200).send(`
+      <html>
+        <body style="font-family: Arial, sans-serif; padding: 40px; text-align: center;">
+          <h1 style="color: #28a745;">Property Deleted Successfully</h1>
+          <p>Property "${deletionRequest.property.title}" has been permanently deleted.</p>
+          <p style="color: #6c757d;">Address: ${deletionRequest.property.streetAddress}</p>
+          <hr style="margin: 30px 0;">
+          <p><a href="https://landivo.com" style="color: #324c48;">Return to Landivo</a></p>
+        </body>
+      </html>
+    `);
 
   } catch (error) {
     console.error("Error approving property deletion:", error);
-    res.status(500).json({
-      message: "Failed to delete property",
-      error: error.message
-    });
+    res.status(500).send(`
+      <html>
+        <body style="font-family: Arial, sans-serif; padding: 40px; text-align: center;">
+          <h1 style="color: #dc3545;">Error</h1>
+          <p>Failed to delete property. Please try again or contact support.</p>
+        </body>
+      </html>
+    `);
   }
 });

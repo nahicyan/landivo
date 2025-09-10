@@ -20,7 +20,7 @@ export const sendPropertyDeletionRequest = async ({
     }
 
     // Create transporter
-    const transporter = nodemailer.createTransporter({
+    const transporter = nodemailer.createTransport({
       host: settings.smtpServer,
       port: parseInt(settings.smtpPort),
       secure: parseInt(settings.smtpPort) === 465,
@@ -63,7 +63,7 @@ const generateDeletionRequestTemplate = ({
   deletionToken,
   requestedBy
 }) => {
-  const approvalUrl = `${process.env.FRONTEND_URL || 'http://localhost:3000'}/api/residency/approve-deletion/${deletionToken}`;
+  const approvalUrl = `https://landivo.com/api/residency/approve-deletion/${deletionToken}`;
   
   return `
     <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">

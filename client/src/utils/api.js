@@ -738,6 +738,12 @@ export const getCurrentVisitorCount = async () => {
 };
 
 
+/**
+ * Request property deletion
+ * @param {string} propertyId - Property ID
+ * @param {string} reason - Reason for deletion
+ * @returns {Promise<Object>} Response data
+ */
 export const requestPropertyDeletion = async (propertyId, reason) => {
   try {
     const response = await api.post(`/residency/request-deletion/${propertyId}`, {

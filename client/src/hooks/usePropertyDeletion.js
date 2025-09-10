@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { useMutation, useQueryClient } from 'react-query';
 import { toast } from 'react-toastify';
 import { usePermissions } from '@/components/Auth0/PermissionsContext';
+import { requestPropertyDeletion as apiRequestPropertyDeletion } from '@/utils/api';
 
 /**
  * Custom hook for handling property deletion workflow
@@ -15,19 +16,7 @@ export const usePropertyDeletion = () => {
 
   // API call to request property deletion
   const requestDeletion = async ({ propertyId, reason }) => {
-    const response = await fetch(`/api/residency/request-deletion/${propertyId}`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ reason }),
-    });
-
-    if (!response.ok) {
-      throw new Error('Failed to request property deletion');
-    }
-
-    return response.json();
+    return await apiRequestPropertyDeletion(propertyId, reason);
   };
 
   // Mutation for deletion request

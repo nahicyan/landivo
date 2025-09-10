@@ -46,13 +46,9 @@ app.use((req, res, next) => {
   next();
 });
 
-// Serve static "uploads" folder
-app.use("/uploads", express.static(path.join(__dirname, "uploads")));
-
 // API routes
-app.use(trackActivity);
-app.use("/user", userManagementRoute);
 app.use("/residency", residencyRoute);
+app.use("/user", userManagementRoute);
 app.use("/property-rows", propertyRowRoute);
 app.use("/buyer", buyerRoute);
 app.use("/offer", offerRoute);
@@ -63,6 +59,12 @@ app.use("/deal", dealRoute);
 app.use("/property-rows", propertyRowRoute);
 app.use("/settings", settingsRoute);
 app.use("/visitors", visitorRoute);
+app.use(trackActivity);
+
+
+// Serve static "uploads" folder
+app.use("/uploads", express.static(path.join(__dirname, "uploads")));
+
 
 // Auth test route
 app.get("/auth/test-jwt", jwtCheck, extractUserFromToken, (req, res) => {
