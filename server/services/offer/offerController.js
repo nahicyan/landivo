@@ -15,6 +15,13 @@ import {
   updatedOfferTemplate,
   lowOfferTemplate
 } from "./offerEmailService.js";
+import {
+  sendBuyerOfferNotification,
+  acceptedOfferTemplate,
+  rejectedOfferTemplate,
+  counterOfferTemplate,
+  expiredOfferTemplate
+} from './offerBuyerEmailService.js';
 // Add this import
 import { handleOfferEmailList } from "./offerEmailListService.js";
 
@@ -270,7 +277,12 @@ export const getOffersByBuyer = asyncHandler(async (req, res) => {
 });
 
 /**
- * Update offer status (admin action)
+ * Update offer status (admin action) - UPDATED VERSION
+ * @route PUT /api/offer/:id/status
+ * @access Private (Admin only)
+ */
+/**
+ * Update offer status (admin action) - UPDATED VERSION
  * @route PUT /api/offer/:id/status
  * @access Private (Admin only)
  */
@@ -278,13 +290,53 @@ export const updateOfferStatus = asyncHandler(async (req, res) => {
   const { id } = req.params;
   const { status, counteredPrice, sysMessage } = req.body;
   
-  // Validation code remains the same...
+  if (!id) {
+    return res.status(400).json({ message: "Offer ID is required" });
+  }
+  
+  if (!status) {
+    return res.status(400).json({ message: "Status is required" });
+  }
+  
+  const validStatuses = ["PENDING", "ACCEPTED", "REJECTED", "COUNTERED", "EXPIRED"];
+  if (!validStatuses.includes(status)) {
+    return res.status(400).json({ 
+      message: `Invalid status. Must be one of: ${validStatuses.join(", ")}` 
+    });
+  }
+  
+  if (status === "COUNTERED" && (!counteredPrice || isNaN(parseFloat(counteredPrice)))) {
+    return res.status(400).json({ 
+      message: "Counter price is required and must be a valid number when status is COUNTERED" 
+    });
+  }
   
   try {
-    // Find the offer
+    // Find the offer with buyer information
     const existingOffer = await prisma.offer.findUnique({
       where: { id },
-      include: { buyer: true }
+      include: { 
+        buyer: true
+      }
+    });
+    
+    if (!existingOffer) {
+      return res.status(404).json({ message: "Offer not found" });
+    }
+    
+    // Get property information separately
+    const property = await prisma.residency.findUnique({
+      where: { id: existingOffer.propertyId },
+      select: {
+        id: true,
+        streetAddress: true,
+        city: true,
+        state: true,
+        zip: true,
+        title: true,
+        askingPrice: true,
+        minPrice: true
+      }
     });
     
     if (!existingOffer) {
@@ -324,44 +376,71 @@ export const updateOfferStatus = asyncHandler(async (req, res) => {
       }
     });
     
-    // Get property for notification
-    const property = await prisma.residency.findUnique({
-      where: { id: existingOffer.propertyId }
-    });
-    
     res.status(200).json({
       message: `Offer status updated to ${status}`,
       offer: updatedOffer
     });
     
-    // Send notification based on status (async, don't wait)
-    let emailSubject, emailTemplate;
-    
-    switch(status) {
-      case "ACCEPTED":
-        emailSubject = "Your Offer Has Been Accepted!";
-        // Use a template for accepted offers
-        break;
-      case "REJECTED":
-        emailSubject = "Offer Status Update";
-        // Use a template for rejected offers
-        break;
-      case "COUNTERED":
-        emailSubject = "Counter Offer Received";
-        // Use a template for counter offers
-        break;
-      case "EXPIRED":
-        emailSubject = "Your Offer Has Expired";
-        // Use a template for expired offers
-        break;
-    }
-    
-    // If we have a subject and template, send the email
-    if (emailSubject && emailTemplate) {
+    // Send buyer notification emails based on status (async, don't wait)
+    if (existingOffer.buyer && existingOffer.property) {
       try {
-        await sendOfferNotification(emailSubject, emailTemplate);
+        let emailSubject, emailTemplate;
+        
+        switch(status) {
+          case "ACCEPTED":
+            emailSubject = "🎉 Your Offer Has Been Accepted!";
+            emailTemplate = acceptedOfferTemplate(
+              existingOffer.property, 
+              existingOffer.buyer, 
+              existingOffer,
+              updatedSysMessage
+            );
+            break;
+            
+          case "REJECTED":
+            emailSubject = "Offer Update - Thank You for Your Interest";
+            emailTemplate = rejectedOfferTemplate(
+              existingOffer.property, 
+              existingOffer.buyer, 
+              existingOffer,
+              updatedSysMessage
+            );
+            break;
+            
+          case "COUNTERED":
+            emailSubject = "Counter Offer Received - Action Required";
+            emailTemplate = counterOfferTemplate(
+              existingOffer.property, 
+              existingOffer.buyer, 
+              existingOffer,
+              parseFloat(counteredPrice),
+              updatedSysMessage
+            );
+            break;
+            
+          case "EXPIRED":
+            emailSubject = "Your Offer Has Expired";
+            emailTemplate = expiredOfferTemplate(
+              existingOffer.property, 
+              existingOffer.buyer, 
+              existingOffer,
+              updatedSysMessage
+            );
+            break;
+        }
+        
+        // Send buyer notification if we have both subject and template
+        if (emailSubject && emailTemplate) {
+          await sendBuyerOfferNotification(
+            existingOffer.buyer,
+            emailSubject, 
+            emailTemplate
+          );
+        }
+        
       } catch (emailError) {
-        console.error("Failed to send offer status notification:", emailError);
+        console.error("Failed to send buyer notification:", emailError);
+        // Don't fail the offer update if email fails
       }
     }
     
@@ -629,3 +708,4 @@ export const getRecentOfferActivity = asyncHandler(async (req, res) => {
     });
   }
 });
+

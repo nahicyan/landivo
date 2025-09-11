@@ -9,7 +9,24 @@ import {
   getRecentOfferActivity
 } from './offerController.js';
 
-// For Email List
+// For Admin Email Notifications
+import { 
+  sendOfferNotification,
+  newOfferTemplate,
+  updatedOfferTemplate,
+  lowOfferTemplate
+} from './offerEmailService.js';
+
+// For Buyer Email Notifications - NEW
+import {
+  sendBuyerOfferNotification,
+  acceptedOfferTemplate,
+  rejectedOfferTemplate,
+  counterOfferTemplate,
+  expiredOfferTemplate
+} from './offerBuyerEmailService.js';
+
+// For Email List Management
 import { 
   handleOfferEmailList, 
   getOfferEmailLists 
@@ -17,6 +34,7 @@ import {
 
 // Export all controller functions and services
 export {
+  // Controller functions
   makeOffer,
   getOffersOnProperty,
   getOffersByBuyer,
@@ -24,7 +42,21 @@ export {
   getOfferHistory,
   getAllOffers,
   getRecentOfferActivity,
-  // Add these exports
+  
+  // Admin email services
+  sendOfferNotification,
+  newOfferTemplate,
+  updatedOfferTemplate,
+  lowOfferTemplate,
+  
+  // Buyer email services - NEW
+  sendBuyerOfferNotification,
+  acceptedOfferTemplate,
+  rejectedOfferTemplate,
+  counterOfferTemplate,
+  expiredOfferTemplate,
+  
+  // Email list management
   handleOfferEmailList,
   getOfferEmailLists
 };
