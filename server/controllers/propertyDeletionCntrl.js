@@ -131,18 +131,26 @@ export const approvePropertyDeletion = asyncHandler(async (req, res) => {
       });
     }
 
-    // Delete the property
-    await prisma.residency.delete({
-      where: { id: deletionRequest.propertyId }
-    });
+    // Use a transaction to ensure both operations succeed or fail together
+    await prisma.$transaction(async (tx) => {
+      // First, update the deletion request status
+      await tx.propertyDeletionRequest.update({
+        where: { id: deletionRequest.id },
+        data: {
+          status: "APPROVED",
+          approvedAt: new Date()
+        }
+      });
 
-    // Update deletion request status
-    await prisma.propertyDeletionRequest.update({
-      where: { id: deletionRequest.id },
-      data: {
-        status: "APPROVED",
-        approvedAt: new Date()
-      }
+      // Delete ALL deletion requests for this property (in case there are multiple)
+      await tx.propertyDeletionRequest.deleteMany({
+        where: { propertyId: deletionRequest.propertyId }
+      });
+
+      // Now delete the property
+      await tx.residency.delete({
+        where: { id: deletionRequest.propertyId }
+      });
     });
 
     res.status(200).json({
