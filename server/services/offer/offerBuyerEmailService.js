@@ -9,27 +9,33 @@ export const sendBuyerOfferNotification = async (buyer, subject, body) => {
   try {
     // Get system settings from database
     const settings = await prisma.settings.findFirst();
-    
+
     // Check if SMTP is properly configured
-    if (!settings || !settings.smtpServer || !settings.smtpPort || !settings.smtpUser || !settings.smtpPassword) {
-      console.log('Incomplete SMTP configuration for buyer notification');
+    if (
+      !settings ||
+      !settings.smtpServer ||
+      !settings.smtpPort ||
+      !settings.smtpUser ||
+      !settings.smtpPassword
+    ) {
+      console.log("Incomplete SMTP configuration for buyer notification");
       return;
     }
-    
+
     // Create nodemailer transporter using database settings
-    const transporter = nodemailer.createTransporter({
+    const transporter = nodemailer.createTransport({
       host: settings.smtpServer,
       port: parseInt(settings.smtpPort),
       secure: parseInt(settings.smtpPort) === 465,
       auth: {
         user: settings.smtpUser,
-        pass: settings.smtpPassword
-      }
+        pass: settings.smtpPassword,
+      },
     });
-    
+
     // Verify connection before sending
     await transporter.verify();
-    
+
     // Send email to buyer
     const mailOptions = {
       from: `"Landivo Alerts" <${settings.smtpUser}>`,
@@ -37,7 +43,7 @@ export const sendBuyerOfferNotification = async (buyer, subject, body) => {
       subject: subject,
       html: body,
     };
-    
+
     await transporter.sendMail(mailOptions);
     console.log(`Buyer notification sent to ${buyer.email}: ${subject}`);
   } catch (error) {
@@ -48,27 +54,38 @@ export const sendBuyerOfferNotification = async (buyer, subject, body) => {
 /**
  * Generate buyer email template using EXACT design from offerEmailService.js
  */
-const generateBuyerEmailTemplate = ({ action, property, buyer, offer, counteredPrice, adminMessage }) => {
+const generateBuyerEmailTemplate = ({
+  action,
+  property,
+  buyer,
+  offer,
+  counteredPrice,
+  adminMessage,
+}) => {
   const propertyUrl = `https://landivo.com/properties/${property.id}`;
-  
+
   // Action-specific configurations
   const actionConfig = {
     accepted: {
-      title: 'YOUR OFFER HAS BEEN ACCEPTED',
-      description: 'Congratulations! Your offer has been accepted. Our team will contact you soon with the next steps.'
+      title: "Offer Status Update",
+      description:
+        "We are pleased to inform you that your offer has been accepted. Our team will be in touch shortly regarding next steps.",
     },
     rejected: {
-      title: 'OFFER UPDATE',
-      description: 'Thank you for your interest. Unfortunately, your offer was not accepted this time. You\'re welcome to submit a new offer if you\'re still interested.'
+      title: "Offer Status Update",
+      description:
+        "Thank you for your interest in this property. After careful consideration, we have decided to pursue other options at this time.",
     },
     countered: {
-      title: 'COUNTER OFFER RECEIVED',
-      description: `We appreciate your offer! We'd like to propose a counter offer. Please review the details below.`
+      title: "Offer Status Update",
+      description:
+        "Thank you for your offer submission. We would like to present an alternative proposal for your consideration.",
     },
     expired: {
-      title: 'OFFER EXPIRED',
-      description: 'Your offer has expired. If you\'re still interested in this property, you\'re welcome to submit a new offer.'
-    }
+      title: "Offer Status Update",
+      description:
+        "Your recent offer submission has reached its expiration date. Should you remain interested, we welcome a new proposal.",
+    },
   };
 
   const config = actionConfig[action] || actionConfig.accepted;
@@ -98,34 +115,30 @@ const generateBuyerEmailTemplate = ({ action, property, buyer, offer, counteredP
         ">
           
           <!-- Header with Logo -->
-          <div style="
-            background: #f6ece0;
-            padding: 40px;
-            text-align: center;
-          ">
-            <img 
-              src="https://cdn.landivo.com/wp-content/uploads/2025/08/landivo.png" 
-              alt="Landivo" 
-              style="
-                max-width: 180px;
-                height: auto;
-                margin-bottom: 20px;
-              "
-            />
-          </div>
+            <div style="
+                 background: #f6ece0;
+                padding: 40px;
+                text-align: center;
+                ">
+                <h1 style="
+                margin: 0;
+                color: #324c48;
+                font-size: 28px;
+                font-weight: 700;
+                ">Landivo</h1>
+            </div>
 
           <!-- Content Section -->
           <div style="padding: 0 40px;">
             <hr style="border-color: #e8eaed; margin: 20px 0;" />
             
             <h2 style="
-              font-size: 14px;
-              line-height: 26px;
-              font-weight: 700;
-              color: #324c48;
-              margin: 0 0 20px 0;
-              text-transform: uppercase;
-              letter-spacing: 1px;
+            font-size: 14px;
+            line-height: 26px;
+            font-weight: 700;
+            color: #324c48;
+            margin: 0 0 20px 0;
+            letter-spacing: 1px;
             ">${config.title}</h2>
             
             <p style="
@@ -231,7 +244,9 @@ const generateBuyerEmailTemplate = ({ action, property, buyer, offer, counteredP
                   font-weight: 700;
                 ">$${Number(offer.offeredPrice).toLocaleString()}</td>
               </tr>
-              ${counteredPrice ? `
+              ${
+                counteredPrice
+                  ? `
               <tr>
                 <td style="
                   padding: 8px 0;
@@ -245,11 +260,15 @@ const generateBuyerEmailTemplate = ({ action, property, buyer, offer, counteredP
                   font-weight: 700;
                 ">$${Number(counteredPrice).toLocaleString()}</td>
               </tr>
-              ` : ''}
+              `
+                  : ""
+              }
             </table>
           </div>
 
-          ${adminMessage ? `
+          ${
+            adminMessage
+              ? `
           <!-- Admin Message Card -->
           <div style="
             margin: 20px 40px;
@@ -275,7 +294,9 @@ const generateBuyerEmailTemplate = ({ action, property, buyer, offer, counteredP
               border-left: 3px solid #ffc107;
             ">${adminMessage}</p>
           </div>
-          ` : ''}
+          `
+              : ""
+          }
 
           <!-- Offer Status Card -->
           <div style="
@@ -352,7 +373,7 @@ const generateBuyerEmailTemplate = ({ action, property, buyer, offer, counteredP
                   padding: 8px 0;
                   border-bottom: 1px solid #bbdefb;
                   color: #1565c0;
-                ">${buyer.phone || 'N/A'}</td>
+                ">${buyer.phone || "N/A"}</td>
               </tr>
               <tr>
                 <td style="
@@ -363,14 +384,16 @@ const generateBuyerEmailTemplate = ({ action, property, buyer, offer, counteredP
                 <td style="
                   padding: 8px 0;
                   color: #1565c0;
-                ">${buyer.buyerType || 'N/A'}</td>
+                ">${buyer.buyerType || "N/A"}</td>
               </tr>
             </table>
           </div>
 
           <!-- Action Button Section -->
           <div style="padding: 20px 40px; text-align: center;">
-            ${action === 'countered' ? `
+            ${
+              action === "countered"
+                ? `
             <a href="${propertyUrl}" style="
               display: inline-block;
               background-color: #324c48;
@@ -381,8 +404,12 @@ const generateBuyerEmailTemplate = ({ action, property, buyer, offer, counteredP
               font-weight: 600;
               font-size: 14px;
             ">View Counter Offer</a>
-            ` : ''}
-            ${action === 'rejected' || action === 'expired' ? `
+            `
+                : ""
+            }
+            ${
+              action === "rejected" || action === "expired"
+                ? `
             <a href="${propertyUrl}" style="
               display: inline-block;
               background-color: #324c48;
@@ -393,16 +420,18 @@ const generateBuyerEmailTemplate = ({ action, property, buyer, offer, counteredP
               font-weight: 600;
               font-size: 14px;
             ">Submit New Offer</a>
-            ` : ''}
+            `
+                : ""
+            }
             ${action === 'accepted' ? `
             <div style="
-              background-color: #d4edda;
-              color: #155724;
-              padding: 15px;
-              border-radius: 5px;
-              font-weight: 600;
-              font-size: 14px;
-            ">🎉 Congratulations! We'll contact you soon with next steps.</div>
+                background-color: #d4edda;
+                color: #155724;
+                padding: 15px;
+                border-radius: 5px;
+                font-weight: 600;
+                font-size: 14px;
+            ">We appreciate your business and look forward to working with you.</div>
             ` : ''}
           </div>
 
@@ -432,52 +461,73 @@ const generateBuyerEmailTemplate = ({ action, property, buyer, offer, counteredP
 /**
  * Template for Accepted Offer
  */
-export const acceptedOfferTemplate = (property, buyer, offer, adminMessage = null) => {
+export const acceptedOfferTemplate = (
+  property,
+  buyer,
+  offer,
+  adminMessage = null
+) => {
   return generateBuyerEmailTemplate({
-    action: 'accepted',
+    action: "accepted",
     property,
     buyer,
     offer,
-    adminMessage
+    adminMessage,
   });
 };
 
 /**
  * Template for Rejected Offer
  */
-export const rejectedOfferTemplate = (property, buyer, offer, adminMessage = null) => {
+export const rejectedOfferTemplate = (
+  property,
+  buyer,
+  offer,
+  adminMessage = null
+) => {
   return generateBuyerEmailTemplate({
-    action: 'rejected',
+    action: "rejected",
     property,
     buyer,
     offer,
-    adminMessage
+    adminMessage,
   });
 };
 
 /**
  * Template for Counter Offer
  */
-export const counterOfferTemplate = (property, buyer, offer, counteredPrice, adminMessage = null) => {
+export const counterOfferTemplate = (
+  property,
+  buyer,
+  offer,
+  counteredPrice,
+  adminMessage = null
+) => {
   return generateBuyerEmailTemplate({
-    action: 'countered',
+    action: "countered",
     property,
     buyer,
     offer,
     counteredPrice,
-    adminMessage
+    adminMessage,
   });
 };
 
 /**
  * Template for Expired Offer
  */
-export const expiredOfferTemplate = (property, buyer, offer, adminMessage = null) => {
+export const expiredOfferTemplate = (
+  property,
+  buyer,
+  offer,
+  adminMessage = null
+) => {
   return generateBuyerEmailTemplate({
-    action: 'expired',
+    action: "expired",
     property,
     buyer,
     offer,
-    adminMessage
+    adminMessage,
   });
 };
