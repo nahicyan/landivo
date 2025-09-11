@@ -739,7 +739,7 @@ export const getCurrentVisitorCount = async () => {
 
 
 /**
- * Request property deletion
+ * Request property deletion (existing function - for users without delete permissions)
  * @param {string} propertyId - Property ID
  * @param {string} reason - Reason for deletion
  * @returns {Promise<Object>} Response data
@@ -752,5 +752,22 @@ export const requestPropertyDeletion = async (propertyId, reason) => {
     return response.data;
   } catch (error) {
     handleRequestError(error, "Failed to request property deletion");
+  }
+};
+
+/**
+ * Direct property deletion (new function - for users with delete:properties permission)
+ * @param {string} propertyId - Property ID
+ * @param {string} reason - Reason for deletion
+ * @returns {Promise<Object>} Response data
+ */
+export const deletePropertyDirect = async (propertyId, reason) => {
+  try {
+    const response = await api.delete(`/residency/delete/${propertyId}`, {
+      data: { reason }
+    });
+    return response.data;
+  } catch (error) {
+    handleRequestError(error, "Failed to delete property");
   }
 };

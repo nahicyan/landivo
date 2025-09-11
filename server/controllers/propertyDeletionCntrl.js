@@ -165,3 +165,110 @@ export const approvePropertyDeletion = asyncHandler(async (req, res) => {
     });
   }
 });
+
+
+/**
+ * Direct property deletion - for users with DELETE_PROPERTIES permission
+ * @route DELETE /api/residency/delete/:id
+ * @access Private (requires DELETE_PROPERTIES permission)
+ */
+export const deletePropertyDirect = asyncHandler(async (req, res) => {
+  const { id } = req.params;
+  const { reason } = req.body;
+
+  try {
+    // Get property details
+    const property = await prisma.residency.findUnique({
+      where: { id }
+    });
+
+    if (!property) {
+      return res.status(404).json({ message: "Property not found" });
+    }
+
+    // Get requesting user's details for logging
+    let requestingUser = {
+      firstName: "Unknown",
+      lastName: "User",
+      email: req.user?.email || "Unknown Email",
+      auth0Id: req.user?.sub || "Unknown"
+    };
+
+    if (req.userId) {
+      try {
+        const dbUser = await prisma.user.findUnique({
+          where: { id: req.userId },
+          select: {
+            firstName: true,
+            lastName: true,
+            email: true,
+            auth0Id: true
+          }
+        });
+
+        if (dbUser) {
+          requestingUser = {
+            firstName: dbUser.firstName || "Unknown",
+            lastName: dbUser.lastName || "User",
+            email: dbUser.email || req.user?.email || "Unknown Email",
+            auth0Id: dbUser.auth0Id || req.user?.sub || "Unknown"
+          };
+        }
+      } catch (error) {
+        console.error("Error fetching user details:", error);
+        // Continue with fallback values
+      }
+    }
+
+    // Use a transaction to ensure all operations succeed or fail together
+    await prisma.$transaction(async (tx) => {
+      // First, clean up any existing deletion requests for this property
+      await tx.propertyDeletionRequest.deleteMany({
+        where: { propertyId: id }
+      });
+
+      // Log the deletion action
+      console.log(`Direct property deletion by ${requestingUser.email}:`, {
+        propertyId: id,
+        propertyTitle: property.title,
+        propertyAddress: `${property.streetAddress}, ${property.city}, ${property.state}`,
+        propertyStatus: property.status,
+        reason: reason || 'No reason provided',
+        deletedBy: requestingUser.email,
+        deletedAt: new Date().toISOString()
+      });
+
+      // Delete the property
+      await tx.residency.delete({
+        where: { id }
+      });
+    });
+
+    res.status(200).json({
+      message: "Property has been successfully deleted",
+      deletedProperty: {
+        id: property.id,
+        title: property.title,
+        address: `${property.streetAddress}, ${property.city}, ${property.state}`,
+        status: property.status
+      },
+      deletedBy: requestingUser.email,
+      reason: reason || null
+    });
+
+  } catch (error) {
+    console.error("Error in direct property deletion:", error);
+    
+    // Handle specific Prisma errors
+    if (error.code === 'P2025') {
+      return res.status(404).json({
+        message: "Property not found or already deleted"
+      });
+    }
+    
+    res.status(500).json({
+      message: "Failed to delete property",
+      error: error.message
+    });
+  }
+});

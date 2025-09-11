@@ -7,17 +7,17 @@ import useProperties from "../../components/hooks/useProperties.js";
 import { DataTable } from "../DataTable/DataTable";
 import PropertiesTableFilter from "../PropertiesTableFilter/PropertiesTableFilter";
 import { QuickEditModal } from "@/components/PropertyManagement/QuickEditModal";
-import { usePropertyDeletion } from '@/hooks/usePropertyDeletion';
-import { PropertyDeletionModal } from '@/components/PropertyManagement/PropertyDeletionModal';
-import { 
-  MoreHorizontal, 
-  PencilIcon, 
-  TrashIcon, 
+import { usePropertyDeletion } from "@/hooks/usePropertyDeletion";
+import { PropertyDeletionModal } from "@/components/PropertyManagement/PropertyDeletionModal";
+import {
+  MoreHorizontal,
+  PencilIcon,
+  TrashIcon,
   Eye,
   ChevronDown,
   ChevronUp,
   Trash2,
-  PencilLine
+  PencilLine,
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -43,33 +43,49 @@ export default function PropertiesTable({ propertyData }) {
   const [activeFilters, setActiveFilters] = useState([]);
   // Track expanded cells for rich text content
   const [expandedCells, setExpandedCells] = useState({});
-  
+
   // For quick edit modal
   const [selectedProperty, setSelectedProperty] = useState(null);
   const [isQuickEditOpen, setIsQuickEditOpen] = useState(false);
-  
+
   // Add property deletion hook
   const {
     isConfirmOpen,
     selectedProperty: selectedPropertyForDeletion,
+    currentStep,
+    isPermissionLoading,
     isLoading: isDeletionLoading,
+    hasDeletePermission,
+    requiresStatusConfirmation,
+    canDirectDelete,
     canDeleteProperty,
     openDeletionConfirm,
     closeDeletionConfirm,
-    requestPropertyDeletion,
+    handleInitialConfirm,
+    executePropertyDeletion,
+    DELETION_STEPS,
   } = usePropertyDeletion();
-  
+
   // All available columns from schema
   const allAvailableColumns = [
     { id: "streetAddress", name: "Street Address", accessor: "streetAddress" },
     { id: "title", name: "Title", accessor: "title", isRichText: true },
     { id: "status", name: "Status", accessor: "status" },
-    { id: "location", name: "Location", accessor: (row) => `${row.city}, ${row.state}` },
+    {
+      id: "location",
+      name: "Location",
+      accessor: (row) => `${row.city}, ${row.state}`,
+    },
     { id: "askingPrice", name: "Asking Price", accessor: "askingPrice" },
     { id: "area", name: "Area", accessor: "area" },
     { id: "ownerId", name: "Owner ID", accessor: "ownerId" },
     { id: "featured", name: "Featured", accessor: "featured" },
-    { id: "description", name: "Description", accessor: "description", isRichText: true },
+    {
+      id: "description",
+      name: "Description",
+      accessor: "description",
+      isRichText: true,
+    },
     { id: "city", name: "City", accessor: "city" },
     { id: "county", name: "County", accessor: "county" },
     { id: "state", name: "State", accessor: "state" },
@@ -88,7 +104,11 @@ export default function PropertiesTable({ propertyData }) {
     { id: "floodplain", name: "Floodplain", accessor: "floodplain" },
     { id: "zoning", name: "Zoning", accessor: "zoning" },
     { id: "restrictions", name: "Restrictions", accessor: "restrictions" },
-    { id: "mobileHomeFriendly", name: "Mobile Home Friendly", accessor: "mobileHomeFriendly" },
+    {
+      id: "mobileHomeFriendly",
+      name: "Mobile Home Friendly",
+      accessor: "mobileHomeFriendly",
+    },
     { id: "hoaPoa", name: "HOA/POA", accessor: "hoaPoa" },
     { id: "hoaFee", name: "HOA Fee", accessor: "hoaFee" },
     { id: "notes", name: "Notes", accessor: "notes", isRichText: true },
@@ -98,9 +118,14 @@ export default function PropertiesTable({ propertyData }) {
 
   // Default visible columns
   const [visibleColumns, setVisibleColumns] = useState([
-    "streetAddress", "location", "askingPrice", "status", "area", "featured"
+    "streetAddress",
+    "location",
+    "askingPrice",
+    "status",
+    "area",
+    "featured",
   ]);
-  
+
   // Filter states
   const [filters, setFilters] = useState({
     status: "all",
@@ -138,15 +163,15 @@ export default function PropertiesTable({ propertyData }) {
 
   // Handle view property
   const handleViewProperty = (property) => {
-    window.open(`/properties/${property.id}`, '_blank');
+    window.open(`/properties/${property.id}`, "_blank");
   };
 
   // Helper function to toggle cell expansion
   const toggleCellExpansion = (rowId, columnId) => {
     const cellKey = `${rowId}-${columnId}`;
-    setExpandedCells(prev => ({
+    setExpandedCells((prev) => ({
       ...prev,
-      [cellKey]: !prev[cellKey]
+      [cellKey]: !prev[cellKey],
     }));
   };
 
@@ -159,25 +184,29 @@ export default function PropertiesTable({ propertyData }) {
   // Helper function to render rich text content with truncation
   const renderRichTextContent = (content, rowId, columnId, maxLength = 100) => {
     if (!content) return <span className="text-gray-400">N/A</span>;
-    
+
     const isExpanded = isCellExpanded(rowId, columnId);
     const cellKey = `${rowId}-${columnId}`;
-    
+
     // Strip HTML to get approximate text length for truncation decision
-    const textContent = content.replace(/<[^>]*>/g, '');
+    const textContent = content.replace(/<[^>]*>/g, "");
     const needsTruncation = textContent.length > maxLength;
-    
+
     // Create a safe version of the content for display
-    const displayContent = isExpanded || !needsTruncation ? content : 
-      content.substring(0, maxLength) + '...';
-    
+    const displayContent =
+      isExpanded || !needsTruncation
+        ? content
+        : content.substring(0, maxLength) + "...";
+
     return (
       <div className="relative">
         <div
-          className={`rich-text-cell ${isExpanded ? 'max-h-none' : 'max-h-24 overflow-hidden'}`}
+          className={`rich-text-cell ${
+            isExpanded ? "max-h-none" : "max-h-24 overflow-hidden"
+          }`}
           dangerouslySetInnerHTML={{ __html: displayContent }}
         />
-        
+
         {needsTruncation && (
           <Button
             variant="ghost"
@@ -189,9 +218,13 @@ export default function PropertiesTable({ propertyData }) {
             className="mt-1 text-xs text-blue-600 hover:text-blue-800 p-0 h-6"
           >
             {isExpanded ? (
-              <span className="flex items-center">Show less <ChevronUp className="ml-1 h-3 w-3" /></span>
+              <span className="flex items-center">
+                Show less <ChevronUp className="ml-1 h-3 w-3" />
+              </span>
             ) : (
-              <span className="flex items-center">Show more <ChevronDown className="ml-1 h-3 w-3" /></span>
+              <span className="flex items-center">
+                Show more <ChevronDown className="ml-1 h-3 w-3" />
+              </span>
             )}
           </Button>
         )}
@@ -203,60 +236,76 @@ export default function PropertiesTable({ propertyData }) {
   const dynamicColumns = useMemo(() => {
     // Always include actions column
     const columns = [
-      ...visibleColumns.map(colId => {
-        const columnDef = allAvailableColumns.find(col => col.id === colId);
-        if (!columnDef) return null;
-        
-        return {
-          accessorKey: columnDef.id,
-          header: columnDef.name,
-          cell: ({ row }) => {
-            const value = typeof columnDef.accessor === 'function' 
-              ? columnDef.accessor(row.original) 
-              : row.original[columnDef.accessor];
-            
-            // Handle rich text fields specially
-            if (columnDef.isRichText) {
-              return renderRichTextContent(value, row.id, columnDef.id);
-            }
-            
-            // Format different types of data
-            if (colId === 'askingPrice' || colId === 'minPrice' || colId === 'hoaFee') {
-              return value ? `$${Number(value).toLocaleString()}` : 'N/A';
-            } else if (colId === 'sqft') {
-              return value ? `${Number(value).toLocaleString()} sqft` : 'N/A';
-            } else if (colId === 'acre') {
-              return value ? `${Number(value).toFixed(2)} acres` : 'N/A';
-            } else if (colId === 'status') {
-              return (
-                <Badge className={
-                  value === 'Available' ? 'bg-green-100 text-green-800' : 
-                  value === 'Pending' ? 'bg-orange-100 text-orange-800' : 
-                  value === 'Sold' ? 'bg-blue-100 text-blue-800' : 
-                  'bg-gray-100 text-gray-800'
-                }>
-                  {value || 'Unknown'}
-                </Badge>
-              );
-            } else if (colId === 'featured') {
-              return value === 'Featured' ? (
-                <Badge className="bg-yellow-100 text-yellow-800">Featured</Badge>
-              ) : 'No';
-            } else if (colId === 'createdAt' || colId === 'updatedAt') {
-              return value ? new Date(value).toLocaleDateString() : 'N/A';
-            } else if (typeof value === 'boolean') {
-              return value ? 'Yes' : 'No';
-            }
-            
-            return value || 'N/A';
-          }
-        };
-      }).filter(Boolean),
+      ...visibleColumns
+        .map((colId) => {
+          const columnDef = allAvailableColumns.find((col) => col.id === colId);
+          if (!columnDef) return null;
+
+          return {
+            accessorKey: columnDef.id,
+            header: columnDef.name,
+            cell: ({ row }) => {
+              const value =
+                typeof columnDef.accessor === "function"
+                  ? columnDef.accessor(row.original)
+                  : row.original[columnDef.accessor];
+
+              // Handle rich text fields specially
+              if (columnDef.isRichText) {
+                return renderRichTextContent(value, row.id, columnDef.id);
+              }
+
+              // Format different types of data
+              if (
+                colId === "askingPrice" ||
+                colId === "minPrice" ||
+                colId === "hoaFee"
+              ) {
+                return value ? `$${Number(value).toLocaleString()}` : "N/A";
+              } else if (colId === "sqft") {
+                return value ? `${Number(value).toLocaleString()} sqft` : "N/A";
+              } else if (colId === "acre") {
+                return value ? `${Number(value).toFixed(2)} acres` : "N/A";
+              } else if (colId === "status") {
+                return (
+                  <Badge
+                    className={
+                      value === "Available"
+                        ? "bg-green-100 text-green-800"
+                        : value === "Pending"
+                        ? "bg-orange-100 text-orange-800"
+                        : value === "Sold"
+                        ? "bg-blue-100 text-blue-800"
+                        : "bg-gray-100 text-gray-800"
+                    }
+                  >
+                    {value || "Unknown"}
+                  </Badge>
+                );
+              } else if (colId === "featured") {
+                return value === "Featured" ? (
+                  <Badge className="bg-yellow-100 text-yellow-800">
+                    Featured
+                  </Badge>
+                ) : (
+                  "No"
+                );
+              } else if (colId === "createdAt" || colId === "updatedAt") {
+                return value ? new Date(value).toLocaleDateString() : "N/A";
+              } else if (typeof value === "boolean") {
+                return value ? "Yes" : "No";
+              }
+
+              return value || "N/A";
+            },
+          };
+        })
+        .filter(Boolean),
       {
         id: "actions",
+        header: "Actions",
         cell: ({ row }) => {
           const property = row.original;
-          
           return (
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
@@ -267,56 +316,59 @@ export default function PropertiesTable({ propertyData }) {
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
                 <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                
                 <DropdownMenuItem
-                  onClick={() => handleQuickEdit(property)}
-                  className="cursor-pointer"
+                  onClick={() => {
+                    setSelectedProperty(property);
+                    setIsQuickEditOpen(true);
+                  }}
+                  className="cursor-pointer text-blue-600 hover:text-blue-700 hover:bg-blue-50"
                 >
                   <PencilLine className="mr-2 h-4 w-4" />
                   Quick Edit
                 </DropdownMenuItem>
-                
                 <DropdownMenuItem
-                  onClick={() => handleViewProperty(property)}
-                  className="cursor-pointer"
+                  onClick={() =>
+                    window.open(
+                      `/admin/properties/edit/${property.id}`,
+                      "_blank"
+                    )
+                  }
+                  className="cursor-pointer text-purple-600 hover:text-purple-700 hover:bg-purple-50"
+                >
+                  <PencilIcon className="mr-2 h-4 w-4" />
+                  Edit Property
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  onClick={() =>
+                    window.open(`/properties/${property.id}`, "_blank")
+                  }
+                  className="cursor-pointer text-green-600 hover:text-green-700 hover:bg-green-50"
                 >
                   <Eye className="mr-2 h-4 w-4" />
                   View Details
                 </DropdownMenuItem>
-                
-                <DropdownMenuItem onClick={() => window.open(`/admin/edit-property/${property.id}`, '_blank')}>
-                  <PencilIcon className="mr-2 h-4 w-4" /> Full Edit
-                </DropdownMenuItem>
-                
                 <DropdownMenuSeparator />
-                
-                {/* Delete option - only show if property can be deleted */}
                 <DropdownMenuItem
-                  onClick={() => canDeleteProperty(property) ? openDeletionConfirm(property) : null}
-                  className={`cursor-pointer ${
-                    canDeleteProperty(property) 
-                      ? "text-red-600 hover:text-red-700 hover:bg-red-50" 
-                      : "text-gray-400 cursor-not-allowed"
-                  }`}
-                  disabled={!canDeleteProperty(property)}
+                  onClick={() => openDeletionConfirm(property)}
+                  className="cursor-pointer text-red-600 hover:text-red-700 hover:bg-red-50"
                 >
                   <Trash2 className="mr-2 h-4 w-4" />
-                  {canDeleteProperty(property) ? "Request Deletion" : "Cannot Delete"}
+                  Delete Property
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
           );
         },
-      }
+      },
     ];
-    
+
     return columns;
   }, [visibleColumns, expandedCells, canDeleteProperty, openDeletionConfirm]);
 
   // Parse filtered data
   const filteredData = useMemo(() => {
     if (!data) return [];
-    
+
     return data.filter((property) => {
       // General search query filtering
       const searchFields = [
@@ -329,119 +381,138 @@ export default function PropertiesTable({ propertyData }) {
         property.ltag,
         property.rtag,
         property.city,
-        property.county
+        property.county,
       ];
-      
-      const matchesSearchQuery = !searchQuery || searchFields.some(field => {
-        // Strip HTML for text search if field is rich text
-        if (field && typeof field === 'string' && field.includes('<')) {
-          const textContent = field.replace(/<[^>]*>/g, '');
-          return textContent.toLowerCase().includes(searchQuery.toLowerCase());
-        }
-        return field && field.toString().toLowerCase().includes(searchQuery.toLowerCase());
-      });
-      
+
+      const matchesSearchQuery =
+        !searchQuery ||
+        searchFields.some((field) => {
+          // Strip HTML for text search if field is rich text
+          if (field && typeof field === "string" && field.includes("<")) {
+            const textContent = field.replace(/<[^>]*>/g, "");
+            return textContent
+              .toLowerCase()
+              .includes(searchQuery.toLowerCase());
+          }
+          return (
+            field &&
+            field.toString().toLowerCase().includes(searchQuery.toLowerCase())
+          );
+        });
+
       // Advanced filters
-      const matchesStatus = filters.status === "all" || property.status === filters.status;
-      const matchesArea = filters.area === "all" || property.area === filters.area;
-      const matchesOwner = !filters.ownerId || property.ownerId?.toString() === filters.ownerId;
-      const matchesFinancing = filters.financing === "all" || property.financing === filters.financing;
-      
+      const matchesStatus =
+        filters.status === "all" || property.status === filters.status;
+      const matchesArea =
+        filters.area === "all" || property.area === filters.area;
+      const matchesOwner =
+        !filters.ownerId || property.ownerId?.toString() === filters.ownerId;
+      const matchesFinancing =
+        filters.financing === "all" || property.financing === filters.financing;
+
       // Price range filtering
       const propertyPrice = parseFloat(property.askingPrice || 0);
-      const withinPriceRange = propertyPrice >= filters.priceRange[0] && 
-                               propertyPrice <= filters.priceRange[1];
-      
+      const withinPriceRange =
+        propertyPrice >= filters.priceRange[0] &&
+        propertyPrice <= filters.priceRange[1];
+
       // Square footage filtering
       const propertySqft = parseFloat(property.sqft || 0);
-      const withinSqftRange = propertySqft >= filters.squareFeet[0] && 
-                              propertySqft <= filters.squareFeet[1];
-      
-      return matchesSearchQuery && 
-             matchesStatus && 
-             matchesArea && 
-             withinPriceRange && 
-             matchesOwner &&
-             withinSqftRange &&
-             matchesFinancing;
+      const withinSqftRange =
+        propertySqft >= filters.squareFeet[0] &&
+        propertySqft <= filters.squareFeet[1];
+
+      return (
+        matchesSearchQuery &&
+        matchesStatus &&
+        matchesArea &&
+        withinPriceRange &&
+        matchesOwner &&
+        withinSqftRange &&
+        matchesFinancing
+      );
     });
   }, [data, searchQuery, filters]);
 
   // Update active filters for display
   useEffect(() => {
     const newActiveFilters = [];
-    
+
     if (filters.status && filters.status !== "all") {
-      newActiveFilters.push({ 
-        type: 'status', 
-        value: filters.status, 
-        label: `Status: ${filters.status}` 
+      newActiveFilters.push({
+        type: "status",
+        value: filters.status,
+        label: `Status: ${filters.status}`,
       });
     }
-    
+
     if (filters.area && filters.area !== "all") {
-      newActiveFilters.push({ 
-        type: 'area', 
-        value: filters.area, 
-        label: `Area: ${filters.area}` 
+      newActiveFilters.push({
+        type: "area",
+        value: filters.area,
+        label: `Area: ${filters.area}`,
       });
     }
-    
+
     if (filters.priceRange[0] > 0 || filters.priceRange[1] < 5000000) {
-      newActiveFilters.push({ 
-        type: 'priceRange', 
-        value: filters.priceRange, 
-        label: `Price: ${formatNumber(filters.priceRange[0])} - ${formatNumber(filters.priceRange[1])}` 
+      newActiveFilters.push({
+        type: "priceRange",
+        value: filters.priceRange,
+        label: `Price: ${formatNumber(filters.priceRange[0])} - ${formatNumber(
+          filters.priceRange[1]
+        )}`,
       });
     }
-    
+
     if (filters.ownerId) {
-      newActiveFilters.push({ 
-        type: 'ownerId', 
-        value: filters.ownerId, 
-        label: `Owner ID: ${filters.ownerId}` 
+      newActiveFilters.push({
+        type: "ownerId",
+        value: filters.ownerId,
+        label: `Owner ID: ${filters.ownerId}`,
       });
     }
-    
+
     if (filters.squareFeet[0] > 0 || filters.squareFeet[1] < 500000) {
-      newActiveFilters.push({ 
-        type: 'squareFeet', 
-        value: filters.squareFeet, 
-        label: `Size: ${formatNumber(filters.squareFeet[0])} - ${formatNumber(filters.squareFeet[1])} sqft` 
+      newActiveFilters.push({
+        type: "squareFeet",
+        value: filters.squareFeet,
+        label: `Size: ${formatNumber(filters.squareFeet[0])} - ${formatNumber(
+          filters.squareFeet[1]
+        )} sqft`,
       });
     }
 
     if (filters.financing && filters.financing !== "all") {
-      newActiveFilters.push({ 
-        type: 'financing', 
-        value: filters.financing, 
-        label: `Financing: ${filters.financing}` 
+      newActiveFilters.push({
+        type: "financing",
+        value: filters.financing,
+        label: `Financing: ${filters.financing}`,
       });
     }
-    
+
     setActiveFilters(newActiveFilters);
   }, [filters]);
 
   // Remove a specific filter
   const removeFilter = (type, value) => {
-    if (type === 'priceRange') {
-      setFilters(prev => ({
+    if (type === "priceRange") {
+      setFilters((prev) => ({
         ...prev,
         priceRange: [0, 5000000],
         minPriceDisplay: "0",
-        maxPriceDisplay: "5,000,000"
+        maxPriceDisplay: "5,000,000",
       }));
-    } else if (type === 'squareFeet') {
-      setFilters(prev => ({
+    } else if (type === "squareFeet") {
+      setFilters((prev) => ({
         ...prev,
         squareFeet: [0, 500000],
         minSqftDisplay: "0",
-        maxSqftDisplay: "500,000"
+        maxSqftDisplay: "500,000",
       }));
     } else {
-      setFilters(prev => ({
+      setFilters((prev) => ({
         ...prev,
-        [type]: type === "ownerId" ? "" : "all"
+        [type]: type === "ownerId" ? "" : "all",
       }));
     }
   };
@@ -496,7 +567,9 @@ export default function PropertiesTable({ propertyData }) {
   if (isError) {
     return (
       <div className="flex items-center justify-center h-[60vh]">
-        <h2 className="text-red-600 text-xl font-semibold">Error fetching data.</h2>
+        <h2 className="text-red-600 text-xl font-semibold">
+          Error fetching data.
+        </h2>
       </div>
     );
   }
@@ -513,10 +586,10 @@ export default function PropertiesTable({ propertyData }) {
     <div className="w-full bg-[#FDF8F2] rounded-lg p-4 sm:p-6">
       {/* Inject CSS for rich text styling */}
       <style>{richTextCellStyles}</style>
-      
+
       <div className="space-y-4">
         {/* Properties Table Filter */}
-        <PropertiesTableFilter 
+        <PropertiesTableFilter
           searchQuery={searchQuery}
           setSearchQuery={setSearchQuery}
           filters={filters}
@@ -533,7 +606,8 @@ export default function PropertiesTable({ propertyData }) {
         {/* Results Count */}
         <div className="flex justify-between items-center">
           <p className="text-sm text-gray-600">
-            {filteredData.length} {filteredData.length === 1 ? "result" : "results"} found
+            {filteredData.length}{" "}
+            {filteredData.length === 1 ? "result" : "results"} found
           </p>
           <div className="text-sm text-gray-600">
             {visibleColumns.length} columns visible
@@ -555,14 +629,21 @@ export default function PropertiesTable({ propertyData }) {
           onSave={handleQuickEditSave}
         />
       )}
-      
+
       {/* Property Deletion Modal */}
       <PropertyDeletionModal
         isOpen={isConfirmOpen}
         onClose={closeDeletionConfirm}
         property={selectedPropertyForDeletion}
-        onConfirm={requestPropertyDeletion}
+        onConfirm={executePropertyDeletion}
         isLoading={isDeletionLoading}
+        currentStep={currentStep}
+        isPermissionLoading={isPermissionLoading}
+        hasDeletePermission={hasDeletePermission}
+        requiresStatusConfirmation={requiresStatusConfirmation}
+        canDirectDelete={canDirectDelete}
+        onInitialConfirm={handleInitialConfirm}
+        DELETION_STEPS={DELETION_STEPS}
       />
     </div>
   );

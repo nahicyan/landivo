@@ -11,7 +11,8 @@ import {
 } from '../controllers/residencyCntrl.js';
 import { uploadWithMedia } from '../config/multerConfig.js'; // Updated import
 import { jwtCheck, extractUserFromToken, checkPermissions } from "../middlewares/authMiddleware.js";
-import { requestPropertyDeletion, approvePropertyDeletion } from "../controllers/propertyDeletionCntrl.js";
+import { requestPropertyDeletion, approvePropertyDeletion, deletePropertyDirect } from "../controllers/propertyDeletionCntrl.js";
+
 
 const router = express.Router();
 
@@ -48,6 +49,14 @@ router.put(
     { name: 'cmaFile', maxCount: 1 }
   ]), 
   updateResidency
+);
+
+router.delete(
+  "/delete/:id", 
+  jwtCheck, 
+  extractUserFromToken, 
+  checkPermissions(['delete:properties']), 
+  deletePropertyDirect
 );
 
 export { router as residencyRoute };
