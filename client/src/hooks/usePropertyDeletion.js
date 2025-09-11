@@ -3,7 +3,7 @@ import { useState } from 'react';
 import { useMutation, useQueryClient } from 'react-query';
 import { toast } from 'react-toastify';
 import { usePermissions } from '@/components/Auth0/PermissionsContext';
-import { requestPropertyDeletion as apiRequestPropertyDeletion } from '@/utils/api';
+import { requestPropertyDeletion as apiRequestPropertyDeletion, deletePropertyDirect } from '@/utils/api';
 
 /**
  * Deletion flow steps
@@ -34,7 +34,7 @@ export const usePropertyDeletion = () => {
 
   // Direct deletion API call (for users with delete:properties permission)
   const directDeletion = async ({ propertyId, reason }) => {
-    return await apiDeletePropertyDirect(propertyId, reason);
+    return await deletePropertyDirect(propertyId, reason);
   };
 
   // Mutation for deletion request (existing admin approval flow)

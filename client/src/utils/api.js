@@ -756,7 +756,7 @@ export const requestPropertyDeletion = async (propertyId, reason) => {
 };
 
 /**
- * Direct property deletion (new function - for users with delete:properties permission)
+ * Direct property deletion
  * @param {string} propertyId - Property ID
  * @param {string} reason - Reason for deletion
  * @returns {Promise<Object>} Response data
