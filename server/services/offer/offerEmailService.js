@@ -215,25 +215,14 @@ const generateOfferEmailTemplate = ({ action, property, buyer, offeredPrice, buy
                   border-bottom: 1px solid #e8eaed;
                   font-weight: 600;
                   color: #3c4043;
-                ">Property ID:</td>
-                <td style="
-                  padding: 8px 0;
-                  border-bottom: 1px solid #e8eaed;
-                  color: #3c4043;
-                ">${property.id}</td>
-              </tr>
-              <tr>
-                <td style="
-                  padding: 8px 0;
-                  border-bottom: 1px solid #e8eaed;
-                  font-weight: 600;
-                  color: #3c4043;
                 ">Asking Price:</td>
                 <td style="
                   padding: 8px 0;
                   border-bottom: 1px solid #e8eaed;
                   color: #3c4043;
-                ">$${Number(property.askingPrice || 0).toLocaleString()}</td>
+                  font-size: 18px;
+                  font-weight: 700;
+                ">${Number(property.askingPrice || 0).toLocaleString()}</td>
               </tr>
               <tr>
                 <td style="
@@ -244,7 +233,9 @@ const generateOfferEmailTemplate = ({ action, property, buyer, offeredPrice, buy
                 <td style="
                   padding: 8px 0;
                   color: #3c4043;
-                ">$${Number(offeredPrice).toLocaleString()}</td>
+                  font-size: 18px;
+                  font-weight: 700;
+                ">${Number(offeredPrice).toLocaleString()}</td>
               </tr>
               ${action === 'low_offer' && property.minPrice ? `
               <tr>
@@ -256,7 +247,9 @@ const generateOfferEmailTemplate = ({ action, property, buyer, offeredPrice, buy
                 <td style="
                   padding: 8px 0;
                   color: #3c4043;
-                ">$${Number(property.minPrice).toLocaleString()}</td>
+                  font-size: 18px;
+                  font-weight: 700;
+                ">${Number(property.minPrice).toLocaleString()}</td>
               </tr>
               ` : ''}
             </table>
