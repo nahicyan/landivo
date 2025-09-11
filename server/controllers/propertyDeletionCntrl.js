@@ -30,6 +30,37 @@ export const requestPropertyDeletion = asyncHandler(async (req, res) => {
       });
     }
 
+    // Get requesting user's details from database
+    let requestingUser = {
+      firstName: "Unknown",
+      lastName: "User",
+      email: req.user?.email || "Unknown Email"
+    };
+
+    if (req.userId) {
+      try {
+        const dbUser = await prisma.user.findUnique({
+          where: { id: req.userId },
+          select: {
+            firstName: true,
+            lastName: true,
+            email: true
+          }
+        });
+
+        if (dbUser) {
+          requestingUser = {
+            firstName: dbUser.firstName || "Unknown",
+            lastName: dbUser.lastName || "User",
+            email: dbUser.email || req.user?.email || "Unknown Email"
+          };
+        }
+      } catch (error) {
+        console.error("Error fetching user details:", error);
+        // Continue with fallback values
+      }
+    }
+
     // Generate unique deletion token
     const deletionToken = crypto.randomUUID();
     const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours
@@ -45,12 +76,12 @@ export const requestPropertyDeletion = asyncHandler(async (req, res) => {
       }
     });
 
-    // Send email to admin
+    // Send email to admin with user details
     await sendPropertyDeletionRequest({
       property,
       reason,
       deletionToken,
-      requestedBy: req.user?.email || "System User"
+      requestingUser
     });
 
     res.status(200).json({
@@ -100,38 +131,29 @@ export const approvePropertyDeletion = asyncHandler(async (req, res) => {
       });
     }
 
-    // Store property info
-    const propertyInfo = {
-      title: deletionRequest.property.title,
-      address: deletionRequest.property.streetAddress
-    };
+    // Delete the property
+    await prisma.residency.delete({
+      where: { id: deletionRequest.propertyId }
+    });
 
-    // Delete without transaction - sequential operations
-    try {
-      // First delete all deletion requests
-      await prisma.propertyDeletionRequest.deleteMany({
-        where: { propertyId: deletionRequest.propertyId }
-      });
+    // Update deletion request status
+    await prisma.propertyDeletionRequest.update({
+      where: { id: deletionRequest.id },
+      data: {
+        status: "APPROVED",
+        approvedAt: new Date()
+      }
+    });
 
-      // Then delete the property
-      await prisma.residency.delete({
-        where: { id: deletionRequest.propertyId }
-      });
-
-      res.status(200).json({
-        message: `Property "${propertyInfo.title}" at ${propertyInfo.address} has been permanently deleted.`
-      });
-
-    } catch (deleteError) {
-      // If deletion fails, try to restore the request
-      console.error("Delete operation failed:", deleteError);
-      throw deleteError;
-    }
+    res.status(200).json({
+      message: "Property has been successfully deleted."
+    });
 
   } catch (error) {
     console.error("Error approving property deletion:", error);
     res.status(500).json({
-      message: "Failed to delete property. Please try again or contact support."
+      message: "Failed to delete property",
+      error: error.message
     });
   }
 });

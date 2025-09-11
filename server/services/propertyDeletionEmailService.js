@@ -9,7 +9,7 @@ export const sendPropertyDeletionRequest = async ({
   property,
   reason,
   deletionToken,
-  requestedBy,
+  requestingUser,
 }) => {
   try {
     // Get SMTP settings from database
@@ -39,7 +39,7 @@ export const sendPropertyDeletionRequest = async ({
       property,
       reason,
       deletionToken,
-      requestedBy,
+      requestingUser,
     });
 
     // Send email
@@ -64,9 +64,12 @@ const generateDeletionRequestTemplate = ({
   property,
   reason,
   deletionToken,
-  requestedBy,
+  requestingUser,
 }) => {
   const approvalUrl = `https://landivo.com/property-deletion/${deletionToken}`;
+  // Formatting The Name
+  const requestedByName = `${requestingUser.firstName} ${requestingUser.lastName}`;
+  const requestedByEmail = requestingUser.email;
 
   return `
     <!DOCTYPE html>
@@ -79,14 +82,14 @@ const generateDeletionRequestTemplate = ({
       <body style="
         margin: 0;
         padding: 0;
-        background-color: #dbddde;
+        background-color: #324c48;
         font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen-Sans, Ubuntu, Cantarell, 'Helvetica Neue', sans-serif;
       ">
         <!-- Main Container -->
         <div style="
           margin: 30px auto;
           max-width: 600px;
-          background-color: #fff;
+          background-color: #FDF8F2;
           border-radius: 5px;
           overflow: hidden;
           box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
@@ -94,7 +97,7 @@ const generateDeletionRequestTemplate = ({
           
           <!-- Header with Logo -->
           <div style="
-            background: linear-gradient(135deg, #324c48 0%, #3f5f5a 100%);
+            background: #f6ece0;
             padding: 40px;
             text-align: center;
           ">
@@ -141,7 +144,7 @@ const generateDeletionRequestTemplate = ({
           <!-- Property Details Card -->
           <div style="
             margin: 20px 40px;
-            background-color: #f8f9fa;
+            background-color: #f6ece0;
             border-radius: 8px;
             padding: 20px;
             border-left: 4px solid #324c48;
@@ -276,7 +279,10 @@ const generateDeletionRequestTemplate = ({
                   padding: 8px 0;
                   border-bottom: 1px solid #bbdefb;
                   color: #1565c0;
-                ">${requestedBy}</td>
+                ">
+                 <div>${requestedByName}</div>
+                  <div style="font-size: 13px; color: #1565c0; margin-top: 4px;">${requestedByEmail}</div>
+                </td>
               </tr>
               <tr>
                 <td style="
@@ -369,7 +375,7 @@ const generateDeletionRequestTemplate = ({
 
           <!-- Connect Section -->
           <div style="
-            background-color: #f0fcff;
+            background-color: #f6ece0;
             padding: 20px 40px;
             text-align: center;
           ">
