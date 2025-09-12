@@ -7,7 +7,8 @@ import {
   updateOfferStatus,
   getOfferHistory,
   getAllOffers,
-  getRecentOfferActivity 
+  getRecentOfferActivity,
+  getOfferById
 } from "../services/offer/index.js";
 
 const router = express.Router();
@@ -26,6 +27,8 @@ router.get("/all", getAllOffers);
 
 // Get recent offer activity
 router.get("/activity/recent", getRecentOfferActivity);
+
+router.get("/:id", getOfferById);
 
 // Update offer status
 router.put("/:id/status", updateOfferStatus);

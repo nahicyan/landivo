@@ -65,6 +65,7 @@ import TrafficPage from "./pages/Traffic/TrafficPage";
 import { TokenValidationProvider } from "./components/Auth0/TokenValidationProvider";
 import AuthErrorBoundary from "./components/Auth0/AuthErrorBoundary";
 import ApprovePropertyDeletion from "./pages/ApprovePropertyDeletion/ApprovePropertyDeletion";
+import Offer from './pages/AdminOffer/Offer';
 import JoinVip from "./pages/JoinVip/JoinVip";
 
 
@@ -172,6 +173,7 @@ function App() {
                                 <Route path="add-property" element={<AddProperty />} />
                                 <Route path="edit-property/:propertyId" element={<EditProperty />} />
                                 <Route path="offers" element={<AdminOffer />} />
+                                <Route path="offers/id/:offerId" element={<Offer />} />
                                 <Route path="properties" element={<AdminProperties />} />
 
                                 {/* Deals */}

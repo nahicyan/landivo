@@ -723,3 +723,70 @@ export const getRecentOfferActivity = asyncHandler(async (req, res) => {
     });
   }
 });
+
+/**
+ * Get a single offer by ID
+ * @route GET /api/offer/:id
+ * @access Private
+ */
+export const getOfferById = asyncHandler(async (req, res) => {
+  const { id } = req.params;
+
+  if (!id) {
+    return res.status(400).json({ message: "Offer ID is required" });
+  }
+
+  try {
+    const offer = await prisma.offer.findUnique({
+      where: { id },
+      include: {
+        buyer: {
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+            email: true,
+            phone: true,
+            buyerType: true,
+          },
+        },
+      },
+    });
+
+    if (!offer) {
+      return res.status(404).json({ message: "Offer not found" });
+    }
+
+    // Fetch property details separately
+    let property = null;
+    try {
+      property = await prisma.residency.findUnique({
+        where: { id: offer.propertyId },
+        select: {
+          id: true,
+          title: true,
+          streetAddress: true,
+          city: true,
+          state: true,
+          askingPrice: true,
+          minPrice: true,
+        },
+      });
+    } catch (propertyError) {
+      console.warn("Error fetching property details:", propertyError);
+    }
+
+    res.status(200).json({
+      offer: {
+        ...offer,
+        property,
+      },
+    });
+  } catch (err) {
+    console.error("Error fetching offer:", err);
+    res.status(500).json({
+      message: "An error occurred while fetching the offer",
+      error: err.message,
+    });
+  }
+});

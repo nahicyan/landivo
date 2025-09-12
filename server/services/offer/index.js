@@ -6,7 +6,8 @@ import {
   updateOfferStatus,
   getOfferHistory,
   getAllOffers,
-  getRecentOfferActivity
+  getRecentOfferActivity,
+  getOfferById, 
 } from './offerController.js';
 
 // For Admin Email Notifications
@@ -42,6 +43,7 @@ export {
   getOfferHistory,
   getAllOffers,
   getRecentOfferActivity,
+  getOfferById, 
   
   // Admin email services
   sendOfferNotification,
