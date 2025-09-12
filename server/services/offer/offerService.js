@@ -138,7 +138,7 @@ export const updateExistingOffer = async (offerId, offeredPrice, buyerMessage = 
     previousPrice: existingOffer.offeredPrice,
     newPrice: parseFloat(offeredPrice),
     buyerMessage: buyerMessage || null, // Set to null if not provided
-    sysMessage: null, // Always clear system message
+    sysMessage: existingOffer.sysMessage, 
     updatedById: userId,
     updatedByName: userName || "Buyer"
   };
@@ -153,7 +153,7 @@ export const updateExistingOffer = async (offerId, offeredPrice, buyerMessage = 
       offeredPrice: parseFloat(offeredPrice),
       offerStatus: "PENDING", // Reset to pending with new offer
       buyerMessage: buyerMessage || null, // Set to null if not provided
-      sysMessage: null, // Always clear system message
+      // sysMessage: null, // Don't Always clear system message
       offerHistory: [...existingHistory, historyEntry],
       timestamp: new Date(),
       updatedById: userId

@@ -352,7 +352,7 @@ export const updateOfferStatus = asyncHandler(async (req, res) => {
       previousPrice: existingOffer.offeredPrice,  // Added previousPrice
       counteredPrice: status === "COUNTERED" ? parseFloat(counteredPrice) : null,
       sysMessage: updatedSysMessage,
-      buyerMessage: null,
+      buyerMessage: existingOffer.buyerMessage,
       updatedById: req.userId || null,
       updatedByName: req.user?.name || "Admin"
     };
@@ -367,7 +367,7 @@ export const updateOfferStatus = asyncHandler(async (req, res) => {
         offerStatus: status,
         counteredPrice: status === "COUNTERED" ? parseFloat(counteredPrice) : null,
         sysMessage: updatedSysMessage,
-        buyerMessage: null,
+        //buyerMessage: null,
         offerHistory: [...existingHistory, historyEntry],
         updatedById: req.userId || null,
         updatedAt: new Date()
