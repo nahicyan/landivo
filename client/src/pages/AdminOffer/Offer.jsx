@@ -255,9 +255,6 @@ export default function Offer() {
                 <User className="h-5 w-5" />
                 Buyer Information
               </CardTitle>
-              <CardDescription>
-                Contact details and buyer profile
-              </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               {/* Name */}
