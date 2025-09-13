@@ -1,4 +1,3 @@
-// client/src/pages/AdminOffer/Offer.jsx
 import React, { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { format } from "date-fns";
@@ -311,89 +310,93 @@ export default function Offer() {
                   </div>
                 </div>
               </div>
-            </CardContent>
-          </Card>
 
-          {/* Property Information Card */}
-          <Card className="shadow-lg border-l-4 border-l-[#3f4f24]">
-            <CardHeader className="bg-gradient-to-r from-[#3f4f24]/5 to-transparent">
-              <CardTitle className="flex items-center gap-2 text-[#3f4f24]">
-                <Home className="h-5 w-5" />
-                Property Information
-              </CardTitle>
-              <CardDescription>Property details and pricing</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              {/* Property Address */}
-              <div className="flex items-start gap-3">
-                <div className="w-10 h-10 bg-[#3f4f24]/10 rounded-full flex items-center justify-center mt-1">
-                  <MapPin className="h-5 w-5 text-[#3f4f24]" />
-                </div>
-                <div>
-                  <p className="text-sm text-gray-500">Address</p>
-                  <p className="font-medium">
-                    {offer.property?.streetAddress || "Address not available"}
-                  </p>
-                  <p className="text-sm text-gray-600">
-                    {offer.property?.city && offer.property?.state
-                      ? `${offer.property.city}, ${offer.property.state}`
-                      : "City, State not available"
-                    }
-                  </p>
-                </div>
-              </div>
-
-              {/* Property Title */}
-              {offer.property?.title && (
-                <div className="flex items-start gap-3">
-                  <div className="w-10 h-10 bg-orange-100 rounded-full flex items-center justify-center">
-                    <Home className="h-5 w-5 text-orange-600" />
-                  </div>
-                  <div>
-                    <p className="text-sm text-gray-500">Property Title</p>
-                    <p className="font-medium">{offer.property.title}</p>
-                  </div>
-                </div>
-              )}
-
-              {/* Asking Price */}
+              {/* Offer Price */}
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center">
                   <DollarSign className="h-5 w-5 text-green-600" />
                 </div>
                 <div>
-                  <p className="text-sm text-gray-500">Asking Price</p>
+                  <p className="text-sm text-gray-500">Offer Price</p>
                   <p className="font-semibold text-lg text-green-600">
-                    {formatCurrency(offer.property?.askingPrice)}
+                    {formatCurrency(offer.offerPrice)}
                   </p>
+                  {offer.counteredPrice && (
+                    <p className="text-sm text-blue-600">
+                      Countered: {formatCurrency(offer.counteredPrice)}
+                    </p>
+                  )}
                 </div>
               </div>
+            </CardContent>
+          </Card>
 
-              {/* Offered Price */}
+          {/* Property Information Card */}
+          <Card className="shadow-lg border-l-4 border-l-[#324c48]">
+            <CardHeader className="bg-gradient-to-r from-[#324c48]/5 to-transparent">
+              <CardTitle className="flex items-center gap-2 text-[#324c48]">
+                <Home className="h-5 w-5" />
+                Property Information
+              </CardTitle>
+              <CardDescription>Details about the property</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {/* Address */}
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
-                  <DollarSign className="h-5 w-5 text-blue-600" />
+                <div className="w-10 h-10 bg-[#324c48]/10 rounded-full flex items-center justify-center">
+                  <MapPin className="h-5 w-5 text-[#324c48]" />
                 </div>
                 <div>
-                  <p className="text-sm text-gray-500">Offered Price</p>
-                  <p className="font-semibold text-lg text-blue-600">
-                    {formatCurrency(offer.offeredPrice)}
+                  <p className="font-semibold">
+                    {offer.property?.address || "Address not available"}
+                  </p>
+                  <p className="text-sm text-gray-500">
+                    {offer.property?.city}, {offer.property?.state} {offer.property?.zip}
                   </p>
                 </div>
               </div>
 
-              {/* Counter Price (if exists) */}
-              {offer.counteredPrice && (
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 bg-purple-100 rounded-full flex items-center justify-center">
-                    <RefreshCw className="h-5 w-5 text-purple-600" />
-                  </div>
-                  <div>
-                    <p className="text-sm text-gray-500">Counter Price</p>
-                    <p className="font-semibold text-lg text-purple-600">
-                      {formatCurrency(offer.counteredPrice)}
+              {/* Offer Price */}
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center">
+                  <DollarSign className="h-5 w-5 text-green-600" />
+                </div>
+                <div>
+                  <p className="text-sm text-gray-500">Offer Price</p>
+                  <p className="font-semibold text-lg text-green-600">
+                    {formatCurrency(offer.offerPrice)}
+                  </p>
+                  {offer.counteredPrice && (
+                    <p className="text-sm text-blue-600">
+                      Countered: {formatCurrency(offer.counteredPrice)}
                     </p>
-                  </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Property Details */}
+              {offer.property && (
+                <div className="grid grid-cols-2 gap-2 text-sm">
+                  {offer.property.beds && (
+                    <div className="bg-gray-50 p-2 rounded">
+                      <span className="text-gray-500">Beds:</span> {offer.property.beds}
+                    </div>
+                  )}
+                  {offer.property.baths && (
+                    <div className="bg-gray-50 p-2 rounded">
+                      <span className="text-gray-500">Baths:</span> {offer.property.baths}
+                    </div>
+                  )}
+                  {offer.property.sqft && (
+                    <div className="bg-gray-50 p-2 rounded">
+                      <span className="text-gray-500">Sqft:</span> {offer.property.sqft.toLocaleString()}
+                    </div>
+                  )}
+                  {offer.property.yearBuilt && (
+                    <div className="bg-gray-50 p-2 rounded">
+                      <span className="text-gray-500">Built:</span> {offer.property.yearBuilt}
+                    </div>
+                  )}
                 </div>
               )}
 
@@ -542,6 +545,72 @@ export default function Offer() {
             )}
           </CardContent>
         </Card>
+
+        {/* Offer Actions Section */}
+        {(offer.offerStatus === "PENDING" || offer.offerStatus === "COUNTERED") && (
+          <Card className="shadow-lg border-l-4 border-l-orange-500">
+            <CardHeader className="bg-gradient-to-r from-orange-50 to-transparent">
+              <CardTitle className="flex items-center gap-2 text-orange-700">
+                <DollarSign className="h-5 w-5" />
+                Quick Actions
+              </CardTitle>
+              <CardDescription>
+                Take action on this offer
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="pt-3">
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+                <button
+                  onClick={() => handleAction("ACCEPT")}
+                  className="group relative bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white rounded-lg px-3 py-2 shadow-md shadow-green-500/25 hover:shadow-lg hover:shadow-green-500/30 transition-all duration-300 transform hover:-translate-y-0.5 active:translate-y-0"
+                >
+                  <div className="flex items-center justify-center gap-1.5">
+                    <div className="w-5 h-5 bg-white/20 rounded-full flex items-center justify-center">
+                      <Check className="h-2.5 w-2.5" />
+                    </div>
+                    <span className="font-medium text-xs">Accept</span>
+                  </div>
+                </button>
+                
+                <button
+                  onClick={() => handleAction("COUNTER")}
+                  className="group relative bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white rounded-lg px-3 py-2 shadow-md shadow-blue-500/25 hover:shadow-lg hover:shadow-blue-500/30 transition-all duration-300 transform hover:-translate-y-0.5 active:translate-y-0"
+                >
+                  <div className="flex items-center justify-center gap-1.5">
+                    <div className="w-5 h-5 bg-white/20 rounded-full flex items-center justify-center">
+                      <RefreshCw className="h-2.5 w-2.5" />
+                    </div>
+                    <span className="font-medium text-xs">Counter</span>
+                  </div>
+                </button>
+                
+                <button
+                  onClick={() => handleAction("REJECT")}
+                  className="group relative bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white rounded-lg px-3 py-2 shadow-md shadow-red-500/25 hover:shadow-lg hover:shadow-red-500/30 transition-all duration-300 transform hover:-translate-y-0.5 active:translate-y-0"
+                >
+                  <div className="flex items-center justify-center gap-1.5">
+                    <div className="w-5 h-5 bg-white/20 rounded-full flex items-center justify-center">
+                      <X className="h-2.5 w-2.5" />
+                    </div>
+                    <span className="font-medium text-xs">Reject</span>
+                  </div>
+                </button>
+                
+                <button
+                  onClick={() => handleAction("EXPIRE")}
+                  className="group relative bg-white hover:bg-gray-50 text-gray-700 rounded-lg px-3 py-2 shadow-md shadow-gray-200/50 hover:shadow-lg hover:shadow-gray-200/60 border border-gray-200 transition-all duration-300 transform hover:-translate-y-0.5 active:translate-y-0"
+                >
+                  <div className="flex items-center justify-center gap-1.5">
+                    <div className="w-5 h-5 bg-gray-100 rounded-full flex items-center justify-center">
+                      <Clock className="h-2.5 w-2.5" />
+                    </div>
+                    <span className="font-medium text-xs">Expire</span>
+                  </div>
+                </button>
+              </div>
+            </CardContent>
+          </Card>
+        )}
 
         {/* Action Dialog */}
         <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
