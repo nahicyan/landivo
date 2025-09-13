@@ -226,7 +226,7 @@ export default function Offer() {
 
   return (
     <div className="w-full bg-white min-h-screen">
-      <div className="max-w-screen-xl mx-auto px-4 py-6">
+      <div className="max-w-screen-xl mx-auto px-4 py-4">
         {/* Header */}
         <div className="flex items-center gap-4 mb-6">
           <Button
@@ -258,7 +258,7 @@ export default function Offer() {
             </CardHeader>
             <CardContent className="space-y-4">
               {/* Name */}
-              <div className="flex items-center gap-3">
+              <div className="flex items-center gap-3 pt-2">
                 <div className="w-10 h-10 bg-[#324c48]/10 rounded-full flex items-center justify-center">
                   <User className="h-5 w-5 text-[#324c48]" />
                 </div>
@@ -347,15 +347,9 @@ export default function Offer() {
 
           {/* Property Information Card */}
           <Card className="shadow-lg border-l-4 border-l-[#324c48]">
-            <CardHeader className="bg-gradient-to-r from-[#324c48]/5 to-transparent">
-              <CardTitle className="flex items-center gap-2 text-[#324c48]">
-                <Home className="h-5 w-5" />
-                Property Information
-              </CardTitle>
-            </CardHeader>
             <CardContent className="space-y-4">
               {/* Property Information */}
-              <div>
+              <div className="pt-4">
                 {propertyData ? (
                   <PropertyCard card={propertyData} />
                 ) : (
@@ -479,7 +473,7 @@ export default function Offer() {
             )}
           </CardContent>
         </Card>
-
+        <div className="pt-6">
         {/* Offer Actions Section */}
         {(offer.offerStatus === "PENDING" ||
           offer.offerStatus === "COUNTERED") && (
@@ -544,6 +538,7 @@ export default function Offer() {
             </CardContent>
           </Card>
         )}
+        </div>
 
         {/* Action Dialog */}
         <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
