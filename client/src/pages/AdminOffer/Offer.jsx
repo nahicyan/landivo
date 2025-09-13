@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { format } from "date-fns";
-import { api } from "@/utils/api";
+import { api, getProperty } from "@/utils/api";
 import { toast } from "react-toastify";
 import { PuffLoader } from "react-spinners";
 import PropertyCard from "@/components/PropertyCard/PropertyCard";
@@ -336,7 +336,7 @@ export default function Offer() {
                 <div>
                   <p className="text-sm text-gray-500">Offer Price</p>
                   <p className="font-semibold text-lg text-green-600">
-                    {formatCurrency(offer.offerPrice)}
+                    {formatCurrency(offer.offeredPrice)}
                   </p>
                   {offer.counteredPrice && (
                     <p className="text-sm text-blue-600">
@@ -355,17 +355,10 @@ export default function Offer() {
                 <Home className="h-5 w-5" />
                 Property Information
               </CardTitle>
-              <CardDescription>Details about the property</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               {/* Property Information */}
               <div>
-                <h3 className="text-lg font-semibold text-[#324c48] mb-4">
-                  Property Information
-                </h3>
-                <p className="text-sm text-gray-600 mb-4">
-                  Details about the property
-                </p>
                 {propertyData ? (
                   <PropertyCard card={propertyData} />
                 ) : (
@@ -374,48 +367,6 @@ export default function Offer() {
                   </div>
                 )}
               </div>
-
-              {/* Action Buttons */}
-              {offer.offerStatus === "PENDING" && (
-                <div className="pt-4 space-y-2">
-                  <div className="grid grid-cols-2 gap-2">
-                    <Button
-                      onClick={() => handleAction("ACCEPT")}
-                      className="bg-green-600 hover:bg-green-700 text-white"
-                      size="sm"
-                    >
-                      <Check className="mr-2 h-4 w-4" />
-                      Accept
-                    </Button>
-                    <Button
-                      onClick={() => handleAction("REJECT")}
-                      variant="destructive"
-                      size="sm"
-                    >
-                      <X className="mr-2 h-4 w-4" />
-                      Reject
-                    </Button>
-                  </div>
-                  <div className="grid grid-cols-2 gap-2">
-                    <Button
-                      onClick={() => handleAction("COUNTER")}
-                      className="bg-blue-600 hover:bg-blue-700 text-white"
-                      size="sm"
-                    >
-                      <RefreshCw className="mr-2 h-4 w-4" />
-                      Counter
-                    </Button>
-                    <Button
-                      onClick={() => handleAction("EXPIRE")}
-                      variant="outline"
-                      size="sm"
-                    >
-                      <Clock className="mr-2 h-4 w-4" />
-                      Expire
-                    </Button>
-                  </div>
-                </div>
-              )}
             </CardContent>
           </Card>
         </div>
@@ -451,41 +402,41 @@ export default function Offer() {
                           <div className="flex items-center gap-2">
                             <Calendar className="h-4 w-4 text-gray-400" />
                             <div>
-                              <p className="font-medium">
+                              <div className="font-medium">
                                 {format(
                                   new Date(entry.timestamp),
                                   "MMM d, yyyy"
                                 )}
-                              </p>
-                              <p className="text-sm text-gray-500">
+                              </div>
+                              <div className="text-sm text-gray-500">
                                 {format(new Date(entry.timestamp), "h:mm a")}
-                              </p>
+                              </div>
                             </div>
                           </div>
                         </TableCell>
                         <TableCell>
                           <div className="space-y-1">
                             {entry.previousStatus && (
-                              <p className="text-sm text-gray-500">
+                              <div className="text-sm text-gray-500">
                                 From: {getStatusBadge(entry.previousStatus)}
-                              </p>
+                              </div>
                             )}
-                            <p className="text-sm">
+                            <div className="text-sm">
                               To: {getStatusBadge(entry.newStatus)}
-                            </p>
+                            </div>
                           </div>
                         </TableCell>
                         <TableCell>
                           <div className="space-y-1">
                             {entry.newPrice && (
-                              <p className="font-medium">
+                              <div className="font-medium">
                                 {formatCurrency(entry.newPrice)}
-                              </p>
+                              </div>
                             )}
                             {entry.counteredPrice && (
-                              <p className="text-sm text-blue-600">
+                              <div className="text-sm text-blue-600">
                                 Counter: {formatCurrency(entry.counteredPrice)}
-                              </p>
+                              </div>
                             )}
                           </div>
                         </TableCell>
@@ -493,22 +444,22 @@ export default function Offer() {
                           <div className="space-y-1">
                             {entry.buyerMessage && (
                               <div className="bg-blue-50 p-2 rounded text-sm">
-                                <p className="font-medium text-blue-800">
+                                <div className="font-medium text-blue-800">
                                   Buyer:
-                                </p>
-                                <p className="text-blue-700">
+                                </div>
+                                <div className="text-blue-700">
                                   {entry.buyerMessage}
-                                </p>
+                                </div>
                               </div>
                             )}
                             {entry.sysMessage && (
                               <div className="bg-gray-50 p-2 rounded text-sm">
-                                <p className="font-medium text-gray-800">
+                                <div className="font-medium text-gray-800">
                                   System:
-                                </p>
-                                <p className="text-gray-700">
+                                </div>
+                                <div className="text-gray-700">
                                   {entry.sysMessage}
-                                </p>
+                                </div>
                               </div>
                             )}
                           </div>
