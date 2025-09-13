@@ -4,6 +4,7 @@ import { format } from "date-fns";
 import { api } from "@/utils/api";
 import { toast } from "react-toastify";
 import { PuffLoader } from "react-spinners";
+import PropertyCard from "@/components/PropertyCard/PropertyCard";
 
 // UI Components
 import {
@@ -53,7 +54,7 @@ import {
 export default function Offer() {
   const { offerId } = useParams();
   const navigate = useNavigate();
-  
+
   // State management
   const [loading, setLoading] = useState(true);
   const [offer, setOffer] = useState(null);
@@ -63,21 +64,32 @@ export default function Offer() {
   const [counterPrice, setCounterPrice] = useState("");
   const [message, setMessage] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [propertyData, setPropertyData] = useState(null);
 
   // Fetch offer data
   useEffect(() => {
     const fetchOfferData = async () => {
       try {
         setLoading(true);
-        
+
         // Fetch offer details and history
         const [offerResponse, historyResponse] = await Promise.all([
           api.get(`/offer/${offerId}`),
-          api.get(`/offer/${offerId}/history`)
+          api.get(`/offer/${offerId}/history`),
         ]);
 
         setOffer(offerResponse.data.offer);
         setHistory(historyResponse.data.history || []);
+        if (offerResponse.data.offer?.propertyId) {
+          try {
+            const property = await getProperty(
+              offerResponse.data.offer.propertyId
+            );
+            setPropertyData(property);
+          } catch (err) {
+            console.error("Error fetching property:", err);
+          }
+        }
       } catch (error) {
         console.error("Error fetching offer data:", error);
         toast.error("Failed to load offer details");
@@ -103,7 +115,9 @@ export default function Offer() {
     if (!phone) return "N/A";
     const cleaned = phone.replace(/\D/g, "");
     if (cleaned.length === 10) {
-      return `(${cleaned.slice(0, 3)}) ${cleaned.slice(3, 6)}-${cleaned.slice(6)}`;
+      return `(${cleaned.slice(0, 3)}) ${cleaned.slice(3, 6)}-${cleaned.slice(
+        6
+      )}`;
     }
     return phone;
   };
@@ -159,10 +173,10 @@ export default function Offer() {
       }
 
       await api.put(`/offer/${offerId}/status`, payload);
-      
+
       toast.success(`Offer ${actionType.toLowerCase()}ed successfully`);
       setIsDialogOpen(false);
-      
+
       // Refresh data
       window.location.reload();
     } catch (error) {
@@ -200,7 +214,9 @@ export default function Offer() {
     return (
       <div className="text-center py-10">
         <h2 className="text-2xl font-bold mb-2">Offer Not Found</h2>
-        <p className="text-gray-500 mb-4">The requested offer could not be found.</p>
+        <p className="text-gray-500 mb-4">
+          The requested offer could not be found.
+        </p>
         <Button onClick={() => navigate("/admin/offers")}>
           Back to Offers
         </Button>
@@ -222,11 +238,10 @@ export default function Offer() {
             Back to Offers
           </Button>
           <div>
-            <h1 className="text-2xl font-bold text-[#324c48]">
-              Offer Details
-            </h1>
+            <h1 className="text-2xl font-bold text-[#324c48]">Offer Details</h1>
             <p className="text-gray-600">
-              Offer #{offerId.slice(0, 8)} • {format(new Date(offer.timestamp), "MMM d, yyyy 'at' h:mm a")}
+              Offer #{offerId.slice(0, 8)} •{" "}
+              {format(new Date(offer.timestamp), "MMM d, yyyy 'at' h:mm a")}
             </p>
           </div>
         </div>
@@ -240,7 +255,9 @@ export default function Offer() {
                 <User className="h-5 w-5" />
                 Buyer Information
               </CardTitle>
-              <CardDescription>Contact details and buyer profile</CardDescription>
+              <CardDescription>
+                Contact details and buyer profile
+              </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               {/* Name */}
@@ -341,64 +358,22 @@ export default function Offer() {
               <CardDescription>Details about the property</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              {/* Address */}
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 bg-[#324c48]/10 rounded-full flex items-center justify-center">
-                  <MapPin className="h-5 w-5 text-[#324c48]" />
-                </div>
-                <div>
-                  <p className="font-semibold">
-                    {offer.property?.address || "Address not available"}
-                  </p>
-                  <p className="text-sm text-gray-500">
-                    {offer.property?.city}, {offer.property?.state} {offer.property?.zip}
-                  </p>
-                </div>
+              {/* Property Information */}
+              <div>
+                <h3 className="text-lg font-semibold text-[#324c48] mb-4">
+                  Property Information
+                </h3>
+                <p className="text-sm text-gray-600 mb-4">
+                  Details about the property
+                </p>
+                {propertyData ? (
+                  <PropertyCard card={propertyData} />
+                ) : (
+                  <div className="p-4 bg-gray-50 rounded-lg text-center text-gray-500">
+                    Loading property details...
+                  </div>
+                )}
               </div>
-
-              {/* Offer Price */}
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center">
-                  <DollarSign className="h-5 w-5 text-green-600" />
-                </div>
-                <div>
-                  <p className="text-sm text-gray-500">Offer Price</p>
-                  <p className="font-semibold text-lg text-green-600">
-                    {formatCurrency(offer.offerPrice)}
-                  </p>
-                  {offer.counteredPrice && (
-                    <p className="text-sm text-blue-600">
-                      Countered: {formatCurrency(offer.counteredPrice)}
-                    </p>
-                  )}
-                </div>
-              </div>
-
-              {/* Property Details */}
-              {offer.property && (
-                <div className="grid grid-cols-2 gap-2 text-sm">
-                  {offer.property.beds && (
-                    <div className="bg-gray-50 p-2 rounded">
-                      <span className="text-gray-500">Beds:</span> {offer.property.beds}
-                    </div>
-                  )}
-                  {offer.property.baths && (
-                    <div className="bg-gray-50 p-2 rounded">
-                      <span className="text-gray-500">Baths:</span> {offer.property.baths}
-                    </div>
-                  )}
-                  {offer.property.sqft && (
-                    <div className="bg-gray-50 p-2 rounded">
-                      <span className="text-gray-500">Sqft:</span> {offer.property.sqft.toLocaleString()}
-                    </div>
-                  )}
-                  {offer.property.yearBuilt && (
-                    <div className="bg-gray-50 p-2 rounded">
-                      <span className="text-gray-500">Built:</span> {offer.property.yearBuilt}
-                    </div>
-                  )}
-                </div>
-              )}
 
               {/* Action Buttons */}
               {offer.offerStatus === "PENDING" && (
@@ -477,7 +452,10 @@ export default function Offer() {
                             <Calendar className="h-4 w-4 text-gray-400" />
                             <div>
                               <p className="font-medium">
-                                {format(new Date(entry.timestamp), "MMM d, yyyy")}
+                                {format(
+                                  new Date(entry.timestamp),
+                                  "MMM d, yyyy"
+                                )}
                               </p>
                               <p className="text-sm text-gray-500">
                                 {format(new Date(entry.timestamp), "h:mm a")}
@@ -515,14 +493,22 @@ export default function Offer() {
                           <div className="space-y-1">
                             {entry.buyerMessage && (
                               <div className="bg-blue-50 p-2 rounded text-sm">
-                                <p className="font-medium text-blue-800">Buyer:</p>
-                                <p className="text-blue-700">{entry.buyerMessage}</p>
+                                <p className="font-medium text-blue-800">
+                                  Buyer:
+                                </p>
+                                <p className="text-blue-700">
+                                  {entry.buyerMessage}
+                                </p>
                               </div>
                             )}
                             {entry.sysMessage && (
                               <div className="bg-gray-50 p-2 rounded text-sm">
-                                <p className="font-medium text-gray-800">System:</p>
-                                <p className="text-gray-700">{entry.sysMessage}</p>
+                                <p className="font-medium text-gray-800">
+                                  System:
+                                </p>
+                                <p className="text-gray-700">
+                                  {entry.sysMessage}
+                                </p>
                               </div>
                             )}
                           </div>
@@ -547,16 +533,15 @@ export default function Offer() {
         </Card>
 
         {/* Offer Actions Section */}
-        {(offer.offerStatus === "PENDING" || offer.offerStatus === "COUNTERED") && (
+        {(offer.offerStatus === "PENDING" ||
+          offer.offerStatus === "COUNTERED") && (
           <Card className="shadow-lg border-l-4 border-l-orange-500">
             <CardHeader className="bg-gradient-to-r from-orange-50 to-transparent">
               <CardTitle className="flex items-center gap-2 text-orange-700">
                 <DollarSign className="h-5 w-5" />
                 Quick Actions
               </CardTitle>
-              <CardDescription>
-                Take action on this offer
-              </CardDescription>
+              <CardDescription>Take action on this offer</CardDescription>
             </CardHeader>
             <CardContent className="pt-3">
               <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
@@ -571,7 +556,7 @@ export default function Offer() {
                     <span className="font-medium text-xs">Accept</span>
                   </div>
                 </button>
-                
+
                 <button
                   onClick={() => handleAction("COUNTER")}
                   className="group relative bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white rounded-lg px-3 py-2 shadow-md shadow-blue-500/25 hover:shadow-lg hover:shadow-blue-500/30 transition-all duration-300 transform hover:-translate-y-0.5 active:translate-y-0"
@@ -583,7 +568,7 @@ export default function Offer() {
                     <span className="font-medium text-xs">Counter</span>
                   </div>
                 </button>
-                
+
                 <button
                   onClick={() => handleAction("REJECT")}
                   className="group relative bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white rounded-lg px-3 py-2 shadow-md shadow-red-500/25 hover:shadow-lg hover:shadow-red-500/30 transition-all duration-300 transform hover:-translate-y-0.5 active:translate-y-0"
@@ -595,7 +580,7 @@ export default function Offer() {
                     <span className="font-medium text-xs">Reject</span>
                   </div>
                 </button>
-                
+
                 <button
                   onClick={() => handleAction("EXPIRE")}
                   className="group relative bg-white hover:bg-gray-50 text-gray-700 rounded-lg px-3 py-2 shadow-md shadow-gray-200/50 hover:shadow-lg hover:shadow-gray-200/60 border border-gray-200 transition-all duration-300 transform hover:-translate-y-0.5 active:translate-y-0"
@@ -623,10 +608,14 @@ export default function Offer() {
                 {actionType === "EXPIRE" && "Expire Offer"}
               </DialogTitle>
               <DialogDescription>
-                {actionType === "ACCEPT" && "Are you sure you want to accept this offer?"}
-                {actionType === "REJECT" && "Are you sure you want to reject this offer?"}
-                {actionType === "COUNTER" && "Enter your counter offer details."}
-                {actionType === "EXPIRE" && "Are you sure you want to expire this offer?"}
+                {actionType === "ACCEPT" &&
+                  "Are you sure you want to accept this offer?"}
+                {actionType === "REJECT" &&
+                  "Are you sure you want to reject this offer?"}
+                {actionType === "COUNTER" &&
+                  "Enter your counter offer details."}
+                {actionType === "EXPIRE" &&
+                  "Are you sure you want to expire this offer?"}
               </DialogDescription>
             </DialogHeader>
 
@@ -645,7 +634,8 @@ export default function Offer() {
 
               <div>
                 <Label htmlFor="message">
-                  Message {actionType === "COUNTER" ? "(Optional)" : "(Optional)"}
+                  Message{" "}
+                  {actionType === "COUNTER" ? "(Optional)" : "(Optional)"}
                 </Label>
                 <Textarea
                   id="message"
@@ -667,7 +657,9 @@ export default function Offer() {
               </Button>
               <Button
                 onClick={handleSubmitAction}
-                disabled={isSubmitting || (actionType === "COUNTER" && !counterPrice)}
+                disabled={
+                  isSubmitting || (actionType === "COUNTER" && !counterPrice)
+                }
                 className={
                   actionType === "ACCEPT"
                     ? "bg-green-600 hover:bg-green-700"
@@ -678,7 +670,14 @@ export default function Offer() {
                     : "bg-gray-600 hover:bg-gray-700"
                 }
               >
-                {isSubmitting ? "Processing..." : `${actionType === "COUNTER" ? "Send Counter" : actionType.charAt(0) + actionType.slice(1).toLowerCase()} Offer`}
+                {isSubmitting
+                  ? "Processing..."
+                  : actionType === "COUNTER"
+                  ? "Send Counter"
+                  : `${
+                      actionType.charAt(0).toUpperCase() +
+                      actionType.slice(1).toLowerCase()
+                    } Offer`}
               </Button>
             </DialogFooter>
           </DialogContent>
