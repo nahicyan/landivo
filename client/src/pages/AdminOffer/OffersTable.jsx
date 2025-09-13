@@ -48,7 +48,8 @@ import {
   MoreVertical, 
   Calendar, 
   History, 
-  Eye 
+  Eye,
+  FileText 
 } from "lucide-react";
 
 const OffersTable = ({ offers, onOfferUpdated }) => {
@@ -115,6 +116,21 @@ const OffersTable = ({ offers, onOfferUpdated }) => {
     
     setMessage("");
     setIsDialogOpen(true);
+  };
+
+  // Handle row click to navigate to offer details
+  const handleRowClick = (offerId, event) => {
+    // Don't navigate if clicking on actions dropdown or property link
+    if (event.target.closest('.dropdown-trigger') || 
+        event.target.closest('.property-link')) {
+      return;
+    }
+    window.location.href = `https://landivo.com/admin/offers/id/${offerId}`;
+  };
+
+  // Handle view details click
+  const handleViewDetails = (offerId) => {
+    window.location.href = `https://landivo.com/admin/offers/id/${offerId}`;
   };
 
 // In OffersTable.jsx, update the handleUpdateOfferStatus function:
@@ -254,7 +270,11 @@ const handleUpdateOfferStatus = async () => {
                   </TableRow>
                 ) : (
                   offers.map((offer) => (
-                    <TableRow key={offer.id} className="hover:bg-gray-50">
+                    <TableRow 
+                      key={offer.id} 
+                      className="hover:bg-gray-50 cursor-pointer"
+                      onClick={(e) => handleRowClick(offer.id, e)}
+                    >
                       <TableCell>
                         {format(new Date(offer.timestamp), "MMM d, yyyy")}
                       </TableCell>
@@ -269,7 +289,7 @@ const handleUpdateOfferStatus = async () => {
                         </div>
                       </TableCell>
                         <TableCell>
-                        <div className="max-w-[200px] truncate cursor-pointer hover:text-blue-600" 
+                        <div className="property-link max-w-[200px] truncate cursor-pointer hover:text-blue-600" 
                             onClick={() => handleViewProperty(offer.propertyId)}>
                             {offer.property?.streetAddress ? 
                             `${offer.property.streetAddress}, ${offer.property.city || ''}` : 
@@ -293,13 +313,19 @@ const handleUpdateOfferStatus = async () => {
                       </TableCell>
                       <TableCell className="text-right">
                         <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
+                          <DropdownMenuTrigger asChild className="dropdown-trigger">
                             <Button variant="ghost" className="h-8 w-8 p-0">
                               <span className="sr-only">Open menu</span>
                               <MoreVertical className="h-4 w-4" />
                             </Button>
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="end">
+                            <DropdownMenuItem 
+                              onClick={() => handleViewDetails(offer.id)}
+                              className="cursor-pointer"
+                            >
+                              <FileText className="mr-2 h-4 w-4" /> View Details
+                            </DropdownMenuItem>
                             <DropdownMenuItem 
                               onClick={() => handleViewHistory(offer)}
                               className="cursor-pointer"
@@ -371,27 +397,21 @@ const handleUpdateOfferStatus = async () => {
                   <p>
                     Property: <span className="font-medium">
                     {selectedOffer.property?.streetAddress ? 
-                    `${selectedOffer.property.streetAddress}, ${selectedOffer.property.city || ''}` : 
-                    (selectedOffer.property?.title || selectedOffer.propertyId)}
+                            `${selectedOffer.property.streetAddress}, ${selectedOffer.property.city || ''}` : 
+                            (selectedOffer.property?.title || selectedOffer.propertyId)}
                     </span>
-                    </p>
+                  </p>
                 </div>
               )}
-              {actionType === "accept" && "The buyer will be notified that their offer has been accepted."}
-              {actionType === "counter" && "Specify a counter offer price to send to the buyer."}
-              {actionType === "reject" && "The buyer will be notified that their offer has been rejected."}
-              {actionType === "expire" && "The offer will be marked as expired and the buyer will be notified."}
             </DialogDescription>
           </DialogHeader>
 
-          <div className="space-y-4 py-2">
-            {/* Counter price input - only for counter action */}
+          <div className="py-4 space-y-4">
             {actionType === "counter" && (
               <div>
-                <Label htmlFor="counterPrice">Counter Offer Price ($)</Label>
-                <Input
+                <Label htmlFor="counterPrice">Counter Price *</Label>
+                <Input 
                   id="counterPrice"
-                  type="text"
                   value={counterPrice}
                   onChange={handleCounterPriceChange}
                   placeholder="Enter counter price"
@@ -399,37 +419,38 @@ const handleUpdateOfferStatus = async () => {
                 />
               </div>
             )}
-
-            {/* Message input for all actions */}
+            
             <div>
-              <Label htmlFor="message">Message (Optional)</Label>
-              <textarea
+              <Label htmlFor="message">
+                Message (Optional)
+              </Label>
+              <Input 
                 id="message"
                 value={message}
                 onChange={(e) => setMessage(e.target.value)}
-                placeholder="Add a message to the buyer..."
-                className="w-full min-h-[100px] p-2 rounded-md border border-input bg-background resize-y"
+                placeholder="Add a message to the buyer"
+                className="mt-1"
               />
             </div>
           </div>
 
           <DialogFooter>
-            <Button
+            <Button 
               variant="outline"
               onClick={() => setIsDialogOpen(false)}
               disabled={isSubmitting}
             >
               Cancel
             </Button>
-            <Button
+            <Button 
               onClick={handleUpdateOfferStatus}
               disabled={isSubmitting}
-              className={`
-                ${actionType === "accept" && "bg-green-600 hover:bg-green-700"}
-                ${actionType === "counter" && "bg-blue-600 hover:bg-blue-700"}
-                ${actionType === "reject" && "bg-red-600 hover:bg-red-700"}
-                ${actionType === "expire" && "bg-gray-600 hover:bg-gray-700"}
-              `}
+              className={
+                actionType === "accept" ? "bg-green-600 hover:bg-green-700" :
+                actionType === "reject" ? "bg-red-600 hover:bg-red-700" :
+                actionType === "counter" ? "bg-blue-600 hover:bg-blue-700" :
+                ""
+              }
             >
               {isSubmitting ? "Processing..." : "Confirm"}
             </Button>
@@ -462,47 +483,15 @@ const handleUpdateOfferStatus = async () => {
 
           <div className="space-y-4 py-2">
             {selectedHistory.length === 0 ? (
-              <p className="text-center text-gray-500">No history records found</p>
+              <p className="text-center text-gray-500 py-4">No history available</p>
             ) : (
-              <div className="space-y-4">
+              <div className="space-y-3">
                 {selectedHistory.map((entry, index) => (
-                  <div 
-                    key={index}
-                    className="border rounded-md p-4 bg-gray-50"
-                  >
-                    <div className="flex justify-between items-start">
-                      <div>
-                        {entry.newStatus === "PENDING" && entry.previousStatus === undefined && (
-                          <div className="font-medium">
-                            Buyer Submitted an Offer of {formatCurrency(entry.newPrice)}
-                          </div>
-                        )}
-                        {entry.newStatus === "COUNTERED" && (
-                          <div className="font-medium">
-                            Admin Countered the Offer with {formatCurrency(entry.counteredPrice)}
-                          </div>
-                        )}
-                        {entry.newStatus === "ACCEPTED" && (
-                          <div className="font-medium">
-                            Admin Accepted the Offer of {formatCurrency(entry.previousPrice || entry.newPrice)}
-                          </div>
-                        )}
-                        {entry.newStatus === "REJECTED" && (
-                          <div className="font-medium">
-                            Admin Rejected the Offer of {formatCurrency(entry.previousPrice || entry.newPrice)}
-                          </div>
-                        )}
-                        {entry.newStatus === "EXPIRED" && (
-                          <div className="font-medium">
-                            Offer of {formatCurrency(entry.previousPrice || entry.newPrice)} Expired
-                          </div>
-                        )}
-                        {entry.newStatus === "PENDING" && entry.previousStatus && (
-                          <div className="font-medium">
-                            Buyer Updated their Offer to {formatCurrency(entry.newPrice)}
-                          </div>
-                        )}
-                      </div>
+                  <div key={index} className="border rounded-lg p-4 bg-gray-50">
+                    <div className="flex items-center justify-between">
+                      <span className="font-medium">
+                        {entry.previousStatus ? `${entry.previousStatus} → ${entry.newStatus}` : entry.newStatus}
+                      </span>
                       <Badge 
                         className={`
                           ${entry.newStatus === "PENDING" ? "bg-amber-100 text-amber-800" : ""}
