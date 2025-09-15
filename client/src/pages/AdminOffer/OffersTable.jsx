@@ -29,7 +29,7 @@ import {
   DialogTitle,
   DialogDescription,
 } from "@/components/ui/dialog";
-import { 
+import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
@@ -40,15 +40,15 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-import { 
-  Check, 
-  X, 
-  RefreshCw, 
-  Clock, 
-  MoreVertical, 
-  Calendar, 
-  History, 
-  Eye 
+import {
+  Check,
+  X,
+  RefreshCw,
+  Clock,
+  MoreVertical,
+  Calendar,
+  History,
+  Eye,
 } from "lucide-react";
 
 const OffersTable = ({ offers, onOfferUpdated }) => {
@@ -65,17 +65,22 @@ const OffersTable = ({ offers, onOfferUpdated }) => {
   // Format currency for display
   const formatCurrency = (value) => {
     if (!value && value !== 0) return "N/A";
-    return `$${Number(value).toLocaleString(undefined, { maximumFractionDigits: 0 })}`;
+    return `$${Number(value).toLocaleString(undefined, {
+      maximumFractionDigits: 0,
+    })}`;
   };
 
   // Format phone number
   const formatPhoneNumber = (phone) => {
     if (!phone) return "N/A";
     // Strip all non-numeric characters
-    const cleaned = phone.replace(/\D/g, '');
+    const cleaned = phone.replace(/\D/g, "");
     // Format: (XXX) XXX-XXXX
     if (cleaned.length === 10) {
-      return `(${cleaned.slice(0, 3)}) ${cleaned.slice(3, 6)}-${cleaned.slice(6, 10)}`;
+      return `(${cleaned.slice(0, 3)}) ${cleaned.slice(3, 6)}-${cleaned.slice(
+        6,
+        10
+      )}`;
     }
     // Return as-is if not 10 digits
     return phone;
@@ -103,7 +108,7 @@ const OffersTable = ({ offers, onOfferUpdated }) => {
   const openActionDialog = (offer, action) => {
     setSelectedOffer(offer);
     setActionType(action);
-    
+
     // Set initial counter price if countering
     if (action === "counter") {
       // Suggest a price 10% higher than the current offer
@@ -112,18 +117,18 @@ const OffersTable = ({ offers, onOfferUpdated }) => {
     } else {
       setCounterPrice("");
     }
-    
+
     setMessage("");
     setIsDialogOpen(true);
   };
 
-// In OffersTable.jsx, update the handleUpdateOfferStatus function:
+  // In OffersTable.jsx, update the handleUpdateOfferStatus function:
 
-const handleUpdateOfferStatus = async () => {
+  const handleUpdateOfferStatus = async () => {
     if (!selectedOffer) return;
-    
+
     setIsSubmitting(true);
-    
+
     try {
       // Validate counter price if countering
       if (actionType === "counter") {
@@ -134,10 +139,10 @@ const handleUpdateOfferStatus = async () => {
           return;
         }
       }
-      
+
       // Map action type to correct status enum value
       let statusValue;
-      switch(actionType) {
+      switch (actionType) {
         case "accept":
           statusValue = "ACCEPTED";
           break;
@@ -153,25 +158,24 @@ const handleUpdateOfferStatus = async () => {
         default:
           statusValue = actionType.toUpperCase();
       }
-      
+
       // Prepare request data
       const requestData = {
         status: statusValue,
-        sysMessage: message,
+        message: message,
       };
-      
+
       // Add counter price if countering
       if (actionType === "counter") {
         requestData.counteredPrice = parseFloat(counterPrice.replace(/,/g, ""));
       }
-      
+
       // Make API request - remove leading slash to avoid duplicate /api/api
       await api.put(`offer/${selectedOffer.id}/status`, requestData);
-      
+
       // Close dialog and notify
       setIsDialogOpen(false);
       onOfferUpdated();
-      
     } catch (error) {
       console.error("Error updating offer status:", error);
       if (error.response?.data?.message) {
@@ -187,7 +191,7 @@ const handleUpdateOfferStatus = async () => {
   // Handle viewing offer history
   const handleViewHistory = async (offer) => {
     setSelectedOffer(offer);
-    
+
     try {
       // Fetch history for this offer
       const response = await api.get(`/offer/${offer.id}/history`);
@@ -204,12 +208,12 @@ const handleUpdateOfferStatus = async () => {
     let value = e.target.value;
     // Remove commas
     value = value.replace(/,/g, "");
-    
+
     if (value === "") {
       setCounterPrice("");
       return;
     }
-    
+
     // If valid number, format with commas
     const number = parseFloat(value);
     if (!isNaN(number)) {
@@ -248,7 +252,10 @@ const handleUpdateOfferStatus = async () => {
               <TableBody>
                 {offers.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={7} className="text-center py-8 text-gray-500">
+                    <TableCell
+                      colSpan={7}
+                      className="text-center py-8 text-gray-500"
+                    >
                       No offers found
                     </TableCell>
                   </TableRow>
@@ -268,14 +275,18 @@ const handleUpdateOfferStatus = async () => {
                           </div>
                         </div>
                       </TableCell>
-                        <TableCell>
-                        <div className="max-w-[200px] truncate cursor-pointer hover:text-blue-600" 
-                            onClick={() => handleViewProperty(offer.propertyId)}>
-                            {offer.property?.streetAddress ? 
-                            `${offer.property.streetAddress}, ${offer.property.city || ''}` : 
-                            (offer.property?.title || offer.propertyId)}
+                      <TableCell>
+                        <div
+                          className="max-w-[200px] truncate cursor-pointer hover:text-blue-600"
+                          onClick={() => handleViewProperty(offer.propertyId)}
+                        >
+                          {offer.property?.streetAddress
+                            ? `${offer.property.streetAddress}, ${
+                                offer.property.city || ""
+                              }`
+                            : offer.property?.title || offer.propertyId}
                         </div>
-                    </TableCell>
+                      </TableCell>
                       <TableCell className="font-medium">
                         {formatCurrency(offer.offeredPrice)}
                       </TableCell>
@@ -288,9 +299,7 @@ const handleUpdateOfferStatus = async () => {
                           "—"
                         )}
                       </TableCell>
-                      <TableCell>
-                        {getStatusBadge(offer.offerStatus)}
-                      </TableCell>
+                      <TableCell>{getStatusBadge(offer.offerStatus)}</TableCell>
                       <TableCell className="text-right">
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>
@@ -300,38 +309,41 @@ const handleUpdateOfferStatus = async () => {
                             </Button>
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="end">
-                            <DropdownMenuItem 
+                            <DropdownMenuItem
                               onClick={() => handleViewHistory(offer)}
                               className="cursor-pointer"
                             >
                               <History className="mr-2 h-4 w-4" /> View History
                             </DropdownMenuItem>
-                            <DropdownMenuItem 
-                              onClick={() => handleViewProperty(offer.propertyId)}
+                            <DropdownMenuItem
+                              onClick={() =>
+                                handleViewProperty(offer.propertyId)
+                              }
                               className="cursor-pointer"
                             >
                               <Eye className="mr-2 h-4 w-4" /> View Property
                             </DropdownMenuItem>
                             <DropdownMenuSeparator />
-                            <DropdownMenuItem 
+                            <DropdownMenuItem
                               onClick={() => openActionDialog(offer, "accept")}
                               className="cursor-pointer text-green-600"
                             >
                               <Check className="mr-2 h-4 w-4" /> Accept Offer
                             </DropdownMenuItem>
-                            <DropdownMenuItem 
+                            <DropdownMenuItem
                               onClick={() => openActionDialog(offer, "counter")}
                               className="cursor-pointer text-blue-600"
                             >
-                              <RefreshCw className="mr-2 h-4 w-4" /> Counter Offer
+                              <RefreshCw className="mr-2 h-4 w-4" /> Counter
+                              Offer
                             </DropdownMenuItem>
-                            <DropdownMenuItem 
+                            <DropdownMenuItem
                               onClick={() => openActionDialog(offer, "reject")}
                               className="cursor-pointer text-red-600"
                             >
                               <X className="mr-2 h-4 w-4" /> Reject Offer
                             </DropdownMenuItem>
-                            <DropdownMenuItem 
+                            <DropdownMenuItem
                               onClick={() => openActionDialog(offer, "expire")}
                               className="cursor-pointer text-gray-600"
                             >
@@ -363,24 +375,39 @@ const handleUpdateOfferStatus = async () => {
               {selectedOffer && (
                 <div className="py-2">
                   <p>
-                    Buyer: <span className="font-medium">{selectedOffer.buyer?.firstName} {selectedOffer.buyer?.lastName}</span>
-                  </p>
-                  <p>
-                    Current Offer: <span className="font-medium">{formatCurrency(selectedOffer.offeredPrice)}</span>
-                  </p>
-                  <p>
-                    Property: <span className="font-medium">
-                    {selectedOffer.property?.streetAddress ? 
-                    `${selectedOffer.property.streetAddress}, ${selectedOffer.property.city || ''}` : 
-                    (selectedOffer.property?.title || selectedOffer.propertyId)}
+                    Buyer:{" "}
+                    <span className="font-medium">
+                      {selectedOffer.buyer?.firstName}{" "}
+                      {selectedOffer.buyer?.lastName}
                     </span>
-                    </p>
+                  </p>
+                  <p>
+                    Current Offer:{" "}
+                    <span className="font-medium">
+                      {formatCurrency(selectedOffer.offeredPrice)}
+                    </span>
+                  </p>
+                  <p>
+                    Property:{" "}
+                    <span className="font-medium">
+                      {selectedOffer.property?.streetAddress
+                        ? `${selectedOffer.property.streetAddress}, ${
+                            selectedOffer.property.city || ""
+                          }`
+                        : selectedOffer.property?.title ||
+                          selectedOffer.propertyId}
+                    </span>
+                  </p>
                 </div>
               )}
-              {actionType === "accept" && "The buyer will be notified that their offer has been accepted."}
-              {actionType === "counter" && "Specify a counter offer price to send to the buyer."}
-              {actionType === "reject" && "The buyer will be notified that their offer has been rejected."}
-              {actionType === "expire" && "The offer will be marked as expired and the buyer will be notified."}
+              {actionType === "accept" &&
+                "The buyer will be notified that their offer has been accepted."}
+              {actionType === "counter" &&
+                "Specify a counter offer price to send to the buyer."}
+              {actionType === "reject" &&
+                "The buyer will be notified that their offer has been rejected."}
+              {actionType === "expire" &&
+                "The offer will be marked as expired and the buyer will be notified."}
             </DialogDescription>
           </DialogHeader>
 
@@ -440,87 +467,134 @@ const handleUpdateOfferStatus = async () => {
       {/* History Dialog */}
       <Dialog open={isHistoryOpen} onOpenChange={setIsHistoryOpen}>
         <DialogContent className="max-w-3xl max-h-[80vh] overflow-y-auto">
-        <DialogHeader>
-         <DialogTitle>Offer History</DialogTitle>
+          <DialogHeader>
+            <DialogTitle>Offer History</DialogTitle>
             <DialogDescription>
-                {selectedOffer && (
+              {selectedOffer && (
                 <div className="py-2">
-                <p>
-                Property: <span className="font-medium">
-                    {selectedOffer.property?.streetAddress ? 
-                    `${selectedOffer.property.streetAddress}, ${selectedOffer.property.city || ''}, ${selectedOffer.property.state || ''}` : 
-                    (selectedOffer.property?.title || selectedOffer.propertyId)}
-                </span>
-                </p>
-                <p>
-                Buyer: <span className="font-medium">{selectedOffer.buyer?.firstName} {selectedOffer.buyer?.lastName}</span>
-                </p>
+                  <p>
+                    Property:{" "}
+                    <span className="font-medium">
+                      {selectedOffer.property?.streetAddress
+                        ? `${selectedOffer.property.streetAddress}, ${
+                            selectedOffer.property.city || ""
+                          }, ${selectedOffer.property.state || ""}`
+                        : selectedOffer.property?.title ||
+                          selectedOffer.propertyId}
+                    </span>
+                  </p>
+                  <p>
+                    Buyer:{" "}
+                    <span className="font-medium">
+                      {selectedOffer.buyer?.firstName}{" "}
+                      {selectedOffer.buyer?.lastName}
+                    </span>
+                  </p>
                 </div>
-                )}
-                </DialogDescription>
-            </DialogHeader>
+              )}
+            </DialogDescription>
+          </DialogHeader>
 
           <div className="space-y-4 py-2">
             {selectedHistory.length === 0 ? (
-              <p className="text-center text-gray-500">No history records found</p>
+              <p className="text-center text-gray-500">
+                No history records found
+              </p>
             ) : (
               <div className="space-y-4">
                 {selectedHistory.map((entry, index) => (
-                  <div 
-                    key={index}
-                    className="border rounded-md p-4 bg-gray-50"
-                  >
+                  <div key={index} className="border rounded-md p-4 bg-gray-50">
                     <div className="flex justify-between items-start">
                       <div>
-                        {entry.newStatus === "PENDING" && entry.previousStatus === undefined && (
-                          <div className="font-medium">
-                            Buyer Submitted an Offer of {formatCurrency(entry.newPrice)}
-                          </div>
-                        )}
+                        {entry.newStatus === "PENDING" &&
+                          entry.previousStatus === undefined && (
+                            <div className="font-medium">
+                              Buyer Submitted an Offer of{" "}
+                              {formatCurrency(entry.newPrice)}
+                            </div>
+                          )}
                         {entry.newStatus === "COUNTERED" && (
                           <div className="font-medium">
-                            Admin Countered the Offer with {formatCurrency(entry.counteredPrice)}
+                            Admin Countered the Offer with{" "}
+                            {formatCurrency(entry.counteredPrice)}
                           </div>
                         )}
                         {entry.newStatus === "ACCEPTED" && (
                           <div className="font-medium">
-                            Admin Accepted the Offer of {formatCurrency(entry.previousPrice || entry.newPrice)}
+                            Admin Accepted the Offer of{" "}
+                            {formatCurrency(
+                              entry.previousPrice || entry.newPrice
+                            )}
                           </div>
                         )}
                         {entry.newStatus === "REJECTED" && (
                           <div className="font-medium">
-                            Admin Rejected the Offer of {formatCurrency(entry.previousPrice || entry.newPrice)}
+                            Admin Rejected the Offer of{" "}
+                            {formatCurrency(
+                              entry.previousPrice || entry.newPrice
+                            )}
                           </div>
                         )}
                         {entry.newStatus === "EXPIRED" && (
                           <div className="font-medium">
-                            Offer of {formatCurrency(entry.previousPrice || entry.newPrice)} Expired
+                            Offer of{" "}
+                            {formatCurrency(
+                              entry.previousPrice || entry.newPrice
+                            )}{" "}
+                            Expired
                           </div>
                         )}
-                        {entry.newStatus === "PENDING" && entry.previousStatus && (
-                          <div className="font-medium">
-                            Buyer Updated their Offer to {formatCurrency(entry.newPrice)}
-                          </div>
-                        )}
+                        {entry.newStatus === "PENDING" &&
+                          entry.previousStatus && (
+                            <div className="font-medium">
+                              Buyer Updated their Offer to{" "}
+                              {formatCurrency(entry.newPrice)}
+                            </div>
+                          )}
                       </div>
-                      <Badge 
+                      <Badge
                         className={`
-                          ${entry.newStatus === "PENDING" ? "bg-amber-100 text-amber-800" : ""}
-                          ${entry.newStatus === "ACCEPTED" ? "bg-green-100 text-green-800" : ""}
-                          ${entry.newStatus === "REJECTED" ? "bg-red-100 text-red-800" : ""}
-                          ${entry.newStatus === "COUNTERED" ? "bg-blue-100 text-blue-800" : ""}
-                          ${entry.newStatus === "EXPIRED" ? "bg-gray-100 text-gray-800" : ""}
+                          ${
+                            entry.newStatus === "PENDING"
+                              ? "bg-amber-100 text-amber-800"
+                              : ""
+                          }
+                          ${
+                            entry.newStatus === "ACCEPTED"
+                              ? "bg-green-100 text-green-800"
+                              : ""
+                          }
+                          ${
+                            entry.newStatus === "REJECTED"
+                              ? "bg-red-100 text-red-800"
+                              : ""
+                          }
+                          ${
+                            entry.newStatus === "COUNTERED"
+                              ? "bg-blue-100 text-blue-800"
+                              : ""
+                          }
+                          ${
+                            entry.newStatus === "EXPIRED"
+                              ? "bg-gray-100 text-gray-800"
+                              : ""
+                          }
                         `}
                       >
                         {entry.newStatus}
                       </Badge>
                     </div>
-                    
+
                     <div className="flex items-center text-gray-500 text-sm mt-1">
                       <Calendar className="w-3 h-3 mr-1" />
-                      {entry.timestamp ? format(new Date(entry.timestamp), "MMM d, yyyy h:mm a") : "Unknown date"}
+                      {entry.timestamp
+                        ? format(
+                            new Date(entry.timestamp),
+                            "MMM d, yyyy h:mm a"
+                          )
+                        : "Unknown date"}
                     </div>
-                    
+
                     {/* Show messages if present */}
                     {entry.buyerMessage && (
                       <div className="mt-2 pt-2 border-t border-gray-200">
@@ -528,7 +602,7 @@ const handleUpdateOfferStatus = async () => {
                         <p className="text-sm italic">{entry.buyerMessage}</p>
                       </div>
                     )}
-                    
+
                     {entry.sysMessage && (
                       <div className="mt-2 pt-2 border-t border-gray-200">
                         <p className="text-sm font-semibold">Admin Message:</p>
@@ -542,11 +616,7 @@ const handleUpdateOfferStatus = async () => {
           </div>
 
           <DialogFooter>
-            <Button
-              onClick={() => setIsHistoryOpen(false)}
-            >
-              Close
-            </Button>
+            <Button onClick={() => setIsHistoryOpen(false)}>Close</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

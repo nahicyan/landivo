@@ -138,7 +138,6 @@ export const updateExistingOffer = async (offerId, offeredPrice, buyerMessage = 
     previousPrice: existingOffer.offeredPrice,
     newPrice: parseFloat(offeredPrice),
     buyerMessage: buyerMessage || null, // Set to null if not provided
-    sysMessage: existingOffer.sysMessage, 
     updatedById: userId,
     updatedByName: userName || "Buyer"
   };

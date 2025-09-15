@@ -352,7 +352,6 @@ export const updateOfferStatus = asyncHandler(async (req, res) => {
       previousPrice: existingOffer.offeredPrice,  // Added previousPrice
       counteredPrice: status === "COUNTERED" ? parseFloat(counteredPrice) : null,
       sysMessage: updatedSysMessage,
-      buyerMessage: existingOffer.buyerMessage,
       updatedById: req.userId || null,
       updatedByName: req.user?.name || "Admin"
     };
