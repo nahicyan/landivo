@@ -146,10 +146,10 @@ export default function Offer({ propertyData }) {
             if (offerForThisProperty.sysMessage) {
               setSysMessage(offerForThisProperty.sysMessage);
             }
-
-            if (offerForThisProperty.buyerMessage) {
+            // Not loading Message During Buyer Identification
+            /* if (offerForThisProperty.buyerMessage) {
               setBuyerMessage(offerForThisProperty.buyerMessage);
-            }
+            } */
 
             if (offerForThisProperty.counteredPrice) {
               setCounteredPrice(offerForThisProperty.counteredPrice);

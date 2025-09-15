@@ -60,7 +60,7 @@ const generateBuyerEmailTemplate = ({
   buyer,
   offer,
   counteredPrice,
-  adminMessage,
+  sysMessage,
 }) => {
   const propertyUrl = `https://landivo.com/properties/${property.id}`;
 
@@ -267,7 +267,7 @@ const generateBuyerEmailTemplate = ({
           </div>
 
           ${
-            adminMessage
+            sysMessage
               ? `
           <!-- Admin Message Card -->
           <div style="
@@ -292,14 +292,158 @@ const generateBuyerEmailTemplate = ({
               padding: 15px;
               border-radius: 5px;
               border-left: 3px solid #ffc107;
-            ">${adminMessage}</p>
+            ">${sysMessage}</p>
           </div>
           `
               : ""
           }
+          <!-- Action Button Section -->
+          <div style="padding: 20px 40px; text-align: center;">
+            ${
+              action === "countered"
+                ? `
+            <a href="${propertyUrl}" style="
+              display: inline-block;
+              background-color: #324c48;
+              color: #ffffff;
+              padding: 12px 30px;
+              text-decoration: none;
+              border-radius: 5px;
+              font-weight: 600;
+              font-size: 14px;
+            ">View Counter Offer</a>
+            `
+                : ""
+            }
+            ${
+              action === "rejected" || action === "expired"
+                ? `
+            <a href="${propertyUrl}" style="
+              display: inline-block;
+              background-color: #324c48;
+              color: #ffffff;
+              padding: 12px 30px;
+              text-decoration: none;
+              border-radius: 5px;
+              font-weight: 600;
+              font-size: 14px;
+            ">Submit New Offer</a>
+            `
+                : ""
+            }
+            ${action === 'accepted' ? `
+            <div style="
+                background-color: #d4edda;
+                color: #155724;
+                padding: 15px;
+                border-radius: 5px;
+                font-weight: 600;
+                font-size: 14px;
+            ">We appreciate your business and look forward to working with you.</div>
+            ` : ''}
+          </div>
 
-          <!-- Offer Status Card -->
+          <!-- Footer -->
           <div style="
+            background-color: #324c48;
+            padding: 20px 40px;
+            text-align: center;
+          ">
+            <p style="
+              font-size: 12px;
+              color: rgba(255, 255, 255, 0.8);
+              margin: 0 0 10px 0;
+            ">© 2024 Landivo. All rights reserved.</p>
+            <p style="
+              font-size: 12px;
+              color: rgba(255, 255, 255, 0.6);
+              margin: 0;
+            ">You have received this notification regarding your property offer activity in your Landivo system.</p>
+          </div>
+        </div>
+      </body>
+    </html>
+  `;
+};
+
+/**
+ * Template for Accepted Offer
+ */
+export const acceptedOfferTemplate = (
+  property,
+  buyer,
+  offer,
+  sysMessage = null
+) => {
+  return generateBuyerEmailTemplate({
+    action: "accepted",
+    property,
+    buyer,
+    offer,
+    sysMessage,
+  });
+};
+
+/**
+ * Template for Rejected Offer
+ */
+export const rejectedOfferTemplate = (
+  property,
+  buyer,
+  offer,
+  sysMessage = null
+) => {
+  return generateBuyerEmailTemplate({
+    action: "rejected",
+    property,
+    buyer,
+    offer,
+    sysMessage,
+  });
+};
+
+/**
+ * Template for Counter Offer
+ */
+export const counterOfferTemplate = (
+  property,
+  buyer,
+  offer,
+  counteredPrice,
+  sysMessage = null
+) => {
+  return generateBuyerEmailTemplate({
+    action: "countered",
+    property,
+    buyer,
+    offer,
+    counteredPrice,
+    sysMessage,
+  });
+};
+
+/**
+ * Template for Expired Offer
+ */
+export const expiredOfferTemplate = (
+  property,
+  buyer,
+  offer,
+  sysMessage = null
+) => {
+  return generateBuyerEmailTemplate({
+    action: "expired",
+    property,
+    buyer,
+    offer,
+    sysMessage,
+  });
+};
+
+
+
+//          <!-- Offer Status Card -->
+/*           <div style="
             margin: 20px 40px;
             background-color: #e3f2fd;
             border-radius: 8px;
@@ -387,147 +531,4 @@ const generateBuyerEmailTemplate = ({
                 ">${buyer.buyerType || "N/A"}</td>
               </tr>
             </table>
-          </div>
-
-          <!-- Action Button Section -->
-          <div style="padding: 20px 40px; text-align: center;">
-            ${
-              action === "countered"
-                ? `
-            <a href="${propertyUrl}" style="
-              display: inline-block;
-              background-color: #324c48;
-              color: #ffffff;
-              padding: 12px 30px;
-              text-decoration: none;
-              border-radius: 5px;
-              font-weight: 600;
-              font-size: 14px;
-            ">View Counter Offer</a>
-            `
-                : ""
-            }
-            ${
-              action === "rejected" || action === "expired"
-                ? `
-            <a href="${propertyUrl}" style="
-              display: inline-block;
-              background-color: #324c48;
-              color: #ffffff;
-              padding: 12px 30px;
-              text-decoration: none;
-              border-radius: 5px;
-              font-weight: 600;
-              font-size: 14px;
-            ">Submit New Offer</a>
-            `
-                : ""
-            }
-            ${action === 'accepted' ? `
-            <div style="
-                background-color: #d4edda;
-                color: #155724;
-                padding: 15px;
-                border-radius: 5px;
-                font-weight: 600;
-                font-size: 14px;
-            ">We appreciate your business and look forward to working with you.</div>
-            ` : ''}
-          </div>
-
-          <!-- Footer -->
-          <div style="
-            background-color: #324c48;
-            padding: 20px 40px;
-            text-align: center;
-          ">
-            <p style="
-              font-size: 12px;
-              color: rgba(255, 255, 255, 0.8);
-              margin: 0 0 10px 0;
-            ">© 2024 Landivo. All rights reserved.</p>
-            <p style="
-              font-size: 12px;
-              color: rgba(255, 255, 255, 0.6);
-              margin: 0;
-            ">You have received this notification regarding your property offer activity in your Landivo system.</p>
-          </div>
-        </div>
-      </body>
-    </html>
-  `;
-};
-
-/**
- * Template for Accepted Offer
- */
-export const acceptedOfferTemplate = (
-  property,
-  buyer,
-  offer,
-  adminMessage = null
-) => {
-  return generateBuyerEmailTemplate({
-    action: "accepted",
-    property,
-    buyer,
-    offer,
-    adminMessage,
-  });
-};
-
-/**
- * Template for Rejected Offer
- */
-export const rejectedOfferTemplate = (
-  property,
-  buyer,
-  offer,
-  adminMessage = null
-) => {
-  return generateBuyerEmailTemplate({
-    action: "rejected",
-    property,
-    buyer,
-    offer,
-    adminMessage,
-  });
-};
-
-/**
- * Template for Counter Offer
- */
-export const counterOfferTemplate = (
-  property,
-  buyer,
-  offer,
-  counteredPrice,
-  adminMessage = null
-) => {
-  return generateBuyerEmailTemplate({
-    action: "countered",
-    property,
-    buyer,
-    offer,
-    counteredPrice,
-    adminMessage,
-  });
-};
-
-/**
- * Template for Expired Offer
- */
-export const expiredOfferTemplate = (
-  property,
-  buyer,
-  offer,
-  adminMessage = null
-) => {
-  return generateBuyerEmailTemplate({
-    action: "expired",
-    property,
-    buyer,
-    offer,
-    adminMessage,
-  });
-};
+          </div> */
