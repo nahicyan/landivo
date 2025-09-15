@@ -361,7 +361,7 @@ const generateBuyerEmailTemplate = ({
                 border-radius: 5px;
                 font-weight: 600;
                 font-size: 14px;
-            ">We appreciate your business and look forward to working with you.</div>
+            ">We appreciate your Offer and look forward to working with you.</div>
             ` : ''}
           </div>
 
