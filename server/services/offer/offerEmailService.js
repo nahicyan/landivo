@@ -58,7 +58,7 @@ export const sendOfferNotification = async (subject, body) => {
 /**
  * Generate beautiful offer email template using EXACT design from property deletion service
  */
-const generateOfferEmailTemplate = ({ action, property, buyer, offeredPrice, buyerMessage }) => {
+const generateOfferEmailTemplate = ({ action, property, buyer, offeredPrice, buyerMessage, offerId }) => {
   const propertyUrl = `https://landivo.com/properties/${property.id}`;
   const manageOfferUrl = `https://landivo.com/admin/offers/id/${offerId}`;
   
@@ -507,38 +507,41 @@ const generateOfferEmailTemplate = ({ action, property, buyer, offeredPrice, buy
 /**
  * Template for New Offer
  */
-export const newOfferTemplate = (property, buyer, offeredPrice, buyerMessage = null) => {
+export const newOfferTemplate = (property, buyer, offeredPrice, buyerMessage = null, offerId) => {
   return generateOfferEmailTemplate({
     action: 'submitted',
     property,
     buyer,
     offeredPrice,
-    buyerMessage
+    buyerMessage,
+    offerId
   });
 };
 
 /**
  * Template for Updated Offer
  */
-export const updatedOfferTemplate = (property, buyer, offeredPrice, buyerMessage = null) => {
+export const updatedOfferTemplate = (property, buyer, offeredPrice, buyerMessage = null, offerId) => {
   return generateOfferEmailTemplate({
     action: 'updated',
     property,
     buyer,
     offeredPrice,
-    buyerMessage
+    buyerMessage,
+    offerId
   });
 };
 
 /**
  * Template for Low Offer Warning
  */
-export const lowOfferTemplate = (property, buyer, offeredPrice, buyerMessage = null) => {
+export const lowOfferTemplate = (property, buyer, offeredPrice, buyerMessage = null, offerId) => {
   return generateOfferEmailTemplate({
     action: 'low_offer',
     property,
     buyer,
     offeredPrice,
-    buyerMessage
+    buyerMessage,
+    offerId
   });
 };
