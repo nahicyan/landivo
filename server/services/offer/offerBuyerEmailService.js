@@ -51,6 +51,28 @@ export const sendBuyerOfferNotification = async (buyer, subject, body) => {
   }
 };
 
+// Add this function to server/services/offer/offerBuyerEmailService.js
+
+/**
+ * Generate dynamic buyer email subjects with property address
+ */
+export const generateBuyerOfferSubject = (action, property) => {
+  const streetAddress = property.streetAddress || 'Unknown Address';
+  
+  switch (action) {
+    case 'accepted':
+      return `Your Offer Has Been Accepted on ${streetAddress}!`;
+    case 'rejected':
+      return `Offer rejected on ${streetAddress}`;
+    case 'countered':
+      return `Counter Offer Received on ${streetAddress}`;
+    case 'expired':
+      return `Your Offer Has Expired on ${streetAddress}`;
+    default:
+      return `Offer Update on ${streetAddress}`;
+  }
+};
+
 /**
  * Generate buyer email template using EXACT design from offerEmailService.js
  */

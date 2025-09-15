@@ -56,6 +56,25 @@ export const sendOfferNotification = async (subject, body) => {
 };
 
 /**
+ * Generate dynamic email subjects with buyer and property info
+ */
+export const generateOfferSubject = (action, buyer, property) => {
+  const firstName = buyer.firstName || 'Unknown';
+  const streetAddress = property.streetAddress || 'Unknown Address';
+  
+  switch (action) {
+    case 'submitted':
+      return `New Offer Submitted by ${firstName} on ${streetAddress}`;
+    case 'updated':
+      return `Offer Updated by ${firstName} on ${streetAddress}`;
+    case 'low_offer':
+      return `Low Offer Submitted by ${firstName} on ${streetAddress}`;
+    default:
+      return `Offer ${action} by ${firstName} on ${streetAddress}`;
+  }
+};
+
+/**
  * Generate beautiful offer email template using EXACT design from property deletion service
  */
 const generateOfferEmailTemplate = ({ action, property, buyer, offeredPrice, buyerMessage, offerId }) => {

@@ -14,6 +14,7 @@ import {
   newOfferTemplate,
   updatedOfferTemplate,
   lowOfferTemplate,
+  generateOfferSubject,
 } from "./offerEmailService.js";
 import {
   sendBuyerOfferNotification,
@@ -21,6 +22,7 @@ import {
   rejectedOfferTemplate,
   counterOfferTemplate,
   expiredOfferTemplate,
+  generateBuyerOfferSubject,
 } from "./offerBuyerEmailService.js";
 // Add this import
 import { handleOfferEmailList } from "./offerEmailListService.js";
@@ -106,8 +108,14 @@ export const makeOffer = asyncHandler(async (req, res) => {
 
         // Send notification email in the background
         await sendOfferNotification(
-          "Offer Updated",
-          updatedOfferTemplate(property, buyer, offeredPrice, buyerMessage, updatedOffer.id)
+          generateOfferSubject("updated", buyer, property),
+          updatedOfferTemplate(
+            property,
+            buyer,
+            offeredPrice,
+            buyerMessage,
+            updatedOffer.id
+          )
         );
         return;
       } else {
@@ -153,8 +161,14 @@ export const makeOffer = asyncHandler(async (req, res) => {
 
       // Send low offer notification in the background
       await sendOfferNotification(
-        "Low Offer Submitted",
-        lowOfferTemplate(property, buyer, offeredPrice, buyerMessage, newOffer.id)
+        generateOfferSubject("low_offer", buyer, property),
+        lowOfferTemplate(
+          property,
+          buyer,
+          offeredPrice,
+          buyerMessage,
+          newOffer.id
+        )
       );
       return;
     }
@@ -167,7 +181,7 @@ export const makeOffer = asyncHandler(async (req, res) => {
 
     // 9. Send new offer notification in the background
     await sendOfferNotification(
-      "New Offer Submitted",
+      generateOfferSubject("submitted", buyer, property),
       newOfferTemplate(property, buyer, offeredPrice, buyerMessage, newOffer.id)
     );
   } catch (err) {
@@ -306,146 +320,164 @@ export const getOffersByBuyer = asyncHandler(async (req, res) => {
 export const updateOfferStatus = asyncHandler(async (req, res) => {
   const { id } = req.params;
   const { status, counteredPrice, message } = req.body;
-  
+
   // Validate input
-  if (!status || !["ACCEPTED", "REJECTED", "COUNTERED", "EXPIRED"].includes(status)) {
+  if (
+    !status ||
+    !["ACCEPTED", "REJECTED", "COUNTERED", "EXPIRED"].includes(status)
+  ) {
     return res.status(400).json({ message: "Invalid status provided" });
   }
-  
+
   if (status === "COUNTERED" && !counteredPrice) {
-    return res.status(400).json({ message: "Counter price is required for COUNTERED status" });
+    return res
+      .status(400)
+      .json({ message: "Counter price is required for COUNTERED status" });
   }
-  
+
   try {
     // Get the existing offer with buyer
     const existingOffer = await prisma.offer.findUnique({
       where: { id },
       include: {
-        buyer: true
-      }
+        buyer: true,
+      },
     });
-    
+
     if (!existingOffer) {
       return res.status(404).json({ message: "Offer not found" });
     }
-    
+
     // Fetch the property separately
     const property = await prisma.residency.findUnique({
-      where: { id: existingOffer.propertyId }
+      where: { id: existingOffer.propertyId },
     });
-    
+
     if (!property) {
       return res.status(404).json({ message: "Property not found" });
     }
-    
+
     // Add property to existingOffer for email sending
     existingOffer.property = property;
-    
+
     // Build system message
     const updatedSysMessage = message || null;
-    
+
     // Create history entry with CONSISTENT field names
     const historyEntry = {
       timestamp: new Date(),
       previousStatus: existingOffer.offerStatus,
-      newStatus: status,  // Changed from 'status' to 'newStatus'
-      previousPrice: existingOffer.offeredPrice,  // Added previousPrice
-      counteredPrice: status === "COUNTERED" ? parseFloat(counteredPrice) : null,
+      newStatus: status, // Changed from 'status' to 'newStatus'
+      previousPrice: existingOffer.offeredPrice, // Added previousPrice
+      counteredPrice:
+        status === "COUNTERED" ? parseFloat(counteredPrice) : null,
       sysMessage: updatedSysMessage,
       updatedById: req.userId || null,
-      updatedByName: req.user?.name || "Admin"
+      updatedByName: req.user?.name || "Admin",
     };
-    
+
     // Get existing history or initialize empty array
     const existingHistory = existingOffer.offerHistory || [];
-    
+
     // Update the offer
     const updatedOffer = await prisma.offer.update({
       where: { id },
       data: {
         offerStatus: status,
-        counteredPrice: status === "COUNTERED" ? parseFloat(counteredPrice) : null,
+        counteredPrice:
+          status === "COUNTERED" ? parseFloat(counteredPrice) : null,
         sysMessage: updatedSysMessage,
         //buyerMessage: null,
         offerHistory: [...existingHistory, historyEntry],
         updatedById: req.userId || null,
-        updatedAt: new Date()
-      }
+        updatedAt: new Date(),
+      },
     });
-    
+
     res.status(200).json({
       message: `Offer status updated to ${status}`,
-      offer: updatedOffer
+      offer: updatedOffer,
     });
-    
+
     // Send buyer notification emails based on status (async, don't wait)
     if (existingOffer.buyer && existingOffer.property) {
       try {
         let emailSubject, emailTemplate;
-        
-        switch(status) {
+
+        switch (status) {
           case "ACCEPTED":
-            emailSubject = "Your Offer Has Been Accepted!";
+            emailSubject = generateBuyerOfferSubject(
+              "accepted",
+              existingOffer.property
+            );
             emailTemplate = acceptedOfferTemplate(
-              existingOffer.property, 
-              existingOffer.buyer, 
+              existingOffer.property,
+              existingOffer.buyer,
               existingOffer,
               updatedSysMessage
             );
+
             break;
-            
+
           case "REJECTED":
-            emailSubject = "Offer Update";
+            emailSubject = generateBuyerOfferSubject(
+              "rejected",
+              existingOffer.property
+            );
             emailTemplate = rejectedOfferTemplate(
-              existingOffer.property, 
-              existingOffer.buyer, 
+              existingOffer.property,
+              existingOffer.buyer,
               existingOffer,
               updatedSysMessage
             );
             break;
-            
+
           case "COUNTERED":
-            emailSubject = "Counter Offer Received";
+            emailSubject = generateBuyerOfferSubject(
+              "countered",
+              existingOffer.property
+            );
             emailTemplate = counterOfferTemplate(
-              existingOffer.property, 
-              existingOffer.buyer, 
+              existingOffer.property,
+              existingOffer.buyer,
               existingOffer,
               parseFloat(counteredPrice),
               updatedSysMessage
             );
             break;
-            
+
           case "EXPIRED":
-            emailSubject = "Your Offer Has Expired";
+            emailSubject = generateBuyerOfferSubject(
+              "expired",
+              existingOffer.property
+            );
             emailTemplate = expiredOfferTemplate(
-              existingOffer.property, 
-              existingOffer.buyer, 
+              existingOffer.property,
+              existingOffer.buyer,
               existingOffer,
               updatedSysMessage
             );
             break;
         }
-        
+
         // Send buyer notification if we have both subject and template
         if (emailSubject && emailTemplate) {
           await sendBuyerOfferNotification(
             existingOffer.buyer,
-            emailSubject, 
+            emailSubject,
             emailTemplate
           );
         }
-        
       } catch (emailError) {
         console.error("Failed to send buyer notification:", emailError);
         // Don't fail the offer update if email fails
       }
     }
-    
   } catch (err) {
     console.error("Error updating offer status:", err);
     res.status(500).json({
       message: "An error occurred while updating offer status.",
-      error: err.message
+      error: err.message,
     });
   }
 });
