@@ -157,22 +157,43 @@ export default function Offer() {
     try {
       setIsSubmitting(true);
 
-      const payload = {
-        action: actionType,
-        message: message.trim(),
+      // Map action type to correct status enum value (like OffersTable.jsx does)
+      let statusValue;
+      switch (actionType) {
+        case "ACCEPT":
+          statusValue = "ACCEPTED";
+          break;
+        case "REJECT":
+          statusValue = "REJECTED";
+          break;
+        case "COUNTER":
+          statusValue = "COUNTERED";
+          break;
+        case "EXPIRE":
+          statusValue = "EXPIRED";
+          break;
+        default:
+          statusValue = actionType.toUpperCase();
+      }
+
+      // Build request data with correct field names
+      const requestData = {
+        status: statusValue, // Changed from 'action' to 'status'
+        sysMessage: message.trim() || null, // Changed from 'message' to 'sysMessage'
       };
 
-      if (actionType === "COUNTER" && counterPrice) {
-        // Remove commas and convert to number
+      // Add counter price if countering
+      if (actionType === "COUNTER") {
         const price = parseFloat(counterPrice.replace(/,/g, ""));
         if (isNaN(price) || price <= 0) {
           toast.error("Please enter a valid counter price");
+          setIsSubmitting(false);
           return;
         }
-        payload.counteredPrice = price;
+        requestData.counteredPrice = price;
       }
 
-      await api.put(`/offer/${offerId}/status`, payload);
+      await api.put(`/offer/${offerId}/status`, requestData);
 
       toast.success(`Offer ${actionType.toLowerCase()}ed successfully`);
       setIsDialogOpen(false);
@@ -474,70 +495,70 @@ export default function Offer() {
           </CardContent>
         </Card>
         <div className="pt-6">
-        {/* Offer Actions Section */}
-        {(offer.offerStatus === "PENDING" ||
-          offer.offerStatus === "COUNTERED") && (
-          <Card className="shadow-lg border-l-4 border-l-orange-500">
-            <CardHeader className="bg-gradient-to-r from-orange-50 to-transparent">
-              <CardTitle className="flex items-center gap-2 text-orange-700">
-                <DollarSign className="h-5 w-5" />
-                Quick Actions
-              </CardTitle>
-              <CardDescription>Take action on this offer</CardDescription>
-            </CardHeader>
-            <CardContent className="pt-3">
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
-                <button
-                  onClick={() => handleAction("ACCEPT")}
-                  className="group relative bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white rounded-lg px-3 py-2 shadow-md shadow-green-500/25 hover:shadow-lg hover:shadow-green-500/30 transition-all duration-300 transform hover:-translate-y-0.5 active:translate-y-0"
-                >
-                  <div className="flex items-center justify-center gap-1.5">
-                    <div className="w-5 h-5 bg-white/20 rounded-full flex items-center justify-center">
-                      <Check className="h-2.5 w-2.5" />
+          {/* Offer Actions Section */}
+          {(offer.offerStatus === "PENDING" ||
+            offer.offerStatus === "COUNTERED") && (
+            <Card className="shadow-lg border-l-4 border-l-orange-500">
+              <CardHeader className="bg-gradient-to-r from-orange-50 to-transparent">
+                <CardTitle className="flex items-center gap-2 text-orange-700">
+                  <DollarSign className="h-5 w-5" />
+                  Quick Actions
+                </CardTitle>
+                <CardDescription>Take action on this offer</CardDescription>
+              </CardHeader>
+              <CardContent className="pt-3">
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+                  <button
+                    onClick={() => handleAction("ACCEPT")}
+                    className="group relative bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white rounded-lg px-3 py-2 shadow-md shadow-green-500/25 hover:shadow-lg hover:shadow-green-500/30 transition-all duration-300 transform hover:-translate-y-0.5 active:translate-y-0"
+                  >
+                    <div className="flex items-center justify-center gap-1.5">
+                      <div className="w-5 h-5 bg-white/20 rounded-full flex items-center justify-center">
+                        <Check className="h-2.5 w-2.5" />
+                      </div>
+                      <span className="font-medium text-xs">Accept</span>
                     </div>
-                    <span className="font-medium text-xs">Accept</span>
-                  </div>
-                </button>
+                  </button>
 
-                <button
-                  onClick={() => handleAction("COUNTER")}
-                  className="group relative bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white rounded-lg px-3 py-2 shadow-md shadow-blue-500/25 hover:shadow-lg hover:shadow-blue-500/30 transition-all duration-300 transform hover:-translate-y-0.5 active:translate-y-0"
-                >
-                  <div className="flex items-center justify-center gap-1.5">
-                    <div className="w-5 h-5 bg-white/20 rounded-full flex items-center justify-center">
-                      <RefreshCw className="h-2.5 w-2.5" />
+                  <button
+                    onClick={() => handleAction("COUNTER")}
+                    className="group relative bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white rounded-lg px-3 py-2 shadow-md shadow-blue-500/25 hover:shadow-lg hover:shadow-blue-500/30 transition-all duration-300 transform hover:-translate-y-0.5 active:translate-y-0"
+                  >
+                    <div className="flex items-center justify-center gap-1.5">
+                      <div className="w-5 h-5 bg-white/20 rounded-full flex items-center justify-center">
+                        <RefreshCw className="h-2.5 w-2.5" />
+                      </div>
+                      <span className="font-medium text-xs">Counter</span>
                     </div>
-                    <span className="font-medium text-xs">Counter</span>
-                  </div>
-                </button>
+                  </button>
 
-                <button
-                  onClick={() => handleAction("REJECT")}
-                  className="group relative bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white rounded-lg px-3 py-2 shadow-md shadow-red-500/25 hover:shadow-lg hover:shadow-red-500/30 transition-all duration-300 transform hover:-translate-y-0.5 active:translate-y-0"
-                >
-                  <div className="flex items-center justify-center gap-1.5">
-                    <div className="w-5 h-5 bg-white/20 rounded-full flex items-center justify-center">
-                      <X className="h-2.5 w-2.5" />
+                  <button
+                    onClick={() => handleAction("REJECT")}
+                    className="group relative bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white rounded-lg px-3 py-2 shadow-md shadow-red-500/25 hover:shadow-lg hover:shadow-red-500/30 transition-all duration-300 transform hover:-translate-y-0.5 active:translate-y-0"
+                  >
+                    <div className="flex items-center justify-center gap-1.5">
+                      <div className="w-5 h-5 bg-white/20 rounded-full flex items-center justify-center">
+                        <X className="h-2.5 w-2.5" />
+                      </div>
+                      <span className="font-medium text-xs">Reject</span>
                     </div>
-                    <span className="font-medium text-xs">Reject</span>
-                  </div>
-                </button>
+                  </button>
 
-                <button
-                  onClick={() => handleAction("EXPIRE")}
-                  className="group relative bg-white hover:bg-gray-50 text-gray-700 rounded-lg px-3 py-2 shadow-md shadow-gray-200/50 hover:shadow-lg hover:shadow-gray-200/60 border border-gray-200 transition-all duration-300 transform hover:-translate-y-0.5 active:translate-y-0"
-                >
-                  <div className="flex items-center justify-center gap-1.5">
-                    <div className="w-5 h-5 bg-gray-100 rounded-full flex items-center justify-center">
-                      <Clock className="h-2.5 w-2.5" />
+                  <button
+                    onClick={() => handleAction("EXPIRE")}
+                    className="group relative bg-white hover:bg-gray-50 text-gray-700 rounded-lg px-3 py-2 shadow-md shadow-gray-200/50 hover:shadow-lg hover:shadow-gray-200/60 border border-gray-200 transition-all duration-300 transform hover:-translate-y-0.5 active:translate-y-0"
+                  >
+                    <div className="flex items-center justify-center gap-1.5">
+                      <div className="w-5 h-5 bg-gray-100 rounded-full flex items-center justify-center">
+                        <Clock className="h-2.5 w-2.5" />
+                      </div>
+                      <span className="font-medium text-xs">Expire</span>
                     </div>
-                    <span className="font-medium text-xs">Expire</span>
-                  </div>
-                </button>
-              </div>
-            </CardContent>
-          </Card>
-        )}
+                  </button>
+                </div>
+              </CardContent>
+            </Card>
+          )}
         </div>
 
         {/* Action Dialog */}
