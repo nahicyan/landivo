@@ -225,10 +225,10 @@ export default function Offer({ propertyData }) {
               if (offerForThisProperty.sysMessage) {
                 setSysMessage(offerForThisProperty.sysMessage);
               }
-
-              if (offerForThisProperty.buyerMessage) {
+              // Not loading Message During Buyer Identification
+              /* if (offerForThisProperty.buyerMessage) {
                 setBuyerMessage(offerForThisProperty.buyerMessage);
-              }
+              } */
 
               if (offerForThisProperty.counteredPrice) {
                 setCounteredPrice(offerForThisProperty.counteredPrice);
@@ -470,6 +470,7 @@ export default function Offer({ propertyData }) {
       setExistingOffer(response.data.offer);
       setHasExistingOffer(true);
       setOfferStatus("PENDING");
+      setBuyerMessage(""); 
     } catch (error) {
       setDialogMessage(
         "There was an error processing your offer. Please try again."
