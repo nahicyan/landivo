@@ -60,6 +60,7 @@ export const sendOfferNotification = async (subject, body) => {
  */
 const generateOfferEmailTemplate = ({ action, property, buyer, offeredPrice, buyerMessage }) => {
   const propertyUrl = `https://landivo.com/properties/${property.id}`;
+  const manageOfferUrl = `https://landivo.com/admin/offers/id/${offerId}`;
   
   // Action-specific configurations
   const actionConfig = {
@@ -391,6 +392,23 @@ const generateOfferEmailTemplate = ({ action, property, buyer, offeredPrice, buy
               box-shadow: 0 4px 15px rgba(50, 76, 72, 0.3);
               transition: all 0.3s ease;
             ">Go to Property</a>
+            
+            ${manageOfferUrl ? `
+            <a href="${manageOfferUrl}" style="
+              background: linear-gradient(135deg, #D4A017 0%, #B8940F 100%);
+              color: white;
+              padding: 15px 40px;
+              text-decoration: none;
+              border-radius: 8px;
+              display: inline-block;
+              font-weight: 600;
+              font-size: 16px;
+              text-transform: uppercase;
+              letter-spacing: 1px;
+              box-shadow: 0 4px 15px rgba(212, 160, 23, 0.3);
+              transition: all 0.3s ease;
+            ">Manage Offer</a>
+            ` : ''}
           </div>
 
           ${action === 'low_offer' ? `
