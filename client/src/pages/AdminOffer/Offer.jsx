@@ -178,8 +178,8 @@ export default function Offer() {
 
       // Build request data with correct field names
       const requestData = {
-        status: statusValue, // Changed from 'action' to 'status'
-        sysMessage: message.trim() || null, // Changed from 'message' to 'sysMessage'
+        status: statusValue,
+        message: message,
       };
 
       // Add counter price if countering

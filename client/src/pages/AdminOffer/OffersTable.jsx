@@ -310,6 +310,12 @@ const OffersTable = ({ offers, onOfferUpdated }) => {
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="end">
                             <DropdownMenuItem
+                              onClick={() => navigate(`/admin/offers/id/${offer.id}`)}
+                              className="cursor-pointer"
+                            >
+                              <Eye className="mr-2 h-4 w-4" /> View Details
+                            </DropdownMenuItem>
+                            <DropdownMenuItem
                               onClick={() => handleViewHistory(offer)}
                               className="cursor-pointer"
                             >
