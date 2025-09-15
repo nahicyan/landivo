@@ -123,7 +123,7 @@ const generateBuyerEmailTemplate = ({
                 <h1 style="
                 margin: 0;
                 color: #324c48;
-                font-size: 28px;
+                font-size: 40px;
                 font-weight: 700;
                 ">Landivo</h1>
             </div>
