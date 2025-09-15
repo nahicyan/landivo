@@ -107,7 +107,7 @@ export const makeOffer = asyncHandler(async (req, res) => {
         // Send notification email in the background
         await sendOfferNotification(
           "Offer Updated",
-          updatedOfferTemplate(property, buyer, offeredPrice)
+          updatedOfferTemplate(property, buyer, offeredPrice, buyerMessage)
         );
         return;
       } else {
@@ -154,7 +154,7 @@ export const makeOffer = asyncHandler(async (req, res) => {
       // Send low offer notification in the background
       await sendOfferNotification(
         "Low Offer Submitted",
-        lowOfferTemplate(property, buyer, offeredPrice)
+        lowOfferTemplate(property, buyer, offeredPrice, buyerMessage)
       );
       return;
     }
@@ -168,7 +168,7 @@ export const makeOffer = asyncHandler(async (req, res) => {
     // 9. Send new offer notification in the background
     await sendOfferNotification(
       "New Offer Submitted",
-      newOfferTemplate(property, buyer, offeredPrice)
+      newOfferTemplate(property, buyer, offeredPrice, buyerMessage)
     );
   } catch (err) {
     console.error(err);
