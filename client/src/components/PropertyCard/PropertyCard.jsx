@@ -8,22 +8,27 @@ const serverURL = import.meta.env.VITE_SERVER_URL;
 // Helper function to format county name
 const formatCountyName = (county) => {
   if (!county) return "County unavailable";
-  
+
   // Check if county already contains "County" (case insensitive)
-  if (county.toLowerCase().includes('county')) {
+  if (county.toLowerCase().includes("county")) {
     return county;
   }
-  
+
   // Add "County" to the name
   return `${county} County`;
 };
 
 // Updated function to get display address with county fallback
-const getDisplayAddress = (streetAddress, toggleObscure, showAddress, county) => {
+const getDisplayAddress = (
+  streetAddress,
+  toggleObscure,
+  showAddress,
+  county
+) => {
   if (!toggleObscure || showAddress) {
     return streetAddress || "Address unavailable";
   }
-  
+
   return formatCountyName(county);
 };
 
@@ -32,6 +37,9 @@ export default function PropertyCard({ card }) {
   const showAddress = useShowAddress(card.toggleObscure);
 
   if (!card) return null;
+
+  // Check if property is sold
+  const isSold = card.status === "Sold";
 
   // Parse images safely
   const images = (() => {
@@ -46,14 +54,11 @@ export default function PropertyCard({ card }) {
     }
   })();
 
-  const firstImage = images.length > 0
-    ? `${serverURL}/${images[0]}`
-    : "/default-image.jpg";
+  const firstImage =
+    images.length > 0 ? `${serverURL}/${images[0]}` : "/default-image.jpg";
 
   // Format prices
-  const formattedPrice = card.askingPrice
-    ? formatPrice(card.askingPrice)
-    : "0";
+  const formattedPrice = card.askingPrice ? formatPrice(card.askingPrice) : "0";
 
   // Calculate minimum monthly payment
   const getMonthlyPayment = () => {
@@ -62,8 +67,8 @@ export default function PropertyCard({ card }) {
     const payments = [
       card.monthlyPaymentOne,
       card.monthlyPaymentTwo,
-      card.monthlyPaymentThree
-    ].filter(payment => payment && !isNaN(payment));
+      card.monthlyPaymentThree,
+    ].filter((payment) => payment && !isNaN(payment));
 
     if (payments.length === 0) return null;
     const minPayment = Math.min(...payments);
@@ -74,9 +79,9 @@ export default function PropertyCard({ card }) {
 
   // Get display address based on permissions (with county fallback)
   const displayAddress = getDisplayAddress(
-    card.streetAddress, 
-    card.toggleObscure, 
-    showAddress, 
+    card.streetAddress,
+    card.toggleObscure,
+    showAddress,
     card.county
   );
 
@@ -85,17 +90,24 @@ export default function PropertyCard({ card }) {
       onClick={() => navigate(`/properties/${card.id}`)}
       className="w-full w-96 rounded-xl overflow-hidden shadow-lg hover:shadow-xl transition-shadow cursor-pointer bg-white relative"
     >
-      {/* Left Tag */}
-      {card.ltag && (
+      {/* Left Tag - Only show if not sold */}
+      {!isSold && card.ltag && (
         <div className="absolute top-3 left-3 z-10 bg-gradient-to-r from-blue-500 to-blue-600 text-white text-sm font-semibold px-3 py-1.5 rounded-lg shadow-lg">
           {card.ltag}
         </div>
       )}
-      
-      {/* Right Tag */}
-      {card.rtag && (
+
+      {/* Right Tag - Only show if not sold */}
+      {!isSold && card.rtag && (
         <div className="absolute top-3 right-3 z-10 bg-gradient-to-r from-green-600 to-green-700 text-white text-sm font-semibold px-3 py-1.5 rounded-lg shadow-lg">
           {card.rtag}
+        </div>
+      )}
+
+      {/* SOLD Badge - Show when property is sold */}
+      {isSold && (
+        <div className="absolute top-3 right-3 z-10 bg-gradient-to-r from-red-500 to-red-600 text-white text-sm font-semibold px-3 py-1.5 rounded-lg shadow-lg">
+          SOLD
         </div>
       )}
 
@@ -115,7 +127,11 @@ export default function PropertyCard({ card }) {
           <span className="text-gray-600 text-lg font-normal truncate">
             {card.acre || "0"} Acres
           </span>
-          <span className="text-[#517b75] text-xl font-semibold whitespace-nowrap leading-tight tracking-tight">
+          <span
+            className={`text-[#517b75] text-xl font-semibold whitespace-nowrap leading-tight tracking-tight ${
+              isSold ? "filter blur-sm" : ""
+            }`}
+          >
             ${formattedPrice}
           </span>
         </div>
@@ -126,7 +142,11 @@ export default function PropertyCard({ card }) {
             {displayAddress}
           </h3>
           {monthlyPayment && (
-            <span className="text-[#D4A017] text-base font-medium tracking-tight whitespace-nowrap">
+            <span
+              className={`text-[#D4A017] text-base font-medium tracking-tight whitespace-nowrap ${
+                isSold ? "filter blur-sm" : ""
+              }`}
+            >
               ${monthlyPayment}/mo
             </span>
           )}
@@ -138,14 +158,14 @@ export default function PropertyCard({ card }) {
             const parts = [];
             if (card.city) parts.push(card.city);
             if (card.state) parts.push(card.state);
-            
+
             if (parts.length === 0 && !card.zip) return "Location unavailable";
-            
+
             let location = parts.join(", ");
             if (card.zip) {
               location = location ? `${location} ${card.zip}` : card.zip;
             }
-            
+
             return location || "Location unavailable";
           })()}
         </p>

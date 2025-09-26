@@ -7,13 +7,13 @@ import { useAuth0 } from "@auth0/auth0-react";
 import { useVipBuyer } from "@/utils/VipBuyerContext";
 import { useNavigate } from "react-router-dom";
 import { useShowAddress } from "@/utils/addressUtils";
-import { 
-  Dialog, 
-  DialogContent, 
-  DialogHeader, 
-  DialogTitle, 
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
   DialogDescription,
-  DialogFooter 
+  DialogFooter,
 } from "@/components/ui/dialog";
 
 // Function to assign status colors
@@ -38,12 +38,12 @@ export default function PropertyHeaderRight({ propertyData }) {
   const { isVipBuyer } = useVipBuyer();
   const navigate = useNavigate();
   const showAddress = useShowAddress(propertyData?.toggleObscure);
-  
+
   // State for email dialog
   const [showDialog, setShowDialog] = useState(false);
-  const [email, setEmail] = useState('');
-  const [error, setError] = useState('');
-  
+  const [email, setEmail] = useState("");
+  const [error, setError] = useState("");
+
   const {
     status,
     disPrice,
@@ -58,12 +58,16 @@ export default function PropertyHeaderRight({ propertyData }) {
 
   const { circle, text } = getStatusClasses(status);
 
+  // Check if property is sold
+  const isSold = status === "Sold";
+
   // Determine which price to show as main price
   const mainPrice = isVipBuyer && disPrice ? disPrice : askingPrice;
 
   // Email validation function
   const validateEmail = (email) => {
-    const re = /^(([^<>()[\]\\.,;:\s@"]+(\.[^<>()[\]\\.,;:\s@"]+)*)|(".+"))@((\[[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\])|(([a-zA-Z\-0-9]+\.)+[a-zA-Z]{2,}))$/;
+    const re =
+      /^(([^<>()[\]\\.,;:\s@"]+(\.[^<>()[\]\\.,;:\s@"]+)*)|(".+"))@((\[[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\])|(([a-zA-Z\-0-9]+\.)+[a-zA-Z]{2,}))$/;
     return re.test(String(email).toLowerCase());
   };
 
@@ -74,7 +78,7 @@ export default function PropertyHeaderRight({ propertyData }) {
 
   // Handle contact button click
   const handleContactClick = () => {
-    navigate('/support');
+    navigate("/support");
   };
 
   // Handle dialog submission
@@ -83,7 +87,7 @@ export default function PropertyHeaderRight({ propertyData }) {
       setError("Please enter your email address");
       return;
     }
-    
+
     if (!validateEmail(email)) {
       setError("Please enter a valid email address");
       return;
@@ -104,61 +108,76 @@ export default function PropertyHeaderRight({ propertyData }) {
         </span>
       </div>
 
-      {/* Price Row (All prices aligned in one line) */}
-      <div className="flex items-center text-3xl font-bold text-gray-900 whitespace-nowrap mb-4">
-        {/* Main Price */}
-        {mainPrice ? `$${mainPrice.toLocaleString()}` : "$0"}
+      {/* Price Row with blur effect for sold properties */}
+      <div className="relative mb-4 group">
+        <div
+          className={`flex items-center text-3xl font-bold text-gray-900 whitespace-nowrap ${
+            isSold
+              ? "filter blur-sm group-hover:blur-xl transition-all duration-200"
+              : ""
+          }`}
+        >
+          {/* Main Price */}
+          {mainPrice ? `$${mainPrice.toLocaleString()}` : "$0"}
 
-        {/* Show discount price differently based on authentication and VIP status */}
-        {!isAuthenticated && disPrice && (
-          <span className="relative ml-6 inline-flex items-center">
-            {/* Overlay Button (Triggers Email Dialog) */}
-            <button
-              className="
-                absolute inset-0 z-10 bg-transparent text-sm font-semibold
-                hover:bg-gray-200 transition-colors px-2 py-1 rounded-md
-                flex items-center justify-center w-full h-full whitespace-nowrap
-              "
-              onClick={handleDiscountClick}
-            >
-              Login For Discount
-            </button>
+          {/* Show discount price differently based on authentication and VIP status */}
+          {!isAuthenticated && disPrice && (
+            <span className="relative ml-6 inline-flex items-center">
+              {/* Overlay Button (Triggers Email Dialog) */}
+              <button
+                className="
+                  absolute inset-0 z-10 bg-transparent text-sm font-semibold
+                  hover:bg-gray-200 transition-colors px-2 py-1 rounded-md
+                  flex items-center justify-center w-full h-full whitespace-nowrap
+                "
+                onClick={handleDiscountClick}
+              >
+                Login For Discount
+              </button>
 
-            {/* Blurred Discount Price (Behind the button) */}
-            <span className="filter blur-[2px] text-3xl text-gray-400 font-thin ml-2">
-              ${disPrice.toLocaleString()}
+              {/* Blurred Discount Price (Behind the button) */}
+              <span className="filter blur-[2px] text-3xl text-gray-400 font-thin ml-2">
+                ${disPrice.toLocaleString()}
+              </span>
             </span>
-          </span>
-        )}
+          )}
 
-        {/* For logged in but non-VIP users, show subscribe option */}
-        {isAuthenticated && !isVipBuyer && disPrice && (
-          <span className="relative ml-6 inline-flex items-center">
-            {/* Overlay Button (Triggers Email Dialog) */}
-            <button
-              className="
-                absolute inset-0 z-10 bg-transparent text-sm font-semibold
-                hover:bg-gray-200 transition-colors px-2 py-1 rounded-md
-                flex items-center justify-center w-full h-full whitespace-nowrap
-                text-gray-900
-              "
-              onClick={handleDiscountClick}
-            >
-              Subscribe For Discount
-            </button>
+          {/* For logged in but non-VIP users, show subscribe option */}
+          {isAuthenticated && !isVipBuyer && disPrice && (
+            <span className="relative ml-6 inline-flex items-center">
+              {/* Overlay Button (Triggers Email Dialog) */}
+              <button
+                className="
+                  absolute inset-0 z-10 bg-transparent text-sm font-semibold
+                  hover:bg-gray-200 transition-colors px-2 py-1 rounded-md
+                  flex items-center justify-center w-full h-full whitespace-nowrap
+                  text-gray-900
+                "
+                onClick={handleDiscountClick}
+              >
+                Subscribe For Discount
+              </button>
 
-            {/* Blurred Discount Price (Behind the button) */}
-            <span className="filter blur-[2px] text-3xl text-gray-400 font-thin ml-2">
-              ${disPrice.toLocaleString()}
+              {/* Blurred Discount Price (Behind the button) */}
+              <span className="filter blur-[2px] text-3xl text-gray-400 font-thin ml-2">
+                ${disPrice.toLocaleString()}
+              </span>
             </span>
-          </span>
-        )}
+          )}
 
-        {/* Crossed Out Original Price (Only for VIP users with a discount) */}
-        {isVipBuyer && disPrice && (
-          <span className="text-gray-500 line-through text-xl ml-3">
-            ${askingPrice?.toLocaleString()}
-          </span>
+          {/* Crossed Out Original Price (Only for VIP users with a discount) */}
+          {isVipBuyer && disPrice && (
+            <span className="text-gray-500 line-through text-xl ml-3">
+              ${askingPrice?.toLocaleString()}
+            </span>
+          )}
+        </div>
+
+        {/* SOLD Overlay - Only visible on hover when property is sold */}
+        {isSold && (
+          <div className="absolute inset-0 flex items-center justify-left opacity-0 hover:opacity-100 transition-opacity duration-200 cursor-default">
+            <span className="text-2xl font-bold text-gray-800">SOLD</span>
+          </div>
         )}
       </div>
 
@@ -174,9 +193,7 @@ export default function PropertyHeaderRight({ propertyData }) {
         <div className="text-lg text-gray-700 mt-1">
           {toggleObscure && !showAddress ? (
             <div className="flex items-center gap-3">
-              <span>
-                {[city, state, zip].filter(Boolean).join(", ")}
-              </span>
+              <span>{[city, state, zip].filter(Boolean).join(", ")}</span>
               <Button
                 onClick={handleContactClick}
                 className="bg-[#324c48] hover:bg-[#3f4f24] text-white text-base font-medium px-4 py-2 rounded-md transition-colors"
@@ -198,8 +215,8 @@ export default function PropertyHeaderRight({ propertyData }) {
               Enter Your Email
             </DialogTitle>
             <DialogDescription className="text-[#324c48] mt-2">
-              Please provide your email address to join our exclusive VIP buyers list
-              and access special property discounts.
+              Please provide your email address to join our exclusive VIP buyers
+              list and access special property discounts.
             </DialogDescription>
           </DialogHeader>
 
@@ -211,9 +228,7 @@ export default function PropertyHeaderRight({ propertyData }) {
               placeholder="your@email.com"
               className="w-full p-4 text-[#3f4f24] border border-[#324c48] rounded-md focus:outline-none focus:border-[#D4A017] focus:ring-1 focus:ring-[#D4A017]"
             />
-            {error && (
-              <p className="text-red-600 text-sm mt-1">{error}</p>
-            )}
+            {error && <p className="text-red-600 text-sm mt-1">{error}</p>}
           </div>
 
           <DialogFooter className="mt-6 flex space-x-2 justify-end">

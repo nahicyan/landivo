@@ -6,24 +6,41 @@ import { api } from "../../utils/api";
 import { parsePhoneNumber } from "libphonenumber-js";
 import ContactCard from "@/components/ContactCard/ContactCard";
 import { useAuth } from "@/components/hooks/useAuth";
-import { useVipBuyer } from '@/utils/VipBuyerContext';
+import { useVipBuyer } from "@/utils/VipBuyerContext";
 import { useShowAddress } from "@/utils/addressUtils";
 
 // ShadCN UI components
 import {
-  Card, CardHeader, CardTitle, CardDescription, CardContent,
+  Card,
+  CardHeader,
+  CardTitle,
+  CardDescription,
+  CardContent,
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import {
-  Select, SelectTrigger, SelectValue, SelectContent, SelectItem,
+  Select,
+  SelectTrigger,
+  SelectValue,
+  SelectContent,
+  SelectItem,
 } from "@/components/ui/select";
 import {
-  Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter,
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
 } from "@/components/ui/dialog";
-import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { InfoCircledIcon, CheckCircledIcon, CrossCircledIcon } from '@radix-ui/react-icons';
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import {
+  InfoCircledIcon,
+  CheckCircledIcon,
+  CrossCircledIcon,
+} from "@radix-ui/react-icons";
 
 export default function Offer({ propertyData }) {
   if (!propertyData) {
@@ -36,7 +53,7 @@ export default function Offer({ propertyData }) {
 
   const navigate = useNavigate();
   const showAddress = useShowAddress(propertyData?.toggleObscure);
-  
+
   const [offerPrice, setOfferPrice] = useState("");
   const [buyerType, setBuyerType] = useState("");
   const [firstName, setFirstName] = useState("");
@@ -73,6 +90,7 @@ export default function Offer({ propertyData }) {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [dialogMessage, setDialogMessage] = useState("");
   const [dialogType, setDialogType] = useState("success"); // "success" or "warning"
+  const isSold = propertyData?.status === "Sold";
 
   // Auto-populate user data when component mounts or data becomes available
   useEffect(() => {
@@ -86,7 +104,11 @@ export default function Offer({ propertyData }) {
   // Check for existing offers when user data is loaded
   useEffect(() => {
     // Check for existing offers once user data is populated and we have enough info
-    if ((email || (user && user.email)) && !existingOfferChecked.current && propertyData?.id) {
+    if (
+      (email || (user && user.email)) &&
+      !existingOfferChecked.current &&
+      propertyData?.id
+    ) {
       checkForExistingOffer();
       existingOfferChecked.current = true;
     }
@@ -125,7 +147,7 @@ export default function Offer({ propertyData }) {
         // Check for offers on this property
         if (response.data.offers) {
           const offerForThisProperty = response.data.offers.find(
-            offer => offer.propertyId === propertyData.id
+            (offer) => offer.propertyId === propertyData.id
           );
 
           if (offerForThisProperty) {
@@ -173,23 +195,27 @@ export default function Offer({ propertyData }) {
     if (!phone && buyer.phone) setPhone(formatPhoneNumber(buyer.phone));
     if (!buyerType && buyer.buyerType) setBuyerType(buyer.buyerType);
 
-    console.log("Auto-populated buyer data:", { firstName: buyer.firstName, lastName: buyer.lastName, buyerType: buyer.buyerType });
+    console.log("Auto-populated buyer data:", {
+      firstName: buyer.firstName,
+      lastName: buyer.lastName,
+      buyerType: buyer.buyerType,
+    });
   };
 
   // When email or phone changes, check for existing buyer and offers
   const handleIdentifierChange = async (field, value) => {
-    if (field === 'email') {
+    if (field === "email") {
       setEmail(value);
-    } else if (field === 'phone') {
+    } else if (field === "phone") {
       setPhone(formatPhoneNumber(value));
     }
 
     // If either email or phone has changed, check for buyer data
-    if ((email || field === 'email') && (phone || field === 'phone')) {
+    if ((email || field === "email") && (phone || field === "phone")) {
       try {
         // Find buyer by email or phone
         const queryParams = new URLSearchParams();
-        if (field === 'email') {
+        if (field === "email") {
           queryParams.append("email", value);
         } else {
           queryParams.append("phone", formatPhoneNumber(value));
@@ -205,7 +231,7 @@ export default function Offer({ propertyData }) {
           // Check for existing offers on this property
           if (response.data.offers && propertyData?.id) {
             const offerForThisProperty = response.data.offers.find(
-              offer => offer.propertyId === propertyData.id
+              (offer) => offer.propertyId === propertyData.id
             );
 
             if (offerForThisProperty) {
@@ -214,7 +240,9 @@ export default function Offer({ propertyData }) {
 
               // Set the current offer price
               if (offerForThisProperty.offeredPrice) {
-                setOfferPrice(offerForThisProperty.offeredPrice.toLocaleString());
+                setOfferPrice(
+                  offerForThisProperty.offeredPrice.toLocaleString()
+                );
               }
 
               // Set the offer status and system message
@@ -250,11 +278,15 @@ export default function Offer({ propertyData }) {
 
     // Priority 1: Use VIP buyer data if available
     if (isVipBuyer && vipBuyerData) {
-      if (!firstName && vipBuyerData.firstName) setFirstName(vipBuyerData.firstName);
-      if (!lastName && vipBuyerData.lastName) setLastName(vipBuyerData.lastName);
+      if (!firstName && vipBuyerData.firstName)
+        setFirstName(vipBuyerData.firstName);
+      if (!lastName && vipBuyerData.lastName)
+        setLastName(vipBuyerData.lastName);
       if (!email && vipBuyerData.email) setEmail(vipBuyerData.email);
-      if (!phone && vipBuyerData.phone) setPhone(formatPhoneNumber(vipBuyerData.phone));
-      if (!buyerType && vipBuyerData.buyerType) setBuyerType(vipBuyerData.buyerType);
+      if (!phone && vipBuyerData.phone)
+        setPhone(formatPhoneNumber(vipBuyerData.phone));
+      if (!buyerType && vipBuyerData.buyerType)
+        setBuyerType(vipBuyerData.buyerType);
       return;
     }
 
@@ -266,9 +298,10 @@ export default function Offer({ propertyData }) {
 
       // If no given/family name, try to parse from name
       if ((!firstName || !lastName) && user.name) {
-        const nameParts = user.name.split(' ');
+        const nameParts = user.name.split(" ");
         if (nameParts.length > 0 && !firstName) setFirstName(nameParts[0]);
-        if (nameParts.length > 1 && !lastName) setLastName(nameParts.slice(1).join(' '));
+        if (nameParts.length > 1 && !lastName)
+          setLastName(nameParts.slice(1).join(" "));
       }
 
       // Set email if available
@@ -313,25 +346,28 @@ export default function Offer({ propertyData }) {
   const handlePhoneChange = (e) => {
     const formatted = formatPhoneNumber(e.target.value);
     setPhone(formatted);
-    handleIdentifierChange('phone', formatted);
+    handleIdentifierChange("phone", formatted);
   };
 
   const formatPhoneNumber = (input) => {
-    if (!input) return '';
+    if (!input) return "";
 
     // Strip all non-numeric characters
-    const digitsOnly = input.replace(/\D/g, '');
+    const digitsOnly = input.replace(/\D/g, "");
 
     // Format the number as user types
-    let formattedNumber = '';
+    let formattedNumber = "";
     if (digitsOnly.length === 0) {
-      return '';
+      return "";
     } else if (digitsOnly.length <= 3) {
       formattedNumber = digitsOnly;
     } else if (digitsOnly.length <= 6) {
       formattedNumber = `(${digitsOnly.slice(0, 3)}) ${digitsOnly.slice(3)}`;
     } else {
-      formattedNumber = `(${digitsOnly.slice(0, 3)}) ${digitsOnly.slice(3, 6)}-${digitsOnly.slice(6, Math.min(10, digitsOnly.length))}`;
+      formattedNumber = `(${digitsOnly.slice(0, 3)}) ${digitsOnly.slice(
+        3,
+        6
+      )}-${digitsOnly.slice(6, Math.min(10, digitsOnly.length))}`;
     }
 
     return formattedNumber;
@@ -357,7 +393,9 @@ export default function Offer({ propertyData }) {
   // New method for accepting counter offer
   const handleAcceptCounter = async () => {
     if (!existingOffer || !counteredPrice) {
-      setDialogMessage("Counter offer information is missing. Please try again.");
+      setDialogMessage(
+        "Counter offer information is missing. Please try again."
+      );
       setDialogType("warning");
       setDialogOpen(true);
       return;
@@ -370,26 +408,29 @@ export default function Offer({ propertyData }) {
       const response = await api.put(`/offer/${existingOffer.id}/status`, {
         status: "ACCEPTED",
         buyerMessage: "Counter offer accepted",
-        acceptedPrice: counteredPrice  // Explicitly include the accepted price
+        acceptedPrice: counteredPrice, // Explicitly include the accepted price
       });
 
-      setDialogMessage("You have accepted the counter offer! Our team will contact you soon with the next steps.");
+      setDialogMessage(
+        "You have accepted the counter offer! Our team will contact you soon with the next steps."
+      );
       setDialogType("success");
       setDialogOpen(true);
 
       // Update local state
       setOfferStatus("ACCEPTED");
-      setOfferPrice(counteredPrice.toLocaleString());  // Update displayed price to match counter price
+      setOfferPrice(counteredPrice.toLocaleString()); // Update displayed price to match counter price
 
       // Update existing offer object in state
       setExistingOffer({
         ...existingOffer,
         offerStatus: "ACCEPTED",
-        offeredPrice: counteredPrice  // Update the price in our local state
+        offeredPrice: counteredPrice, // Update the price in our local state
       });
-
     } catch (error) {
-      setDialogMessage("Failed to accept counter offer. Please try again or contact support.");
+      setDialogMessage(
+        "Failed to accept counter offer. Please try again or contact support."
+      );
       setDialogType("warning");
       setDialogOpen(true);
     } finally {
@@ -401,7 +442,14 @@ export default function Offer({ propertyData }) {
     e.preventDefault();
 
     // Basic required field check
-    if (!offerPrice || !email || !firstName || !lastName || !phone || !buyerType) {
+    if (
+      !offerPrice ||
+      !email ||
+      !firstName ||
+      !lastName ||
+      !phone ||
+      !buyerType
+    ) {
       setDialogMessage("All fields are required.");
       setDialogType("warning");
       setDialogOpen(true);
@@ -440,7 +488,7 @@ export default function Offer({ propertyData }) {
       lastName,
       buyerMessage: buyerMessage,
       // Pass auth0Id from authenticated user if available
-      auth0Id: user?.sub || null
+      auth0Id: user?.sub || null,
     };
 
     console.log("Submitting offer with data:", offerData);
@@ -460,9 +508,11 @@ export default function Offer({ propertyData }) {
       }
 
       // If valid offer, show success and (optionally) navigate back
-      setDialogMessage(hasExistingOffer
-        ? "Your offer has been successfully updated!"
-        : "Offer submitted successfully!");
+      setDialogMessage(
+        hasExistingOffer
+          ? "Your offer has been successfully updated!"
+          : "Offer submitted successfully!"
+      );
       setDialogType("success");
       setDialogOpen(true);
 
@@ -470,7 +520,7 @@ export default function Offer({ propertyData }) {
       setExistingOffer(response.data.offer);
       setHasExistingOffer(true);
       setOfferStatus("PENDING");
-      setBuyerMessage(""); 
+      setBuyerMessage("");
     } catch (error) {
       setDialogMessage(
         "There was an error processing your offer. Please try again."
@@ -535,7 +585,7 @@ export default function Offer({ propertyData }) {
       firstName,
       lastName,
       buyerMessage: updateMessage || null,
-      auth0Id: user?.sub || null
+      auth0Id: user?.sub || null,
     };
 
     try {
@@ -563,7 +613,7 @@ export default function Offer({ propertyData }) {
   const handleEmailChange = (e) => {
     const value = e.target.value;
     setEmail(value);
-    handleIdentifierChange('email', value);
+    handleIdentifierChange("email", value);
   };
 
   // Get card title based on offer status
@@ -603,7 +653,9 @@ export default function Offer({ propertyData }) {
       case "REJECTED":
         return "We're sorry, your offer was not accepted. You can submit a new offer if you're still interested.";
       case "COUNTERED":
-        return `We've made a counter offer of $${counteredPrice?.toLocaleString() || 0}. You can accept this counter offer or propose a new offer.`;
+        return `We've made a counter offer of $${
+          counteredPrice?.toLocaleString() || 0
+        }. You can accept this counter offer or propose a new offer.`;
       case "EXPIRED":
         return "Your offer has expired. You can submit a new offer if you're still interested.";
       default:
@@ -647,327 +699,393 @@ export default function Offer({ propertyData }) {
     }
   };
 
-return (
-  <div className="bg-white text-[#050002]">
-    <Card className="w-full max-w-md border border-[#405025]/20 bg-white shadow-lg mx-auto">
-      <CardHeader className="text-center py-4">
-        <CardTitle className="text-2xl font-bold text-[#405025]">
-          {getCardTitle()}
-        </CardTitle>
-        <CardDescription className="text-[#324d49] text-sm">
-          For {(!propertyData.toggleObscure || showAddress) ? propertyData.streetAddress : "This Property"}
-        </CardDescription>
-      </CardHeader>
-
-      <CardContent className="px-5 pb-3">
-        {/* Status Alert - Only shown for existing offers */}
-        {hasExistingOffer && (
-          <Alert className={`mb-4 py-3 ${getStatusColor()}`}>
-            <div className="flex items-center">
-              {getStatusIcon()}
-              <AlertTitle className="ml-2 text-sm">Status: {offerStatus}</AlertTitle>
-            </div>
-            <AlertDescription className="text-sm mt-1">{getStatusMessage()}</AlertDescription>
-
-            {/* Show system message if exists */}
-            {sysMessage && (
-              <div className="mt-2 pt-1 border-t border-[#324d49]/20 text-sm">
-                <p className="font-semibold">Landivo Says:</p>
-                <p className="italic">{sysMessage}</p>
-              </div>
-            )}
-          </Alert>
+  return (
+    <div className="bg-white text-[#050002]">
+      <div className="relative group">
+        {/* SOLD Overlay - Only visible when property is sold */}
+        {isSold && (
+          <div className="absolute inset-0 flex items-center justify-center z-50 opacity-0 hover:opacity-100 transition-opacity duration-200 group">
+            <span className="text-4xl font-bold text-gray-800">SOLD</span>
+          </div>
         )}
+        <Card
+          className={`w-full max-w-md border border-[#405025]/20 bg-white shadow-lg mx-auto ${
+            isSold
+              ? "filter blur-sm group-hover:blur-xl transition-all duration-200"
+              : ""
+          }`}
+        >
+          <CardHeader className="text-center py-4">
+            <CardTitle className="text-2xl font-bold text-[#405025]">
+              {getCardTitle()}
+            </CardTitle>
+            <CardDescription className="text-[#324d49] text-sm">
+              For{" "}
+              {!propertyData.toggleObscure || showAddress
+                ? propertyData.streetAddress
+                : "This Property"}
+            </CardDescription>
+          </CardHeader>
 
-        <form onSubmit={handleSubmit} className="space-y-3">
-          {/* Name fields on same line */}
-          <div className="flex space-x-3">
-            <div className="flex-1">
-              <Label htmlFor="firstName" className="text-sm text-[#050002] mb-1 block">First Name</Label>
-              <Input
-                id="firstName"
-                type="text"
-                placeholder="John"
-                value={firstName}
-                onChange={(e) => setFirstName(e.target.value)}
-                required
-                disabled={isFormDisabled()}
-                className="h-9 text-sm"
-              />
-            </div>
-            <div className="flex-1">
-              <Label htmlFor="lastName" className="text-sm text-[#050002] mb-1 block">Last Name</Label>
-              <Input
-                id="lastName"
-                type="text"
-                placeholder="Doe"
-                value={lastName}
-                onChange={(e) => setLastName(e.target.value)}
-                required
-                disabled={isFormDisabled()}
-                className="h-9 text-sm"
-              />
-            </div>
-          </div>
+          <CardContent className="px-5 pb-3">
+            {/* Status Alert - Only shown for existing offers */}
+            {hasExistingOffer && (
+              <Alert className={`mb-4 py-3 ${getStatusColor()}`}>
+                <div className="flex items-center">
+                  {getStatusIcon()}
+                  <AlertTitle className="ml-2 text-sm">
+                    Status: {offerStatus}
+                  </AlertTitle>
+                </div>
+                <AlertDescription className="text-sm mt-1">
+                  {getStatusMessage()}
+                </AlertDescription>
 
-          {/* Email on separate line */}
-          <div>
-            <Label htmlFor="email" className="text-sm text-[#050002] mb-1 block">Email</Label>
-            <Input
-              id="email"
-              type="email"
-              placeholder="example@mail.com"
-              value={email}
-              onChange={handleEmailChange}
-              required
-              disabled={isFormDisabled()}
-              className="h-9 text-sm"
-            />
-          </div>
-
-          {/* Phone on separate line */}
-          <div>
-            <Label htmlFor="phone" className="text-sm text-[#050002] mb-1 block">Phone</Label>
-            <Input
-              id="phone"
-              type="text"
-              placeholder="(555) 555-5555"
-              value={phone}
-              onChange={handlePhoneChange}
-              required
-              disabled={isFormDisabled()}
-              className="h-9 text-sm"
-            />
-          </div>
-
-          {/* Offer Price and Buyer Type on same line, with Offer first */}
-          <div className="flex space-x-3">
-            <div className="flex-1">
-              <Label htmlFor="offerPrice" className="text-sm text-[#050002] mb-1 block">
-                {hasExistingOffer
-                  ? (offerStatus === "COUNTERED"
-                    ? "Your Original Offer"
-                    : "Your Offer Price")
-                  : "Offer Price ($)"}
-              </Label>
-              <Input
-                id="offerPrice"
-                type="text"
-                placeholder="500,000"
-                value={offerPrice}
-                onChange={handleOfferPriceChange}
-                required
-                disabled={isFormDisabled() || offerStatus === "COUNTERED"}
-                className="h-9 text-sm"
-              />
-            </div>
-            <div className="flex-1">
-              <Label className="text-sm text-[#050002] mb-1 block">Buyer Type</Label>
-              <Select
-                value={buyerType}
-                onValueChange={(val) => setBuyerType(val)}
-                required
-                disabled={isFormDisabled()}
-              >
-                <SelectTrigger className="w-full h-9 text-sm">
-                  <SelectValue placeholder="Select Type" />
-                </SelectTrigger>
-                <SelectContent className="bg-[#FFF] text-[#050002] border border-[#405025]/20 text-sm">
-                  <SelectItem value="CashBuyer">Cash Buyer</SelectItem>
-                  <SelectItem value="Builder">Builder</SelectItem>
-                  <SelectItem value="Developer">Developer</SelectItem>
-                  <SelectItem value="Realtor">Realtor</SelectItem>
-                  <SelectItem value="Investor">Investor</SelectItem>
-                  <SelectItem value="Wholesaler">Wholesaler</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-
-          {/* Show counter offer price if applicable */}
-          {offerStatus === "COUNTERED" && counteredPrice && (
-            <div className="mt-2">
-              <Label htmlFor="counteredPrice" className="text-sm font-medium text-blue-700 mb-1 block">
-                Counter Offer Price
-              </Label>
-              <Input
-                id="counteredPrice"
-                type="text"
-                value={counteredPrice.toLocaleString()}
-                disabled={true}
-                className="bg-blue-50 text-blue-800 font-medium h-9 text-sm"
-              />
-            </div>
-          )}
-
-          {/* Buyer Message */}
-          <div>
-            <Label htmlFor="buyerMessage" className="text-sm text-[#050002] mb-1 block">
-              Message (Optional)
-            </Label>
-            <textarea
-              id="buyerMessage"
-              placeholder="Include any notes or questions about your offer"
-              value={buyerMessage}
-              onChange={(e) => setBuyerMessage(e.target.value)}
-              className="w-full min-h-[70px] p-2 text-sm rounded-md border border-input bg-background resize-y"
-              disabled={isFormDisabled()}
-            />
-          </div>
-
-          {/* Action Buttons - Display based on offer status */}
-          <div className="pt-0">
-            {/* CASE 1: COUNTERED status - show side-by-side Accept Counter and Update Offer buttons */}
-            {offerStatus === "COUNTERED" ? (
-              <div className="grid grid-cols-2 gap-3">
-                <Button
-                  type="button"
-                  className="w-full bg-[#324c48] text-[#FFF] hover:bg-[#324c48]/90 font-semibold text-sm h-9"
-                  onClick={handleAcceptCounter}
-                  disabled={isAcceptingCounter}
-                >
-                  {isAcceptingCounter ? "Accepting..." : "Accept Counter"}
-                </Button>
-
-                <Button
-                  type="button"
-                  className="w-full bg-[#405025] text-[#FFF] hover:bg-[#405025]/90 font-semibold text-sm h-9"
-                  onClick={() => {
-                    setActionType("counter");
-                    setNewOfferPrice("");
-                    setUpdateDialogOpen(true);
-                  }}
-                  disabled={isFormDisabled()}
-                >
-                  Counter Offer
-                </Button>
-              </div>
-            ) : offerStatus === "ACCEPTED" ? (
-              /* CASE 2: ACCEPTED status - show disabled accepted button */
-              <Button
-                type="button"
-                className="w-full bg-green-600 text-[#FFF] hover:bg-green-600 font-semibold text-sm h-9 mt-1"
-                disabled={true}
-              >
-                Offer Accepted
-              </Button>
-            ) : (
-              /* CASE 3: All other statuses (PENDING, REJECTED, EXPIRED or new offer) - show single submit/update button */
-              <Button
-                type="submit"
-                className="w-full bg-[#324c48] text-[#FFF] hover:bg-[#324c48]/90 font-semibold text-sm h-9 mt-1"
-                disabled={isFormDisabled()}
-              >
-                {hasExistingOffer ? "Update Your Offer" : "Submit Offer"}
-              </Button>
+                {/* Show system message if exists */}
+                {sysMessage && (
+                  <div className="mt-2 pt-1 border-t border-[#324d49]/20 text-sm">
+                    <p className="font-semibold">Landivo Says:</p>
+                    <p className="italic">{sysMessage}</p>
+                  </div>
+                )}
+              </Alert>
             )}
-          </div>
-        </form>
-        <div className="py-2 mt-1">
-          <ContactCard />
-        </div>
-      </CardContent>
-    </Card>
 
-    {/* Dialog Notification */}
-    <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-      <DialogContent className="bg-[#FFF] text-[#050002] border border-[#405025]/30 shadow-lg max-w-sm">
-        <DialogHeader className="pb-2">
-          <DialogTitle
-            className={dialogType === "success" ? "text-green-600" : "text-red-600"}
-          >
-            {dialogType === "success" ? "Success" : "Warning"}
-          </DialogTitle>
-          <DialogDescription>{dialogMessage}</DialogDescription>
-        </DialogHeader>
-        <DialogFooter>
-          <Button
-            onClick={() => {
-              setDialogOpen(false);
-              if (dialogType === "success" && offerStatus === "ACCEPTED") {
-                navigate("/properties");
-              }
-            }}
-            className="bg-[#324c48] text-[#FFF]"
-          >
-            Okay
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+            <form onSubmit={handleSubmit} className="space-y-3">
+              {/* Name fields on same line */}
+              <div className="flex space-x-3">
+                <div className="flex-1">
+                  <Label
+                    htmlFor="firstName"
+                    className="text-sm text-[#050002] mb-1 block"
+                  >
+                    First Name
+                  </Label>
+                  <Input
+                    id="firstName"
+                    type="text"
+                    placeholder="John"
+                    value={firstName}
+                    onChange={(e) => setFirstName(e.target.value)}
+                    required
+                    disabled={isFormDisabled()}
+                    className="h-9 text-sm"
+                  />
+                </div>
+                <div className="flex-1">
+                  <Label
+                    htmlFor="lastName"
+                    className="text-sm text-[#050002] mb-1 block"
+                  >
+                    Last Name
+                  </Label>
+                  <Input
+                    id="lastName"
+                    type="text"
+                    placeholder="Doe"
+                    value={lastName}
+                    onChange={(e) => setLastName(e.target.value)}
+                    required
+                    disabled={isFormDisabled()}
+                    className="h-9 text-sm"
+                  />
+                </div>
+              </div>
 
-    {/* Update Offer Dialog */}
-    <Dialog open={updateDialogOpen} onOpenChange={setUpdateDialogOpen}>
-      <DialogContent className="bg-[#FFF] text-[#050002] border border-[#405025]/30 shadow-lg max-w-sm">
-        <DialogHeader className="pb-2">
-          <DialogTitle className="text-[#405025]">
-            {actionType === "counter"
-              ? "Respond to Counter Offer"
-              : "Update Your Offer"}
-          </DialogTitle>
-          <DialogDescription className="text-sm">
-            {actionType === "counter"
-              ? `The seller has countered with $${counteredPrice?.toLocaleString() || 0}. You can respond with a new offer.`
-              : `Your new offer must be higher than your previous offer of $${existingOffer?.offeredPrice?.toLocaleString() || "0"}.`}
-          </DialogDescription>
-        </DialogHeader>
-        <div className="py-2 space-y-3">
-          <div>
-            <Label htmlFor="newOfferPrice" className="text-sm text-[#050002] mb-1 block">
-              New Offer Price ($)
-            </Label>
-            <Input
-              id="newOfferPrice"
-              type="text"
-              placeholder={`Higher than ${existingOffer?.offeredPrice?.toLocaleString() || "0"}`}
-              value={newOfferPrice}
-              onChange={(e) => {
-                let value = e.target.value;
-                value = value.replace(/,/g, "");
-                if (value === "") {
-                  setNewOfferPrice("");
-                  return;
+              {/* Email on separate line */}
+              <div>
+                <Label
+                  htmlFor="email"
+                  className="text-sm text-[#050002] mb-1 block"
+                >
+                  Email
+                </Label>
+                <Input
+                  id="email"
+                  type="email"
+                  placeholder="example@mail.com"
+                  value={email}
+                  onChange={handleEmailChange}
+                  required
+                  disabled={isFormDisabled()}
+                  className="h-9 text-sm"
+                />
+              </div>
+
+              {/* Phone on separate line */}
+              <div>
+                <Label
+                  htmlFor="phone"
+                  className="text-sm text-[#050002] mb-1 block"
+                >
+                  Phone
+                </Label>
+                <Input
+                  id="phone"
+                  type="text"
+                  placeholder="(555) 555-5555"
+                  value={phone}
+                  onChange={handlePhoneChange}
+                  required
+                  disabled={isFormDisabled()}
+                  className="h-9 text-sm"
+                />
+              </div>
+
+              {/* Offer Price and Buyer Type on same line, with Offer first */}
+              <div className="flex space-x-3">
+                <div className="flex-1">
+                  <Label
+                    htmlFor="offerPrice"
+                    className="text-sm text-[#050002] mb-1 block"
+                  >
+                    {hasExistingOffer
+                      ? offerStatus === "COUNTERED"
+                        ? "Your Original Offer"
+                        : "Your Offer Price"
+                      : "Offer Price ($)"}
+                  </Label>
+                  <Input
+                    id="offerPrice"
+                    type="text"
+                    placeholder="500,000"
+                    value={offerPrice}
+                    onChange={handleOfferPriceChange}
+                    required
+                    disabled={isFormDisabled() || offerStatus === "COUNTERED"}
+                    className="h-9 text-sm"
+                  />
+                </div>
+                <div className="flex-1">
+                  <Label className="text-sm text-[#050002] mb-1 block">
+                    Buyer Type
+                  </Label>
+                  <Select
+                    value={buyerType}
+                    onValueChange={(val) => setBuyerType(val)}
+                    required
+                    disabled={isFormDisabled()}
+                  >
+                    <SelectTrigger className="w-full h-9 text-sm">
+                      <SelectValue placeholder="Select Type" />
+                    </SelectTrigger>
+                    <SelectContent className="bg-[#FFF] text-[#050002] border border-[#405025]/20 text-sm">
+                      <SelectItem value="CashBuyer">Cash Buyer</SelectItem>
+                      <SelectItem value="Builder">Builder</SelectItem>
+                      <SelectItem value="Developer">Developer</SelectItem>
+                      <SelectItem value="Realtor">Realtor</SelectItem>
+                      <SelectItem value="Investor">Investor</SelectItem>
+                      <SelectItem value="Wholesaler">Wholesaler</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+
+              {/* Show counter offer price if applicable */}
+              {offerStatus === "COUNTERED" && counteredPrice && (
+                <div className="mt-2">
+                  <Label
+                    htmlFor="counteredPrice"
+                    className="text-sm font-medium text-blue-700 mb-1 block"
+                  >
+                    Counter Offer Price
+                  </Label>
+                  <Input
+                    id="counteredPrice"
+                    type="text"
+                    value={counteredPrice.toLocaleString()}
+                    disabled={true}
+                    className="bg-blue-50 text-blue-800 font-medium h-9 text-sm"
+                  />
+                </div>
+              )}
+
+              {/* Buyer Message */}
+              <div>
+                <Label
+                  htmlFor="buyerMessage"
+                  className="text-sm text-[#050002] mb-1 block"
+                >
+                  Message (Optional)
+                </Label>
+                <textarea
+                  id="buyerMessage"
+                  placeholder="Include any notes or questions about your offer"
+                  value={buyerMessage}
+                  onChange={(e) => setBuyerMessage(e.target.value)}
+                  className="w-full min-h-[70px] p-2 text-sm rounded-md border border-input bg-background resize-y"
+                  disabled={isFormDisabled()}
+                />
+              </div>
+
+              {/* Action Buttons - Display based on offer status */}
+              <div className="pt-0">
+                {/* CASE 1: COUNTERED status - show side-by-side Accept Counter and Update Offer buttons */}
+                {offerStatus === "COUNTERED" ? (
+                  <div className="grid grid-cols-2 gap-3">
+                    <Button
+                      type="button"
+                      className="w-full bg-[#324c48] text-[#FFF] hover:bg-[#324c48]/90 font-semibold text-sm h-9"
+                      onClick={handleAcceptCounter}
+                      disabled={isAcceptingCounter}
+                    >
+                      {isAcceptingCounter ? "Accepting..." : "Accept Counter"}
+                    </Button>
+
+                    <Button
+                      type="button"
+                      className="w-full bg-[#405025] text-[#FFF] hover:bg-[#405025]/90 font-semibold text-sm h-9"
+                      onClick={() => {
+                        setActionType("counter");
+                        setNewOfferPrice("");
+                        setUpdateDialogOpen(true);
+                      }}
+                      disabled={isFormDisabled()}
+                    >
+                      Counter Offer
+                    </Button>
+                  </div>
+                ) : offerStatus === "ACCEPTED" ? (
+                  /* CASE 2: ACCEPTED status - show disabled accepted button */
+                  <Button
+                    type="button"
+                    className="w-full bg-green-600 text-[#FFF] hover:bg-green-600 font-semibold text-sm h-9 mt-1"
+                    disabled={true}
+                  >
+                    Offer Accepted
+                  </Button>
+                ) : (
+                  /* CASE 3: All other statuses (PENDING, REJECTED, EXPIRED or new offer) - show single submit/update button */
+                  <Button
+                    type="submit"
+                    className="w-full bg-[#324c48] text-[#FFF] hover:bg-[#324c48]/90 font-semibold text-sm h-9 mt-1"
+                    disabled={isFormDisabled()}
+                  >
+                    {hasExistingOffer ? "Update Your Offer" : "Submit Offer"}
+                  </Button>
+                )}
+              </div>
+            </form>
+            <div className="py-2 mt-1">
+              <ContactCard />
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Dialog Notification */}
+        <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+          <DialogContent className="bg-[#FFF] text-[#050002] border border-[#405025]/30 shadow-lg max-w-sm">
+            <DialogHeader className="pb-2">
+              <DialogTitle
+                className={
+                  dialogType === "success" ? "text-green-600" : "text-red-600"
                 }
-                const floatValue = parseFloat(value);
-                if (!isNaN(floatValue)) {
-                  setNewOfferPrice(floatValue.toLocaleString("en-US"));
-                } else {
-                  setNewOfferPrice(value);
-                }
-              }}
-              className="text-sm h-9"
-            />
-          </div>
-          <div>
-            <Label htmlFor="updateMessage" className="text-sm text-[#050002] mb-1 block">
-              Message (Optional)
-            </Label>
-            <textarea
-              id="updateMessage"
-              placeholder="Include any notes about your updated offer..."
-              value={updateMessage}
-              onChange={(e) => setUpdateMessage(e.target.value)}
-              className="w-full min-h-[70px] p-2 text-sm rounded-md border border-input bg-background resize-y"
-            />
-          </div>
-        </div>
-        <DialogFooter className="flex justify-end space-x-2">
-          <Button
-            onClick={() => setUpdateDialogOpen(false)}
-            variant="outline"
-            className="text-sm"
-          >
-            Cancel
-          </Button>
-          <Button
-            onClick={handleUpdateFromDialog}
-            className="bg-[#324c48] text-[#FFF] text-sm"
-          >
-            Submit New Offer
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
-  </div>
-);
+              >
+                {dialogType === "success" ? "Success" : "Warning"}
+              </DialogTitle>
+              <DialogDescription>{dialogMessage}</DialogDescription>
+            </DialogHeader>
+            <DialogFooter>
+              <Button
+                onClick={() => {
+                  setDialogOpen(false);
+                  if (dialogType === "success" && offerStatus === "ACCEPTED") {
+                    navigate("/properties");
+                  }
+                }}
+                className="bg-[#324c48] text-[#FFF]"
+              >
+                Okay
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        {/* Update Offer Dialog */}
+        <Dialog open={updateDialogOpen} onOpenChange={setUpdateDialogOpen}>
+          <DialogContent className="bg-[#FFF] text-[#050002] border border-[#405025]/30 shadow-lg max-w-sm">
+            <DialogHeader className="pb-2">
+              <DialogTitle className="text-[#405025]">
+                {actionType === "counter"
+                  ? "Respond to Counter Offer"
+                  : "Update Your Offer"}
+              </DialogTitle>
+              <DialogDescription className="text-sm">
+                {actionType === "counter"
+                  ? `The seller has countered with $${
+                      counteredPrice?.toLocaleString() || 0
+                    }. You can respond with a new offer.`
+                  : `Your new offer must be higher than your previous offer of $${
+                      existingOffer?.offeredPrice?.toLocaleString() || "0"
+                    }.`}
+              </DialogDescription>
+            </DialogHeader>
+            <div className="py-2 space-y-3">
+              <div>
+                <Label
+                  htmlFor="newOfferPrice"
+                  className="text-sm text-[#050002] mb-1 block"
+                >
+                  New Offer Price ($)
+                </Label>
+                <Input
+                  id="newOfferPrice"
+                  type="text"
+                  placeholder={`Higher than ${
+                    existingOffer?.offeredPrice?.toLocaleString() || "0"
+                  }`}
+                  value={newOfferPrice}
+                  onChange={(e) => {
+                    let value = e.target.value;
+                    value = value.replace(/,/g, "");
+                    if (value === "") {
+                      setNewOfferPrice("");
+                      return;
+                    }
+                    const floatValue = parseFloat(value);
+                    if (!isNaN(floatValue)) {
+                      setNewOfferPrice(floatValue.toLocaleString("en-US"));
+                    } else {
+                      setNewOfferPrice(value);
+                    }
+                  }}
+                  className="text-sm h-9"
+                />
+              </div>
+              <div>
+                <Label
+                  htmlFor="updateMessage"
+                  className="text-sm text-[#050002] mb-1 block"
+                >
+                  Message (Optional)
+                </Label>
+                <textarea
+                  id="updateMessage"
+                  placeholder="Include any notes about your updated offer..."
+                  value={updateMessage}
+                  onChange={(e) => setUpdateMessage(e.target.value)}
+                  className="w-full min-h-[70px] p-2 text-sm rounded-md border border-input bg-background resize-y"
+                />
+              </div>
+            </div>
+            <DialogFooter className="flex justify-end space-x-2">
+              <Button
+                onClick={() => setUpdateDialogOpen(false)}
+                variant="outline"
+                className="text-sm"
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={handleUpdateFromDialog}
+                className="bg-[#324c48] text-[#FFF] text-sm"
+              >
+                Submit New Offer
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      </div>
+    </div>
+  );
 }
