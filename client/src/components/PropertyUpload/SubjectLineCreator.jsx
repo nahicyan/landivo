@@ -1,13 +1,12 @@
 // client/src/components/PropertyUpload/SubjectLineCreator.jsx
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect } from "react";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
-import { Button } from "@/components/ui/button";
 import { Select, SelectTrigger, SelectContent, SelectItem, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { Mail, Loader2, AlertTriangle } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import axios from "axios";
+import { api } from "@/utils/api";
 
 const ADDRESS_FORMAT_TEMPLATES = [
   "{streetAddress}, {city}, {state}",
@@ -30,11 +29,11 @@ export default function SubjectLineCreator({
   const [generatedSubject, setGeneratedSubject] = useState("");
   const [customSubject, setCustomSubject] = useState("");
 
-  // Load templates from Mailivo API
+  // Fetch templates from Landivo backend (which proxies to Mailivo)
   useEffect(() => {
     const fetchTemplates = async () => {
       try {
-        const response = await axios.get("https://api.mailivo.landivo.com/subject-templates");
+        const response = await api.get("/subject-templates");
         if (response.data.success) {
           const enabled = response.data.templates.filter(t => t.isEnabled);
           setTemplates(enabled);
@@ -52,13 +51,11 @@ export default function SubjectLineCreator({
   const replaceVariables = (template, data, addressFormat) => {
     let result = template;
     
-    // Replace {address} with formatted address if needed
     if (addressFormat && result.includes("{address}")) {
       const formattedAddress = replaceVariables(addressFormat, data);
       result = result.replace(/{address}/g, formattedAddress);
     }
     
-    // Replace property variables
     const replacements = {
       county: data.county || "",
       city: data.city || "",
@@ -125,7 +122,6 @@ export default function SubjectLineCreator({
     onSubjectChange(value);
   };
 
-  // Trigger generation when address template changes
   useEffect(() => {
     if (selectedSubjectTemplate && propertyData) {
       if (templateRequiresAddress && selectedAddressTemplate) {
@@ -154,7 +150,6 @@ export default function SubjectLineCreator({
           </div>
         ) : enabledTemplates.length > 0 ? (
           <div className="space-y-4">
-            {/* Template Selector */}
             <div className="space-y-2">
               <Label>Subject Line Template</Label>
               <Select
@@ -179,7 +174,6 @@ export default function SubjectLineCreator({
               </Select>
             </div>
 
-            {/* Address Format - Only show if template requires it */}
             {templateRequiresAddress && (
               <div className="space-y-2">
                 <Label>Address Format *</Label>
@@ -213,7 +207,6 @@ export default function SubjectLineCreator({
           </Alert>
         )}
 
-        {/* Custom Subject Line */}
         <div className="space-y-2">
           <Label>Customize Subject Line</Label>
           <Textarea
@@ -233,7 +226,6 @@ export default function SubjectLineCreator({
           )}
         </div>
 
-        {/* Helper Text */}
         {selectedSubjectTemplate && (
           <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg text-sm text-blue-700">
             {templateRequiresAddress ? (
