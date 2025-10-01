@@ -26,6 +26,8 @@ import Pricing from "@/components/AddProperty/Pricing";
 import Financing from "@/components/AddProperty/Financing";
 import Utilities from "@/components/AddProperty/Utilities";
 import MediaTags from "@/components/AddProperty/MediaTags";
+import SubjectLineCreator from "@/components/PropertyUpload/SubjectLineCreator";
+import { Checkbox } from "@/components/ui/checkbox";
 
 export default function AddProperty() {
   const navigate = useNavigate();
@@ -33,7 +35,7 @@ export default function AddProperty() {
 
   // Current step index
   const [step, setStep] = useState(0);
-  
+
   // Loading state for submission
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -41,7 +43,15 @@ export default function AddProperty() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [dialogMessage, setDialogMessage] = useState("");
   const [dialogType, setDialogType] = useState("success"); // "success" or "warning"
-  
+
+  //Automation
+  const [sendCampaign, setSendCampaign] = useState(false);
+  const [campaignSubject, setCampaignSubject] = useState("");
+  const [showSubjectCreator, setShowSubjectCreator] = useState(false);
+  const [sendingCampaign, setSendingCampaign] = useState(false);
+  const [createdPropertyId, setCreatedPropertyId] = useState(null);
+  const [createdPropertyData, setCreatedPropertyData] = useState(null);
+
   // State for validation errors
   const [formErrors, setFormErrors] = useState({});
   const [showValidationAlert, setShowValidationAlert] = useState(false);
@@ -82,7 +92,7 @@ export default function AddProperty() {
     direction: "",
     streetAddress: "",
     // Display
-    toggleObscure: false, 
+    toggleObscure: false,
     //
     city: "",
     county: "",
@@ -135,7 +145,7 @@ export default function AddProperty() {
 
     //Media & Tags
     ltag: "",
-    rtag: ""
+    rtag: "",
   });
 
   // Media state
@@ -148,66 +158,74 @@ export default function AddProperty() {
     0: ["status", "area", "profileId"], // System Info
     1: ["title", "description"], // Listing Details
     2: ["type", "landType", "zoning"], // Classification
-    3: ["streetAddress", "city", "state", "zip", "latitude", "longitude", "apnOrPin"], // Location
+    3: [
+      "streetAddress",
+      "city",
+      "state",
+      "zip",
+      "latitude",
+      "longitude",
+      "apnOrPin",
+    ], // Location
     4: ["sqft"], // Dimensions
-    5: ["askingPrice","minPrice","disPrice","hoaPoa"], // Pricing
+    5: ["askingPrice", "minPrice", "disPrice", "hoaPoa"], // Pricing
     6: ["financing"],
-    7: ["water", "sewer", "electric", "roadCondition", "floodplain"] // Utilities
+    7: ["water", "sewer", "electric", "roadCondition", "floodplain"], // Utilities
   };
 
-// Update the validateStep function
-const validateStep = (stepIndex) => {
-  const currentRequiredFields = requiredFieldsByStep[stepIndex] || [];
-  const errors = {};
-  let isValid = true;
+  // Update the validateStep function
+  const validateStep = (stepIndex) => {
+    const currentRequiredFields = requiredFieldsByStep[stepIndex] || [];
+    const errors = {};
+    let isValid = true;
 
-  // Special validation for MediaTags step (step 9)
-  if (stepIndex === 9) {
-    if (uploadedImages.length === 0) {
-      errors.images = 'At least one image is required';
-      isValid = false;
-    }
-  }
-
-  currentRequiredFields.forEach(field => {
-    // Handle rich text fields
-    if (field === 'title' || field === 'description') {
-      const textContent = formData[field]?.replace(/<[^>]*>/g, '')?.trim();
-      if (!textContent) {
-        errors[field] = 'This field is required';
-        isValid = false;
-      }
-    } 
-    // Handle array fields
-    else if (field === 'landType') {
-      if (!Array.isArray(formData[field]) || formData[field].length === 0) {
-        errors[field] = 'At least one land type is required';
+    // Special validation for MediaTags step (step 9)
+    if (stepIndex === 9) {
+      if (uploadedImages.length === 0) {
+        errors.images = "At least one image is required";
         isValid = false;
       }
     }
-    // Handle numeric fields
-    else if (['sqft', 'askingPrice', 'minPrice'].includes(field)) {
-      const numValue = formData[field]?.toString().replace(/,/g, '');
-      if (!numValue || isNaN(parseFloat(numValue))) {
-        errors[field] = 'This field is required';
+
+    currentRequiredFields.forEach((field) => {
+      // Handle rich text fields
+      if (field === "title" || field === "description") {
+        const textContent = formData[field]?.replace(/<[^>]*>/g, "")?.trim();
+        if (!textContent) {
+          errors[field] = "This field is required";
+          isValid = false;
+        }
+      }
+      // Handle array fields
+      else if (field === "landType") {
+        if (!Array.isArray(formData[field]) || formData[field].length === 0) {
+          errors[field] = "At least one land type is required";
+          isValid = false;
+        }
+      }
+      // Handle numeric fields
+      else if (["sqft", "askingPrice", "minPrice"].includes(field)) {
+        const numValue = formData[field]?.toString().replace(/,/g, "");
+        if (!numValue || isNaN(parseFloat(numValue))) {
+          errors[field] = "This field is required";
+          isValid = false;
+        }
+      }
+      // Handle regular string fields
+      else if (!formData[field] || formData[field].toString().trim() === "") {
+        errors[field] = "This field is required";
         isValid = false;
       }
-    }
-    // Handle regular string fields
-    else if (!formData[field] || formData[field].toString().trim() === '') {
-      errors[field] = 'This field is required';
-      isValid = false;
-    }
-  });
+    });
 
-  return { valid: isValid, errors };
-};
+    return { valid: isValid, errors };
+  };
 
   // Helper function to check if rich text is empty
   const isRichTextEmpty = (value) => {
     if (!value) return true;
     // Remove HTML tags and check if anything remains
-    const textOnly = value.replace(/<[^>]*>/g, '').trim();
+    const textOnly = value.replace(/<[^>]*>/g, "").trim();
     return !textOnly;
   };
 
@@ -219,21 +237,21 @@ const validateStep = (stepIndex) => {
   // Numeric fields formatting, etc.
   const handleChange = (e) => {
     const { name, value } = e.target;
-    
+
     // Clear validation error when field is edited
     if (formErrors[name]) {
-      setFormErrors(prev => {
+      setFormErrors((prev) => {
         const updated = { ...prev };
         delete updated[name];
         return updated;
       });
     }
-    
+
     setFormData((prev) => {
       const updated = { ...prev };
       const numericFields = [
         // Skip sqft and acre as they are now handled in Dimension.jsx
-        
+
         // Pricing and Financing
         "askingPrice",
         "minPrice",
@@ -278,21 +296,21 @@ const validateStep = (stepIndex) => {
   // Handle form submission
   const handleSubmitForm = async (e) => {
     if (e) e.preventDefault();
-    
+
     // Validate the final step
     const finalValidation = validateStep(step);
     if (!finalValidation.valid) {
       setFormErrors(finalValidation.errors);
       setShowValidationAlert(true);
-      window.scrollTo({ top: 0, behavior: 'smooth' });
+      window.scrollTo({ top: 0, behavior: "smooth" });
       return;
     }
-    
+
     // Validate all steps to make sure everything is filled
     let allValid = true;
     let allErrors = {};
 
-    Object.keys(requiredFieldsByStep).forEach(stepIdx => {
+    Object.keys(requiredFieldsByStep).forEach((stepIdx) => {
       const validation = validateStep(parseInt(stepIdx));
       if (!validation.valid) {
         allValid = false;
@@ -310,7 +328,7 @@ const validateStep = (stepIndex) => {
     }
 
     setIsSubmitting(true);
-    
+
     try {
       const numericFields = [
         // Physical Attributes
@@ -346,13 +364,13 @@ const validateStep = (stepIndex) => {
       const multipartForm = new FormData();
       for (let key in formData) {
         if (key === "imageUrls" || key === "videoUrls") continue; // skip imageUrls and videoUrls here
-        
+
         let val = formData[key];
-        
+
         if (numericFields.includes(key) && typeof val === "string") {
           val = val.replace(/,/g, "");
         }
-        
+
         // Special handling for landType array
         if (key === "landType" && Array.isArray(val)) {
           multipartForm.append(key, JSON.stringify(val));
@@ -365,7 +383,7 @@ const validateStep = (stepIndex) => {
       if (formData.featured === "Featured") {
         multipartForm.append("featuredPosition", formData.featuredPosition);
       }
-      
+
       // Append CMA file if available
       if (cmaFile) {
         multipartForm.append("cmaFile", cmaFile);
@@ -380,6 +398,10 @@ const validateStep = (stepIndex) => {
       uploadedVideos.forEach((file) => multipartForm.append("videos", file));
 
       const result = await createResidencyWithFiles(multipartForm);
+
+      //Automation
+      setCreatedPropertyId(result.id);
+      setCreatedPropertyData(result);
 
       setDialogMessage("Property added successfully!");
       setDialogType("success");
@@ -409,29 +431,35 @@ const validateStep = (stepIndex) => {
   // Steps navigation with validation
   const nextStep = () => {
     const validation = validateStep(step);
-    
+
     if (validation.valid) {
       // Clear errors when validation passes
       setFormErrors({});
       setShowValidationAlert(false);
-      setStep(prev => Math.min(prev + 1, steps.length - 1));
+      setStep((prev) => Math.min(prev + 1, steps.length - 1));
     } else {
       // Update errors state to show validation messages
       setFormErrors(validation.errors);
       setShowValidationAlert(true);
-      
+
       // Scroll to the top to show validation alert
-      window.scrollTo({ top: 0, behavior: 'smooth' });
+      window.scrollTo({ top: 0, behavior: "smooth" });
     }
   };
-  
-  const prevStep = () => setStep(prev => Math.max(prev - 1, 0));
+
+  const prevStep = () => setStep((prev) => Math.max(prev - 1, 0));
 
   // Define steps array with all necessary props passed to each component
   const steps = [
     {
       title: "System Info",
-      component: <SystemInfo formData={formData} handleChange={handleChange} errors={formErrors} />,
+      component: (
+        <SystemInfo
+          formData={formData}
+          handleChange={handleChange}
+          errors={formErrors}
+        />
+      ),
     },
     {
       title: "Listing Details",
@@ -441,32 +469,38 @@ const validateStep = (stepIndex) => {
           errors={formErrors}
           handleTitleChange={(val) => {
             if (formErrors.title) {
-              setFormErrors(prev => {
+              setFormErrors((prev) => {
                 const updated = { ...prev };
                 delete updated.title;
                 return updated;
               });
             }
-            setFormData(prev => ({ ...prev, title: val }));
+            setFormData((prev) => ({ ...prev, title: val }));
           }}
           handleDescriptionChange={(val) => {
             if (formErrors.description) {
-              setFormErrors(prev => {
+              setFormErrors((prev) => {
                 const updated = { ...prev };
                 delete updated.description;
                 return updated;
               });
             }
-            setFormData(prev => ({ ...prev, description: val }));
+            setFormData((prev) => ({ ...prev, description: val }));
           }}
-          handleNotesChange={(val) => setFormData(prev => ({ ...prev, notes: val }))}
+          handleNotesChange={(val) =>
+            setFormData((prev) => ({ ...prev, notes: val }))
+          }
         />
       ),
     },
     {
       title: "Classification",
       component: (
-        <Classification formData={formData} handleChange={handleChange} errors={formErrors} />
+        <Classification
+          formData={formData}
+          handleChange={handleChange}
+          errors={formErrors}
+        />
       ),
     },
     {
@@ -483,9 +517,9 @@ const validateStep = (stepIndex) => {
     {
       title: "Dimensions",
       component: (
-        <Dimension 
-          formData={formData} 
-          handleChange={handleChange} 
+        <Dimension
+          formData={formData}
+          handleChange={handleChange}
           setFormData={setFormData}
           errors={formErrors}
         />
@@ -494,8 +528,8 @@ const validateStep = (stepIndex) => {
     {
       title: "Pricing",
       component: (
-        <Pricing 
-          formData={formData} 
+        <Pricing
+          formData={formData}
           handleChange={handleChange}
           errors={formErrors}
         />
@@ -510,8 +544,8 @@ const validateStep = (stepIndex) => {
           updateFormData={(updatedData) => {
             // Clear any financing related errors when updating form data
             const updatedErrors = { ...formErrors };
-            Object.keys(updatedErrors).forEach(key => {
-              if (['financing', 'term', 'interestOne'].includes(key)) {
+            Object.keys(updatedErrors).forEach((key) => {
+              if (["financing", "term", "interestOne"].includes(key)) {
                 delete updatedErrors[key];
               }
             });
@@ -525,8 +559,8 @@ const validateStep = (stepIndex) => {
     {
       title: "Utilities",
       component: (
-        <Utilities 
-          formData={formData} 
+        <Utilities
+          formData={formData}
           handleChange={handleChange}
           errors={formErrors}
         />
@@ -535,11 +569,11 @@ const validateStep = (stepIndex) => {
     {
       title: "Market Analysis",
       component: (
-        <ComparativeMarketAnalysis 
-          formData={formData} 
-          handleChange={handleChange} 
+        <ComparativeMarketAnalysis
+          formData={formData}
+          handleChange={handleChange}
           handleCmaFileUpload={handleCmaFileUpload}
-          handleCmaDataChange={(val) => 
+          handleCmaDataChange={(val) =>
             setFormData((prev) => ({ ...prev, cmaData: val }))
           }
           errors={formErrors}
@@ -570,7 +604,7 @@ const validateStep = (stepIndex) => {
           const isActive = index === currentStep;
           const isCompleted = index < currentStep;
           const hasErrors = Object.keys(requiredFieldsByStep[index] || {}).some(
-            field => Object.keys(formErrors).includes(field)
+            (field) => Object.keys(formErrors).includes(field)
           );
 
           return (
@@ -579,13 +613,13 @@ const validateStep = (stepIndex) => {
               <div className="flex flex-col items-center">
                 <div
                   className={`w-8 h-8 flex items-center justify-center rounded-full border-2 ${
-                    hasErrors 
+                    hasErrors
                       ? "border-red-500 bg-red-100 text-red-700"
                       : isCompleted
-                        ? "border-green-500 bg-green-500 text-white"
-                        : isActive
-                          ? "border-blue-500 bg-blue-100 text-blue-700"
-                          : "border-gray-300 bg-white text-gray-500"
+                      ? "border-green-500 bg-green-500 text-white"
+                      : isActive
+                      ? "border-blue-500 bg-blue-100 text-blue-700"
+                      : "border-gray-300 bg-white text-gray-500"
                   }`}
                 >
                   {isCompleted ? <Check className="w-4 h-4" /> : index + 1}
@@ -597,8 +631,8 @@ const validateStep = (stepIndex) => {
                     hasErrors
                       ? "font-semibold text-red-600"
                       : isCompleted || isActive
-                        ? "font-semibold text-gray-900"
-                        : "text-gray-500"
+                      ? "font-semibold text-gray-900"
+                      : "text-gray-500"
                   }`}
                 >
                   {item.title}
@@ -621,7 +655,7 @@ const validateStep = (stepIndex) => {
       <h1 className="text-2xl md:text-3xl font-bold text-[#324c48] text-center mb-4">
         Add New Property
       </h1>
-      
+
       {/* Step Indicator */}
       <StepIndicator currentStep={step} />
 
@@ -630,7 +664,10 @@ const validateStep = (stepIndex) => {
         <div className="bg-red-50 border-l-4 border-red-500 p-4 mb-4 rounded-r-md">
           <div className="flex items-start">
             <div className="flex-shrink-0">
-              <AlertCircle className="h-5 w-5 text-red-500" aria-hidden="true" />
+              <AlertCircle
+                className="h-5 w-5 text-red-500"
+                aria-hidden="true"
+              />
             </div>
             <div className="ml-3">
               <h3 className="text-sm font-medium text-red-800">
@@ -640,7 +677,9 @@ const validateStep = (stepIndex) => {
                 <ul className="list-disc pl-5 space-y-1">
                   {Object.keys(formErrors).map((field) => (
                     <li key={field}>
-                      {field.charAt(0).toUpperCase() + field.slice(1).replace(/([A-Z])/g, ' $1')} is required
+                      {field.charAt(0).toUpperCase() +
+                        field.slice(1).replace(/([A-Z])/g, " $1")}{" "}
+                      is required
                     </li>
                   ))}
                 </ul>
@@ -677,8 +716,19 @@ const validateStep = (stepIndex) => {
                 className="bg-gray-300 text-gray-800 px-4 py-2 rounded-md flex items-center"
                 disabled={isSubmitting}
               >
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  className="h-5 w-5 mr-1"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M15 19l-7-7 7-7"
+                  />
                 </svg>
                 Previous
               </Button>
@@ -694,8 +744,19 @@ const validateStep = (stepIndex) => {
                 className="bg-[#324c48] text-white px-4 py-2 rounded-md flex items-center"
               >
                 Next
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 ml-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  className="h-5 w-5 ml-1"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M9 5l7 7-7 7"
+                  />
                 </svg>
               </Button>
             ) : (
@@ -713,8 +774,19 @@ const validateStep = (stepIndex) => {
                 ) : (
                   <>
                     Submit
-                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 ml-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      className="h-5 w-5 ml-1"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      stroke="currentColor"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M5 13l4 4L19 7"
+                      />
                     </svg>
                   </>
                 )}
@@ -726,7 +798,7 @@ const validateStep = (stepIndex) => {
 
       {/* ShadCN Alert Dialog */}
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent className="bg-white text-gray-900 border border-gray-300 shadow-lg rounded-lg p-6 w-full max-w-md mx-auto">
+        <DialogContent className="sm:max-w-[600px]">
           <DialogHeader>
             <DialogTitle
               className={
@@ -737,19 +809,111 @@ const validateStep = (stepIndex) => {
             </DialogTitle>
             <DialogDescription>{dialogMessage}</DialogDescription>
           </DialogHeader>
-          <DialogFooter>
-            <Button
-              onClick={() => {
-                setDialogOpen(false);
-                if (dialogType === "success") {
-                  navigate("/properties");
-                }
-              }}
-              className="bg-[#324c48] text-white"
-            >
-              Okay
-            </Button>
-          </DialogFooter>
+
+          {/* Campaign Options - Only show on success */}
+          {dialogType === "success" && !showSubjectCreator && (
+            <div className="space-y-4 py-4">
+              <div className="flex items-start space-x-3">
+                <Checkbox
+                  id="send-campaign"
+                  checked={sendCampaign}
+                  onCheckedChange={setSendCampaign}
+                />
+                <div className="grid gap-1.5 leading-none">
+                  <label
+                    htmlFor="send-campaign"
+                    className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                  >
+                    Send {createdPropertyData?.streetAddress || "property"} to
+                    buyers who prefer{" "}
+                    {createdPropertyData?.area || formData.area} using the
+                    default template
+                  </label>
+                  <p className="text-sm text-muted-foreground">
+                    Instantly notify interested buyers about this new property
+                  </p>
+                </div>
+              </div>
+
+              {sendCampaign && (
+                <div className="flex gap-2 mt-4">
+                  <Button
+                    onClick={() => setShowSubjectCreator(true)}
+                    className="flex-1 bg-[#324c48] hover:bg-[#3f4f24] text-white"
+                  >
+                    Send Now
+                  </Button>
+                  <Button
+                    onClick={() => handleSendCampaign("mailivo")}
+                    variant="outline"
+                    className="flex-1"
+                    disabled={sendingCampaign}
+                  >
+                    {sendingCampaign ? (
+                      <>
+                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                        Redirecting...
+                      </>
+                    ) : (
+                      "Send from Mailivo"
+                    )}
+                  </Button>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Subject Creator View */}
+          {dialogType === "success" && showSubjectCreator && (
+            <div className="space-y-4">
+              <SubjectLineCreator
+                propertyData={createdPropertyData || formData}
+                onSubjectChange={setCampaignSubject}
+                area={createdPropertyData?.city || formData.city}
+              />
+
+              <div className="flex gap-2">
+                <Button
+                  onClick={() => setShowSubjectCreator(false)}
+                  variant="outline"
+                  className="flex-1"
+                >
+                  Back
+                </Button>
+                <Button
+                  onClick={() => handleSendCampaign("now")}
+                  disabled={!campaignSubject.trim() || sendingCampaign}
+                  className="flex-1 bg-[#324c48] hover:bg-[#3f4f24] text-white"
+                >
+                  {sendingCampaign ? (
+                    <>
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                      Sending...
+                    </>
+                  ) : (
+                    "Send Now"
+                  )}
+                </Button>
+              </div>
+            </div>
+          )}
+
+          {/* Default Footer - Only show when not in campaign flow */}
+          {(!sendCampaign || dialogType !== "success") && (
+            <DialogFooter>
+              <Button
+                onClick={() => {
+                  setDialogOpen(false);
+                  if (dialogType === "success") {
+                    navigate("/properties");
+                  }
+                }}
+                className="bg-[#324c48] text-white"
+              >
+                Okay
+              </Button>
+            </DialogFooter>
+          )}
         </DialogContent>
       </Dialog>
     </div>
