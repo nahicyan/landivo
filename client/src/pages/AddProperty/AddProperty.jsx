@@ -2,19 +2,10 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { createResidencyWithFiles } from "@/utils/api";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-  DialogFooter,
-} from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/components/hooks/useAuth";
 import { motion, AnimatePresence } from "framer-motion";
 import { AlertCircle, Check, Loader2 } from "lucide-react";
-
 // Import subcomponents
 import SystemInfo from "@/components/AddProperty/SystemInfo";
 import ListingDetails from "@/components/AddProperty/ListingDetails";
@@ -26,9 +17,7 @@ import Pricing from "@/components/AddProperty/Pricing";
 import Financing from "@/components/AddProperty/Financing";
 import Utilities from "@/components/AddProperty/Utilities";
 import MediaTags from "@/components/AddProperty/MediaTags";
-import SubjectLineCreator from "@/components/PropertyUpload/SubjectLineCreator";
-import { Checkbox } from "@/components/ui/checkbox";
-import axios from "axios";
+import PropertySuccessDialog from "@/components/PropertyUpload/PropertySuccessDialog";
 
 export default function AddProperty() {
   const navigate = useNavigate();
@@ -45,17 +34,13 @@ export default function AddProperty() {
   const [dialogMessage, setDialogMessage] = useState("");
   const [dialogType, setDialogType] = useState("success"); // "success" or "warning"
 
-  //Automation
-  const [sendCampaign, setSendCampaign] = useState(false);
-  const [campaignSubject, setCampaignSubject] = useState("");
-  const [showSubjectCreator, setShowSubjectCreator] = useState(false);
-  const [sendingCampaign, setSendingCampaign] = useState(false);
-  const [createdPropertyId, setCreatedPropertyId] = useState(null);
-  const [createdPropertyData, setCreatedPropertyData] = useState(null);
-
   // State for validation errors
   const [formErrors, setFormErrors] = useState({});
   const [showValidationAlert, setShowValidationAlert] = useState(false);
+
+  // Property creation result
+  const [createdPropertyId, setCreatedPropertyId] = useState(null);
+  const [createdPropertyData, setCreatedPropertyData] = useState(null);
 
   // Form data state
   const [formData, setFormData] = useState({
@@ -399,8 +384,6 @@ export default function AddProperty() {
       uploadedVideos.forEach((file) => multipartForm.append("videos", file));
 
       const result = await createResidencyWithFiles(multipartForm);
-      
-      //Automation
       setCreatedPropertyId(result.residency.id);
       setCreatedPropertyData(result.residency);
 
@@ -651,56 +634,6 @@ export default function AddProperty() {
     );
   };
 
-  const handleSendCampaign = async (sendType) => {
-    if (!campaignSubject.trim()) {
-      toast.error("Please enter a subject line");
-      return;
-    }
-
-    setSendingCampaign(true);
-
-    try {
-      const payload = {
-        propertyID: createdPropertyId,
-        type: "single",
-        subject: campaignSubject,
-        audienceType: "area",
-        area: createdPropertyData?.city || formData.city,
-        emailTemplate: "default",
-        source: "Property-Upload-Landivo",
-        emailSchedule: "immediate",
-        sendType: sendType, // "now" or "mailivo"
-      };
-
-      if (sendType === "mailivo") {
-        // Redirect to Mailivo
-        const response = await axios.post(
-          `${import.meta.env.VITE_SERVER_URL}/mailivo/automation`,
-          payload
-        );
-
-        if (response.data.redirectUrl) {
-          window.location.href = response.data.redirectUrl;
-        }
-      } else {
-        // Send now
-        await axios.post(
-          "https://api.mailivo.landivo.com/automation/propertyUpload",
-          payload
-        );
-
-        toast.success("Campaign sent successfully!");
-        setDialogOpen(false);
-        navigate("/properties");
-      }
-    } catch (error) {
-      console.error("Error sending campaign:", error);
-      toast.error("Failed to send campaign");
-    } finally {
-      setSendingCampaign(false);
-    }
-  };
-
   return (
     <div className="max-w-6xl mx-auto p-6 space-y-6">
       <h1 className="text-2xl md:text-3xl font-bold text-[#324c48] text-center mb-4">
@@ -848,128 +781,14 @@ export default function AddProperty() {
       </form>
 
       {/* ShadCN Alert Dialog */}
-      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent className="sm:max-w-[600px]">
-          <DialogHeader>
-            <DialogTitle
-              className={
-                dialogType === "success" ? "text-green-600" : "text-red-600"
-              }
-            >
-              {dialogType === "success" ? "Success" : "Warning"}
-            </DialogTitle>
-            <DialogDescription>{dialogMessage}</DialogDescription>
-          </DialogHeader>
-
-          {/* Campaign Options - Only show on success */}
-          {dialogType === "success" && !showSubjectCreator && (
-            <div className="space-y-4 py-4">
-              <div className="flex items-start space-x-3">
-                <Checkbox
-                  id="send-campaign"
-                  checked={sendCampaign}
-                  onCheckedChange={setSendCampaign}
-                />
-                <div className="grid gap-1.5 leading-none">
-                  <label
-                    htmlFor="send-campaign"
-                    className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
-                  >
-                    Send {createdPropertyData?.streetAddress || "property"} to
-                    buyers who prefer{" "}
-                    {createdPropertyData?.area || formData.area} using the
-                    default template
-                  </label>
-                  <p className="text-sm text-muted-foreground">
-                    Instantly notify interested buyers about this new property
-                  </p>
-                </div>
-              </div>
-
-              {sendCampaign && (
-                <div className="flex gap-2 mt-4">
-                  <Button
-                    onClick={() => setShowSubjectCreator(true)}
-                    className="flex-1 bg-[#324c48] hover:bg-[#3f4f24] text-white"
-                  >
-                    Send Now
-                  </Button>
-                  <Button
-                    onClick={() => handleSendCampaign("mailivo")}
-                    variant="outline"
-                    className="flex-1"
-                    disabled={sendingCampaign}
-                  >
-                    {sendingCampaign ? (
-                      <>
-                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                        Redirecting...
-                      </>
-                    ) : (
-                      "Send from Mailivo"
-                    )}
-                  </Button>
-                </div>
-              )}
-            </div>
-          )}
-
-          {/* Subject Creator View */}
-          {dialogType === "success" && showSubjectCreator && (
-            <div className="space-y-4">
-              {console.log(
-                "Rendering SubjectLineCreator with propertyId:",
-                createdPropertyId
-              )}
-              <SubjectLineCreator
-                propertyId={createdPropertyId}
-                onSubjectChange={setCampaignSubject}
-              />
-
-              <div className="flex gap-2">
-                <Button
-                  onClick={() => setShowSubjectCreator(false)}
-                  variant="outline"
-                  className="flex-1"
-                >
-                  Back
-                </Button>
-                <Button
-                  onClick={() => handleSendCampaign("now")}
-                  disabled={!campaignSubject.trim() || sendingCampaign}
-                  className="flex-1 bg-[#324c48] hover:bg-[#3f4f24] text-white"
-                >
-                  {sendingCampaign ? (
-                    <>
-                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                      Sending...
-                    </>
-                  ) : (
-                    "Send Now"
-                  )}
-                </Button>
-              </div>
-            </div>
-          )}
-
-          {/* Default Footer - Only show when not in campaign flow */}
-          {(!sendCampaign || dialogType !== "success") && (
-            <DialogFooter>
-              <Button
-                onClick={() => {
-                  setDialogOpen(false);
-                  if (dialogType === "success") {
-                    navigate("/properties");
-                  }
-                }}
-                className="bg-[#324c48] text-white"
-              >
-                Okay
-              </Button>
-            </DialogFooter>
-          )}
-        </DialogContent>
-      </Dialog>
+      <PropertySuccessDialog
+        open={dialogOpen}
+        onOpenChange={setDialogOpen}
+        dialogType={dialogType}
+        dialogMessage={dialogMessage}
+        propertyId={createdPropertyId}
+        propertyData={createdPropertyData}
+      />
     </div>
   );
 }
