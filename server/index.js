@@ -18,6 +18,7 @@ import { settingsRoute } from "./routes/settingsRoute.js";
 import { visitorRoute } from "./routes/visitorRoute.js";
 import { initScheduledTasks } from "./services/scheduledTasks.js";
 import { mailivoAutomationRoute } from "./routes/mailivoAutomationRoute.js";
+import { subjectTemplatesRoute } from "./routes/subjectTemplatesRoute.js";
 
 const app = express();
 const PORT = process.env.PORT || 8200;
@@ -61,6 +62,7 @@ app.use("/property-rows", propertyRowRoute);
 app.use("/settings", settingsRoute);
 app.use("/visitors", visitorRoute);
 app.use("/api/mailivo/automation", mailivoAutomationRoute);
+app.use("/api/subject-templates", subjectTemplatesRoute);
 app.use(trackActivity);
 
 
