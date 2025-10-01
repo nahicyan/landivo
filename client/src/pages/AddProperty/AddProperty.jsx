@@ -28,6 +28,7 @@ import Utilities from "@/components/AddProperty/Utilities";
 import MediaTags from "@/components/AddProperty/MediaTags";
 import SubjectLineCreator from "@/components/PropertyUpload/SubjectLineCreator";
 import { Checkbox } from "@/components/ui/checkbox";
+import axios from "axios";
 
 export default function AddProperty() {
   const navigate = useNavigate();
@@ -398,10 +399,10 @@ export default function AddProperty() {
       uploadedVideos.forEach((file) => multipartForm.append("videos", file));
 
       const result = await createResidencyWithFiles(multipartForm);
-
+      
       //Automation
-      setCreatedPropertyId(result.id);
-      setCreatedPropertyData(result);
+      setCreatedPropertyId(result.residency.id);
+      setCreatedPropertyData(result.residency);
 
       setDialogMessage("Property added successfully!");
       setDialogType("success");
@@ -650,6 +651,56 @@ export default function AddProperty() {
     );
   };
 
+  const handleSendCampaign = async (sendType) => {
+    if (!campaignSubject.trim()) {
+      toast.error("Please enter a subject line");
+      return;
+    }
+
+    setSendingCampaign(true);
+
+    try {
+      const payload = {
+        propertyID: createdPropertyId,
+        type: "single",
+        subject: campaignSubject,
+        audienceType: "area",
+        area: createdPropertyData?.city || formData.city,
+        emailTemplate: "default",
+        source: "Property-Upload-Landivo",
+        emailSchedule: "immediate",
+        sendType: sendType, // "now" or "mailivo"
+      };
+
+      if (sendType === "mailivo") {
+        // Redirect to Mailivo
+        const response = await axios.post(
+          `${import.meta.env.VITE_SERVER_URL}/mailivo/automation`,
+          payload
+        );
+
+        if (response.data.redirectUrl) {
+          window.location.href = response.data.redirectUrl;
+        }
+      } else {
+        // Send now
+        await axios.post(
+          "https://api.mailivo.landivo.com/automation/propertyUpload",
+          payload
+        );
+
+        toast.success("Campaign sent successfully!");
+        setDialogOpen(false);
+        navigate("/properties");
+      }
+    } catch (error) {
+      console.error("Error sending campaign:", error);
+      toast.error("Failed to send campaign");
+    } finally {
+      setSendingCampaign(false);
+    }
+  };
+
   return (
     <div className="max-w-6xl mx-auto p-6 space-y-6">
       <h1 className="text-2xl md:text-3xl font-bold text-[#324c48] text-center mb-4">
@@ -866,10 +917,13 @@ export default function AddProperty() {
           {/* Subject Creator View */}
           {dialogType === "success" && showSubjectCreator && (
             <div className="space-y-4">
+              {console.log(
+                "Rendering SubjectLineCreator with propertyId:",
+                createdPropertyId
+              )}
               <SubjectLineCreator
-                propertyData={createdPropertyData || formData}
+                propertyId={createdPropertyId}
                 onSubjectChange={setCampaignSubject}
-                area={createdPropertyData?.city || formData.city}
               />
 
               <div className="flex gap-2">

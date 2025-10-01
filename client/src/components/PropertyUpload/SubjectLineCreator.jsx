@@ -4,33 +4,65 @@ import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Select, SelectTrigger, SelectContent, SelectItem, SelectValue } from "@/components/ui/select";
-import { Textarea } from "@/components/ui/textarea";
-import { Mail, Loader2, AlertTriangle } from "lucide-react";
+import { Mail, Loader2, AlertTriangle, Smile } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import EmojiPicker from "emoji-picker-react";
 import axios from "axios";
+import { getProperty } from "@/utils/api";
 
 const ADDRESS_FORMAT_TEMPLATES = [
-  "{streetAddress}, {city}, {state}",
-  "{streetAddress}, {city}",
-  "{city}, {state}",
-  "{streetAddress}",
+  '{county}',
+  '{city}',
+  '{state}',
+  '{state} {zip}',
+  '{city} {zip}',
+  '{county}, {state} {zip}',
+  '{city}, {state} {zip}',
+  '{county}, {city}, {state} {zip}'
 ];
 
 export default function SubjectLineCreator({ 
-  propertyData, 
+  propertyId,
   onSubjectChange,
-  errors = {},
-  area 
+  errors = {}
 }) {
   const [templates, setTemplates] = useState([]);
   const [loadingTemplates, setLoadingTemplates] = useState(true);
+  const [propertyData, setPropertyData] = useState(null);
+  const [loadingProperty, setLoadingProperty] = useState(true);
   const [selectedSubjectTemplate, setSelectedSubjectTemplate] = useState("");
   const [selectedAddressTemplate, setSelectedAddressTemplate] = useState("");
   const [templateRequiresAddress, setTemplateRequiresAddress] = useState(false);
-  const [generatedSubject, setGeneratedSubject] = useState("");
-  const [customSubject, setCustomSubject] = useState("");
+  const [subjectContent, setSubjectContent] = useState("");
+  const [showEmojiPicker, setShowEmojiPicker] = useState(false);
+  const [charCount, setCharCount] = useState(0);
+  const editorRef = useRef(null);
 
-  // Load templates from Mailivo API
+  // Fetch property data from Landivo API
+  useEffect(() => {
+    const fetchProperty = async () => {
+      if (!propertyId) {
+        setLoadingProperty(false);
+        return;
+      }
+
+      try {
+        setLoadingProperty(true);
+        const data = await getProperty(propertyId);
+        console.log("Fetched property data:", data);
+        setPropertyData(data);
+      } catch (error) {
+        console.error("Error fetching property:", error);
+      } finally {
+        setLoadingProperty(false);
+      }
+    };
+
+    fetchProperty();
+  }, [propertyId]);
+
+  // Fetch templates from Mailivo API
   useEffect(() => {
     const fetchTemplates = async () => {
       try {
@@ -49,30 +81,31 @@ export default function SubjectLineCreator({
     fetchTemplates();
   }, []);
 
-  const replaceVariables = (template, data, addressFormat) => {
+  const replaceVariables = (template, data) => {
+    if (!data) return template;
+    
     let result = template;
     
-    // Replace {address} with formatted address if needed
-    if (addressFormat && result.includes("{address}")) {
-      const formattedAddress = replaceVariables(addressFormat, data);
-      result = result.replace(/{address}/g, formattedAddress);
-    }
-    
-    // Replace property variables
     const replacements = {
-      county: data.county || "",
-      city: data.city || "",
-      state: data.state || "",
-      zip: data.zip || "",
-      streetAddress: data.streetAddress || "",
-      acre: data.acre?.toString() || "",
-      zoning: data.zoning || "",
-      askingPrice: data.askingPrice ? `$${data.askingPrice.toLocaleString()}` : "",
-      area: area || data.city || ""
+      county: data.county || '',
+      city: data.city || '',
+      state: data.state || '',
+      zip: data.zip || '',
+      streetAddress: data.streetAddress || '',
+      acre: data.acre?.toString() || '',
+      zoning: data.zoning || '',
+      restrictions: data.restrictions || '',
+      askingPrice: data.askingPrice ? `$${data.askingPrice.toLocaleString()}` : '',
+      minPrice: data.minPrice ? `$${data.minPrice.toLocaleString()}` : '',
+      disPrice: data.disPrice ? `$${data.disPrice.toLocaleString()}` : '',
+      hoaPoa: data.hoaPoa || '',
+      hoaFee: data.hoaFee ? `$${data.hoaFee}` : '',
+      tax: data.tax ? `$${data.tax}` : '',
+      area: data.city || ''
     };
 
     Object.entries(replacements).forEach(([key, value]) => {
-      const regex = new RegExp(`{${key}}`, "g");
+      const regex = new RegExp(`\\{${key}\\}`, 'g');
       result = result.replace(regex, value);
     });
 
@@ -83,16 +116,23 @@ export default function SubjectLineCreator({
     const template = templates.find(t => t.id === selectedSubjectTemplate);
     if (!template || !propertyData) return;
 
-    let generated = "";
-    if (templateRequiresAddress && selectedAddressTemplate) {
-      generated = replaceVariables(template.content, propertyData, selectedAddressTemplate);
-    } else if (!templateRequiresAddress) {
-      generated = replaceVariables(template.content, propertyData);
+    let templateContent = template.content;
+
+    // Replace {address} with formatted address if template requires it
+    if (templateContent.includes('{address}') && selectedAddressTemplate) {
+      const formattedAddress = replaceVariables(selectedAddressTemplate, propertyData);
+      templateContent = templateContent.replace(/{address}/g, formattedAddress);
     }
 
-    setGeneratedSubject(generated);
-    setCustomSubject(generated);
+    const generated = replaceVariables(templateContent, propertyData);
+    
+    setSubjectContent(generated);
     onSubjectChange(generated);
+    setCharCount(generated.length);
+
+    if (editorRef.current) {
+      editorRef.current.textContent = generated;
+    }
   };
 
   const handleSubjectTemplateChange = (templateId) => {
@@ -103,11 +143,7 @@ export default function SubjectLineCreator({
       const requiresAddress = template.variables?.includes("address");
       setTemplateRequiresAddress(requiresAddress);
       
-      if (!requiresAddress && propertyData) {
-        const generated = replaceVariables(template.content, propertyData);
-        setGeneratedSubject(generated);
-        setCustomSubject(generated);
-        onSubjectChange(generated);
+      if (!requiresAddress) {
         setSelectedAddressTemplate("");
       } else {
         setSelectedAddressTemplate("");
@@ -119,23 +155,63 @@ export default function SubjectLineCreator({
     setSelectedAddressTemplate(template);
   };
 
-  const handleCustomSubjectChange = (e) => {
-    const value = e.target.value;
-    setCustomSubject(value);
-    onSubjectChange(value);
-  };
-
-  // Trigger generation when address template changes
+  // Auto-generate when requirements are met
   useEffect(() => {
     if (selectedSubjectTemplate && propertyData) {
-      if (templateRequiresAddress && selectedAddressTemplate) {
-        generateSubjectLine();
-      } else if (!templateRequiresAddress) {
+      if (templateRequiresAddress) {
+        if (selectedAddressTemplate) {
+          generateSubjectLine();
+        }
+      } else {
         generateSubjectLine();
       }
     }
-  }, [selectedSubjectTemplate, selectedAddressTemplate, propertyData, templateRequiresAddress]);
+  }, [selectedSubjectTemplate, selectedAddressTemplate, propertyData]);
 
+  const handleContentInput = (e) => {
+    const content = e.target.textContent || '';
+    
+    if (content.length > 150) {
+      e.target.textContent = content.substring(0, 150);
+      const range = document.createRange();
+      const sel = window.getSelection();
+      range.selectNodeContents(e.target);
+      range.collapse(false);
+      sel.removeAllRanges();
+      sel.addRange(range);
+      return;
+    }
+
+    setSubjectContent(content);
+    setCharCount(content.length);
+    onSubjectChange(content);
+  };
+
+  const handleEmojiClick = (emojiData) => {
+    const emoji = emojiData.emoji;
+    
+    if (editorRef.current) {
+      const selection = window.getSelection();
+      if (selection.rangeCount > 0) {
+        const range = selection.getRangeAt(0);
+        range.deleteContents();
+        range.insertNode(document.createTextNode(emoji));
+        range.collapse(false);
+      } else {
+        editorRef.current.textContent += emoji;
+      }
+      
+      const newContent = editorRef.current.textContent;
+      setSubjectContent(newContent);
+      setCharCount(newContent.length);
+      onSubjectChange(newContent);
+    }
+    
+    setShowEmojiPicker(false);
+    editorRef.current?.focus();
+  };
+
+  const isLoading = loadingTemplates || loadingProperty;
   const enabledTemplates = templates.filter(t => t.isEnabled);
 
   return (
@@ -147,11 +223,18 @@ export default function SubjectLineCreator({
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
-        {loadingTemplates ? (
+        {isLoading ? (
           <div className="flex items-center gap-2 text-muted-foreground">
             <Loader2 className="h-4 w-4 animate-spin" />
-            Loading templates...
+            {loadingProperty ? "Loading property data..." : "Loading templates..."}
           </div>
+        ) : !propertyData ? (
+          <Alert>
+            <AlertTriangle className="h-4 w-4" />
+            <AlertDescription>
+              Could not load property data. Please try again.
+            </AlertDescription>
+          </Alert>
         ) : enabledTemplates.length > 0 ? (
           <div className="space-y-4">
             {/* Template Selector */}
@@ -179,10 +262,10 @@ export default function SubjectLineCreator({
               </Select>
             </div>
 
-            {/* Address Format - Only show if template requires it */}
+            {/* Address Format */}
             {templateRequiresAddress && (
               <div className="space-y-2">
-                <Label>Address Format *</Label>
+                <Label>Address Format Template *</Label>
                 <Select
                   value={selectedAddressTemplate}
                   onValueChange={handleAddressTemplateChange}
@@ -199,7 +282,7 @@ export default function SubjectLineCreator({
                   </SelectContent>
                 </Select>
                 <p className="text-xs text-muted-foreground">
-                  Required because the template contains an {"{address}"} variable
+                  Required for templates with {"{address}"} variable
                 </p>
               </div>
             )}
@@ -208,46 +291,87 @@ export default function SubjectLineCreator({
           <Alert>
             <AlertTriangle className="h-4 w-4" />
             <AlertDescription>
-              No templates found. You can still create a custom subject line below.
+              No templates available. You can still create a custom subject line below.
             </AlertDescription>
           </Alert>
         )}
 
-        {/* Custom Subject Line */}
+        {/* Subject Editor */}
         <div className="space-y-2">
-          <Label>Customize Subject Line</Label>
-          <Textarea
-            value={customSubject}
-            onChange={handleCustomSubjectChange}
-            placeholder="Enter your email subject line..."
-            maxLength={150}
-            rows={3}
-            className="resize-none"
-          />
-          <div className="flex justify-between text-xs text-muted-foreground">
-            <span>Maximum 150 characters</span>
-            <span>{customSubject.length}/150</span>
+          <div className="flex items-center justify-between">
+            <Label>Customize Subject Line</Label>
+            <Popover open={showEmojiPicker} onOpenChange={setShowEmojiPicker}>
+              <PopoverTrigger asChild>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  className="h-8 w-8 p-0"
+                >
+                  <Smile className="h-4 w-4" />
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0" align="end">
+                <EmojiPicker
+                  onEmojiClick={handleEmojiClick}
+                  autoFocusSearch={false}
+                  height={400}
+                  width={350}
+                />
+              </PopoverContent>
+            </Popover>
           </div>
+
+          <div className="border rounded-md">
+            <div
+              ref={editorRef}
+              contentEditable
+              onInput={handleContentInput}
+              className="min-h-[100px] p-3 text-base outline-none focus:ring-2 focus:ring-ring rounded-md"
+              style={{
+                wordWrap: 'break-word',
+                overflowWrap: 'break-word',
+                whiteSpace: 'pre-wrap'
+              }}
+              data-placeholder="Enter your email subject line or select templates above..."
+            />
+          </div>
+
+          <div className="flex justify-between text-xs text-muted-foreground">
+            <span>Add emojis and customize</span>
+            <span className={charCount > 135 ? 'text-orange-600' : ''}>
+              {charCount}/150
+            </span>
+          </div>
+
           {errors.subject && (
             <p className="text-sm text-red-600">{errors.subject}</p>
           )}
         </div>
 
-        {/* Helper Text */}
+        {/* Helper */}
         {selectedSubjectTemplate && (
           <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg text-sm text-blue-700">
             {templateRequiresAddress ? (
               selectedAddressTemplate ? (
-                <p>💡 Template generated! You can customize it above.</p>
+                <p>💡 Template generated! Customize above.</p>
               ) : (
-                <p>⏳ Please select an address format to complete generation.</p>
+                <p>⏳ Select an address format to continue.</p>
               )
             ) : (
-              <p>💡 Template generated! You can customize it above.</p>
+              <p>💡 Template generated! Customize above.</p>
             )}
           </div>
         )}
       </CardContent>
+
+      <style jsx>{`
+        [contenteditable=true]:empty:before {
+          content: attr(data-placeholder);
+          color: #9ca3af;
+          pointer-events: none;
+        }
+      `}</style>
     </Card>
   );
 }
