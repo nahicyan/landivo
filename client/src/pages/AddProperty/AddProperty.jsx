@@ -144,15 +144,7 @@ export default function AddProperty() {
     0: ["status", "area", "profileId"], // System Info
     1: ["title", "description"], // Listing Details
     2: ["type", "landType", "zoning"], // Classification
-    3: [
-      "streetAddress",
-      "city",
-      "state",
-      "zip",
-      "latitude",
-      "longitude",
-      "apnOrPin",
-    ], // Location
+    3: ["streetAddress", "city", "state", "zip", "latitude", "longitude", "apnOrPin"], // Location
     4: ["sqft"], // Dimensions
     5: ["askingPrice", "minPrice", "disPrice", "hoaPoa"], // Pricing
     6: ["financing"],
@@ -393,11 +385,7 @@ export default function AddProperty() {
     } catch (error) {
       console.error("Error creating property:", error);
       // Attempt to extract a detailed error message from the response
-      const errorMsg =
-        error.response?.data?.message ||
-        error.response?.data?.error ||
-        error.message ||
-        "Unknown error";
+      const errorMsg = error.response?.data?.message || error.response?.data?.error || error.message || "Unknown error";
       setDialogMessage(`Failed to create property: ${errorMsg}`);
       setDialogType("warning");
       setDialogOpen(true);
@@ -437,13 +425,7 @@ export default function AddProperty() {
   const steps = [
     {
       title: "System Info",
-      component: (
-        <SystemInfo
-          formData={formData}
-          handleChange={handleChange}
-          errors={formErrors}
-        />
-      ),
+      component: <SystemInfo formData={formData} handleChange={handleChange} errors={formErrors} />,
     },
     {
       title: "Listing Details",
@@ -471,53 +453,25 @@ export default function AddProperty() {
             }
             setFormData((prev) => ({ ...prev, description: val }));
           }}
-          handleNotesChange={(val) =>
-            setFormData((prev) => ({ ...prev, notes: val }))
-          }
+          handleNotesChange={(val) => setFormData((prev) => ({ ...prev, notes: val }))}
         />
       ),
     },
     {
       title: "Classification",
-      component: (
-        <Classification
-          formData={formData}
-          handleChange={handleChange}
-          errors={formErrors}
-        />
-      ),
+      component: <Classification formData={formData} handleChange={handleChange} errors={formErrors} />,
     },
     {
       title: "Location",
-      component: (
-        <Location
-          formData={formData}
-          handleChange={handleChange}
-          setFormData={setFormData}
-          errors={formErrors}
-        />
-      ),
+      component: <Location formData={formData} handleChange={handleChange} setFormData={setFormData} errors={formErrors} />,
     },
     {
       title: "Dimensions",
-      component: (
-        <Dimension
-          formData={formData}
-          handleChange={handleChange}
-          setFormData={setFormData}
-          errors={formErrors}
-        />
-      ),
+      component: <Dimension formData={formData} handleChange={handleChange} setFormData={setFormData} errors={formErrors} />,
     },
     {
       title: "Pricing",
-      component: (
-        <Pricing
-          formData={formData}
-          handleChange={handleChange}
-          errors={formErrors}
-        />
-      ),
+      component: <Pricing formData={formData} handleChange={handleChange} errors={formErrors} />,
     },
     {
       title: "Financing",
@@ -542,13 +496,7 @@ export default function AddProperty() {
     },
     {
       title: "Utilities",
-      component: (
-        <Utilities
-          formData={formData}
-          handleChange={handleChange}
-          errors={formErrors}
-        />
-      ),
+      component: <Utilities formData={formData} handleChange={handleChange} errors={formErrors} />,
     },
     {
       title: "Market Analysis",
@@ -557,9 +505,7 @@ export default function AddProperty() {
           formData={formData}
           handleChange={handleChange}
           handleCmaFileUpload={handleCmaFileUpload}
-          handleCmaDataChange={(val) =>
-            setFormData((prev) => ({ ...prev, cmaData: val }))
-          }
+          handleCmaDataChange={(val) => setFormData((prev) => ({ ...prev, cmaData: val }))}
           errors={formErrors}
         />
       ),
@@ -587,9 +533,7 @@ export default function AddProperty() {
         {steps.map((item, index) => {
           const isActive = index === currentStep;
           const isCompleted = index < currentStep;
-          const hasErrors = Object.keys(requiredFieldsByStep[index] || {}).some(
-            (field) => Object.keys(formErrors).includes(field)
-          );
+          const hasErrors = Object.keys(requiredFieldsByStep[index] || {}).some((field) => Object.keys(formErrors).includes(field));
 
           return (
             <React.Fragment key={index}>
@@ -604,29 +548,18 @@ export default function AddProperty() {
                       : isActive
                       ? "border-blue-500 bg-blue-100 text-blue-700"
                       : "border-gray-300 bg-white text-gray-500"
-                  }`}
-                >
+                  }`}>
                   {isCompleted ? <Check className="w-4 h-4" /> : index + 1}
                 </div>
 
                 {/* Step title - shown underneath in small text */}
-                <span
-                  className={`text-xs mt-1 text-center ${
-                    hasErrors
-                      ? "font-semibold text-red-600"
-                      : isCompleted || isActive
-                      ? "font-semibold text-gray-900"
-                      : "text-gray-500"
-                  }`}
-                >
+                <span className={`text-xs mt-1 text-center ${hasErrors ? "font-semibold text-red-600" : isCompleted || isActive ? "font-semibold text-gray-900" : "text-gray-500"}`}>
                   {item.title}
                 </span>
               </div>
 
               {/* Connector line between steps */}
-              {index < steps.length - 1 && (
-                <div className="w-full h-[2px] bg-gray-300 mx-1"></div>
-              )}
+              {index < steps.length - 1 && <div className="w-full h-[2px] bg-gray-300 mx-1"></div>}
             </React.Fragment>
           );
         })}
@@ -636,9 +569,7 @@ export default function AddProperty() {
 
   return (
     <div className="max-w-6xl mx-auto p-6 space-y-6">
-      <h1 className="text-2xl md:text-3xl font-bold text-[#324c48] text-center mb-4">
-        Add New Property
-      </h1>
+      <h1 className="text-2xl md:text-3xl font-bold text-[#324c48] text-center mb-4">Add New Property</h1>
 
       {/* Step Indicator */}
       <StepIndicator currentStep={step} />
@@ -648,23 +579,14 @@ export default function AddProperty() {
         <div className="bg-red-50 border-l-4 border-red-500 p-4 mb-4 rounded-r-md">
           <div className="flex items-start">
             <div className="flex-shrink-0">
-              <AlertCircle
-                className="h-5 w-5 text-red-500"
-                aria-hidden="true"
-              />
+              <AlertCircle className="h-5 w-5 text-red-500" aria-hidden="true" />
             </div>
             <div className="ml-3">
-              <h3 className="text-sm font-medium text-red-800">
-                Please complete all required fields
-              </h3>
+              <h3 className="text-sm font-medium text-red-800">Please complete all required fields</h3>
               <div className="mt-2 text-sm text-red-700">
                 <ul className="list-disc pl-5 space-y-1">
                   {Object.keys(formErrors).map((field) => (
-                    <li key={field}>
-                      {field.charAt(0).toUpperCase() +
-                        field.slice(1).replace(/([A-Z])/g, " $1")}{" "}
-                      is required
-                    </li>
+                    <li key={field}>{field.charAt(0).toUpperCase() + field.slice(1).replace(/([A-Z])/g, " $1")} is required</li>
                   ))}
                 </ul>
               </div>
@@ -683,8 +605,7 @@ export default function AddProperty() {
             animate={{ x: 0, opacity: 1 }}
             exit={{ x: -50, opacity: 0 }}
             transition={{ duration: 0.3 }}
-            className="bg-white p-6 border border-gray-200 rounded-xl shadow-lg max-w-2xl mx-auto min-h-[640px]"
-          >
+            className="bg-white p-6 border border-gray-200 rounded-xl shadow-lg max-w-2xl mx-auto min-h-[640px]">
             {steps[step].component}
           </motion.div>
         </AnimatePresence>
@@ -694,25 +615,9 @@ export default function AddProperty() {
           <div>
             {/* Left container */}
             {step > 0 && (
-              <Button
-                type="button"
-                onClick={prevStep}
-                className="bg-gray-300 text-gray-800 px-4 py-2 rounded-md flex items-center"
-                disabled={isSubmitting}
-              >
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  className="h-5 w-5 mr-1"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M15 19l-7-7 7-7"
-                  />
+              <Button type="button" onClick={prevStep} className="bg-gray-300 text-gray-800 px-4 py-2 rounded-md flex items-center" disabled={isSubmitting}>
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
                 </svg>
                 Previous
               </Button>
@@ -722,34 +627,14 @@ export default function AddProperty() {
           <div>
             {/* Right container */}
             {step < steps.length - 1 ? (
-              <Button
-                type="button"
-                onClick={nextStep}
-                className="bg-[#324c48] text-white px-4 py-2 rounded-md flex items-center"
-              >
+              <Button type="button" onClick={nextStep} className="bg-[#324c48] text-white px-4 py-2 rounded-md flex items-center">
                 Next
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  className="h-5 w-5 ml-1"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M9 5l7 7-7 7"
-                  />
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 ml-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                 </svg>
               </Button>
             ) : (
-              <Button
-                type="button"
-                onClick={handleSubmitForm}
-                className="bg-green-600 text-white px-4 py-2 rounded-md flex items-center"
-                disabled={isSubmitting}
-              >
+              <Button type="button" onClick={handleSubmitForm} className="bg-green-600 text-white px-4 py-2 rounded-md flex items-center" disabled={isSubmitting}>
                 {isSubmitting ? (
                   <>
                     <Loader2 className="h-4 w-4 mr-2 animate-spin" />
@@ -758,19 +643,8 @@ export default function AddProperty() {
                 ) : (
                   <>
                     Submit
-                    <svg
-                      xmlns="http://www.w3.org/2000/svg"
-                      className="h-5 w-5 ml-1"
-                      fill="none"
-                      viewBox="0 0 24 24"
-                      stroke="currentColor"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M5 13l4 4L19 7"
-                      />
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 ml-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                     </svg>
                   </>
                 )}

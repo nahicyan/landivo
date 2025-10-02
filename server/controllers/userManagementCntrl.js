@@ -24,7 +24,7 @@ const storage = multer.diskStorage({
     const uniqueSuffix = Date.now() + "-" + Math.round(Math.random() * 1e9);
     const ext = path.extname(file.originalname);
     cb(null, "avatar-" + uniqueSuffix + ext);
-  }
+  },
 });
 
 export const uploadAvatar = multer({
@@ -33,13 +33,13 @@ export const uploadAvatar = multer({
   fileFilter: function (req, file, cb) {
     const allowedTypes = /jpeg|jpg|png|webp/;
     const ext = path.extname(file.originalname).toLowerCase();
-    
+
     if (allowedTypes.test(ext.substring(1))) {
       cb(null, true);
     } else {
       cb(new Error("Only image files (JPEG, PNG, WebP) are allowed."));
     }
-  }
+  },
 }).single("avatar");
 
 /**
@@ -48,26 +48,26 @@ export const uploadAvatar = multer({
  */
 export const getUserByAuth0Id = asyncHandler(async (req, res) => {
   const { auth0Id } = req.query;
-  
+
   if (!auth0Id) {
     return res.status(400).json({ message: "Auth0 ID is required" });
   }
-  
+
   try {
     const user = await prisma.user.findUnique({
-      where: { auth0Id }
+      where: { auth0Id },
     });
-    
+
     if (!user) {
       return res.status(404).json({ message: "User not found" });
     }
-    
+
     res.status(200).json(user);
   } catch (error) {
     console.error("Error fetching user by Auth0 ID:", error);
     res.status(500).json({
       message: "An error occurred while fetching user information",
-      error: error.message
+      error: error.message,
     });
   }
 });
@@ -78,17 +78,17 @@ export const getUserByAuth0Id = asyncHandler(async (req, res) => {
  */
 export const createOrUpdateUser = asyncHandler(async (req, res) => {
   const { auth0Id, firstName, lastName, email, phone, profileRole, avatarUrl, allowedProfiles } = req.body;
-  
+
   if (!auth0Id || !email) {
     return res.status(400).json({ message: "Auth0 ID and email are required" });
   }
-  
+
   try {
     // Try to find existing user
     let user = await prisma.user.findUnique({
-      where: { auth0Id }
+      where: { auth0Id },
     });
-    
+
     if (user) {
       // Update existing user with new fields
       user = await prisma.user.update({
@@ -102,13 +102,13 @@ export const createOrUpdateUser = asyncHandler(async (req, res) => {
           avatarUrl: avatarUrl || user.avatarUrl,
           allowedProfiles: allowedProfiles || user.allowedProfiles,
           lastLoginAt: new Date(),
-          loginCount: { increment: 1 }
-        }
+          loginCount: { increment: 1 },
+        },
       });
-      
+
       return res.status(200).json({
         message: "User updated successfully",
-        user
+        user,
       });
     } else {
       // Create new user with new fields
@@ -123,24 +123,23 @@ export const createOrUpdateUser = asyncHandler(async (req, res) => {
           avatarUrl,
           allowedProfiles: allowedProfiles || [],
           lastLoginAt: new Date(),
-          loginCount: 1
-        }
+          loginCount: 1,
+        },
       });
-      
+
       return res.status(201).json({
         message: "User created successfully",
-        user
+        user,
       });
     }
   } catch (error) {
     console.error("Error creating/updating user:", error);
     res.status(500).json({
       message: "An error occurred while creating/updating the user",
-      error: error.message
+      error: error.message,
     });
   }
 });
-
 
 /**
  * Get user profile - gets the current authenticated user's profile
@@ -149,11 +148,11 @@ export const getUserProfile = asyncHandler(async (req, res) => {
   try {
     // Auth0 ID should be in req.user.sub from the auth middleware
     const auth0Id = req.user?.sub;
-    
+
     if (!auth0Id) {
       return res.status(401).json({ message: "Unauthorized: User not authenticated" });
     }
-    
+
     const user = await prisma.user.findUnique({
       where: { auth0Id },
       include: {
@@ -164,22 +163,22 @@ export const getUserProfile = asyncHandler(async (req, res) => {
             streetAddress: true,
             city: true,
             state: true,
-            imageUrls: true
-          }
-        }
-      }
+            imageUrls: true,
+          },
+        },
+      },
     });
-    
+
     if (!user) {
       return res.status(404).json({ message: "User not found in database" });
     }
-    
+
     res.status(200).json(user);
   } catch (error) {
     console.error("Error fetching user profile:", error);
     res.status(500).json({
       message: "An error occurred while fetching user profile",
-      error: error.message
+      error: error.message,
     });
   }
 });
@@ -191,35 +190,35 @@ export const getUserProfile = asyncHandler(async (req, res) => {
 export const updateUserProfile = asyncHandler(async (req, res) => {
   try {
     const auth0Id = req.user?.sub;
-    
+
     if (!auth0Id) {
       return res.status(401).json({ message: "Unauthorized: User not authenticated" });
     }
 
     // Process file upload
-    uploadAvatar(req, res, async function(err) {
+    uploadAvatar(req, res, async function (err) {
       if (err) {
-        return res.status(400).json({ 
-          message: "Error uploading profile picture", 
-          error: err.message 
+        return res.status(400).json({
+          message: "Error uploading profile picture",
+          error: err.message,
         });
       }
-      
+
       // Get form data
       const { firstName, lastName, phone, profileRole, removeAvatar } = req.body;
-      
+
       // Get the existing user to check if it exists
       const existingUser = await prisma.user.findUnique({
-        where: { auth0Id }
+        where: { auth0Id },
       });
-      
+
       if (!existingUser) {
         return res.status(404).json({ message: "User not found" });
       }
-      
+
       // Handle avatar removal or replacement
       let avatarUrl = existingUser.avatarUrl;
-      
+
       // Remove existing avatar if requested or if uploading a new one
       if ((removeAvatar === "true" || req.file) && existingUser.avatarUrl) {
         const oldAvatarPath = path.join(__dirname, "..", existingUser.avatarUrl);
@@ -231,40 +230,40 @@ export const updateUserProfile = asyncHandler(async (req, res) => {
         } catch (err) {
           console.error(`Error deleting old avatar: ${err.message}`);
         }
-        
+
         // Set to null if removing without replacement
         if (removeAvatar === "true" && !req.file) {
           avatarUrl = null;
         }
       }
-      
+
       // Set new avatar URL if file was uploaded
       if (req.file) {
         avatarUrl = `uploads/avatars/${req.file.filename}`;
       }
-      
+
       // Update the user with new fields
       const updatedUser = await prisma.user.update({
         where: { auth0Id },
-        data: { 
-          firstName, 
+        data: {
+          firstName,
           lastName,
           phone,
           profileRole,
-          avatarUrl
-        }
+          avatarUrl,
+        },
       });
-      
+
       res.status(200).json({
         message: "Profile updated successfully",
-        user: updatedUser
+        user: updatedUser,
       });
     });
   } catch (error) {
     console.error("Error updating user profile:", error);
     res.status(500).json({
       message: "An error occurred while updating user profile",
-      error: error.message
+      error: error.message,
     });
   }
 });
@@ -275,23 +274,23 @@ export const getAllUsers = asyncHandler(async (req, res) => {
   try {
     const users = await prisma.user.findMany({
       orderBy: {
-        createdAt: "desc"
+        createdAt: "desc",
       },
       include: {
         createdResidencies: {
           select: {
-            id: true
-          }
-        }
-      }
+            id: true,
+          },
+        },
+      },
     });
-    
+
     res.status(200).json(users);
   } catch (error) {
     console.error("Error fetching all users:", error);
     res.status(500).json({
       message: "An error occurred while fetching users",
-      error: error.message
+      error: error.message,
     });
   }
 });
@@ -301,7 +300,7 @@ export const getAllUsers = asyncHandler(async (req, res) => {
  */
 export const getUserById = asyncHandler(async (req, res) => {
   const { id } = req.params;
-  
+
   try {
     const user = await prisma.user.findUnique({
       where: { id },
@@ -313,22 +312,22 @@ export const getUserById = asyncHandler(async (req, res) => {
             streetAddress: true,
             city: true,
             state: true,
-            imageUrls: true
-          }
-        }
-      }
+            imageUrls: true,
+          },
+        },
+      },
     });
-    
+
     if (!user) {
       return res.status(404).json({ message: "User not found" });
     }
-    
+
     res.status(200).json(user);
   } catch (error) {
     console.error("Error fetching user by ID:", error);
     res.status(500).json({
       message: "An error occurred while fetching user information",
-      error: error.message
+      error: error.message,
     });
   }
 });
@@ -339,24 +338,24 @@ export const getUserById = asyncHandler(async (req, res) => {
 export const updateUserStatus = asyncHandler(async (req, res) => {
   const { id } = req.params;
   const { isActive } = req.body;
-  
+
   try {
     const updatedUser = await prisma.user.update({
       where: { id },
-      data: { 
-        isActive: isActive === true || isActive === "true"
-      }
+      data: {
+        isActive: isActive === true || isActive === "true",
+      },
     });
-    
+
     res.status(200).json({
       message: `User ${isActive ? "enabled" : "disabled"} successfully`,
-      user: updatedUser
+      user: updatedUser,
     });
   } catch (error) {
     console.error("Error updating user status:", error);
     res.status(500).json({
       message: "An error occurred while updating user status",
-      error: error.message
+      error: error.message,
     });
   }
 });
@@ -367,22 +366,22 @@ export const updateUserStatus = asyncHandler(async (req, res) => {
 export const updateUserProfiles = asyncHandler(async (req, res) => {
   const { id } = req.params;
   const { allowedProfiles } = req.body;
-  
+
   try {
     const user = await prisma.user.update({
       where: { id },
-      data: { allowedProfiles }
+      data: { allowedProfiles },
     });
-    
+
     res.status(200).json({
       message: "User profiles updated successfully",
-      user
+      user,
     });
   } catch (error) {
     console.error("Error updating user profiles:", error);
     res.status(500).json({
       message: "An error occurred while updating user profiles",
-      error: error.message
+      error: error.message,
     });
   }
 });
@@ -395,63 +394,61 @@ export const getProfilesForPropertyAssignment = asyncHandler(async (req, res) =>
   try {
     // Get current user's ID from the auth token
     const auth0Id = req.user?.sub;
-    
+
     if (!auth0Id) {
       return res.status(401).json({ message: "Unauthorized: User not authenticated" });
     }
-    
+
     // Get the current user from database to get their allowedProfiles
     const currentUser = await prisma.user.findUnique({
       where: { auth0Id },
-      select: { 
+      select: {
         id: true,
-        allowedProfiles: true 
-      }
+        allowedProfiles: true,
+      },
     });
-    
+
     if (!currentUser) {
       return res.status(404).json({ message: "User not found" });
     }
-    
+
     // Get only the profiles that the user is allowed to use
     const allowedProfileIds = currentUser.allowedProfiles || [];
-    
+
     // Include the user's own profile
     if (!allowedProfileIds.includes(currentUser.id)) {
       allowedProfileIds.push(currentUser.id);
     }
-    
+
     const users = await prisma.user.findMany({
       where: {
-        id: { in: allowedProfileIds }
+        id: { in: allowedProfileIds },
       },
       select: {
         id: true,
         firstName: true,
         lastName: true,
         email: true,
-        profileRole: true
+        profileRole: true,
       },
       orderBy: {
-        firstName: "asc"
-      }
+        firstName: "asc",
+      },
     });
-    
+
     // Return limited profile data
-    const profiles = users.map(user => ({
+    const profiles = users.map((user) => ({
       id: user.id,
-      name: user.firstName && user.lastName ? 
-        `${user.firstName} ${user.lastName}` : 
-        user.email || `User (${user.id.substring(0, 8)}...)`,
-      role: user.profileRole || "Landivo Expert"
+      name: user.firstName && user.lastName ? `${user.firstName} ${user.lastName}` : user.email || `User (${user.id.substring(0, 8)}...)`,
+      role: user.profileRole || "Landivo Expert",
     }));
-    
+
     res.status(200).json(profiles);
   } catch (error) {
     console.error("Error fetching profiles for property assignment:", error);
     res.status(500).json({
       message: "An error occurred while fetching profiles",
-      error: error.message
+      error: error.message,
     });
   }
 });
@@ -462,7 +459,7 @@ export const getProfilesForPropertyAssignment = asyncHandler(async (req, res) =>
  */
 export const getPublicProfileById = asyncHandler(async (req, res) => {
   const { id } = req.params;
-  
+
   try {
     const user = await prisma.user.findUnique({
       where: { id },
@@ -473,20 +470,20 @@ export const getPublicProfileById = asyncHandler(async (req, res) => {
         email: true,
         phone: true,
         profileRole: true,
-        avatarUrl: true
-      }
+        avatarUrl: true,
+      },
     });
-    
+
     if (!user) {
       return res.status(404).json({ message: "Profile not found" });
     }
-    
+
     res.status(200).json(user);
   } catch (error) {
     console.error("Error fetching public profile:", error);
     res.status(500).json({
       message: "An error occurred while fetching profile information",
-      error: error.message
+      error: error.message,
     });
   }
 });
@@ -498,7 +495,7 @@ export const getPublicProfileById = asyncHandler(async (req, res) => {
  */
 export const getPropertiesUsingProfile = asyncHandler(async (req, res) => {
   const { id } = req.params;
-  
+
   try {
     const properties = await prisma.residency.findMany({
       where: { profileId: id },
@@ -508,19 +505,19 @@ export const getPropertiesUsingProfile = asyncHandler(async (req, res) => {
         streetAddress: true,
         city: true,
         state: true,
-        zip: true
+        zip: true,
       },
       orderBy: {
-        updatedAt: "desc"
-      }
+        updatedAt: "desc",
+      },
     });
-    
+
     res.status(200).json(properties);
   } catch (error) {
     console.error("Error fetching properties using profile:", error);
     res.status(500).json({
       message: "An error occurred while fetching properties",
-      error: error.message
+      error: error.message,
     });
   }
 });
@@ -530,18 +527,18 @@ export const getPropertiesUsingProfile = asyncHandler(async (req, res) => {
  */
 export const getPropertiesCountByProfile = asyncHandler(async (req, res) => {
   const { id } = req.params;
-  
+
   try {
     const count = await prisma.residency.count({
-      where: { profileId: id }
+      where: { profileId: id },
     });
-    
+
     res.status(200).json({ count });
   } catch (error) {
     console.error("Error counting properties using profile:", error);
     res.status(500).json({
       message: "An error occurred while counting properties",
-      error: error.message
+      error: error.message,
     });
   }
 });
@@ -552,37 +549,37 @@ export const getPropertiesCountByProfile = asyncHandler(async (req, res) => {
 export const reassignProperties = asyncHandler(async (req, res) => {
   const { id } = req.params;
   const { newProfileId } = req.body;
-  
+
   if (!newProfileId) {
     return res.status(400).json({ message: "New profile ID is required" });
   }
-  
+
   try {
     // Check if new profile exists
     const newProfile = await prisma.user.findUnique({
       where: { id: newProfileId },
-      select: { id: true }
+      select: { id: true },
     });
-    
+
     if (!newProfile) {
       return res.status(404).json({ message: "New profile not found" });
     }
-    
+
     // Update all properties using the old profile ID
     const result = await prisma.residency.updateMany({
       where: { profileId: id },
-      data: { profileId: newProfileId }
+      data: { profileId: newProfileId },
     });
-    
+
     res.status(200).json({
       message: `${result.count} properties reassigned successfully`,
-      updatedCount: result.count
+      updatedCount: result.count,
     });
   } catch (error) {
     console.error("Error reassigning properties:", error);
     res.status(500).json({
       message: "An error occurred while reassigning properties",
-      error: error.message
+      error: error.message,
     });
   }
 });
@@ -595,11 +592,7 @@ export const reassignProperties = asyncHandler(async (req, res) => {
 export const getPublicProfiles = asyncHandler(async (req, res) => {
   try {
     // Query parameters for optional filtering
-    const { 
-      limit = 50, 
-      offset = 0, 
-      profileRole 
-    } = req.query;
+    const { limit = 50, offset = 0, profileRole } = req.query;
 
     // Build where clause
     const whereClause = {
@@ -607,12 +600,9 @@ export const getPublicProfiles = asyncHandler(async (req, res) => {
       // Ensure user has basic profile info
       AND: [
         {
-          OR: [
-            { firstName: { not: null } },
-            { lastName: { not: null } }
-          ]
-        }
-      ]
+          OR: [{ firstName: { not: null } }, { lastName: { not: null } }],
+        },
+      ],
     };
 
     // Add profileRole filter if provided
@@ -629,20 +619,16 @@ export const getPublicProfiles = asyncHandler(async (req, res) => {
         email: true,
         phone: true,
         profileRole: true,
-        avatarUrl: true
+        avatarUrl: true,
       },
-      orderBy: [
-        { profileRole: "asc" },
-        { firstName: "asc" },
-        { lastName: "asc" }
-      ],
+      orderBy: [{ profileRole: "asc" }, { firstName: "asc" }, { lastName: "asc" }],
       take: parseInt(limit),
-      skip: parseInt(offset)
+      skip: parseInt(offset),
     });
 
     // Get total count for pagination
     const totalCount = await prisma.user.count({
-      where: whereClause
+      where: whereClause,
     });
 
     res.status(200).json({
@@ -651,14 +637,14 @@ export const getPublicProfiles = asyncHandler(async (req, res) => {
         total: totalCount,
         limit: parseInt(limit),
         offset: parseInt(offset),
-        hasMore: parseInt(offset) + users.length < totalCount
-      }
+        hasMore: parseInt(offset) + users.length < totalCount,
+      },
     });
   } catch (error) {
     console.error("Error fetching public profiles:", error);
     res.status(500).json({
       message: "An error occurred while fetching profiles",
-      error: error.message
+      error: error.message,
     });
   }
 });

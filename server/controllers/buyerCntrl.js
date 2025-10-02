@@ -15,7 +15,7 @@ export const createVipBuyer = asyncHandler(async (req, res) => {
   // Validate required fields
   if (!email || !phone || !buyerType || !firstName || !lastName || !preferredAreas || !Array.isArray(preferredAreas)) {
     res.status(400).json({
-      message: "All fields are required including preferred areas."
+      message: "All fields are required including preferred areas.",
     });
     return;
   }
@@ -38,7 +38,7 @@ export const createVipBuyer = asyncHandler(async (req, res) => {
           buyerType,
           preferredAreas,
           source: "VIP Buyers List",
-          auth0Id  // Add Auth0 user ID to the buyer record
+          auth0Id, // Add Auth0 user ID to the buyer record
         },
       });
     } else {
@@ -52,7 +52,7 @@ export const createVipBuyer = asyncHandler(async (req, res) => {
           lastName,
           preferredAreas,
           source: "VIP Buyers List",
-          auth0Id  // Add Auth0 user ID to the buyer record
+          auth0Id, // Add Auth0 user ID to the buyer record
         },
       });
     }
@@ -60,18 +60,13 @@ export const createVipBuyer = asyncHandler(async (req, res) => {
     // Handle VIP buyer email list management for each preferred area
     try {
       const emailListResults = [];
-      
+
       for (const area of preferredAreas) {
-        const emailListResult = await handleVipBuyerEmailList(
-          buyer, 
-          "VIP", 
-          area, 
-          buyerType
-        );
+        const emailListResult = await handleVipBuyerEmailList(buyer, "VIP", area, buyerType);
         emailListResults.push(emailListResult);
         console.log(`VIP email list result for ${area}:`, emailListResult);
       }
-      
+
       console.log("All VIP email list management completed:", emailListResults);
     } catch (emailListError) {
       console.error("VIP email list management failed:", emailListError);
@@ -105,11 +100,11 @@ export const getAllBuyers = asyncHandler(async (req, res) => {
             id: true,
             propertyId: true,
             offeredPrice: true,
-            timestamp: true
+            timestamp: true,
           },
           orderBy: {
-            timestamp: "desc"
-          }
+            timestamp: "desc",
+          },
         },
         // Add email list memberships to include current list associations
         emailListMemberships: {
@@ -118,15 +113,15 @@ export const getAllBuyers = asyncHandler(async (req, res) => {
               select: {
                 id: true,
                 name: true,
-                description: true
-              }
-            }
-          }
-        }
+                description: true,
+              },
+            },
+          },
+        },
       },
       orderBy: {
-        createdAt: "desc"
-      }
+        createdAt: "desc",
+      },
     });
 
     res.status(200).json(buyers);
@@ -134,7 +129,7 @@ export const getAllBuyers = asyncHandler(async (req, res) => {
     console.error("Error fetching buyers:", err);
     res.status(500).json({
       message: "An error occurred while fetching buyers",
-      error: err.message
+      error: err.message,
     });
   }
 });
@@ -160,11 +155,11 @@ export const getBuyerById = asyncHandler(async (req, res) => {
             id: true,
             propertyId: true,
             offeredPrice: true,
-            timestamp: true
+            timestamp: true,
           },
           orderBy: {
-            timestamp: "desc"
-          }
+            timestamp: "desc",
+          },
         },
         emailListMemberships: {
           include: {
@@ -172,12 +167,12 @@ export const getBuyerById = asyncHandler(async (req, res) => {
               select: {
                 id: true,
                 name: true,
-                description: true
-              }
-            }
-          }
-        }
-      }
+                description: true,
+              },
+            },
+          },
+        },
+      },
     });
 
     if (!buyer) {
@@ -189,7 +184,7 @@ export const getBuyerById = asyncHandler(async (req, res) => {
     console.error("Error fetching buyer:", err);
     res.status(500).json({
       message: "An error occurred while fetching the buyer",
-      error: err.message
+      error: err.message,
     });
   }
 });
@@ -201,15 +196,7 @@ export const getBuyerById = asyncHandler(async (req, res) => {
  */
 export const updateBuyer = asyncHandler(async (req, res) => {
   const { id } = req.params;
-  const {
-    firstName,
-    lastName,
-    email,
-    phone,
-    buyerType,
-    source,
-    preferredAreas
-  } = req.body;
+  const { firstName, lastName, email, phone, buyerType, source, preferredAreas } = req.body;
 
   if (!id) {
     return res.status(400).json({ message: "Buyer ID is required" });
@@ -223,7 +210,7 @@ export const updateBuyer = asyncHandler(async (req, res) => {
   try {
     // Check if buyer exists
     const existingBuyer = await prisma.buyer.findUnique({
-      where: { id }
+      where: { id },
     });
 
     if (!existingBuyer) {
@@ -233,10 +220,10 @@ export const updateBuyer = asyncHandler(async (req, res) => {
     // Check if email is changing and if it's already in use
     if (email.toLowerCase() !== existingBuyer.email) {
       const emailExists = await prisma.buyer.findFirst({
-        where: { 
+        where: {
           email: email.toLowerCase(),
-          id: { not: id } // Exclude current buyer
-        }
+          id: { not: id }, // Exclude current buyer
+        },
       });
 
       if (emailExists) {
@@ -247,10 +234,10 @@ export const updateBuyer = asyncHandler(async (req, res) => {
     // Check if phone is changing and if it's already in use (only if phone is provided)
     if (phone && phone.trim() && phone !== existingBuyer.phone) {
       const phoneExists = await prisma.buyer.findFirst({
-        where: { 
+        where: {
           phone: phone,
-          id: { not: id } // Exclude current buyer
-        }
+          id: { not: id }, // Exclude current buyer
+        },
       });
 
       if (phoneExists) {
@@ -268,16 +255,16 @@ export const updateBuyer = asyncHandler(async (req, res) => {
         phone: phone && phone.trim() ? phone : null,
         buyerType: buyerType || null,
         source,
-        preferredAreas: preferredAreas || []
+        preferredAreas: preferredAreas || [],
       },
       include: {
         offers: true,
         emailListMemberships: {
           include: {
-            emailList: true
-          }
-        }
-      }
+            emailList: true,
+          },
+        },
+      },
     });
 
     res.status(200).json(updatedBuyer);
@@ -285,7 +272,7 @@ export const updateBuyer = asyncHandler(async (req, res) => {
     console.error("Error updating buyer:", err);
     res.status(500).json({
       message: "An error occurred while updating the buyer",
-      error: err.message
+      error: err.message,
     });
   }
 });
@@ -305,7 +292,7 @@ export const deleteBuyer = asyncHandler(async (req, res) => {
   try {
     // Check if buyer exists
     const existingBuyer = await prisma.buyer.findUnique({
-      where: { id }
+      where: { id },
     });
 
     if (!existingBuyer) {
@@ -313,36 +300,36 @@ export const deleteBuyer = asyncHandler(async (req, res) => {
     }
 
     // Delete all related records first (due to foreign key constraints)
-    
+
     // 1. Delete email list memberships
     await prisma.buyerEmailList.deleteMany({
-      where: { buyerId: id }
+      where: { buyerId: id },
     });
 
     // 2. Delete buyer activities
     await prisma.buyerActivity.deleteMany({
-      where: { buyerId: id }
+      where: { buyerId: id },
     });
 
     // 3. Delete offers from this buyer
     await prisma.offer.deleteMany({
-      where: { buyerId: id }
+      where: { buyerId: id },
     });
 
     // 4. Finally delete the buyer
     const deletedBuyer = await prisma.buyer.delete({
-      where: { id }
+      where: { id },
     });
 
     res.status(200).json({
       message: "Buyer and all associated records deleted successfully",
-      buyer: deletedBuyer
+      buyer: deletedBuyer,
     });
   } catch (err) {
     console.error("Error deleting buyer:", err);
     res.status(500).json({
       message: "An error occurred while deleting the buyer",
-      error: err.message
+      error: err.message,
     });
   }
 });
@@ -363,13 +350,13 @@ export const createBuyer = asyncHandler(async (req, res) => {
     preferredAreas,
     emailStatus,
     emailPermissionStatus,
-    emailLists // Array of list names or IDs
+    emailLists, // Array of list names or IDs
   } = req.body;
 
   // Validate required fields
   if (!email || !phone || !firstName || !lastName) {
     res.status(400).json({
-      message: "Email, phone, firstName, and lastName are required."
+      message: "Email, phone, firstName, and lastName are required.",
     });
     return;
   }
@@ -378,17 +365,14 @@ export const createBuyer = asyncHandler(async (req, res) => {
     // Check if buyer already exists
     const existingBuyer = await prisma.buyer.findFirst({
       where: {
-        OR: [
-          { email: email.toLowerCase() },
-          { phone }
-        ]
-      }
+        OR: [{ email: email.toLowerCase() }, { phone }],
+      },
     });
 
     if (existingBuyer) {
       res.status(409).json({
         message: "A buyer with this email or phone number already exists.",
-        existingBuyer
+        existingBuyer,
       });
       return;
     }
@@ -398,11 +382,11 @@ export const createBuyer = asyncHandler(async (req, res) => {
     if (emailLists && emailLists.length > 0) {
       const lists = await prisma.emailList.findMany({
         where: {
-          name: { in: emailLists }
+          name: { in: emailLists },
         },
-        select: { id: true }
+        select: { id: true },
       });
-      emailListConnections = lists.map(list => ({ id: list.id }));
+      emailListConnections = lists.map((list) => ({ id: list.id }));
     }
 
     // Create new buyer with email list connections
@@ -418,29 +402,29 @@ export const createBuyer = asyncHandler(async (req, res) => {
         emailStatus: emailStatus || "available",
         emailPermissionStatus,
         emailListMemberships: {
-          create: emailListConnections.map(listId => ({
-            emailList: { connect: { id: listId } }
-          }))
-        }
+          create: emailListConnections.map((listId) => ({
+            emailList: { connect: { id: listId } },
+          })),
+        },
       },
       include: {
         emailListMemberships: {
           include: {
-            emailList: true
-          }
-        }
-      }
+            emailList: true,
+          },
+        },
+      },
     });
 
     res.status(201).json({
       message: "Buyer created successfully.",
-      buyer
+      buyer,
     });
   } catch (err) {
     console.error("Error creating buyer:", err);
     res.status(500).json({
       message: "An error occurred while processing the request.",
-      error: err.message
+      error: err.message,
     });
   }
 });
@@ -461,24 +445,24 @@ export const getBuyersByArea = asyncHandler(async (req, res) => {
     const buyers = await prisma.buyer.findMany({
       where: {
         preferredAreas: {
-          has: areaId
-        }
+          has: areaId,
+        },
       },
       orderBy: {
-        createdAt: "desc"
-      }
+        createdAt: "desc",
+      },
     });
 
     res.status(200).json({
       areaId,
       count: buyers.length,
-      buyers
+      buyers,
     });
   } catch (err) {
     console.error("Error fetching buyers by area:", err);
     res.status(500).json({
       message: "An error occurred while fetching buyers by area",
-      error: err.message
+      error: err.message,
     });
   }
 });
@@ -504,13 +488,13 @@ export const sendEmailToBuyers = asyncHandler(async (req, res) => {
     const buyers = await prisma.buyer.findMany({
       where: {
         id: { in: buyerIds },
-        ...(includeUnsubscribed ? {} : { unsubscribed: false })
-      }
+        ...(includeUnsubscribed ? {} : { unsubscribed: false }),
+      },
     });
 
     if (buyers.length === 0) {
       return res.status(404).json({
-        message: "No eligible buyers found with the provided IDs"
+        message: "No eligible buyers found with the provided IDs",
       });
     }
 
@@ -518,7 +502,7 @@ export const sendEmailToBuyers = asyncHandler(async (req, res) => {
     // Here we'll simulate sending emails
 
     // Process email content with placeholders
-    const emailsSent = buyers.map(buyer => {
+    const emailsSent = buyers.map((buyer) => {
       // Replace placeholders with buyer data
       const personalizedContent = content
         .replace(/{firstName}/g, buyer.firstName)
@@ -532,7 +516,7 @@ export const sendEmailToBuyers = asyncHandler(async (req, res) => {
         buyerId: buyer.id,
         email: buyer.email,
         name: `${buyer.firstName} ${buyer.lastName}`,
-        status: "sent" // In a real implementation, this would be the actual status
+        status: "sent", // In a real implementation, this would be the actual status
       };
     });
 
@@ -542,13 +526,13 @@ export const sendEmailToBuyers = asyncHandler(async (req, res) => {
     res.status(200).json({
       message: `Successfully sent emails to ${emailsSent.length} buyers`,
       emailsSent,
-      failedCount: buyerIds.length - emailsSent.length
+      failedCount: buyerIds.length - emailsSent.length,
     });
   } catch (err) {
     console.error("Error sending emails to buyers:", err);
     res.status(500).json({
       message: "An error occurred while sending emails",
-      error: err.message
+      error: err.message,
     });
   }
 });
@@ -572,31 +556,20 @@ export const importBuyersFromCsv = asyncHandler(async (req, res) => {
       failed: 0,
       errors: [],
       createdBuyerIds: [],
-      updatedBuyerIds: []
+      updatedBuyerIds: [],
     };
 
     // Process each buyer
     for (const buyerData of buyers) {
       try {
-        const {
-          email,
-          phone,
-          firstName,
-          lastName,
-          buyerType,
-          preferredAreas,
-          emailStatus,
-          emailPermissionStatus,
-          isNew,
-          existingBuyerId
-        } = buyerData;
+        const { email, phone, firstName, lastName, buyerType, preferredAreas, emailStatus, emailPermissionStatus, isNew, existingBuyerId } = buyerData;
 
         // Check required fields
         if (!email) {
           results.failed++;
           results.errors.push({
             data: buyerData,
-            reason: "Missing required email field"
+            reason: "Missing required email field",
           });
           continue;
         }
@@ -613,13 +586,12 @@ export const importBuyersFromCsv = asyncHandler(async (req, res) => {
               source: source,
               preferredAreas: preferredAreas || [],
               emailStatus: emailStatus || "available",
-              emailPermissionStatus: emailPermissionStatus || null
-            }
+              emailPermissionStatus: emailPermissionStatus || null,
+            },
           });
 
           results.created++;
           results.createdBuyerIds.push(newBuyer.id);
-          
         } else if (existingBuyerId) {
           // Update existing buyer (duplicates are handled in the frontend)
           await prisma.buyer.update({
@@ -631,32 +603,31 @@ export const importBuyersFromCsv = asyncHandler(async (req, res) => {
               preferredAreas: preferredAreas || undefined,
               source: source || undefined,
               emailStatus: emailStatus || undefined,
-              emailPermissionStatus: emailPermissionStatus || undefined
-            }
+              emailPermissionStatus: emailPermissionStatus || undefined,
+            },
           });
 
           results.updated++;
           results.updatedBuyerIds.push(existingBuyerId);
         }
-        
       } catch (err) {
         results.failed++;
         results.errors.push({
           data: buyerData,
-          reason: err.message
+          reason: err.message,
         });
       }
     }
 
     res.status(200).json({
       message: `Processed ${buyers.length} buyers: ${results.created} created, ${results.updated} updated, ${results.failed} failed`,
-      results
+      results,
     });
   } catch (err) {
     console.error("Error importing buyers:", err);
     res.status(500).json({
       message: "An error occurred while importing buyers",
-      error: err.message
+      error: err.message,
     });
   }
 });
@@ -673,7 +644,7 @@ export const getBuyerStats = asyncHandler(async (req, res) => {
 
     // Get count of VIP buyers
     const vipCount = await prisma.buyer.count({
-      where: { source: "VIP Buyers List" }
+      where: { source: "VIP Buyers List" },
     });
 
     // Get counts by area (this is more complex with array fields)
@@ -685,8 +656,8 @@ export const getBuyerStats = asyncHandler(async (req, res) => {
         preferredAreas: true,
         buyerType: true,
         source: true,
-        createdAt: true
-      }
+        createdAt: true,
+      },
     });
 
     // Manually count by area
@@ -697,10 +668,10 @@ export const getBuyerStats = asyncHandler(async (req, res) => {
     // Process for time-based analytics - group by month
     const monthlyGrowth = {};
 
-    buyers.forEach(buyer => {
+    buyers.forEach((buyer) => {
       // Count by area
       if (buyer.preferredAreas) {
-        buyer.preferredAreas.forEach(area => {
+        buyer.preferredAreas.forEach((area) => {
           byArea[area] = (byArea[area] || 0) + 1;
         });
       }
@@ -717,7 +688,7 @@ export const getBuyerStats = asyncHandler(async (req, res) => {
       // Process for monthly growth
       if (buyer.createdAt) {
         const date = new Date(buyer.createdAt);
-        const monthKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+        const monthKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`;
         monthlyGrowth[monthKey] = (monthlyGrowth[monthKey] || 0) + 1;
       }
     });
@@ -729,13 +700,13 @@ export const getBuyerStats = asyncHandler(async (req, res) => {
       byArea,
       byType,
       bySource,
-      monthlyGrowth
+      monthlyGrowth,
     });
   } catch (err) {
     console.error("Error getting buyer stats:", err);
     res.status(500).json({
       message: "An error occurred while fetching buyer statistics",
-      error: err.message
+      error: err.message,
     });
   }
 });
@@ -755,7 +726,7 @@ export const getBuyerByAuth0Id = asyncHandler(async (req, res) => {
   try {
     // Find buyer by Auth0 ID
     const buyer = await prisma.buyer.findFirst({
-      where: { auth0Id }
+      where: { auth0Id },
     });
 
     if (!buyer) {
@@ -768,7 +739,7 @@ export const getBuyerByAuth0Id = asyncHandler(async (req, res) => {
     console.error("Error fetching buyer by Auth0 ID:", err);
     res.status(500).json({
       message: "An error occurred while fetching buyer information",
-      error: err.message
+      error: err.message,
     });
   }
 });
@@ -787,36 +758,36 @@ export const bulkDeleteBuyers = asyncHandler(async (req, res) => {
 
   try {
     // Delete all related records first (due to foreign key constraints)
-    
+
     // 1. Delete email list memberships
     await prisma.buyerEmailList.deleteMany({
-      where: { buyerId: { in: buyerIds } }
+      where: { buyerId: { in: buyerIds } },
     });
 
     // 2. Delete buyer activities
     await prisma.buyerActivity.deleteMany({
-      where: { buyerId: { in: buyerIds } }
+      where: { buyerId: { in: buyerIds } },
     });
 
     // 3. Delete offers
     await prisma.offer.deleteMany({
-      where: { buyerId: { in: buyerIds } }
+      where: { buyerId: { in: buyerIds } },
     });
 
     // 4. Delete buyers
     const result = await prisma.buyer.deleteMany({
-      where: { id: { in: buyerIds } }
+      where: { id: { in: buyerIds } },
     });
 
     res.status(200).json({
       message: `${result.count} buyers and all associated records deleted successfully`,
-      deletedCount: result.count
+      deletedCount: result.count,
     });
   } catch (err) {
     console.error("Error bulk deleting buyers:", err);
     res.status(500).json({
       message: "An error occurred while deleting buyers",
-      error: err.message
+      error: err.message,
     });
   }
 });

@@ -10,7 +10,7 @@ export const getSettings = asyncHandler(async (req, res) => {
   try {
     // Try to find settings
     let settings = await prisma.settings.findFirst();
-    
+
     // If no settings exist, create default settings
     if (!settings) {
       settings = await prisma.settings.create({
@@ -23,20 +23,20 @@ export const getSettings = asyncHandler(async (req, res) => {
           enableOfferEmails: false,
           offerEmailRecipients: [],
           enableFinancingEmails: false,
-          financingEmailRecipients: []
-        }
+          financingEmailRecipients: [],
+        },
       });
     }
-    
+
     // Don't send the password back for security
     const { smtpPassword, ...safeSettings } = settings;
-    
+
     res.status(200).json(safeSettings);
   } catch (error) {
     console.error("Error fetching settings:", error);
     res.status(500).json({
       message: "An error occurred while fetching settings",
-      error: error.message
+      error: error.message,
     });
   }
 });
@@ -45,22 +45,12 @@ export const getSettings = asyncHandler(async (req, res) => {
  * Update settings
  */
 export const updateSettings = asyncHandler(async (req, res) => {
-  const { 
-    overrideContactPhone, 
-    smtpServer, 
-    smtpPort, 
-    smtpUser, 
-    smtpPassword,
-    enableOfferEmails,
-    offerEmailRecipients,
-    enableFinancingEmails,
-    financingEmailRecipients
-  } = req.body;
-  
+  const { overrideContactPhone, smtpServer, smtpPort, smtpUser, smtpPassword, enableOfferEmails, offerEmailRecipients, enableFinancingEmails, financingEmailRecipients } = req.body;
+
   try {
     // Get existing settings or create if none exist
     let settings = await prisma.settings.findFirst();
-    
+
     // Prepare update data
     const updateData = {
       overrideContactPhone,
@@ -71,39 +61,39 @@ export const updateSettings = asyncHandler(async (req, res) => {
       offerEmailRecipients: offerEmailRecipients || [],
       enableFinancingEmails: enableFinancingEmails || false,
       financingEmailRecipients: financingEmailRecipients || [],
-      updatedAt: new Date()
+      updatedAt: new Date(),
     };
-    
+
     // Only update password if provided
     if (smtpPassword) {
       updateData.smtpPassword = smtpPassword;
     }
-    
+
     if (settings) {
       // Update existing settings
       settings = await prisma.settings.update({
         where: { id: settings.id },
-        data: updateData
+        data: updateData,
       });
     } else {
       // Create new settings if none exist
       settings = await prisma.settings.create({
-        data: updateData
+        data: updateData,
       });
     }
-    
+
     // Don't send the password back for security
     const { smtpPassword: pass, ...safeSettings } = settings;
-    
+
     res.status(200).json({
       message: "Settings updated successfully",
-      settings: safeSettings
+      settings: safeSettings,
     });
   } catch (error) {
     console.error("Error updating settings:", error);
     res.status(500).json({
       message: "An error occurred while updating settings",
-      error: error.message
+      error: error.message,
     });
   }
 });
@@ -122,21 +112,21 @@ export const testSmtpConnection = asyncHandler(async (req, res) => {
   try {
     // Get existing settings from database for any missing fields
     const dbSettings = await prisma.settings.findFirst();
-    
+
     if (!dbSettings) {
       return res.status(400).json({ message: "No SMTP settings found in database" });
     }
-    
+
     // Use provided values or fall back to database values
     const server = smtpServer || dbSettings.smtpServer;
     const port = smtpPort || dbSettings.smtpPort;
     const user = smtpUser || dbSettings.smtpUser;
     const password = smtpPassword || dbSettings.smtpPassword;
-    
+
     // Check if we have the minimum required settings
     if (!server || !port || !user || !password) {
-      return res.status(400).json({ 
-        message: "Incomplete SMTP configuration. Please configure SMTP settings first." 
+      return res.status(400).json({
+        message: "Incomplete SMTP configuration. Please configure SMTP settings first.",
       });
     }
 
@@ -147,17 +137,17 @@ export const testSmtpConnection = asyncHandler(async (req, res) => {
       secure: parseInt(port, 10) === 465, // true for 465, false for other ports
       auth: {
         user: user,
-        pass: password
+        pass: password,
       },
       // Connection timeout settings
       connectionTimeout: 10000, // 10 seconds
-      greetingTimeout: 10000,   // 10 seconds
-      socketTimeout: 10000,     // 10 seconds
+      greetingTimeout: 10000, // 10 seconds
+      socketTimeout: 10000, // 10 seconds
     });
-    
+
     // Verify the connection configuration
     await transporter.verify();
-    
+
     // Send test email
     await transporter.sendMail({
       from: `"Landivo System" <${user}>`,
@@ -186,33 +176,33 @@ export const testSmtpConnection = asyncHandler(async (req, res) => {
           &copy; ${new Date().getFullYear()} Landivo. All rights reserved.
         </p>
       </div>
-      `
+      `,
     });
-    
+
     res.status(200).json({
       success: true,
-      message: `SMTP test successful! Email sent to ${testRecipient}`
+      message: `SMTP test successful! Email sent to ${testRecipient}`,
     });
   } catch (error) {
     console.error("SMTP connection test failed:", error);
-    
+
     // Provide more descriptive error messages based on common issues
     let errorMessage = "SMTP connection failed";
-    
-    if (error.code === 'ECONNREFUSED') {
+
+    if (error.code === "ECONNREFUSED") {
       errorMessage = "Connection refused. Check your SMTP server address and port.";
-    } else if (error.code === 'ETIMEDOUT') {
+    } else if (error.code === "ETIMEDOUT") {
       errorMessage = "Connection timed out. Server may be down or blocked by a firewall.";
-    } else if (error.code === 'EAUTH') {
+    } else if (error.code === "EAUTH") {
       errorMessage = "Authentication failed. Check your username and password.";
     } else if (error.responseCode >= 500) {
       errorMessage = `SMTP server error (${error.responseCode}): ${error.response}`;
     }
-    
+
     res.status(500).json({
       success: false,
       message: errorMessage,
-      error: error.message
+      error: error.message,
     });
   }
 });

@@ -19,9 +19,7 @@ const managePropertyRowsDisplayOrder = async (propertyId, propertyRows) => {
     const existingRowIds = existingRows.map((r) => r.id);
 
     // 2) Figure out which of those to delete (i.e. not in the new list)
-    const newRowIds = Array.isArray(propertyRows)
-      ? propertyRows.map((r) => r.rowId)
-      : [];
+    const newRowIds = Array.isArray(propertyRows) ? propertyRows.map((r) => r.rowId) : [];
 
     const rowsToRemove = existingRowIds.filter((id) => !newRowIds.includes(id));
     for (const rowId of rowsToRemove) {
@@ -61,10 +59,7 @@ const managePropertyRowsDisplayOrder = async (propertyId, propertyRows) => {
         const updatedOrder = currentOrder.filter((id) => id !== propertyId);
 
         // Validate the desired position
-        const desiredPosition =
-          position !== undefined
-            ? Math.min(Math.max(0, position), updatedOrder.length)
-            : updatedOrder.length; // Default to the end of the list
+        const desiredPosition = position !== undefined ? Math.min(Math.max(0, position), updatedOrder.length) : updatedOrder.length; // Default to the end of the list
 
         // Insert at the desired position
         updatedOrder.splice(desiredPosition, 0, propertyId);
@@ -75,9 +70,7 @@ const managePropertyRowsDisplayOrder = async (propertyId, propertyRows) => {
           data: { displayOrder: updatedOrder },
         });
 
-        console.log(
-          `Updated display order for property ${propertyId} in row ${rowId} to position ${desiredPosition}`
-        );
+        console.log(`Updated display order for property ${propertyId} in row ${rowId} to position ${desiredPosition}`);
       }
     }
   } catch (error) {
@@ -86,11 +79,7 @@ const managePropertyRowsDisplayOrder = async (propertyId, propertyRows) => {
 };
 
 // Helper function to manage property display order
-const manageFeaturedDisplayOrder = async (
-  propertyId,
-  isFeatured,
-  displayPosition
-) => {
+const manageFeaturedDisplayOrder = async (propertyId, isFeatured, displayPosition) => {
   try {
     // Find PropertyRow for featured properties
     let featuredRow = await prisma.propertyRow.findFirst({
@@ -100,9 +89,7 @@ const manageFeaturedDisplayOrder = async (
     // If property is not featured, remove it from the display order
     if (!isFeatured && featuredRow) {
       // Remove property ID from displayOrder if present
-      const updatedOrder = featuredRow.displayOrder.filter(
-        (id) => id !== propertyId
-      );
+      const updatedOrder = featuredRow.displayOrder.filter((id) => id !== propertyId);
 
       await prisma.propertyRow.update({
         where: { id: featuredRow.id },
@@ -128,10 +115,7 @@ const manageFeaturedDisplayOrder = async (
     }
 
     // Validate the desired position
-    const desiredPosition =
-      displayPosition !== undefined
-        ? Math.min(Math.max(0, displayPosition), currentOrder.length)
-        : currentOrder.length; // Default to the end of the list
+    const desiredPosition = displayPosition !== undefined ? Math.min(Math.max(0, displayPosition), currentOrder.length) : currentOrder.length; // Default to the end of the list
 
     // Insert at the desired position
     currentOrder.splice(desiredPosition, 0, propertyId);
@@ -142,9 +126,7 @@ const manageFeaturedDisplayOrder = async (
       data: { displayOrder: currentOrder },
     });
 
-    console.log(
-      `Updated featured display order for property ${propertyId} to position ${desiredPosition}`
-    );
+    console.log(`Updated featured display order for property ${propertyId} to position ${desiredPosition}`);
   } catch (error) {
     console.error("Error managing featured display order:", error);
   }
@@ -177,12 +159,10 @@ export const getAllResidencies = asyncHandler(async (req, res) => {
     res.status(200).send(residencies);
   } catch (error) {
     console.error("Error fetching residencies:", error);
-    res
-      .status(500)
-      .send({
-        message: "An error occurred while fetching residencies",
-        error: error.message,
-      });
+    res.status(500).send({
+      message: "An error occurred while fetching residencies",
+      error: error.message,
+    });
   }
 });
 
@@ -212,12 +192,10 @@ export const getResidency = asyncHandler(async (req, res) => {
     res.send(residency);
   } catch (err) {
     console.error("Error fetching residency:", err);
-    res
-      .status(500)
-      .send({
-        message: "An error occurred while fetching the residency",
-        error: err.message,
-      });
+    res.status(500).send({
+      message: "An error occurred while fetching the residency",
+      error: err.message,
+    });
   }
 });
 
@@ -226,24 +204,12 @@ export const updateResidency = asyncHandler(async (req, res) => {
   console.log("Received updateResidency request body:", req.body);
   try {
     const { id } = req.params;
-    let {
-      imageUrls,
-      videoUrls,
-      viewCount,
-      removeCmaFile,
-      propertyRows,
-      featuredPosition,
-      profileId,
-      toggleObscure,
-      ...restOfData
-    } = req.body;
+    let { imageUrls, videoUrls, viewCount, removeCmaFile, propertyRows, featuredPosition, profileId, toggleObscure, ...restOfData } = req.body;
     // Get the authenticated user's ID from the req object (set by middleware)
     const updatedById = req.userId;
 
     if (!updatedById) {
-      return res
-        .status(401)
-        .json({ message: "Unauthorized. User not authenticated." });
+      return res.status(401).json({ message: "Unauthorized. User not authenticated." });
     }
 
     // Remove non-updatable fields
@@ -262,65 +228,39 @@ export const updateResidency = asyncHandler(async (req, res) => {
     }
 
     // Convert numeric fields
-    if (restOfData.ownerId)
-      restOfData.ownerId = parseInt(restOfData.ownerId, 10);
-    if (restOfData.latitude)
-      restOfData.latitude = parseFloat(restOfData.latitude);
-    if (restOfData.longitude)
-      restOfData.longitude = parseFloat(restOfData.longitude);
+    if (restOfData.ownerId) restOfData.ownerId = parseInt(restOfData.ownerId, 10);
+    if (restOfData.latitude) restOfData.latitude = parseFloat(restOfData.latitude);
+    if (restOfData.longitude) restOfData.longitude = parseFloat(restOfData.longitude);
     if (restOfData.sqft) restOfData.sqft = parseInt(restOfData.sqft, 10);
-    if (restOfData.askingPrice)
-      restOfData.askingPrice = parseFloat(restOfData.askingPrice);
-    if (restOfData.minPrice)
-      restOfData.minPrice = parseFloat(restOfData.minPrice);
-    if (restOfData.disPrice)
-      restOfData.disPrice = parseFloat(restOfData.disPrice);
+    if (restOfData.askingPrice) restOfData.askingPrice = parseFloat(restOfData.askingPrice);
+    if (restOfData.minPrice) restOfData.minPrice = parseFloat(restOfData.minPrice);
+    if (restOfData.disPrice) restOfData.disPrice = parseFloat(restOfData.disPrice);
     if (restOfData.acre) restOfData.acre = parseFloat(restOfData.acre);
     if (restOfData.hoaFee) restOfData.hoaFee = parseFloat(restOfData.hoaFee);
 
     // Payment Fields
     if (restOfData.tax) restOfData.tax = parseFloat(restOfData.tax);
-    if (restOfData.hoaMonthly)
-      restOfData.hoaMonthly = parseFloat(restOfData.hoaMonthly);
-    if (restOfData.serviceFee)
-      restOfData.serviceFee = parseFloat(restOfData.serviceFee);
+    if (restOfData.hoaMonthly) restOfData.hoaMonthly = parseFloat(restOfData.hoaMonthly);
+    if (restOfData.serviceFee) restOfData.serviceFee = parseFloat(restOfData.serviceFee);
     if (restOfData.term) restOfData.term = parseInt(restOfData.term, 10);
-    if (restOfData.interestOne)
-      restOfData.interestOne = parseFloat(restOfData.interestOne);
-    if (restOfData.interestTwo)
-      restOfData.interestTwo = parseFloat(restOfData.interestTwo);
-    if (restOfData.interestThree)
-      restOfData.interestThree = parseFloat(restOfData.interestThree);
-    if (restOfData.monthlyPaymentOne)
-      restOfData.monthlyPaymentOne = parseFloat(restOfData.monthlyPaymentOne);
-    if (restOfData.monthlyPaymentTwo)
-      restOfData.monthlyPaymentTwo = parseFloat(restOfData.monthlyPaymentTwo);
-    if (restOfData.monthlyPaymentThree)
-      restOfData.monthlyPaymentThree = parseFloat(
-        restOfData.monthlyPaymentThree
-      );
-    if (restOfData.downPaymentOne)
-      restOfData.downPaymentOne = parseFloat(restOfData.downPaymentOne);
-    if (restOfData.downPaymentTwo)
-      restOfData.downPaymentTwo = parseFloat(restOfData.downPaymentTwo);
-    if (restOfData.downPaymentThree)
-      restOfData.downPaymentThree = parseFloat(restOfData.downPaymentThree);
-    if (restOfData.loanAmountOne)
-      restOfData.loanAmountOne = parseFloat(restOfData.loanAmountOne);
-    if (restOfData.loanAmountTwo)
-      restOfData.loanAmountTwo = parseFloat(restOfData.loanAmountTwo);
-    if (restOfData.loanAmountThree)
-      restOfData.loanAmountThree = parseFloat(restOfData.loanAmountThree);
-    if (restOfData.purchasePrice)
-      restOfData.purchasePrice = parseFloat(restOfData.purchasePrice);
-    if (restOfData.financedPrice)
-      restOfData.financedPrice = parseFloat(restOfData.financedPrice);
+    if (restOfData.interestOne) restOfData.interestOne = parseFloat(restOfData.interestOne);
+    if (restOfData.interestTwo) restOfData.interestTwo = parseFloat(restOfData.interestTwo);
+    if (restOfData.interestThree) restOfData.interestThree = parseFloat(restOfData.interestThree);
+    if (restOfData.monthlyPaymentOne) restOfData.monthlyPaymentOne = parseFloat(restOfData.monthlyPaymentOne);
+    if (restOfData.monthlyPaymentTwo) restOfData.monthlyPaymentTwo = parseFloat(restOfData.monthlyPaymentTwo);
+    if (restOfData.monthlyPaymentThree) restOfData.monthlyPaymentThree = parseFloat(restOfData.monthlyPaymentThree);
+    if (restOfData.downPaymentOne) restOfData.downPaymentOne = parseFloat(restOfData.downPaymentOne);
+    if (restOfData.downPaymentTwo) restOfData.downPaymentTwo = parseFloat(restOfData.downPaymentTwo);
+    if (restOfData.downPaymentThree) restOfData.downPaymentThree = parseFloat(restOfData.downPaymentThree);
+    if (restOfData.loanAmountOne) restOfData.loanAmountOne = parseFloat(restOfData.loanAmountOne);
+    if (restOfData.loanAmountTwo) restOfData.loanAmountTwo = parseFloat(restOfData.loanAmountTwo);
+    if (restOfData.loanAmountThree) restOfData.loanAmountThree = parseFloat(restOfData.loanAmountThree);
+    if (restOfData.purchasePrice) restOfData.purchasePrice = parseFloat(restOfData.purchasePrice);
+    if (restOfData.financedPrice) restOfData.financedPrice = parseFloat(restOfData.financedPrice);
 
     // Handle landType as an array
     if (restOfData.landType) {
-      restOfData.landType = Array.isArray(restOfData.landType)
-        ? restOfData.landType
-        : [restOfData.landType];
+      restOfData.landType = Array.isArray(restOfData.landType) ? restOfData.landType : [restOfData.landType];
     }
 
     // Process the "imageUrls" field (expected as JSON-stringified array)
@@ -351,34 +291,26 @@ export const updateResidency = asyncHandler(async (req, res) => {
 
     // Boolean Conversion
     if (restOfData.landId !== undefined) {
-      restOfData.landId =
-        restOfData.landId === true ||
-        restOfData.landId === "true" ||
-        restOfData.landId === "included";
+      restOfData.landId = restOfData.landId === true || restOfData.landId === "true" || restOfData.landId === "included";
     }
 
     // Add toggleObscure conversion
     if (toggleObscure !== undefined) {
-      restOfData.toggleObscure =
-        toggleObscure === true || toggleObscure === "true";
+      restOfData.toggleObscure = toggleObscure === true || toggleObscure === "true";
     }
 
     // Process newly uploaded images (if any) from multer
     let newImagePaths = [];
     if (req.files && req.files["images"] && req.files["images"].length > 0) {
       // Use relative path: "uploads/" + file.filename
-      newImagePaths = req.files["images"].map(
-        (file) => "uploads/" + file.filename
-      );
+      newImagePaths = req.files["images"].map((file) => "uploads/" + file.filename);
     }
 
     // Process newly uploaded videos (if any) from multer
     let newVideoPaths = [];
     if (req.files && req.files["videos"] && req.files["videos"].length > 0) {
       // Use relative path: "uploads/" + file.filename
-      newVideoPaths = req.files["videos"].map(
-        (file) => "uploads/" + file.filename
-      );
+      newVideoPaths = req.files["videos"].map((file) => "uploads/" + file.filename);
     }
 
     // Merge existing images with new image paths
@@ -389,8 +321,7 @@ export const updateResidency = asyncHandler(async (req, res) => {
 
     // Handle CMA fields
     if (restOfData.hasCma !== undefined) {
-      restOfData.hasCma =
-        restOfData.hasCma === "true" || restOfData.hasCma === true;
+      restOfData.hasCma = restOfData.hasCma === "true" || restOfData.hasCma === true;
     }
 
     // Handle CMA file management
@@ -400,11 +331,7 @@ export const updateResidency = asyncHandler(async (req, res) => {
     if (req.body.removeCmaFile === "true") {
       // Delete the physical file if it exists
       if (currentProperty.cmaFilePath) {
-        const oldFilePath = path.join(
-          __dirname,
-          "../",
-          currentProperty.cmaFilePath
-        );
+        const oldFilePath = path.join(__dirname, "../", currentProperty.cmaFilePath);
         try {
           if (fs.existsSync(oldFilePath)) {
             fs.unlinkSync(oldFilePath);
@@ -418,20 +345,12 @@ export const updateResidency = asyncHandler(async (req, res) => {
       cmaFilePath = null;
     }
     // Check if we're uploading a new CMA file
-    else if (
-      req.files &&
-      req.files["cmaFile"] &&
-      req.files["cmaFile"].length > 0
-    ) {
+    else if (req.files && req.files["cmaFile"] && req.files["cmaFile"].length > 0) {
       cmaFilePath = "uploads/" + req.files["cmaFile"][0].filename;
 
       // Delete the old file if it exists
       if (currentProperty.cmaFilePath) {
-        const oldFilePath = path.join(
-          __dirname,
-          "../",
-          currentProperty.cmaFilePath
-        );
+        const oldFilePath = path.join(__dirname, "../", currentProperty.cmaFilePath);
         try {
           if (fs.existsSync(oldFilePath)) {
             fs.unlinkSync(oldFilePath);
@@ -453,9 +372,7 @@ export const updateResidency = asyncHandler(async (req, res) => {
 
     // Track changes for each field
     for (const key in restOfData) {
-      if (
-        JSON.stringify(currentProperty[key]) !== JSON.stringify(restOfData[key])
-      ) {
+      if (JSON.stringify(currentProperty[key]) !== JSON.stringify(restOfData[key])) {
         modification.changes[key] = {
           from: currentProperty[key],
           to: restOfData[key],
@@ -495,23 +412,12 @@ export const updateResidency = asyncHandler(async (req, res) => {
         // Handle different formats for propertyRows data
         if (typeof propertyRows === "string") {
           // Handle malformed [object Object] string
-          if (
-            propertyRows === "[object Object]" ||
-            propertyRows.startsWith("[object Object]")
-          ) {
-            console.log(
-              "Received malformed propertyRows data. Attempting to extract from selected rows data."
-            );
+          if (propertyRows === "[object Object]" || propertyRows.startsWith("[object Object]")) {
+            console.log("Received malformed propertyRows data. Attempting to extract from selected rows data.");
 
             // Try to recover using featuredPosition array if available
-            if (
-              featuredPosition &&
-              (Array.isArray(featuredPosition) ||
-                typeof featuredPosition === "string")
-            ) {
-              const positions = Array.isArray(featuredPosition)
-                ? featuredPosition
-                : [featuredPosition];
+            if (featuredPosition && (Array.isArray(featuredPosition) || typeof featuredPosition === "string")) {
+              const positions = Array.isArray(featuredPosition) ? featuredPosition : [featuredPosition];
 
               // Get featured row information from database
               const featuredRows = await prisma.propertyRow.findMany({
@@ -541,9 +447,7 @@ export const updateResidency = asyncHandler(async (req, res) => {
         }
         // If already an object/array, use directly
         else if (typeof propertyRows === "object") {
-          parsedPropertyRows = Array.isArray(propertyRows)
-            ? propertyRows
-            : [propertyRows];
+          parsedPropertyRows = Array.isArray(propertyRows) ? propertyRows : [propertyRows];
         }
       } catch (error) {
         console.error("Error parsing propertyRows:", error);
@@ -556,16 +460,8 @@ export const updateResidency = asyncHandler(async (req, res) => {
       await managePropertyRowsDisplayOrder(id, parsedPropertyRows);
     }
     // For backward compatibility - ONLY IF NO VALID PROPERTY ROWS
-    else if (
-      restOfData.featured === "Featured" ||
-      restOfData.featured === "Yes"
-    ) {
-      const featPos =
-        featuredPosition !== undefined
-          ? Array.isArray(featuredPosition)
-            ? parseInt(featuredPosition[0], 10)
-            : parseInt(featuredPosition, 10)
-          : undefined;
+    else if (restOfData.featured === "Featured" || restOfData.featured === "Yes") {
+      const featPos = featuredPosition !== undefined ? (Array.isArray(featuredPosition) ? parseInt(featuredPosition[0], 10) : parseInt(featuredPosition, 10)) : undefined;
 
       await manageFeaturedDisplayOrder(id, true, featPos);
     }
@@ -610,9 +506,7 @@ export const getResidencyImages = asyncHandler(async (req, res) => {
     });
 
     if (!residency || !residency.imageUrls) {
-      return res
-        .status(404)
-        .json({ message: "No images found for this residency" });
+      return res.status(404).json({ message: "No images found for this residency" });
     }
 
     res.status(200).json({
@@ -638,9 +532,7 @@ export const getResidencyVideos = asyncHandler(async (req, res) => {
     });
 
     if (!residency || !residency.videoUrls) {
-      return res
-        .status(404)
-        .json({ message: "No videos found for this residency" });
+      return res.status(404).json({ message: "No videos found for this residency" });
     }
 
     res.status(200).json({
@@ -657,399 +549,357 @@ export const getResidencyVideos = asyncHandler(async (req, res) => {
 });
 
 // Create Property with Multiple Files
-export const createResidencyWithMultipleFiles = asyncHandler(
-  async (req, res) => {
-    console.log("This is creation request body: ", req.body);
-    try {
-      // Get the authenticated user's ID from the req object (set by middleware)
-      const createdById = req.userId;
+export const createResidencyWithMultipleFiles = asyncHandler(async (req, res) => {
+  console.log("This is creation request body: ", req.body);
+  try {
+    // Get the authenticated user's ID from the req object (set by middleware)
+    const createdById = req.userId;
 
-      if (!createdById) {
-        return res
-          .status(401)
-          .json({ message: "Unauthorized. User not authenticated." });
+    if (!createdById) {
+      return res.status(401).json({ message: "Unauthorized. User not authenticated." });
+    }
+
+    // Collect all uploaded image files
+    let imagePaths = [];
+    if (req.files && req.files["images"] && req.files["images"].length > 0) {
+      imagePaths = req.files["images"].map((file) => "uploads/" + file.filename);
+    }
+
+    // Collect all uploaded video files
+    let videoPaths = [];
+    if (req.files && req.files["videos"] && req.files["videos"].length > 0) {
+      videoPaths = req.files["videos"].map((file) => "uploads/" + file.filename);
+    }
+
+    // Handle CMA file upload (single file)
+    let cmaFilePath = null;
+    if (req.files && req.files["cmaFile"] && req.files["cmaFile"].length > 0) {
+      cmaFilePath = "uploads/" + req.files["cmaFile"][0].filename;
+    }
+
+    // Process existing imageUrls from req.body (if any)
+    let existingImages = [];
+    if (req.body.imageUrls) {
+      try {
+        existingImages = JSON.parse(req.body.imageUrls);
+        if (!Array.isArray(existingImages)) existingImages = [];
+      } catch (err) {
+        existingImages = [];
       }
+    }
 
-      // Collect all uploaded image files
-      let imagePaths = [];
-      if (req.files && req.files["images"] && req.files["images"].length > 0) {
-        imagePaths = req.files["images"].map(
-          (file) => "uploads/" + file.filename
-        );
+    // Process existing videoUrls from req.body (if any)
+    let existingVideos = [];
+    if (req.body.videoUrls) {
+      try {
+        existingVideos = JSON.parse(req.body.videoUrls);
+        if (!Array.isArray(existingVideos)) existingVideos = [];
+      } catch (err) {
+        existingVideos = [];
       }
+    }
 
-      // Collect all uploaded video files
-      let videoPaths = [];
-      if (req.files && req.files["videos"] && req.files["videos"].length > 0) {
-        videoPaths = req.files["videos"].map(
-          (file) => "uploads/" + file.filename
-        );
-      }
+    // Merge existing images with the new image paths
+    const allImageUrls = [...existingImages, ...imagePaths];
 
-      // Handle CMA file upload (single file)
-      let cmaFilePath = null;
-      if (
-        req.files &&
-        req.files["cmaFile"] &&
-        req.files["cmaFile"].length > 0
-      ) {
-        cmaFilePath = "uploads/" + req.files["cmaFile"][0].filename;
-      }
+    // Merge existing videos with the new video paths
+    const allVideoUrls = [...existingVideos, ...videoPaths];
 
-      // Process existing imageUrls from req.body (if any)
-      let existingImages = [];
-      if (req.body.imageUrls) {
-        try {
-          existingImages = JSON.parse(req.body.imageUrls);
-          if (!Array.isArray(existingImages)) existingImages = [];
-        } catch (err) {
-          existingImages = [];
+    // Destructure the fields from req.body
+    const {
+      //System Info
+      ownerId,
+      area,
+      status,
+      featured,
+      featuredPosition,
+      propertyRows,
+      profileId, // Add the new profileId field
+
+      // Listing Details
+      title,
+      description,
+      notes,
+
+      // Classification
+      type,
+      landType, // Now an array field
+      legalDescription,
+      zoning,
+      restrictions,
+      mobileHomeFriendly,
+      hoaPoa,
+      hoaFee,
+      hoaPaymentTerms,
+      survey,
+
+      // Address and Location
+      direction,
+      streetAddress,
+      city,
+      county,
+      state,
+      zip,
+      latitude,
+      longitude,
+      apnOrPin,
+      landIdLink,
+      landId,
+
+      // Dimensions
+      sqft,
+      acre,
+
+      // Pricing and Financing
+      askingPrice,
+      minPrice,
+      disPrice,
+
+      // Financing and Payment Calculation
+      financing,
+      financingTwo,
+      financingThree,
+      tax,
+      hoaMonthly,
+      serviceFee,
+      term,
+      interestOne,
+      interestTwo,
+      interestThree,
+      monthlyPaymentOne,
+      monthlyPaymentTwo,
+      monthlyPaymentThree,
+      downPaymentOne,
+      downPaymentTwo,
+      downPaymentThree,
+      loanAmountOne,
+      loanAmountTwo,
+      loanAmountThree,
+      purchasePrice,
+      financedPrice,
+
+      // Utilities and Infrastructure
+      water,
+      sewer,
+      electric,
+      roadCondition,
+      floodplain,
+
+      //Media & Tags
+      ltag,
+      rtag,
+
+      // Display
+      toggleObscure,
+
+      // CMA fields
+      hasCma,
+      cmaData,
+    } = req.body;
+
+    // Prepare landType as an array
+    let landTypeArray = [];
+    if (landType) {
+      try {
+        // Handle different input formats: string, array, or JSON string
+        if (typeof landType === "string") {
+          // Try to parse as JSON if it looks like an array
+          if (landType.startsWith("[") && landType.endsWith("]")) {
+            landTypeArray = JSON.parse(landType);
+          } else {
+            // Single string value
+            landTypeArray = [landType];
+          }
+        } else if (Array.isArray(landType)) {
+          landTypeArray = landType;
         }
+      } catch (error) {
+        console.error("Error processing landType:", error);
+        landTypeArray = typeof landType === "string" ? [landType] : [];
       }
+    }
 
-      // Process existing videoUrls from req.body (if any)
-      let existingVideos = [];
-      if (req.body.videoUrls) {
-        try {
-          existingVideos = JSON.parse(req.body.videoUrls);
-          if (!Array.isArray(existingVideos)) existingVideos = [];
-        } catch (err) {
-          existingVideos = [];
-        }
-      }
+    // Create the residency with the array of image URLs and video URLs stored
+    const residency = await prisma.residency.create({
+      data: {
+        // Connect to the creating user
+        createdBy: {
+          connect: { id: createdById },
+        },
+        updatedBy: {
+          connect: { id: createdById },
+        },
 
-      // Merge existing images with the new image paths
-      const allImageUrls = [...existingImages, ...imagePaths];
-
-      // Merge existing videos with the new video paths
-      const allVideoUrls = [...existingVideos, ...videoPaths];
-
-      // Destructure the fields from req.body
-      const {
-        //System Info
-        ownerId,
+        // System Info
+        ownerId: ownerId ? parseInt(ownerId) : null,
         area,
         status,
-        featured,
-        featuredPosition,
-        propertyRows,
-        profileId, // Add the new profileId field
+        featured: featured ?? "Not Featured",
+        profileId: profileId || null, // Add the profileId field
 
         // Listing Details
         title,
-        description,
-        notes,
+        description: description ?? null,
+        notes: notes ?? null,
 
         // Classification
-        type,
-        landType, // Now an array field
-        legalDescription,
-        zoning,
-        restrictions,
-        mobileHomeFriendly,
-        hoaPoa,
-        hoaFee,
-        hoaPaymentTerms,
-        survey,
+        type: type ?? null,
+        landType: landTypeArray,
+        legalDescription: legalDescription ?? null,
+        zoning: zoning ?? null,
+        restrictions: restrictions ?? null,
+        mobileHomeFriendly: mobileHomeFriendly ?? null,
+        hoaPoa: hoaPoa ?? null,
+        hoaFee: hoaFee ? parseFloat(hoaFee) : null,
+        hoaPaymentTerms: hoaPaymentTerms ?? null,
+        survey: survey ?? null,
 
-        // Address and Location
-        direction,
+        // Location
         streetAddress,
         city,
         county,
         state,
         zip,
-        latitude,
-        longitude,
+        latitude: latitude ? parseFloat(latitude) : null,
+        longitude: longitude ? parseFloat(longitude) : null,
         apnOrPin,
-        landIdLink,
-        landId,
+        direction: direction ?? null,
+        landIdLink: landIdLink ?? null,
+        landId: landId === true || landId === "true" || landId === "included",
 
         // Dimensions
-        sqft,
-        acre,
+        sqft: parseInt(sqft),
+        acre: acre ? parseFloat(acre) : null,
 
-        // Pricing and Financing
-        askingPrice,
-        minPrice,
-        disPrice,
+        // Pricing
+        askingPrice: parseFloat(askingPrice),
+        minPrice: parseFloat(minPrice),
+        disPrice: disPrice ? parseFloat(disPrice) : null,
 
         // Financing and Payment Calculation
-        financing,
-        financingTwo,
-        financingThree,
-        tax,
-        hoaMonthly,
-        serviceFee,
-        term,
-        interestOne,
-        interestTwo,
-        interestThree,
-        monthlyPaymentOne,
-        monthlyPaymentTwo,
-        monthlyPaymentThree,
-        downPaymentOne,
-        downPaymentTwo,
-        downPaymentThree,
-        loanAmountOne,
-        loanAmountTwo,
-        loanAmountThree,
-        purchasePrice,
-        financedPrice,
+        financing: financing ?? "Not-Available",
+        financingTwo: financingTwo ?? "Not-Available",
+        financingThree: financingThree ?? "Not-Available",
+        tax: tax ? parseFloat(tax) : null,
+        hoaMonthly: hoaMonthly ? parseFloat(hoaMonthly) : null,
+        serviceFee: serviceFee ? parseFloat(serviceFee) : null,
+        term: term ? parseInt(term, 10) : null,
+        interestOne: interestOne ? parseFloat(interestOne) : null,
+        interestTwo: interestTwo ? parseFloat(interestTwo) : null,
+        interestThree: interestThree ? parseFloat(interestThree) : null,
+        monthlyPaymentOne: monthlyPaymentOne ? parseFloat(monthlyPaymentOne) : null,
+        monthlyPaymentTwo: monthlyPaymentTwo ? parseFloat(monthlyPaymentTwo) : null,
+        monthlyPaymentThree: monthlyPaymentThree ? parseFloat(monthlyPaymentThree) : null,
+        downPaymentOne: downPaymentOne ? parseFloat(downPaymentOne) : null,
+        downPaymentTwo: downPaymentTwo ? parseFloat(downPaymentTwo) : null,
+        downPaymentThree: downPaymentThree ? parseFloat(downPaymentThree) : null,
+        loanAmountOne: loanAmountOne ? parseFloat(loanAmountOne) : null,
+        loanAmountTwo: loanAmountTwo ? parseFloat(loanAmountTwo) : null,
+        loanAmountThree: loanAmountThree ? parseFloat(loanAmountThree) : null,
+        purchasePrice: purchasePrice ? parseFloat(purchasePrice) : null,
+        financedPrice: financedPrice ? parseFloat(financedPrice) : null,
 
-        // Utilities and Infrastructure
-        water,
-        sewer,
-        electric,
-        roadCondition,
-        floodplain,
+        // Utilities
+        water: water ?? null,
+        sewer: sewer ?? null,
+        electric: electric ?? null,
+        roadCondition: roadCondition ?? null,
+        floodplain: floodplain ?? null,
 
-        //Media & Tags
-        ltag,
-        rtag,
+        // Media & Tags
+        ltag: ltag ?? null,
+        rtag: rtag ?? null,
+        imageUrls: allImageUrls.length > 0 ? allImageUrls : null,
+        videoUrls: allVideoUrls.length > 0 ? allVideoUrls : null,
 
         // Display
-        toggleObscure,
+        toggleObscure: toggleObscure === "true" || toggleObscure === true,
 
         // CMA fields
-        hasCma,
-        cmaData,
-      } = req.body;
+        hasCma: hasCma === "true" || hasCma === true,
+        cmaData: cmaData || null,
+        cmaFilePath: cmaFilePath,
 
-      // Prepare landType as an array
-      let landTypeArray = [];
-      if (landType) {
-        try {
-          // Handle different input formats: string, array, or JSON string
-          if (typeof landType === "string") {
-            // Try to parse as JSON if it looks like an array
-            if (landType.startsWith("[") && landType.endsWith("]")) {
-              landTypeArray = JSON.parse(landType);
-            } else {
-              // Single string value
-              landTypeArray = [landType];
-            }
-          } else if (Array.isArray(landType)) {
-            landTypeArray = landType;
-          }
-        } catch (error) {
-          console.error("Error processing landType:", error);
-          landTypeArray = typeof landType === "string" ? [landType] : [];
-        }
-      }
+        //Profile
+        profileId: req.body.profileId || null,
 
-      // Create the residency with the array of image URLs and video URLs stored
-      const residency = await prisma.residency.create({
-        data: {
-          // Connect to the creating user
-          createdBy: {
-            connect: { id: createdById },
-          },
-          updatedBy: {
-            connect: { id: createdById },
-          },
+        // Initialize modification history as an empty array
+        modificationHistory: [],
+      },
+    });
 
-          // System Info
-          ownerId: ownerId ? parseInt(ownerId) : null,
-          area,
-          status,
-          featured: featured ?? "Not Featured",
-          profileId: profileId || null, // Add the profileId field
+    // Handle property rows data
+    let parsedPropertyRows = [];
+    if (propertyRows) {
+      try {
+        // Handle different formats for propertyRows data
+        if (typeof propertyRows === "string") {
+          // Handle malformed [object Object] string
+          if (propertyRows === "[object Object]" || propertyRows.startsWith("[object Object]")) {
+            console.log("Received malformed propertyRows data. Attempting to extract from featuredPosition array.");
 
-          // Listing Details
-          title,
-          description: description ?? null,
-          notes: notes ?? null,
+            // Try to recover using featuredPosition array if available
+            if (featuredPosition && (Array.isArray(featuredPosition) || typeof featuredPosition === "string")) {
+              const positions = Array.isArray(featuredPosition) ? featuredPosition : [featuredPosition];
 
-          // Classification
-          type: type ?? null,
-          landType: landTypeArray,
-          legalDescription: legalDescription ?? null,
-          zoning: zoning ?? null,
-          restrictions: restrictions ?? null,
-          mobileHomeFriendly: mobileHomeFriendly ?? null,
-          hoaPoa: hoaPoa ?? null,
-          hoaFee: hoaFee ? parseFloat(hoaFee) : null,
-          hoaPaymentTerms: hoaPaymentTerms ?? null,
-          survey: survey ?? null,
+              // Get featured row information from database
+              const featuredRows = await prisma.propertyRow.findMany({
+                where: { rowType: "featured" },
+              });
 
-          // Location
-          streetAddress,
-          city,
-          county,
-          state,
-          zip,
-          latitude: latitude ? parseFloat(latitude) : null,
-          longitude: longitude ? parseFloat(longitude) : null,
-          apnOrPin,
-          direction: direction ?? null,
-          landIdLink: landIdLink ?? null,
-          landId: landId === true || landId === "true" || landId === "included",
-
-          // Dimensions
-          sqft: parseInt(sqft),
-          acre: acre ? parseFloat(acre) : null,
-
-          // Pricing
-          askingPrice: parseFloat(askingPrice),
-          minPrice: parseFloat(minPrice),
-          disPrice: disPrice ? parseFloat(disPrice) : null,
-
-          // Financing and Payment Calculation
-          financing: financing ?? "Not-Available",
-          financingTwo: financingTwo ?? "Not-Available",
-          financingThree: financingThree ?? "Not-Available",
-          tax: tax ? parseFloat(tax) : null,
-          hoaMonthly: hoaMonthly ? parseFloat(hoaMonthly) : null,
-          serviceFee: serviceFee ? parseFloat(serviceFee) : null,
-          term: term ? parseInt(term, 10) : null,
-          interestOne: interestOne ? parseFloat(interestOne) : null,
-          interestTwo: interestTwo ? parseFloat(interestTwo) : null,
-          interestThree: interestThree ? parseFloat(interestThree) : null,
-          monthlyPaymentOne: monthlyPaymentOne
-            ? parseFloat(monthlyPaymentOne)
-            : null,
-          monthlyPaymentTwo: monthlyPaymentTwo
-            ? parseFloat(monthlyPaymentTwo)
-            : null,
-          monthlyPaymentThree: monthlyPaymentThree
-            ? parseFloat(monthlyPaymentThree)
-            : null,
-          downPaymentOne: downPaymentOne ? parseFloat(downPaymentOne) : null,
-          downPaymentTwo: downPaymentTwo ? parseFloat(downPaymentTwo) : null,
-          downPaymentThree: downPaymentThree
-            ? parseFloat(downPaymentThree)
-            : null,
-          loanAmountOne: loanAmountOne ? parseFloat(loanAmountOne) : null,
-          loanAmountTwo: loanAmountTwo ? parseFloat(loanAmountTwo) : null,
-          loanAmountThree: loanAmountThree ? parseFloat(loanAmountThree) : null,
-          purchasePrice: purchasePrice ? parseFloat(purchasePrice) : null,
-          financedPrice: financedPrice ? parseFloat(financedPrice) : null,
-
-          // Utilities
-          water: water ?? null,
-          sewer: sewer ?? null,
-          electric: electric ?? null,
-          roadCondition: roadCondition ?? null,
-          floodplain: floodplain ?? null,
-
-          // Media & Tags
-          ltag: ltag ?? null,
-          rtag: rtag ?? null,
-          imageUrls: allImageUrls.length > 0 ? allImageUrls : null,
-          videoUrls: allVideoUrls.length > 0 ? allVideoUrls : null,
-
-          // Display
-          toggleObscure: toggleObscure === "true" || toggleObscure === true,
-
-          // CMA fields
-          hasCma: hasCma === "true" || hasCma === true,
-          cmaData: cmaData || null,
-          cmaFilePath: cmaFilePath,
-
-          //Profile
-          profileId: req.body.profileId || null,
-
-          // Initialize modification history as an empty array
-          modificationHistory: [],
-        },
-      });
-
-      // Handle property rows data
-      let parsedPropertyRows = [];
-      if (propertyRows) {
-        try {
-          // Handle different formats for propertyRows data
-          if (typeof propertyRows === "string") {
-            // Handle malformed [object Object] string
-            if (
-              propertyRows === "[object Object]" ||
-              propertyRows.startsWith("[object Object]")
-            ) {
-              console.log(
-                "Received malformed propertyRows data. Attempting to extract from featuredPosition array."
-              );
-
-              // Try to recover using featuredPosition array if available
-              if (
-                featuredPosition &&
-                (Array.isArray(featuredPosition) ||
-                  typeof featuredPosition === "string")
-              ) {
-                const positions = Array.isArray(featuredPosition)
-                  ? featuredPosition
-                  : [featuredPosition];
-
-                // Get featured row information from database
-                const featuredRows = await prisma.propertyRow.findMany({
-                  where: { rowType: "featured" },
+              if (featuredRows.length > 0) {
+                parsedPropertyRows = featuredRows.map((row, index) => {
+                  return {
+                    rowId: row.id,
+                    position: parseInt(positions[index] || 0, 10),
+                  };
                 });
-
-                if (featuredRows.length > 0) {
-                  parsedPropertyRows = featuredRows.map((row, index) => {
-                    return {
-                      rowId: row.id,
-                      position: parseInt(positions[index] || 0, 10),
-                    };
-                  });
-                }
-              }
-            }
-            // Try standard JSON parsing
-            else {
-              try {
-                parsedPropertyRows = JSON.parse(propertyRows);
-              } catch (e) {
-                console.error("Error parsing propertyRows JSON:", e);
-                // Fallback to empty array
-                parsedPropertyRows = [];
               }
             }
           }
-          // If already an object/array, use directly
-          else if (typeof propertyRows === "object") {
-            parsedPropertyRows = Array.isArray(propertyRows)
-              ? propertyRows
-              : [propertyRows];
+          // Try standard JSON parsing
+          else {
+            try {
+              parsedPropertyRows = JSON.parse(propertyRows);
+            } catch (e) {
+              console.error("Error parsing propertyRows JSON:", e);
+              // Fallback to empty array
+              parsedPropertyRows = [];
+            }
           }
-        } catch (error) {
-          console.error("Error parsing propertyRows:", error);
         }
+        // If already an object/array, use directly
+        else if (typeof propertyRows === "object") {
+          parsedPropertyRows = Array.isArray(propertyRows) ? propertyRows : [propertyRows];
+        }
+      } catch (error) {
+        console.error("Error parsing propertyRows:", error);
       }
-
-      // Update property rows if we have valid data
-      if (
-        Array.isArray(parsedPropertyRows) &&
-        parsedPropertyRows.length > 0 &&
-        parsedPropertyRows.some((row) => row && row.rowId)
-      ) {
-        await managePropertyRowsDisplayOrder(residency.id, parsedPropertyRows);
-      }
-      // For backward compatibility - ONLY IF NO VALID PROPERTY ROWS
-      else if (residency && (featured === "Featured" || featured === "Yes")) {
-        const featPos =
-          featuredPosition !== undefined
-            ? Array.isArray(featuredPosition)
-              ? parseInt(featuredPosition[0], 10)
-              : parseInt(featuredPosition, 10)
-            : undefined;
-
-        await manageFeaturedDisplayOrder(residency.id, true, featPos);
-      }
-
-      res.status(201).json({
-        message: "Property added successfully",
-        residency,
-      });
-    } catch (err) {
-      console.error("Error creating residency:", err);
-      res.status(500).json({
-        message: `Failed to create property: ${err.message}`,
-        error: err.message,
-      });
     }
+
+    // Update property rows if we have valid data
+    if (Array.isArray(parsedPropertyRows) && parsedPropertyRows.length > 0 && parsedPropertyRows.some((row) => row && row.rowId)) {
+      await managePropertyRowsDisplayOrder(residency.id, parsedPropertyRows);
+    }
+    // For backward compatibility - ONLY IF NO VALID PROPERTY ROWS
+    else if (residency && (featured === "Featured" || featured === "Yes")) {
+      const featPos = featuredPosition !== undefined ? (Array.isArray(featuredPosition) ? parseInt(featuredPosition[0], 10) : parseInt(featuredPosition, 10)) : undefined;
+
+      await manageFeaturedDisplayOrder(residency.id, true, featPos);
+    }
+
+    res.status(201).json({
+      message: "Property added successfully",
+      residency,
+    });
+  } catch (err) {
+    console.error("Error creating residency:", err);
+    res.status(500).json({
+      message: `Failed to create property: ${err.message}`,
+      error: err.message,
+    });
   }
-);
+});
 
 // Get PropertyRows with optional filtering
 export const getPropertyRows = asyncHandler(async (req, res) => {
@@ -1072,15 +922,9 @@ export const getPropertyRows = asyncHandler(async (req, res) => {
 
     // If requesting a specific row ID or featured rows, also include property details
     if ((rowType === "featured" || rowId) && propertyRows.length > 0) {
-      const targetRow = rowId
-        ? propertyRows.find((row) => row.id === rowId)
-        : propertyRows[0];
+      const targetRow = rowId ? propertyRows.find((row) => row.id === rowId) : propertyRows[0];
 
-      if (
-        targetRow &&
-        targetRow.displayOrder &&
-        targetRow.displayOrder.length > 0
-      ) {
+      if (targetRow && targetRow.displayOrder && targetRow.displayOrder.length > 0) {
         // Get property details for all IDs in the display order
         const propertyDetails = await Promise.all(
           targetRow.displayOrder.map(async (propertyId) => {
@@ -1115,9 +959,7 @@ export const getPropertyRows = asyncHandler(async (req, res) => {
     res.status(200).json(propertyRows);
   } catch (error) {
     console.error("Error fetching property rows:", error);
-    res
-      .status(500)
-      .json({ message: "Error fetching property rows", error: error.message });
+    res.status(500).json({ message: "Error fetching property rows", error: error.message });
   }
 });
 
@@ -1142,9 +984,7 @@ export const getCmaDocument = asyncHandler(async (req, res) => {
     }
 
     if (!residency.hasCma || !residency.cmaFilePath) {
-      return res
-        .status(404)
-        .json({ message: "No CMA document found for this property" });
+      return res.status(404).json({ message: "No CMA document found for this property" });
     }
 
     // Construct the file path
