@@ -70,7 +70,7 @@
     "react-accessible-accordion": "^5.0.0",
     "react-beautiful-dnd": "^13.1.1",
     "react-countup": "^6.4.2",
-    "react-day-picker": "^9.6.5",
+    "react-day-picker": "^9.11.0",
     "react-dom": "^18.2.0",
     "react-dropzone": "^14.3.8",
     "react-hook-form": "^7.56.3",

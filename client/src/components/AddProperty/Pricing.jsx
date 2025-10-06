@@ -1,87 +1,48 @@
-"use client";
-
-import React, { useEffect } from "react";
-import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
+// client/src/components/AddProperty/Pricing.jsx
+import React from "react";
 import { Label } from "@/components/ui/label";
-import {
-  Select,
-  SelectTrigger,
-  SelectContent,
-  SelectItem,
-  SelectValue,
-} from "@/components/ui/select";
+import { Input } from "@/components/ui/input";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Select, SelectTrigger, SelectContent, SelectItem, SelectValue } from "@/components/ui/select";
+import { DayPicker } from "react-day-picker";
+import "react-day-picker/style.css";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Button } from "@/components/ui/button";
+import { CalendarIcon } from "lucide-react";
+import { format } from "date-fns";
+import { cn } from "@/lib/utils";
 
-export default function Pricing({ formData, handleChange }) {
-  // Calculate hoaMonthly whenever hoaFee or hoaPaymentTerms changes
-  useEffect(() => {
-    if (formData.hoaPoa === "Yes" && formData.hoaFee && formData.hoaPaymentTerms) {
-      // Parse the hoaFee to a number, removing any commas
-      const feeValue = parseFloat(formData.hoaFee.toString().replace(/,/g, ""));
-      
-      if (!isNaN(feeValue)) {
-        let monthlyValue;
-        
-        // Calculate monthly value based on payment terms
-        switch (formData.hoaPaymentTerms) {
-          case "Annually":
-            monthlyValue = feeValue / 12;
-            break;
-          case "Semi-Annually":
-            monthlyValue = feeValue / 6;
-            break;
-          case "Quarterly":
-            monthlyValue = feeValue / 3;
-            break;
-          case "Monthly":
-            monthlyValue = feeValue;
-            break;
-          default:
-            monthlyValue = feeValue / 12; // Default to annual
-        }
-        
-        // Format the monthly value with commas
-        const formattedMonthly = monthlyValue.toLocaleString("en-US");
-        
-        // Update hoaMonthly in formData
-        handleChange({
-          target: { 
-            name: "hoaMonthly", 
-            value: formattedMonthly
-          }
-        });
-      }
-    } else {
-      // If HOA is No or fee/terms are missing, set hoaMonthly to empty or 0
-      handleChange({
-        target: { 
-          name: "hoaMonthly", 
-          value: ""
-        }
-      });
-    }
-  }, [formData.hoaPoa, formData.hoaFee, formData.hoaPaymentTerms]);
+export default function Pricing({ formData, handleChange, errors }) {
+  const handleDateSelect = (date) => {
+    handleChange({
+      target: {
+        name: "closingDate",
+        value: date,
+      },
+    });
+  };
 
   return (
-    <Card className="border border-gray-200 shadow-sm rounded-lg">
+    <Card className="border-gray-200 shadow-sm">
       <CardHeader>
-        <CardTitle className="text-2xl font-bold text-gray-800">Pricing</CardTitle>
+        <CardTitle className="text-lg font-semibold text-gray-800">Pricing</CardTitle>
       </CardHeader>
-      <CardContent className="space-y-2">
+      <CardContent className="space-y-4">
         {/* Asking Price */}
         <div>
-          <Label className="text-sm font-semibold text-gray-700">Asking Price</Label>
+          <Label className="text-sm font-semibold text-gray-700">
+            Asking Price <span className="text-red-500">*</span>
+          </Label>
           <Input
             type="text"
             placeholder="Enter asking price"
             name="askingPrice"
             value={formData.askingPrice}
             onChange={handleChange}
-            className="w-full border-gray-300 focus:border-[#D4A017] focus:ring-1 focus:ring-[#D4A017] rounded-md"
+            className={cn("w-full border-gray-300 focus:border-[#D4A017] focus:ring-1 focus:ring-[#D4A017] rounded-md", errors?.askingPrice && "border-red-500")}
           />
-          <p className="text-xs text-gray-500 mt-1">
-            The initial price you're listing the property for.
-          </p>
+          {errors?.askingPrice && <p className="text-xs text-red-500 mt-1">{errors.askingPrice}</p>}
+          <p className="text-xs text-gray-500 mt-1">The price you are asking for this property.</p>
         </div>
 
         {/* Discount Price */}
@@ -95,9 +56,7 @@ export default function Pricing({ formData, handleChange }) {
             onChange={handleChange}
             className="w-full border-gray-300 focus:border-[#D4A017] focus:ring-1 focus:ring-[#D4A017] rounded-md"
           />
-          <p className="text-xs text-gray-500 mt-1">
-            The special price available for logged in buyers.
-          </p>
+          <p className="text-xs text-gray-500 mt-1">The special price available for logged in buyers.</p>
         </div>
 
         {/* Minimum Price */}
@@ -111,55 +70,46 @@ export default function Pricing({ formData, handleChange }) {
             onChange={handleChange}
             className="w-full border-gray-300 focus:border-[#D4A017] focus:ring-1 focus:ring-[#D4A017] rounded-md"
           />
-          <p className="text-xs text-gray-500 mt-1">
-            The lowest amount you are willing to accept for this property.
-          </p>
+          <p className="text-xs text-gray-500 mt-1">The lowest amount you are willing to accept for this property.</p>
         </div>
-        {/* Yearly Tax */}
-        <div>
-          <Label className="text-sm font-semibold text-gray-700">Yearly Tax</Label>
-          <Input
-            type="text"
-            placeholder="Enter Yearly Tax"
-            name="tax"
-            value={formData.tax}
-            onChange={handleChange}
-            className="w-full border-gray-300 focus:border-[#D4A017] focus:ring-1 focus:ring-[#D4A017] rounded-md"
-          />
-          <p className="text-xs text-gray-500 mt-1">
-           Monthly Tax Will Be Calculated Automatically From This Yearly Tax
-          </p>
-        </div>
-        
-        {/* HOA / POA */}
-        <div className="flex flex-col space-y-1 mb-4">
-          <Label className="text-gray-700 font-semibold">HOA / POA</Label>
-          <Select
-            name="hoaPoa"
-            value={formData.hoaPoa}
-            onValueChange={(value) => handleChange({ target: { name: "hoaPoa", value } })}
-          >
-            <SelectTrigger className="w-full border-gray-300 focus:border-[#324c48] focus:ring-1 focus:ring-[#324c48]">
-              <SelectValue placeholder="Select" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="Yes">Yes</SelectItem>
-              <SelectItem value="No">No</SelectItem>
-            </SelectContent>
-          </Select>
+
+        {/* Yearly Tax and HOA/POA on the same line */}
+        <div className="grid grid-cols-2 gap-4">
+          {/* Yearly Tax */}
+          <div>
+            <Label className="text-sm font-semibold text-gray-700">Yearly Tax</Label>
+            <Input
+              type="text"
+              placeholder="Enter Yearly Tax"
+              name="tax"
+              value={formData.tax}
+              onChange={handleChange}
+              className="w-full border-gray-300 focus:border-[#D4A017] focus:ring-1 focus:ring-[#D4A017] rounded-md"
+            />
+            <p className="text-xs text-gray-500 mt-1">Monthly Tax Will Be Calculated Automatically From This Yearly Tax</p>
+          </div>
+
+          {/* HOA / POA */}
+          <div>
+            <Label className="text-gray-700 font-semibold">HOA / POA</Label>
+            <Select name="hoaPoa" value={formData.hoaPoa} onValueChange={(value) => handleChange({ target: { name: "hoaPoa", value } })}>
+              <SelectTrigger className="w-full border-gray-300 focus:border-[#324c48] focus:ring-1 focus:ring-[#324c48]">
+                <SelectValue placeholder="Select" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="Yes">Yes</SelectItem>
+                <SelectItem value="No">No</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
         </div>
 
         {/* Conditionally Render HOA Fee & Terms */}
         {formData.hoaPoa === "Yes" && (
           <div className="grid grid-cols-2 gap-3">
-
             <div className="flex flex-col space-y-1 mb-4">
               <Label className="text-gray-700 font-semibold">HOA Payment Terms</Label>
-              <Select
-                name="hoaPaymentTerms"
-                value={formData.hoaPaymentTerms}
-                onValueChange={(value) => handleChange({ target: { name: "hoaPaymentTerms", value } })}
-              >
+              <Select name="hoaPaymentTerms" value={formData.hoaPaymentTerms} onValueChange={(value) => handleChange({ target: { name: "hoaPaymentTerms", value } })}>
                 <SelectTrigger className="w-full border-gray-300 focus:border-[#324c48] focus:ring-1 focus:ring-[#324c48]">
                   <SelectValue placeholder="Select" />
                 </SelectTrigger>
@@ -174,16 +124,75 @@ export default function Pricing({ formData, handleChange }) {
             </div>
             <div className="flex flex-col space-y-1 mb-4">
               <Label className="text-gray-700 font-semibold">HOA Fee</Label>
-              <Input
-                type="text"
-                name="hoaFee"
-                value={formData.hoaFee}
-                onChange={handleChange}
-                placeholder="Enter HOA Fee"
-              />
+              <Input type="text" name="hoaFee" value={formData.hoaFee} onChange={handleChange} placeholder="Enter HOA Fee" />
             </div>
           </div>
         )}
+
+        {/* Closing Date */}
+        <div>
+          <Label className="text-sm font-semibold text-gray-700">Closing Date</Label>
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button
+                variant="outline"
+                className={cn(
+                  "w-full justify-start text-left font-normal border-gray-300 focus:border-[#D4A017] focus:ring-1 focus:ring-[#D4A017]",
+                  !formData.closingDate && "text-muted-foreground"
+                )}>
+                <CalendarIcon className="mr-2 h-4 w-4" />
+                {formData.closingDate ? format(new Date(formData.closingDate), "PPP") : <span>Pick a closing date</span>}
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent align="start" className="w-auto p-1 bg-white border border-gray-300 rounded-md shadow-lg">
+              <style>{`
+                .compact-calendar * {
+                  margin: 0 !important;
+                }
+                .compact-calendar table {
+                  border-collapse: collapse !important;
+                  width: auto !important;
+                }
+                .compact-calendar td,
+                .compact-calendar th {
+                  padding: 2px !important;
+                  width: 28px !important;
+                  height: 28px !important;
+                }
+                .compact-calendar button {
+                  width: 24px !important;
+                  height: 24px !important;
+                  font-size: 0.875rem !important;
+                  padding: 0 !important;
+                }
+                .compact-calendar .rdp-day_button {
+                  width: 24px !important;
+                  height: 24px !important;
+                }
+                .compact-calendar .rdp-weekday {
+                  font-size: 0.75rem !important;
+                  padding: 2px !important;
+                }
+                .compact-calendar .rdp-month {
+                  margin: 0.5rem !important;
+                }
+                .compact-calendar .rdp-month_caption {
+                  margin-bottom: 0.5rem !important;
+                }
+              `}</style>
+              <div className="border border-gray-200 rounded-md">
+                <DayPicker
+                  mode="single"
+                  selected={formData.closingDate ? new Date(formData.closingDate) : undefined}
+                  onSelect={handleDateSelect}
+                  initialFocus
+                  className="compact-calendar p-2"
+                />
+              </div>
+            </PopoverContent>
+          </Popover>
+          <p className="text-xs text-gray-500 mt-1">Expected closing date for this property transaction.</p>
+        </div>
       </CardContent>
     </Card>
   );

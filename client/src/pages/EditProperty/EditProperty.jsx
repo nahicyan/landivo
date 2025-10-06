@@ -99,6 +99,7 @@ export default function EditProperty() {
     financingTwo: "",
     financingThree: "",
     tax: "",
+    closingDate: "",
     hoaMonthly: "",
     serviceFee: "",
     term: "",

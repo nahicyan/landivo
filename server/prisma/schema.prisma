@@ -10,28 +10,28 @@ datasource db {
 //--------------------- Users ----------------------//
 
 model User {
-  id               String      @id @default(auto()) @map("_id") @db.ObjectId
-  auth0Id          String      @unique
-  firstName        String?
-  lastName         String?
-  email            String      @unique
-  phone            String?     // Added: User's phone number
-  profileRole      String?     // Added: User's role/title (e.g. "Landivo Expert")
-  avatarUrl        String?     // Added: Profile image path
-  allowedProfiles  String[]    // Added: Array of profile IDs this user can use
-  isActive         Boolean     @default(true)
-  lastLoginAt      DateTime?
-  loginCount       Int         @default(0)
+  id              String    @id @default(auto()) @map("_id") @db.ObjectId
+  auth0Id         String    @unique
+  firstName       String?
+  lastName        String?
+  email           String    @unique
+  phone           String? // Added: User's phone number
+  profileRole     String? // Added: User's role/title (e.g. "Landivo Expert")
+  avatarUrl       String? // Added: Profile image path
+  allowedProfiles String[] // Added: Array of profile IDs this user can use
+  isActive        Boolean   @default(true)
+  lastLoginAt     DateTime?
+  loginCount      Int       @default(0)
 
   // Existing relations and fields
-  createdResidencies   Residency[]      @relation("CreatedByRelation")
-  updatedResidencies   Residency[]      @relation("UpdatedByRelation")
-  createdBuyers        Buyer[]          @relation("CreatedByBuyerRelation")
-  updatedBuyers        Buyer[]          @relation("UpdatedByBuyerRelation")
-  createdDeals         Deal[]           @relation("CreatedByDealRelation")
-  updatedDeals         Deal[]           @relation("UpdatedByDealRelation")
+  createdResidencies    Residency[]     @relation("CreatedByRelation")
+  updatedResidencies    Residency[]     @relation("UpdatedByRelation")
+  createdBuyers         Buyer[]         @relation("CreatedByBuyerRelation")
+  updatedBuyers         Buyer[]         @relation("UpdatedByBuyerRelation")
+  createdDeals          Deal[]          @relation("CreatedByDealRelation")
+  updatedDeals          Deal[]          @relation("UpdatedByDealRelation")
   updatedQualifications Qualification[] @relation("UpdatedByQualificationRelation")
-  activityLogs ActivityLog[] @relation("UserActivityLogs")
+  activityLogs          ActivityLog[]   @relation("UserActivityLogs")
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -40,23 +40,23 @@ model User {
 //---------------------- Activity Log ----------------------//
 
 model ActivityLog {
-  id          String @id @default(auto()) @map("_id") @db.ObjectId
-  entityType  String // 'Residency', 'Buyer', 'Deal', etc.
-  entityId    String
-  actionType  String // 'create', 'update', 'delete', 'view', etc.
-  userId      String @db.ObjectId
-  user        User   @relation("UserActivityLogs", fields: [userId], references: [id])
-  
+  id         String @id @default(auto()) @map("_id") @db.ObjectId
+  entityType String // 'Residency', 'Buyer', 'Deal', etc.
+  entityId   String
+  actionType String // 'create', 'update', 'delete', 'view', etc.
+  userId     String @db.ObjectId
+  user       User   @relation("UserActivityLogs", fields: [userId], references: [id])
+
   // Store the changes as JSON
   previousData Json?
   newData      Json?
-  
-  details     String?
-  ipAddress   String?
-  userAgent   String?
-  
-  createdAt   DateTime @default(now())
-  
+
+  details   String?
+  ipAddress String?
+  userAgent String?
+
+  createdAt DateTime @default(now())
+
   @@index([entityType, entityId])
   @@index([userId])
   @@index([actionType])
@@ -66,33 +66,33 @@ model ActivityLog {
 //---------------------- Property ----------------------//
 
 model Residency {
-  id        String @id @default(auto()) @map("_id") @db.ObjectId
-  
+  id String @id @default(auto()) @map("_id") @db.ObjectId
+
   // Audit fields
-  createdById  String  @db.ObjectId
-  createdBy    User    @relation("CreatedByRelation", fields: [createdById], references: [id])
-  updatedById  String? @db.ObjectId
-  updatedBy    User?   @relation("UpdatedByRelation", fields: [updatedById], references: [id])
-  
+  createdById String  @db.ObjectId
+  createdBy   User    @relation("CreatedByRelation", fields: [createdById], references: [id])
+  updatedById String? @db.ObjectId
+  updatedBy   User?   @relation("UpdatedByRelation", fields: [updatedById], references: [id])
+
   // Track all modifications
   modificationHistory Json? // Array of modification events
-  
-  //Deals
-  deals     Deal[]
 
-    // Deletion
+  //Deals
+  deals Deal[]
+
+  // Deletion
   deletionRequests PropertyDeletionRequest[]
-  
+
   // 1. System Information
-  ownerId            Int?
-  area               String
-  status             String
-  featured           String?
+  ownerId  Int?
+  area     String
+  status   String
+  featured String?
 
   // 2. Listing Details
-  title              String
-  description        String
-  notes              String?
+  title       String
+  description String
+  notes       String?
 
   // 3. Property Classification
   type               String?
@@ -105,7 +105,7 @@ model Residency {
 
   //4. Location & Identification
   streetAddress String
-    // Display
+  // Display
   toggleObscure Boolean @default(false)
   //
   city          String
@@ -120,19 +120,20 @@ model Residency {
   landIdLink    String?
 
   //5. Property Size & Dimensions
-  sqft      Int?
-  acre      Float
+  sqft Int?
+  acre Float
 
-//6. Pricing
-  askingPrice   Float
-  minPrice      Float
-  disPrice      Float
-  hoaPoa        String
-  hoaFee        Float?
+  //6. Pricing
+  askingPrice     Float
+  minPrice        Float
+  disPrice        Float
+  hoaPoa          String
+  hoaFee          Float?
   hoaPaymentTerms String?
-  tax           Float?
+  tax             Float?
+  closingDate     DateTime?
 
-//7. Financing & Pricing Calculations
+  //7. Financing & Pricing Calculations
   financing           String
   financingTwo        String?
   financingThree      String?
@@ -162,9 +163,9 @@ model Residency {
   floodplain    String?
 
   //9. CMA fields
-  hasCma         Boolean  @default(false)
-  cmaData        String?
-  cmaFilePath    String?
+  hasCma      Boolean @default(false)
+  cmaData     String?
+  cmaFilePath String?
 
   //10. Media & Tags
   imageUrls Json?
@@ -173,35 +174,33 @@ model Residency {
   rtag      String?
 
   // Miscellaneous
-  viewCount Int?    @default(0) // View count for unique views
+  viewCount Int? @default(0) // View count for unique views
 
   // Timestamps
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-    // Add profile ID field
-  profileId        String? // ID of the profile used for this property
+  // Add profile ID field
+  profileId String? // ID of the profile used for this property
 
   // Unique Constraints
   @@unique(fields: [apnOrPin, streetAddress, city, state]) // Modified to remove userEmail
   @@unique(fields: [latitude, longitude]) // Ensure no duplicate geolocations
-
-
 }
 
 //---------------------- Deletion ----------------------//
 
 model PropertyDeletionRequest {
-  id          String   @id @default(auto()) @map("_id") @db.ObjectId
-  propertyId  String   @db.ObjectId
-  property    Residency @relation(fields: [propertyId], references: [id])
-  reason      String?
-  token       String   @unique
-  status      DeletionStatus @default(PENDING)
-  expiresAt   DateTime
-  approvedAt  DateTime?
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id         String         @id @default(auto()) @map("_id") @db.ObjectId
+  propertyId String         @db.ObjectId
+  property   Residency      @relation(fields: [propertyId], references: [id])
+  reason     String?
+  token      String         @unique
+  status     DeletionStatus @default(PENDING)
+  expiresAt  DateTime
+  approvedAt DateTime?
+  createdAt  DateTime       @default(now())
+  updatedAt  DateTime       @updatedAt
 }
 
 enum DeletionStatus {
@@ -213,30 +212,28 @@ enum DeletionStatus {
 
 //---------------------- Offer ----------------------//
 
-
-
 model Offer {
-  id              String       @id @default(auto()) @map("_id") @db.ObjectId
-  propertyId      String
-  offeredPrice    Float
-  counteredPrice  Float?       // Added field for counter offers
-  timestamp       DateTime     @default(now())
-  buyerId         String       @db.ObjectId
-  buyer           Buyer        @relation("BuyerOffers", fields: [buyerId], references: [id])
-  offerStatus     OfferStatus  @default(PENDING) // Added status enum
-  
+  id             String      @id @default(auto()) @map("_id") @db.ObjectId
+  propertyId     String
+  offeredPrice   Float
+  counteredPrice Float? // Added field for counter offers
+  timestamp      DateTime    @default(now())
+  buyerId        String      @db.ObjectId
+  buyer          Buyer       @relation("BuyerOffers", fields: [buyerId], references: [id])
+  offerStatus    OfferStatus @default(PENDING) // Added status enum
+
   // Message fields
-  buyerMessage    String?
-  sysMessage      String?
-  
+  buyerMessage String?
+  sysMessage   String?
+
   // History tracking
-  offerHistory    Json[]       // Array of status changes with timestamps and messages
-  
+  offerHistory Json[] // Array of status changes with timestamps and messages
+
   // Audit fields
-  createdById     String?      @db.ObjectId
-  updatedById     String?      @db.ObjectId
-  updatedAt       DateTime     @updatedAt
-  
+  createdById String?  @db.ObjectId
+  updatedById String?  @db.ObjectId
+  updatedAt   DateTime @updatedAt
+
   // Track modifications
   modificationHistory Json?
 }
@@ -252,35 +249,35 @@ enum OfferStatus {
 //---------------------- Buyer ----------------------//
 
 model Buyer {
-  id             String          @id @default(auto()) @map("_id") @db.ObjectId
-  email          String          // @unique
-  phone          String?         // @unique
+  id             String     @id @default(auto()) @map("_id") @db.ObjectId
+  email          String // @unique
+  phone          String? // @unique
   buyerType      BuyerType?
   firstName      String?
   lastName       String?
   source         String?
   preferredAreas String[]
-  offers         Offer[]         @relation("BuyerOffers")
+  offers         Offer[]    @relation("BuyerOffers")
   auth0Id        String?
 
   // Email List fields
-  emailStatus           String?     // "available" or "unsubscribe"
+  emailStatus           String? // "available" or "unsubscribe"
   emailPermissionStatus String?
   emailListMemberships  BuyerEmailList[] @relation("BuyerEmailLists")
-  
+
   // Audit fields
-  createdById    String?         @db.ObjectId
-  createdBy      User?           @relation("CreatedByBuyerRelation", fields: [createdById], references: [id])
-  updatedById    String?         @db.ObjectId
-  updatedBy      User?           @relation("UpdatedByBuyerRelation", fields: [updatedById], references: [id])
-  
+  createdById String? @db.ObjectId
+  createdBy   User?   @relation("CreatedByBuyerRelation", fields: [createdById], references: [id])
+  updatedById String? @db.ObjectId
+  updatedBy   User?   @relation("UpdatedByBuyerRelation", fields: [updatedById], references: [id])
+
   // Track modifications
   modificationHistory Json?
-  
-  createdAt      DateTime        @default(now())
-  updatedAt      DateTime        @updatedAt
-  deals          Deal[]
-  activities     BuyerActivity[] @relation("BuyerActivities")
+
+  createdAt  DateTime        @default(now())
+  updatedAt  DateTime        @updatedAt
+  deals      Deal[]
+  activities BuyerActivity[] @relation("BuyerActivities")
 }
 
 //---------------------- Email List ----------------------//
@@ -304,7 +301,7 @@ model EmailList {
   // Additional metadata
   isDefault Boolean @default(false)
   color     String?
-  
+
   // Track modifications
   modificationHistory Json?
 }
@@ -318,7 +315,7 @@ model BuyerEmailList {
   emailListId String    @db.ObjectId
   emailList   EmailList @relation("EmailListBuyers", fields: [emailListId], references: [id])
   joinedAt    DateTime  @default(now())
-  
+
   @@unique([buyerId, emailListId])
   @@index([buyerId])
   @@index([emailListId])
@@ -370,11 +367,10 @@ model Qualification {
   downPayment    Float? // Selected down payment amount
   term           Int? // Loan term in months
 
+  // Audit fields
+  updatedById String? @db.ObjectId
+  updatedBy   User?   @relation("UpdatedByQualificationRelation", fields: [updatedById], references: [id])
 
-// Audit fields
- updatedById    String?  @db.ObjectId
- updatedBy      User?    @relation("UpdatedByQualificationRelation", fields: [updatedById], references: [id])
-  
   // Track modifications
   modificationHistory Json?
 
@@ -426,11 +422,11 @@ model Deal {
   property   Residency @relation(fields: [propertyId], references: [id])
 
   // Audit fields
-  createdById  String   @db.ObjectId
-  createdBy    User     @relation("CreatedByDealRelation", fields: [createdById], references: [id])
-  updatedById  String?  @db.ObjectId
-  updatedBy    User?    @relation("UpdatedByDealRelation", fields: [updatedById], references: [id])
-  
+  createdById String  @db.ObjectId
+  createdBy   User    @relation("CreatedByDealRelation", fields: [createdById], references: [id])
+  updatedById String? @db.ObjectId
+  updatedBy   User?   @relation("UpdatedByDealRelation", fields: [updatedById], references: [id])
+
   // Track modifications
   modificationHistory Json?
 
@@ -465,8 +461,8 @@ model Deal {
 
   // Performance metrics
   totalExpectedRevenue Float?
-  currentRevenue       Float?  @default(0)
-  profitLoss           Float?  @default(0)
+  currentRevenue       Float? @default(0)
+  profitLoss           Float? @default(0)
   capRate              Float?
   cashOnCashReturn     Float?
 
@@ -495,11 +491,11 @@ model Payment {
   principal     Float
   interest      Float
   lateFee       Float?
-  
+
   // Audit fields
-  createdById  String?  @db.ObjectId
-  updatedById  String?  @db.ObjectId
-  
+  createdById String? @db.ObjectId
+  updatedById String? @db.ObjectId
+
   // Track modifications
   modificationHistory Json?
 
@@ -527,8 +523,8 @@ enum PaymentStatus {
 model PropertyRow {
   id           String   @id @default(auto()) @map("_id") @db.ObjectId
   name         String?
-  rowType      String?   // e.g. "featured", "homepage"
-  sort         String?   // Price, Date, 
+  rowType      String? // e.g. "featured", "homepage"
+  sort         String? // Price, Date, 
   displayOrder String[] // Array of property IDs in order
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
@@ -537,75 +533,75 @@ model PropertyRow {
 //---------------------- Settings ----------------------//
 
 model Settings {
-  id                      String    @id @default(auto()) @map("_id") @db.ObjectId
-  overrideContactPhone    String?
-  
+  id                   String  @id @default(auto()) @map("_id") @db.ObjectId
+  overrideContactPhone String?
+
   // SMTP Configuration
-  smtpServer              String?
-  smtpPort                String?
-  smtpUser                String?
-  smtpPassword            String?
-  
+  smtpServer   String?
+  smtpPort     String?
+  smtpUser     String?
+  smtpPassword String?
+
   // Offer Email Notification Settings
-  enableOfferEmails       Boolean   @default(false)
-  offerEmailRecipients    String[]  @default([])
-  
+  enableOfferEmails    Boolean  @default(false)
+  offerEmailRecipients String[] @default([])
+
   // Financing Email Notification Settings
-  enableFinancingEmails   Boolean   @default(false)
+  enableFinancingEmails    Boolean  @default(false)
   financingEmailRecipients String[] @default([])
-  
-  createdAt               DateTime  @default(now())
-  updatedAt               DateTime  @updatedAt
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 //---------------------- Visitor Tracking ----------------------//
 
 // Visitor tracking models
 model Visitor {
-  id             String    @id @default(auto()) @map("_id") @db.ObjectId
-  visitorId      String    @unique // Client-side generated ID
-  firstVisit     DateTime  @default(now())
-  lastVisit      DateTime  @default(now())
-  totalVisits    Int       @default(1)
-  country        String?
-  region         String?
-  deviceType     String?   // mobile, tablet, desktop
-  browser        String?
-  os             String?
-  visits         Visit[]
-  createdAt      DateTime  @default(now())
-  updatedAt      DateTime  @updatedAt
+  id          String   @id @default(auto()) @map("_id") @db.ObjectId
+  visitorId   String   @unique // Client-side generated ID
+  firstVisit  DateTime @default(now())
+  lastVisit   DateTime @default(now())
+  totalVisits Int      @default(1)
+  country     String?
+  region      String?
+  deviceType  String? // mobile, tablet, desktop
+  browser     String?
+  os          String?
+  visits      Visit[]
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 }
 
 model Visit {
-  id             String    @id @default(auto()) @map("_id") @db.ObjectId
-  visitorId      String
-  visitor        Visitor   @relation(fields: [visitorId], references: [visitorId])
-  sessionId      String    // Unique session ID
-  startTime      DateTime  @default(now())
-  endTime        DateTime?
-  duration       Int?      // Duration in seconds
-  pagesViewed    Int       @default(1)
-  entryPage      String
-  exitPage       String?
-  referrer       String?
-  userAgent      String?
-  ipAddress      String?
-  screenSize     String?
+  id          String    @id @default(auto()) @map("_id") @db.ObjectId
+  visitorId   String
+  visitor     Visitor   @relation(fields: [visitorId], references: [visitorId])
+  sessionId   String // Unique session ID
+  startTime   DateTime  @default(now())
+  endTime     DateTime?
+  duration    Int? // Duration in seconds
+  pagesViewed Int       @default(1)
+  entryPage   String
+  exitPage    String?
+  referrer    String?
+  userAgent   String?
+  ipAddress   String?
+  screenSize  String?
 
   @@index([visitorId])
   @@index([startTime])
 }
 
 model VisitorStat {
-  id              String    @id @default(auto()) @map("_id") @db.ObjectId
-  date            DateTime  @unique
-  uniqueVisitors  Int       @default(0)
-  totalVisits     Int       @default(0)
-  newVisitors     Int       @default(0)
+  id                String   @id @default(auto()) @map("_id") @db.ObjectId
+  date              DateTime @unique
+  uniqueVisitors    Int      @default(0)
+  totalVisits       Int      @default(0)
+  newVisitors       Int      @default(0)
   returningVisitors Int      @default(0)
-  topPages        Json?
-  deviceBreakdown Json?
-  createdAt       DateTime  @default(now())
-  updatedAt       DateTime  @updatedAt
+  topPages          Json?
+  deviceBreakdown   Json?
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
 }
