@@ -31,7 +31,7 @@ export function useCampaignSender(propertyId, propertyData) {
       if (sendType === "mailivo") {
         // Redirect to Mailivo
         const response = await axios.post(
-          `${import.meta.env.VITE_SERVER_URL}/api/mailivo/automation`,
+          `${import.meta.env.VITE_MAILIVO_API_URL}/automation-landivo/propertyUpload`,
           payload
         );
 
@@ -42,7 +42,7 @@ export function useCampaignSender(propertyId, propertyData) {
       } else {
         // Send now
         await axios.post(
-          "https://api.mailivo.landivo.com/automation/propertyUpload",
+          `${import.meta.env.VITE_MAILIVO_API_URL}/automation-landivo/propertyUpload`,
           payload
         );
 

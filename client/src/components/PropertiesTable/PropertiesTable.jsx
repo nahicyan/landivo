@@ -329,7 +329,7 @@ export default function PropertiesTable({ propertyData }) {
                 <DropdownMenuItem
                   onClick={() =>
                     window.open(
-                      `/admin/properties/edit/${property.id}`,
+                      `/admin/edit-property/${property.id}`,
                       "_blank"
                     )
                   }
