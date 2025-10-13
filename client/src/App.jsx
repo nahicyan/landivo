@@ -67,6 +67,7 @@ import AuthErrorBoundary from "./components/Auth0/AuthErrorBoundary";
 import ApprovePropertyDeletion from "./pages/ApprovePropertyDeletion/ApprovePropertyDeletion";
 import Offer from './pages/AdminOffer/Offer';
 import JoinVip from "./pages/JoinVip/JoinVip";
+import Discount from "./pages/Discount/Discount";
 
 
 const queryClient = new QueryClient({
@@ -175,6 +176,8 @@ function App() {
                                 <Route path="offers" element={<AdminOffer />} />
                                 <Route path="offers/id/:offerId" element={<Offer />} />
                                 <Route path="properties" element={<AdminProperties />} />
+                                {/* Discount */}
+                                <Route path="edit-property/:propertyId/discount" element={<Discount />} />
 
                                 {/* Deals */}
                                 <Route path="deals" element={<AdminDeals />} />
