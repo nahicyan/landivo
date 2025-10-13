@@ -28,7 +28,7 @@ const GetStarted = () => {
       await loginWithRedirect({
         authorizationParams: {
           screen_hint: 'signup',
-          redirect_uri: `${window.location.origin}/vip-signup`
+        //  redirect_uri: `${window.location.origin}/vip-signup`
         },
         appState: { returnTo: '/vip-signup' }
       });
