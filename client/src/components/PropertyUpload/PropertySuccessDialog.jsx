@@ -1,4 +1,4 @@
-// client/src/components/PropertyUpload/PropertySuccessDialog.jsx // New File
+// client/src/components/PropertyUpload/PropertySuccessDialog.jsx
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
