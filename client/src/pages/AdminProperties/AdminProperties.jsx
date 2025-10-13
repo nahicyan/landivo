@@ -191,15 +191,6 @@ export default function AdminProperties() {
 
           {/* Properties Tab */}
           <TabsContent value="properties">
-            {/* Stats Section */}
-            {isLoading ? (
-              <div className="flex justify-center p-12">
-                <PuffLoader size={60} color="#3f4f24" />
-              </div>
-            ) : (
-              <PropertyStats stats={stats} />
-            )}
-
             {/* Full Properties Table */}
             <div className="mt-8">
               <h2 className="text-xl font-bold text-[#324c48] mb-4">Advanced Property Management</h2>

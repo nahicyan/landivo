@@ -16,16 +16,16 @@ const formatCurrency = (value) => {
 const formatInputCurrency = (value) => {
   if (!value) return "";
   // Remove any non-digit characters except decimal point
-  const numericValue = typeof value === 'string' ? value.replace(/[^0-9.]/g, '') : value.toString();
+  const numericValue = typeof value === "string" ? value.replace(/[^0-9.]/g, "") : value.toString();
   // Parse to a number and format with commas
-  return Number(numericValue).toLocaleString('en-US');
+  return Number(numericValue).toLocaleString("en-US");
 };
 
 // Utility: Parse currency string to number
 const parseCurrencyToNumber = (value) => {
   // Remove commas and convert to number
   if (!value) return 0;
-  return parseFloat(value.toString().replace(/,/g, ''));
+  return parseFloat(value.toString().replace(/,/g, ""));
 };
 
 // Utility: Format term (in months) into "X Years Y Months"
@@ -48,18 +48,18 @@ const calculateTotals = (monthlyPayment, loanAmount, downPayment, term) => {
   const loan = parseCurrencyToNumber(loanAmount);
   const down = parseCurrencyToNumber(downPayment);
   const months = Number(term) || 0;
-  
+
   if (payment <= 0 || loan <= 0 || months <= 0) {
     return { totalInterest: 0, totalCost: 0 };
   }
-  
+
   const totalLoanPayments = payment * months;
   const totalInterest = totalLoanPayments - loan;
   const totalCost = down + totalLoanPayments;
-  
+
   return {
     totalInterest: Math.max(0, totalInterest),
-    totalCost: totalCost
+    totalCost: totalCost,
   };
 };
 
@@ -75,24 +75,24 @@ export default function PaymentCalculatorBack({ formData, handleChange }) {
   // Enhanced input handler for currency formatting
   const handleCurrencyInputChange = (e) => {
     const { name, value } = e.target;
-    
+
     // Remove commas for proper numeric handling
-    const numericValue = value.replace(/,/g, '');
-    
+    const numericValue = value.replace(/,/g, "");
+
     // Update the display value with comma formatting
-    const formattedValue = numericValue ? Number(numericValue).toLocaleString('en-US') : '';
-    
+    const formattedValue = numericValue ? Number(numericValue).toLocaleString("en-US") : "";
+
     // Update the form with the formatted value for display
-    handleChange({ 
-      target: { 
-        name, 
+    handleChange({
+      target: {
+        name,
         value: formattedValue,
         // Store original numeric value as a data attribute for calculations
-        dataset: { numericValue }
-      } 
+        dataset: { numericValue },
+      },
     });
   };
-  
+
   // Handle blur for general currency inputs
   const handleCurrencyBlur = () => {
     // Trigger recalculation for all available plans to ensure consistency
@@ -105,20 +105,20 @@ export default function PaymentCalculatorBack({ formData, handleChange }) {
   const handleDownPaymentChange = (planKey, e) => {
     const { value } = e.target;
     const fieldName = `downPayment${planKey}`;
-    
+
     // Remove commas for calculation
-    const numericValue = value.replace(/,/g, '');
-    
+    const numericValue = value.replace(/,/g, "");
+
     // Format for display
-    const formattedValue = numericValue ? Number(numericValue).toLocaleString('en-US') : '';
-    
+    const formattedValue = numericValue ? Number(numericValue).toLocaleString("en-US") : "";
+
     // Update the form data with the formatted value
     handleChange({ target: { name: fieldName, value: formattedValue } });
-    
+
     // Set the source to manual
     handleChange({ target: { name: `downPayment${planKey}Source`, value: "manual" } });
   };
-  
+
   // Handle blur (clicking out) of Down Payment fields
   const handleDownPaymentBlur = (planKey) => {
     // Manually trigger a recalculation for this plan
@@ -151,7 +151,7 @@ export default function PaymentCalculatorBack({ formData, handleChange }) {
   // This function is both used by effects and can be called manually
   const recalcPlan = (planKey) => {
     const { term } = formData;
-    
+
     // Parse financing price removing commas
     const financeVal = parseCurrencyToNumber(formData.financingPrice) || 0;
 
@@ -184,7 +184,7 @@ export default function PaymentCalculatorBack({ formData, handleChange }) {
 
     // Calculate Loan Amount = financingPrice - downPayment
     const newLoanAmount = financeVal - newDownPayment;
-    
+
     // Calculate Monthly Payment using the amortization formula
     const newMonthlyPayment = calculateMonthlyPayment(newLoanAmount, interestRateVal, Number(term));
 
@@ -192,40 +192,40 @@ export default function PaymentCalculatorBack({ formData, handleChange }) {
     const totals = calculateTotals(newMonthlyPayment, newLoanAmount, newDownPayment, term);
 
     // Update state with formatted values for display
-    handleChange({ 
-      target: { 
-        name: downPaymentField, 
-        value: formatInputCurrency(newDownPayment.toFixed(2)) 
-      } 
+    handleChange({
+      target: {
+        name: downPaymentField,
+        value: formatInputCurrency(newDownPayment.toFixed(2)),
+      },
     });
-    
-    handleChange({ 
-      target: { 
-        name: loanAmountField, 
-        value: formatInputCurrency(newLoanAmount.toFixed(2)) 
-      } 
+
+    handleChange({
+      target: {
+        name: loanAmountField,
+        value: formatInputCurrency(newLoanAmount.toFixed(2)),
+      },
     });
-    
-    handleChange({ 
-      target: { 
-        name: monthlyPaymentField, 
-        value: formatInputCurrency(newMonthlyPayment.toFixed(2)) 
-      } 
+
+    handleChange({
+      target: {
+        name: monthlyPaymentField,
+        value: formatInputCurrency(newMonthlyPayment.toFixed(2)),
+      },
     });
 
     // Update total interest and total cost
-    handleChange({ 
-      target: { 
-        name: totalInterestField, 
-        value: formatInputCurrency(totals.totalInterest.toFixed(2)) 
-      } 
+    handleChange({
+      target: {
+        name: totalInterestField,
+        value: formatInputCurrency(totals.totalInterest.toFixed(2)),
+      },
     });
-    
-    handleChange({ 
-      target: { 
-        name: totalCostField, 
-        value: formatInputCurrency(totals.totalCost.toFixed(2)) 
-      } 
+
+    handleChange({
+      target: {
+        name: totalCostField,
+        value: formatInputCurrency(totals.totalCost.toFixed(2)),
+      },
     });
   };
 
@@ -236,7 +236,7 @@ export default function PaymentCalculatorBack({ formData, handleChange }) {
 
     // Create plan data objects to sort (only for available plans)
     const planData = [];
-    
+
     if (isPlan1Available) {
       planData.push({
         key: "One",
@@ -245,10 +245,10 @@ export default function PaymentCalculatorBack({ formData, handleChange }) {
         monthlyPayment: parseCurrencyToNumber(formData.monthlyPaymentOne),
         downPaymentPercent: formData.downPaymentOnePercent,
         downPaymentSlider: formData.downPaymentOneSlider,
-        downPaymentSource: formData.downPaymentOneSource || "manual"
+        downPaymentSource: formData.downPaymentOneSource || "manual",
       });
     }
-    
+
     if (isPlan2Available) {
       planData.push({
         key: "Two",
@@ -257,10 +257,10 @@ export default function PaymentCalculatorBack({ formData, handleChange }) {
         monthlyPayment: parseCurrencyToNumber(formData.monthlyPaymentTwo),
         downPaymentPercent: formData.downPaymentTwoPercent,
         downPaymentSlider: formData.downPaymentTwoSlider,
-        downPaymentSource: formData.downPaymentTwoSource || "manual"
+        downPaymentSource: formData.downPaymentTwoSource || "manual",
       });
     }
-    
+
     if (isPlan3Available) {
       planData.push({
         key: "Three",
@@ -269,13 +269,13 @@ export default function PaymentCalculatorBack({ formData, handleChange }) {
         monthlyPayment: parseCurrencyToNumber(formData.monthlyPaymentThree),
         downPaymentPercent: formData.downPaymentThreePercent,
         downPaymentSlider: formData.downPaymentThreeSlider,
-        downPaymentSource: formData.downPaymentThreeSource || "manual"
+        downPaymentSource: formData.downPaymentThreeSource || "manual",
       });
     }
 
     // Sort based on the selected option
     let sortedPlans = [...planData];
-    
+
     switch (sortOption) {
       case "highToLowMonthly":
         sortedPlans.sort((a, b) => b.monthlyPayment - a.monthlyPayment);
@@ -304,41 +304,51 @@ export default function PaymentCalculatorBack({ formData, handleChange }) {
     if (isPlan1Available) availableKeys.push("One");
     if (isPlan2Available) availableKeys.push("Two");
     if (isPlan3Available) availableKeys.push("Three");
-    
+
     // Apply the sorted values to the available plans in order
     sortedPlans.forEach((plan, index) => {
       if (index < availableKeys.length) {
         const targetPlanKey = availableKeys[index];
-        
+
         // Update the down payment, interest rate, etc. for each plan based on sorted order
-        handleChange({ target: { 
-          name: `downPayment${targetPlanKey}`, 
-          value: formatInputCurrency(plan.downPayment.toFixed(2)) 
-        }});
-        
-        handleChange({ target: { 
-          name: `interest${targetPlanKey}`, 
-          value: plan.interest 
-        }});
-        
+        handleChange({
+          target: {
+            name: `downPayment${targetPlanKey}`,
+            value: formatInputCurrency(plan.downPayment.toFixed(2)),
+          },
+        });
+
+        handleChange({
+          target: {
+            name: `interest${targetPlanKey}`,
+            value: plan.interest,
+          },
+        });
+
         // Also update the percent selector, slider, and source to maintain consistency
-        handleChange({ target: { 
-          name: `downPayment${targetPlanKey}Percent`, 
-          value: plan.downPaymentPercent 
-        }});
-        
-        handleChange({ target: { 
-          name: `downPayment${targetPlanKey}Slider`, 
-          value: plan.downPaymentSlider 
-        }});
-        
-        handleChange({ target: { 
-          name: `downPayment${targetPlanKey}Source`, 
-          value: plan.downPaymentSource 
-        }});
+        handleChange({
+          target: {
+            name: `downPayment${targetPlanKey}Percent`,
+            value: plan.downPaymentPercent,
+          },
+        });
+
+        handleChange({
+          target: {
+            name: `downPayment${targetPlanKey}Slider`,
+            value: plan.downPaymentSlider,
+          },
+        });
+
+        handleChange({
+          target: {
+            name: `downPayment${targetPlanKey}Source`,
+            value: plan.downPaymentSource,
+          },
+        });
       }
     });
-    
+
     // Recalculate all available plans to ensure consistency
     if (isPlan1Available) recalcPlan("One");
     if (isPlan2Available) recalcPlan("Two");
@@ -358,36 +368,15 @@ export default function PaymentCalculatorBack({ formData, handleChange }) {
   // Recalculate each plan when relevant fields change:
   useEffect(() => {
     if (isPlan1Available) recalcPlan("One");
-  }, [
-    formData.financingPrice,
-    formData.downPaymentOnePercent,
-    formData.downPaymentOneSlider,
-    formData.interestOne,
-    formData.term,
-    formData.downPaymentOneSource,
-  ]);
+  }, [formData.financingPrice, formData.downPaymentOnePercent, formData.downPaymentOneSlider, formData.interestOne, formData.term, formData.downPaymentOneSource]);
 
   useEffect(() => {
     if (isPlan2Available) recalcPlan("Two");
-  }, [
-    formData.financingPrice,
-    formData.downPaymentTwoPercent,
-    formData.downPaymentTwoSlider,
-    formData.interestTwo,
-    formData.term,
-    formData.downPaymentTwoSource,
-  ]);
+  }, [formData.financingPrice, formData.downPaymentTwoPercent, formData.downPaymentTwoSlider, formData.interestTwo, formData.term, formData.downPaymentTwoSource]);
 
   useEffect(() => {
     if (isPlan3Available) recalcPlan("Three");
-  }, [
-    formData.financingPrice,
-    formData.downPaymentThreePercent,
-    formData.downPaymentThreeSlider,
-    formData.interestThree,
-    formData.term,
-    formData.downPaymentThreeSource,
-  ]);
+  }, [formData.financingPrice, formData.downPaymentThreePercent, formData.downPaymentThreeSlider, formData.interestThree, formData.term, formData.downPaymentThreeSource]);
 
   return (
     <Card className="border border-gray-200 shadow-sm rounded-lg w-full">
@@ -403,15 +392,8 @@ export default function PaymentCalculatorBack({ formData, handleChange }) {
           <div className="grid grid-cols-1 gap-2 md:grid-cols-4">
             {/* Asking Price (display-only) */}
             <div>
-              <Label className="block text-sm font-semibold text-[#4a4a48] mb-1">
-                Asking Price
-              </Label>
-              <Input
-                type="text"
-                readOnly
-                value={formData.askingPrice}
-                className="w-full bg-[#e8e8e6] text-[#333331]"
-              />
+              <Label className="block text-sm font-semibold text-[#4a4a48] mb-1">Asking Price</Label>
+              <Input type="text" readOnly value={formData.askingPrice} className="w-full bg-[#e8e8e6] text-[#333331]" />
             </div>
             {/* Financing Price */}
             <div>
@@ -446,13 +428,8 @@ export default function PaymentCalculatorBack({ formData, handleChange }) {
             </div>
             {/* Sort Options Dropdown */}
             <div>
-              <Label className="block text-sm font-semibold text-[#4a4a48] mb-1">
-                Sort Plans By
-              </Label>
-              <Select 
-                value={sortOption}
-                onValueChange={handleSortOptionChange}
-              >
+              <Label className="block text-sm font-semibold text-[#4a4a48] mb-1">Sort Plans By</Label>
+              <Select value={sortOption} onValueChange={handleSortOptionChange}>
                 <SelectTrigger className="w-full border-[#adadab]">
                   <SelectValue placeholder="Select sort option" />
                 </SelectTrigger>
@@ -487,48 +464,25 @@ export default function PaymentCalculatorBack({ formData, handleChange }) {
             </div>
             {/* Tax */}
             <div>
-              <Label className="block text-sm font-semibold text-[#4a4a48] mb-1">
-                Yearly Tax
-              </Label>
-              <Input
-                type="text"
-                readOnly
-                value={formData.tax}
-                className="w-full bg-[#e8e8e6] text-[#333331]"
-              />
+              <Label className="block text-sm font-semibold text-[#4a4a48] mb-1">Yearly Tax</Label>
+              <Input type="text" readOnly value={formData.tax} className="w-full bg-[#e8e8e6] text-[#333331]" />
             </div>
             {/* HOA Monthly */}
             <div>
-              <Label className="block text-sm font-semibold text-[#4a4a48] mb-1">
-                HOA Monthly Fee
-              </Label>
-              <Input
-                type="text"
-                readOnly
-                value={formData.hoaMonthly}
-                className="w-full bg-[#e8e8e6] text-[#333331]"
-              />
+              <Label className="block text-sm font-semibold text-[#4a4a48] mb-1">HOA Monthly Fee</Label>
+              <Input type="text" readOnly value={formData.hoaMonthly} className="w-full bg-[#e8e8e6] text-[#333331]" />
             </div>
             {/* Term Display (in Years + Months) */}
             <div>
-              <Label className="block text-sm font-semibold text-[#4a4a48] mb-1">
-                Term
-              </Label>
-              <Input
-                type="text"
-                readOnly
-                value={formatTerm(formData.term)}
-                className="w-full bg-[#e8e8e6] text-[#333331]"
-              />
+              <Label className="block text-sm font-semibold text-[#4a4a48] mb-1">Term</Label>
+              <Input type="text" readOnly value={formatTerm(formData.term)} className="w-full bg-[#e8e8e6] text-[#333331]" />
             </div>
           </div>
 
           {/* ------------------- Row 3: Term Slider ------------------- */}
           <div className="grid grid-cols-1 gap-2 mt-2">
             <div>
-              <Label className="block text-sm font-semibold text-[#4a4a48] mb-2">
-                Term Slider (Months)
-              </Label>
+              <Label className="block text-sm font-semibold text-[#4a4a48] mb-2">Term Slider (Months)</Label>
               <Slider
                 value={[Number(formData.term) || 1]}
                 min={1}
@@ -553,31 +507,20 @@ export default function PaymentCalculatorBack({ formData, handleChange }) {
           {/* ============================================================
               PLAN 1 - ENHANCED SALMON THEME
           ============================================================ */}
-          <AccordionItem value="plan1" className={`border-0 shadow-md rounded-xl overflow-hidden ${
-            !isPlan1Available ? 'opacity-50 pointer-events-none' : ''
-          }`}>
-            <AccordionTrigger 
+          <AccordionItem value="plan1" className={`border-0 shadow-md rounded-xl overflow-hidden ${!isPlan1Available ? "opacity-50 pointer-events-none" : ""}`}>
+            <AccordionTrigger
               className={`px-6 py-3 bg-gradient-to-r from-[#EF9C66] to-[#F4B07A] hover:from-[#E6906B] hover:to-[#F1A870] text-white hover:no-underline transition-all duration-300 rounded-t-xl data-[state=closed]:rounded-xl ${
-                !isPlan1Available ? 'cursor-not-allowed' : ''
+                !isPlan1Available ? "cursor-not-allowed" : ""
               }`}
-              disabled={!isPlan1Available}
-            >
+              disabled={!isPlan1Available}>
               <div className="flex justify-between items-center w-full mr-4">
                 <div className="flex flex-col items-start">
-                  <h3 className="text-lg font-bold text-white">
-                    Payment Plan 1 {!isPlan1Available ? '(Disabled)' : ''}
-                  </h3>
-                  <span className="text-base text-white font-medium">
-                    Down Payment: ${formData.downPaymentOne || '0'}
-                  </span>
+                  <h3 className="text-lg font-bold text-white">Payment Plan 1 {!isPlan1Available ? "(Disabled)" : ""}</h3>
+                  <span className="text-base text-white font-medium">Down Payment: ${formData.downPaymentOne || "0"}</span>
                 </div>
                 <div className="text-right">
-                  <div className="text-xl font-bold text-white">
-                    ${formData.monthlyPaymentOne || '0'}/month
-                  </div>
-                  <div className="text-base text-white">
-                    {formData.interestOne}% APR
-                  </div>
+                  <div className="text-xl font-bold text-white">${formData.monthlyPaymentOne || "0"}/month</div>
+                  <div className="text-base text-white">{formData.interestOne}% APR</div>
                 </div>
               </div>
             </AccordionTrigger>
@@ -603,17 +546,14 @@ export default function PaymentCalculatorBack({ formData, handleChange }) {
                 </div>
                 {/* Down Payment Selector (Plan 1) */}
                 <div>
-                  <Label className="block text-sm font-semibold text-[#c97745] mb-2">
-                    Down Payment %
-                  </Label>
+                  <Label className="block text-sm font-semibold text-[#c97745] mb-2">Down Payment %</Label>
                   <Select
                     value={formData.downPaymentOnePercent}
                     onValueChange={(val) => {
                       handleSelectChange("downPaymentOnePercent", val);
                       handleSelectChange("downPaymentOneSource", "selector");
                     }}
-                    disabled={!isPlan1Available}
-                  >
+                    disabled={!isPlan1Available}>
                     <SelectTrigger className="w-full border-[#EF9C66] focus:border-[#E6906B] bg-white shadow-sm">
                       <SelectValue placeholder="Select %" />
                     </SelectTrigger>
@@ -622,9 +562,7 @@ export default function PaymentCalculatorBack({ formData, handleChange }) {
                         const percent = 5 + i * 5;
                         return (
                           <SelectItem key={percent} value={String(percent)}>
-                            {percent}% (
-                            {formatCurrency((parseCurrencyToNumber(formData.financingPrice) || 0) * (percent / 100))}
-                            )
+                            {percent}% ({formatCurrency((parseCurrencyToNumber(formData.financingPrice) || 0) * (percent / 100))})
                           </SelectItem>
                         );
                       })}
@@ -633,9 +571,7 @@ export default function PaymentCalculatorBack({ formData, handleChange }) {
                 </div>
                 {/* Loan Amount (Plan 1) */}
                 <div>
-                  <Label className="block text-sm font-semibold text-[#c97745] mb-2">
-                    Loan Amount
-                  </Label>
+                  <Label className="block text-sm font-semibold text-[#c97745] mb-2">Loan Amount</Label>
                   <Input
                     type="text"
                     readOnly
@@ -645,14 +581,8 @@ export default function PaymentCalculatorBack({ formData, handleChange }) {
                 </div>
                 {/* Interest Rate (Plan 1) */}
                 <div>
-                  <Label className="block text-sm font-semibold text-[#c97745] mb-2">
-                    Interest Rate
-                  </Label>
-                  <Select
-                    value={formData.interestOne}
-                    onValueChange={(val) => handleSelectChange("interestOne", val)}
-                    disabled={!isPlan1Available}
-                  >
+                  <Label className="block text-sm font-semibold text-[#c97745] mb-2">Interest Rate</Label>
+                  <Select value={formData.interestOne} onValueChange={(val) => handleSelectChange("interestOne", val)} disabled={!isPlan1Available}>
                     <SelectTrigger className="w-full border-[#EF9C66] focus:border-[#E6906B] bg-white shadow-sm">
                       <SelectValue placeholder="Select Rate" />
                     </SelectTrigger>
@@ -674,27 +604,23 @@ export default function PaymentCalculatorBack({ formData, handleChange }) {
               <div className="grid grid-cols-1 gap-3 md:grid-cols-2 mt-3">
                 {/* Total Interest (Plan 1) */}
                 <div>
-                  <Label className="block text-sm font-semibold text-[#c97745] mb-2">
-                    Total Interest
-                  </Label>
+                  <Label className="block text-sm font-semibold text-[#c97745] mb-2">Total Interest</Label>
                   <Input
                     type="text"
                     readOnly
-                    value={formData.totalInterestOne || '0'}
+                    value={formData.totalInterestOne || "0"}
                     className="w-full bg-gradient-to-r from-[#fceae0] to-[#fae4d7] text-[#c97745] font-semibold shadow-sm border-[#EF9C66] border-2"
-                    />
+                  />
                 </div>
                 {/* Total Cost (Plan 1) */}
                 <div>
-                  <Label className="block text-sm font-semibold text-[#c97745] mb-2">
-                    Total Cost
-                  </Label>
+                  <Label className="block text-sm font-semibold text-[#c97745] mb-2">Total Cost</Label>
                   <Input
                     type="text"
                     readOnly
-                    value={formData.totalCostOne || '0'}
+                    value={formData.totalCostOne || "0"}
                     className="w-full bg-gradient-to-r from-[#fceae0] to-[#fae4d7] text-[#c97745] font-semibold shadow-sm border-[#EF9C66] border-2"
-                    />
+                  />
                 </div>
               </div>
 
@@ -702,9 +628,7 @@ export default function PaymentCalculatorBack({ formData, handleChange }) {
               <div className="grid grid-cols-4 gap-3 mt-4">
                 {/* Slider (3/4 width) */}
                 <div className="col-span-3">
-                  <Label className="block text-sm font-semibold text-[#c97745] mb-3">
-                    Down Payment vs. Loan Amount
-                  </Label>
+                  <Label className="block text-sm font-semibold text-[#c97745] mb-3">Down Payment vs. Loan Amount</Label>
                   <Slider
                     value={[Number(formData.downPaymentOneSlider) || 0]}
                     min={0}
@@ -717,15 +641,11 @@ export default function PaymentCalculatorBack({ formData, handleChange }) {
                     className="bg-gradient-to-r from-[#EF9C66] to-[#F4B07A]"
                     disabled={!isPlan1Available}
                   />
-                  <p className="text-xs text-[#c97745] mt-2 font-medium">
-                    Currently: {formData.downPaymentOneSlider || 0}%
-                  </p>
+                  <p className="text-xs text-[#c97745] mt-2 font-medium">Currently: {formData.downPaymentOneSlider || 0}%</p>
                 </div>
                 {/* Monthly Payment (1/4 width) */}
                 <div className="col-span-1">
-                  <Label className="block text-sm font-semibold text-[#c97745] mb-2">
-                    Monthly Payment
-                  </Label>
+                  <Label className="block text-sm font-semibold text-[#c97745] mb-2">Monthly Payment</Label>
                   <div className="relative">
                     <Input
                       type="text"
@@ -743,31 +663,20 @@ export default function PaymentCalculatorBack({ formData, handleChange }) {
           {/* ============================================================
               PLAN 2 - ENHANCED SAGE THEME
           ============================================================ */}
-          <AccordionItem value="plan2" className={`border-0 shadow-md rounded-xl overflow-hidden ${
-            !isPlan2Available ? 'opacity-50 pointer-events-none' : ''
-          }`}>
-            <AccordionTrigger 
+          <AccordionItem value="plan2" className={`border-0 shadow-md rounded-xl overflow-hidden ${!isPlan2Available ? "opacity-50 pointer-events-none" : ""}`}>
+            <AccordionTrigger
               className={`px-6 py-3 bg-gradient-to-r from-[#C8CFA0] to-[#D4DBA8] hover:from-[#BEC59A] hover:to-[#D0D7A2] text-white hover:no-underline transition-all duration-300 rounded-t-xl data-[state=closed]:rounded-xl ${
-                !isPlan2Available ? 'cursor-not-allowed' : ''
+                !isPlan2Available ? "cursor-not-allowed" : ""
               }`}
-              disabled={!isPlan2Available}
-            >
+              disabled={!isPlan2Available}>
               <div className="flex justify-between items-center w-full mr-4">
                 <div className="flex flex-col items-start">
-                  <h3 className="text-lg font-bold text-[#4a5235]">
-                    Payment Plan 2 {!isPlan2Available ? '(Disabled)' : ''}
-                  </h3>
-                  <span className="text-base text-[#4a5235] font-medium">
-                    Down Payment: ${formData.downPaymentTwo || '0'}
-                  </span>
+                  <h3 className="text-lg font-bold text-[#4a5235]">Payment Plan 2 {!isPlan2Available ? "(Disabled)" : ""}</h3>
+                  <span className="text-base text-[#4a5235] font-medium">Down Payment: ${formData.downPaymentTwo || "0"}</span>
                 </div>
                 <div className="text-right">
-                  <div className="text-xl font-bold text-[#4a5235]">
-                    ${formData.monthlyPaymentTwo || '0'}/month
-                  </div>
-                  <div className="text-base text-[#4a5235]">
-                    {formData.interestTwo}% APR
-                  </div>
+                  <div className="text-xl font-bold text-[#4a5235]">${formData.monthlyPaymentTwo || "0"}/month</div>
+                  <div className="text-base text-[#4a5235]">{formData.interestTwo}% APR</div>
                 </div>
               </div>
             </AccordionTrigger>
@@ -793,17 +702,14 @@ export default function PaymentCalculatorBack({ formData, handleChange }) {
                 </div>
                 {/* Down Payment Selector (Plan 2) */}
                 <div>
-                  <Label className="block text-sm font-semibold text-[#7a8062] mb-2">
-                    Down Payment %
-                  </Label>
+                  <Label className="block text-sm font-semibold text-[#7a8062] mb-2">Down Payment %</Label>
                   <Select
                     value={formData.downPaymentTwoPercent}
                     onValueChange={(val) => {
                       handleSelectChange("downPaymentTwoPercent", val);
                       handleSelectChange("downPaymentTwoSource", "selector");
                     }}
-                    disabled={!isPlan2Available}
-                  >
+                    disabled={!isPlan2Available}>
                     <SelectTrigger className="w-full border-[#C8CFA0] focus:border-[#BEC59A] bg-white shadow-sm">
                       <SelectValue placeholder="Select %" />
                     </SelectTrigger>
@@ -812,9 +718,7 @@ export default function PaymentCalculatorBack({ formData, handleChange }) {
                         const percent = 5 + i * 5;
                         return (
                           <SelectItem key={percent} value={String(percent)}>
-                            {percent}% (
-                            {formatCurrency((parseCurrencyToNumber(formData.financingPrice) || 0) * (percent / 100))}
-                            )
+                            {percent}% ({formatCurrency((parseCurrencyToNumber(formData.financingPrice) || 0) * (percent / 100))})
                           </SelectItem>
                         );
                       })}
@@ -823,9 +727,7 @@ export default function PaymentCalculatorBack({ formData, handleChange }) {
                 </div>
                 {/* Loan Amount (Plan 2) */}
                 <div>
-                  <Label className="block text-sm font-semibold text-[#7a8062] mb-2">
-                    Loan Amount
-                  </Label>
+                  <Label className="block text-sm font-semibold text-[#7a8062] mb-2">Loan Amount</Label>
                   <Input
                     type="text"
                     readOnly
@@ -835,14 +737,8 @@ export default function PaymentCalculatorBack({ formData, handleChange }) {
                 </div>
                 {/* Interest Rate (Plan 2) */}
                 <div>
-                  <Label className="block text-sm font-semibold text-[#7a8062] mb-2">
-                    Interest Rate
-                  </Label>
-                  <Select
-                    value={formData.interestTwo}
-                    onValueChange={(val) => handleSelectChange("interestTwo", val)}
-                    disabled={!isPlan2Available}
-                  >
+                  <Label className="block text-sm font-semibold text-[#7a8062] mb-2">Interest Rate</Label>
+                  <Select value={formData.interestTwo} onValueChange={(val) => handleSelectChange("interestTwo", val)} disabled={!isPlan2Available}>
                     <SelectTrigger className="w-full border-[#C8CFA0] focus:border-[#BEC59A] bg-white shadow-sm">
                       <SelectValue placeholder="Select Rate" />
                     </SelectTrigger>
@@ -864,27 +760,23 @@ export default function PaymentCalculatorBack({ formData, handleChange }) {
               <div className="grid grid-cols-1 gap-3 md:grid-cols-2 mt-3">
                 {/* Total Interest (Plan 2) */}
                 <div>
-                  <Label className="block text-sm font-semibold text-[#7a8062] mb-2">
-                    Total Interest
-                  </Label>
+                  <Label className="block text-sm font-semibold text-[#7a8062] mb-2">Total Interest</Label>
                   <Input
                     type="text"
                     readOnly
-                    value={formData.totalInterestTwo || '0'}
+                    value={formData.totalInterestTwo || "0"}
                     className="w-full bg-gradient-to-r from-[#f4f5ee] to-[#f2f3ec] text-[#7a8062] font-semibold shadow-sm border-[#C8CFA0] border-2"
-                    />
+                  />
                 </div>
                 {/* Total Cost (Plan 2) */}
                 <div>
-                  <Label className="block text-sm font-semibold text-[#7a8062] mb-2">
-                    Total Cost
-                  </Label>
+                  <Label className="block text-sm font-semibold text-[#7a8062] mb-2">Total Cost</Label>
                   <Input
                     type="text"
                     readOnly
-                    value={formData.totalCostTwo || '0'}
+                    value={formData.totalCostTwo || "0"}
                     className="w-full bg-gradient-to-r from-[#f4f5ee] to-[#f2f3ec] text-[#7a8062] font-semibold shadow-sm border-[#C8CFA0] border-2"
-                    />
+                  />
                 </div>
               </div>
 
@@ -892,9 +784,7 @@ export default function PaymentCalculatorBack({ formData, handleChange }) {
               <div className="grid grid-cols-4 gap-3 mt-4">
                 {/* Slider (3/4 width) */}
                 <div className="col-span-3">
-                  <Label className="block text-sm font-semibold text-[#7a8062] mb-3">
-                    Down Payment vs. Loan Amount
-                  </Label>
+                  <Label className="block text-sm font-semibold text-[#7a8062] mb-3">Down Payment vs. Loan Amount</Label>
                   <Slider
                     value={[Number(formData.downPaymentTwoSlider) || 0]}
                     min={0}
@@ -907,15 +797,11 @@ export default function PaymentCalculatorBack({ formData, handleChange }) {
                     className="bg-gradient-to-r from-[#C8CFA0] to-[#D4DBA8]"
                     disabled={!isPlan2Available}
                   />
-                  <p className="text-xs text-[#7a8062] mt-2 font-medium">
-                    Currently: {formData.downPaymentTwoSlider || 0}%
-                  </p>
+                  <p className="text-xs text-[#7a8062] mt-2 font-medium">Currently: {formData.downPaymentTwoSlider || 0}%</p>
                 </div>
                 {/* Monthly Payment (1/4 width) */}
                 <div className="col-span-1">
-                  <Label className="block text-sm font-semibold text-[#7a8062] mb-2">
-                    Monthly Payment
-                  </Label>
+                  <Label className="block text-sm font-semibold text-[#7a8062] mb-2">Monthly Payment</Label>
                   <div className="relative">
                     <Input
                       type="text"
@@ -933,31 +819,20 @@ export default function PaymentCalculatorBack({ formData, handleChange }) {
           {/* ============================================================
               PLAN 3 - ENHANCED GOLD THEME
           ============================================================ */}
-          <AccordionItem value="plan3" className={`border-0 shadow-md rounded-xl overflow-hidden ${
-            !isPlan3Available ? 'opacity-50 pointer-events-none' : ''
-          }`}>
-            <AccordionTrigger 
+          <AccordionItem value="plan3" className={`border-0 shadow-md rounded-xl overflow-hidden ${!isPlan3Available ? "opacity-50 pointer-events-none" : ""}`}>
+            <AccordionTrigger
               className={`px-6 py-3 bg-gradient-to-r from-[#E7C05F] to-[#F0CE6F] hover:from-[#E1BA59] hover:to-[#EBC869] text-white hover:no-underline transition-all duration-300 rounded-t-xl data-[state=closed]:rounded-xl ${
-                !isPlan3Available ? 'cursor-not-allowed' : ''
+                !isPlan3Available ? "cursor-not-allowed" : ""
               }`}
-              disabled={!isPlan3Available}
-            >
+              disabled={!isPlan3Available}>
               <div className="flex justify-between items-center w-full mr-4">
                 <div className="flex flex-col items-start">
-                  <h3 className="text-lg font-bold text-[#5d4a1a]">
-                    Payment Plan 3 {!isPlan3Available ? '(Disabled)' : ''}
-                  </h3>
-                  <span className="text-base text-[#5d4a1a] font-medium">
-                   Down Payment: ${formData.downPaymentThree || '0'}
-                  </span>
+                  <h3 className="text-lg font-bold text-[#5d4a1a]">Payment Plan 3 {!isPlan3Available ? "(Disabled)" : ""}</h3>
+                  <span className="text-base text-[#5d4a1a] font-medium">Down Payment: ${formData.downPaymentThree || "0"}</span>
                 </div>
                 <div className="text-right">
-                  <div className="text-xl font-bold text-[#5d4a1a]">
-                    ${formData.monthlyPaymentThree || '0'}/month
-                  </div>
-                  <div className="text-base text-[#5d4a1a]">
-                    {formData.interestThree}% APR
-                  </div>
+                  <div className="text-xl font-bold text-[#5d4a1a]">${formData.monthlyPaymentThree || "0"}/month</div>
+                  <div className="text-base text-[#5d4a1a]">{formData.interestThree}% APR</div>
                 </div>
               </div>
             </AccordionTrigger>
@@ -983,17 +858,14 @@ export default function PaymentCalculatorBack({ formData, handleChange }) {
                 </div>
                 {/* Down Payment Selector (Plan 3) */}
                 <div>
-                  <Label className="block text-sm font-semibold text-[#b39032] mb-2">
-                    Down Payment %
-                  </Label>
+                  <Label className="block text-sm font-semibold text-[#b39032] mb-2">Down Payment %</Label>
                   <Select
                     value={formData.downPaymentThreePercent}
                     onValueChange={(val) => {
                       handleSelectChange("downPaymentThreePercent", val);
                       handleSelectChange("downPaymentThreeSource", "selector");
                     }}
-                    disabled={!isPlan3Available}
-                  >
+                    disabled={!isPlan3Available}>
                     <SelectTrigger className="w-full border-[#E7C05F] focus:border-[#E1BA59] bg-white shadow-sm">
                       <SelectValue placeholder="Select %" />
                     </SelectTrigger>
@@ -1002,9 +874,7 @@ export default function PaymentCalculatorBack({ formData, handleChange }) {
                         const percent = 5 + i * 5;
                         return (
                           <SelectItem key={percent} value={String(percent)}>
-                            {percent}% (
-                            {formatCurrency((parseCurrencyToNumber(formData.financingPrice) || 0) * (percent / 100))}
-                            )
+                            {percent}% ({formatCurrency((parseCurrencyToNumber(formData.financingPrice) || 0) * (percent / 100))})
                           </SelectItem>
                         );
                       })}
@@ -1013,9 +883,7 @@ export default function PaymentCalculatorBack({ formData, handleChange }) {
                 </div>
                 {/* Loan Amount (Plan 3) */}
                 <div>
-                  <Label className="block text-sm font-semibold text-[#b39032] mb-2">
-                    Loan Amount
-                  </Label>
+                  <Label className="block text-sm font-semibold text-[#b39032] mb-2">Loan Amount</Label>
                   <Input
                     type="text"
                     readOnly
@@ -1025,14 +893,8 @@ export default function PaymentCalculatorBack({ formData, handleChange }) {
                 </div>
                 {/* Interest Rate (Plan 3) */}
                 <div>
-                  <Label className="block text-sm font-semibold text-[#b39032] mb-2">
-                    Interest Rate
-                  </Label>
-                  <Select
-                    value={formData.interestThree}
-                    onValueChange={(val) => handleSelectChange("interestThree", val)}
-                    disabled={!isPlan3Available}
-                  >
+                  <Label className="block text-sm font-semibold text-[#b39032] mb-2">Interest Rate</Label>
+                  <Select value={formData.interestThree} onValueChange={(val) => handleSelectChange("interestThree", val)} disabled={!isPlan3Available}>
                     <SelectTrigger className="w-full border-[#E7C05F] focus:border-[#E1BA59] bg-white shadow-sm">
                       <SelectValue placeholder="Select Rate" />
                     </SelectTrigger>
@@ -1054,27 +916,23 @@ export default function PaymentCalculatorBack({ formData, handleChange }) {
               <div className="grid grid-cols-1 gap-3 md:grid-cols-2 mt-3">
                 {/* Total Interest (Plan 3) */}
                 <div>
-                  <Label className="block text-sm font-semibold text-[#b39032] mb-2">
-                    Total Interest
-                  </Label>
+                  <Label className="block text-sm font-semibold text-[#b39032] mb-2">Total Interest</Label>
                   <Input
                     type="text"
                     readOnly
-                    value={formData.totalInterestThree || '0'}
+                    value={formData.totalInterestThree || "0"}
                     className="w-full bg-gradient-to-r from-[#fdf0d1] to-[#fbecc9] text-[#b39032] font-semibold shadow-sm border-[#E7C05F] border-2"
-                    />      
+                  />
                 </div>
                 {/* Total Cost (Plan 3) */}
                 <div>
-                  <Label className="block text-sm font-semibold text-[#b39032] mb-2">
-                    Total Cost
-                  </Label>
+                  <Label className="block text-sm font-semibold text-[#b39032] mb-2">Total Cost</Label>
                   <Input
                     type="text"
                     readOnly
-                    value={formData.totalCostThree || '0'}
+                    value={formData.totalCostThree || "0"}
                     className="w-full bg-gradient-to-r from-[#fdf0d1] to-[#fbecc9] text-[#b39032] font-semibold shadow-sm border-[#E7C05F] border-2"
-                    />
+                  />
                 </div>
               </div>
 
@@ -1082,9 +940,7 @@ export default function PaymentCalculatorBack({ formData, handleChange }) {
               <div className="grid grid-cols-4 gap-4 mt-6">
                 {/* Slider (3/4 width) */}
                 <div className="col-span-3">
-                  <Label className="block text-sm font-semibold text-[#b39032] mb-3">
-                    Down Payment vs. Loan Amount
-                  </Label>
+                  <Label className="block text-sm font-semibold text-[#b39032] mb-3">Down Payment vs. Loan Amount</Label>
                   <Slider
                     value={[Number(formData.downPaymentThreeSlider) || 0]}
                     min={0}
@@ -1097,15 +953,11 @@ export default function PaymentCalculatorBack({ formData, handleChange }) {
                     className="bg-gradient-to-r from-[#E7C05F] to-[#F0CE6F]"
                     disabled={!isPlan3Available}
                   />
-                  <p className="text-xs text-[#b39032] mt-2 font-medium">
-                    Currently: {formData.downPaymentThreeSlider || 0}%
-                  </p>
+                  <p className="text-xs text-[#b39032] mt-2 font-medium">Currently: {formData.downPaymentThreeSlider || 0}%</p>
                 </div>
                 {/* Monthly Payment (1/4 width) */}
                 <div className="col-span-1">
-                  <Label className="block text-sm font-semibold text-[#b39032] mb-2">
-                    Monthly Payment
-                  </Label>
+                  <Label className="block text-sm font-semibold text-[#b39032] mb-2">Monthly Payment</Label>
                   <div className="relative">
                     <Input
                       type="text"
