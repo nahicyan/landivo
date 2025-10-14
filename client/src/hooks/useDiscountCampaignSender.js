@@ -31,7 +31,7 @@ export function useDiscountCampaignSender(propertyId, propertyData) {
       if (sendType === "mailivo") {
         // Redirect to Mailivo
         const response = await axios.post(
-          `${import.meta.env.VITE_MAILIVO_API_URL}/automation-landivo/propertyDiscount`,
+          `${import.meta.env.VITE_MAILIVO_API_URL}/automation-landivo/propertyUpdate/discount`,
           payload
         );
 
@@ -42,7 +42,7 @@ export function useDiscountCampaignSender(propertyId, propertyData) {
       } else {
         // Send now
         await axios.post(
-          `${import.meta.env.VITE_MAILIVO_API_URL}/automation-landivo/propertyDiscount`,
+          `${import.meta.env.VITE_MAILIVO_API_URL}/automation-landivo/propertyUpdate/discount`,
           payload
         );
 
