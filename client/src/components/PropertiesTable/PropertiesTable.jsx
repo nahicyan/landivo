@@ -9,32 +9,11 @@ import PropertiesTableFilter from "../PropertiesTableFilter/PropertiesTableFilte
 import { QuickEditModal } from "@/components/PropertyManagement/QuickEditModal";
 import { usePropertyDeletion } from "@/hooks/usePropertyDeletion";
 import { PropertyDeletionModal } from "@/components/PropertyManagement/PropertyDeletionModal";
-import {
-  MoreHorizontal,
-  PencilIcon,
-  TrashIcon,
-  Eye,
-  ChevronDown,
-  ChevronUp,
-  Trash2,
-  PencilLine,
-} from "lucide-react";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+import { MoreHorizontal, PencilIcon, TrashIcon, TrendingDown, Eye, ChevronDown, ChevronUp, Trash2, PencilLine } from "lucide-react";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 export default function PropertiesTable({ propertyData }) {
   const { data, isError, isLoading, refetch } = useProperties();
@@ -117,14 +96,7 @@ export default function PropertiesTable({ propertyData }) {
   ];
 
   // Default visible columns
-  const [visibleColumns, setVisibleColumns] = useState([
-    "streetAddress",
-    "location",
-    "askingPrice",
-    "status",
-    "area",
-    "featured",
-  ]);
+  const [visibleColumns, setVisibleColumns] = useState(["streetAddress", "location", "askingPrice", "status", "area", "featured"]);
 
   // Filter states
   const [filters, setFilters] = useState({
@@ -193,19 +165,11 @@ export default function PropertiesTable({ propertyData }) {
     const needsTruncation = textContent.length > maxLength;
 
     // Create a safe version of the content for display
-    const displayContent =
-      isExpanded || !needsTruncation
-        ? content
-        : content.substring(0, maxLength) + "...";
+    const displayContent = isExpanded || !needsTruncation ? content : content.substring(0, maxLength) + "...";
 
     return (
       <div className="relative">
-        <div
-          className={`rich-text-cell ${
-            isExpanded ? "max-h-none" : "max-h-24 overflow-hidden"
-          }`}
-          dangerouslySetInnerHTML={{ __html: displayContent }}
-        />
+        <div className={`rich-text-cell ${isExpanded ? "max-h-none" : "max-h-24 overflow-hidden"}`} dangerouslySetInnerHTML={{ __html: displayContent }} />
 
         {needsTruncation && (
           <Button
@@ -215,8 +179,7 @@ export default function PropertiesTable({ propertyData }) {
               e.stopPropagation();
               toggleCellExpansion(rowId, columnId);
             }}
-            className="mt-1 text-xs text-blue-600 hover:text-blue-800 p-0 h-6"
-          >
+            className="mt-1 text-xs text-blue-600 hover:text-blue-800 p-0 h-6">
             {isExpanded ? (
               <span className="flex items-center">
                 Show less <ChevronUp className="ml-1 h-3 w-3" />
@@ -245,10 +208,7 @@ export default function PropertiesTable({ propertyData }) {
             accessorKey: columnDef.id,
             header: columnDef.name,
             cell: ({ row }) => {
-              const value =
-                typeof columnDef.accessor === "function"
-                  ? columnDef.accessor(row.original)
-                  : row.original[columnDef.accessor];
+              const value = typeof columnDef.accessor === "function" ? columnDef.accessor(row.original) : row.original[columnDef.accessor];
 
               // Handle rich text fields specially
               if (columnDef.isRichText) {
@@ -256,11 +216,7 @@ export default function PropertiesTable({ propertyData }) {
               }
 
               // Format different types of data
-              if (
-                colId === "askingPrice" ||
-                colId === "minPrice" ||
-                colId === "hoaFee"
-              ) {
+              if (colId === "askingPrice" || colId === "minPrice" || colId === "hoaFee") {
                 return value ? `$${Number(value).toLocaleString()}` : "N/A";
               } else if (colId === "sqft") {
                 return value ? `${Number(value).toLocaleString()} sqft` : "N/A";
@@ -277,19 +233,12 @@ export default function PropertiesTable({ propertyData }) {
                         : value === "Sold"
                         ? "bg-blue-100 text-blue-800"
                         : "bg-gray-100 text-gray-800"
-                    }
-                  >
+                    }>
                     {value || "Unknown"}
                   </Badge>
                 );
               } else if (colId === "featured") {
-                return value === "Featured" ? (
-                  <Badge className="bg-yellow-100 text-yellow-800">
-                    Featured
-                  </Badge>
-                ) : (
-                  "No"
-                );
+                return value === "Featured" ? <Badge className="bg-yellow-100 text-yellow-800">Featured</Badge> : "No";
               } else if (colId === "createdAt" || colId === "updatedAt") {
                 return value ? new Date(value).toLocaleDateString() : "N/A";
               } else if (typeof value === "boolean") {
@@ -321,37 +270,26 @@ export default function PropertiesTable({ propertyData }) {
                     setSelectedProperty(property);
                     setIsQuickEditOpen(true);
                   }}
-                  className="cursor-pointer text-blue-600 hover:text-blue-700 hover:bg-blue-50"
-                >
+                  className="cursor-pointer text-blue-600 hover:text-blue-700 hover:bg-blue-50">
                   <PencilLine className="mr-2 h-4 w-4" />
                   Quick Edit
                 </DropdownMenuItem>
                 <DropdownMenuItem
-                  onClick={() =>
-                    window.open(
-                      `/admin/edit-property/${property.id}`,
-                      "_blank"
-                    )
-                  }
-                  className="cursor-pointer text-purple-600 hover:text-purple-700 hover:bg-purple-50"
-                >
+                  onClick={() => window.open(`/admin/edit-property/${property.id}`, "_blank")}
+                  className="cursor-pointer text-purple-600 hover:text-purple-700 hover:bg-purple-50">
                   <PencilIcon className="mr-2 h-4 w-4" />
                   Edit Property
                 </DropdownMenuItem>
-                <DropdownMenuItem
-                  onClick={() =>
-                    window.open(`/properties/${property.id}`, "_blank")
-                  }
-                  className="cursor-pointer text-green-600 hover:text-green-700 hover:bg-green-50"
-                >
+                <DropdownMenuItem onClick={() => window.open(`/properties/${property.id}`, "_blank")} className="cursor-pointer text-green-600 hover:text-green-700 hover:bg-green-50">
                   <Eye className="mr-2 h-4 w-4" />
                   View Details
                 </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => window.open(`/admin/edit-property/${property.id}/discount`, "_blank")} className="cursor-pointer text-orange-600 hover:text-orange-700 hover:bg-orange-50">
+                  <TrendingDown className="mr-2 h-4 w-4" />
+                  Discount Property
+                </DropdownMenuItem>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem
-                  onClick={() => openDeletionConfirm(property)}
-                  className="cursor-pointer text-red-600 hover:text-red-700 hover:bg-red-50"
-                >
+                <DropdownMenuItem onClick={() => openDeletionConfirm(property)} className="cursor-pointer text-red-600 hover:text-red-700 hover:bg-red-50">
                   <Trash2 className="mr-2 h-4 w-4" />
                   Delete Property
                 </DropdownMenuItem>
@@ -390,47 +328,26 @@ export default function PropertiesTable({ propertyData }) {
           // Strip HTML for text search if field is rich text
           if (field && typeof field === "string" && field.includes("<")) {
             const textContent = field.replace(/<[^>]*>/g, "");
-            return textContent
-              .toLowerCase()
-              .includes(searchQuery.toLowerCase());
+            return textContent.toLowerCase().includes(searchQuery.toLowerCase());
           }
-          return (
-            field &&
-            field.toString().toLowerCase().includes(searchQuery.toLowerCase())
-          );
+          return field && field.toString().toLowerCase().includes(searchQuery.toLowerCase());
         });
 
       // Advanced filters
-      const matchesStatus =
-        filters.status === "all" || property.status === filters.status;
-      const matchesArea =
-        filters.area === "all" || property.area === filters.area;
-      const matchesOwner =
-        !filters.ownerId || property.ownerId?.toString() === filters.ownerId;
-      const matchesFinancing =
-        filters.financing === "all" || property.financing === filters.financing;
+      const matchesStatus = filters.status === "all" || property.status === filters.status;
+      const matchesArea = filters.area === "all" || property.area === filters.area;
+      const matchesOwner = !filters.ownerId || property.ownerId?.toString() === filters.ownerId;
+      const matchesFinancing = filters.financing === "all" || property.financing === filters.financing;
 
       // Price range filtering
       const propertyPrice = parseFloat(property.askingPrice || 0);
-      const withinPriceRange =
-        propertyPrice >= filters.priceRange[0] &&
-        propertyPrice <= filters.priceRange[1];
+      const withinPriceRange = propertyPrice >= filters.priceRange[0] && propertyPrice <= filters.priceRange[1];
 
       // Square footage filtering
       const propertySqft = parseFloat(property.sqft || 0);
-      const withinSqftRange =
-        propertySqft >= filters.squareFeet[0] &&
-        propertySqft <= filters.squareFeet[1];
+      const withinSqftRange = propertySqft >= filters.squareFeet[0] && propertySqft <= filters.squareFeet[1];
 
-      return (
-        matchesSearchQuery &&
-        matchesStatus &&
-        matchesArea &&
-        withinPriceRange &&
-        matchesOwner &&
-        withinSqftRange &&
-        matchesFinancing
-      );
+      return matchesSearchQuery && matchesStatus && matchesArea && withinPriceRange && matchesOwner && withinSqftRange && matchesFinancing;
     });
   }, [data, searchQuery, filters]);
 
@@ -458,9 +375,7 @@ export default function PropertiesTable({ propertyData }) {
       newActiveFilters.push({
         type: "priceRange",
         value: filters.priceRange,
-        label: `Price: ${formatNumber(filters.priceRange[0])} - ${formatNumber(
-          filters.priceRange[1]
-        )}`,
+        label: `Price: ${formatNumber(filters.priceRange[0])} - ${formatNumber(filters.priceRange[1])}`,
       });
     }
 
@@ -476,9 +391,7 @@ export default function PropertiesTable({ propertyData }) {
       newActiveFilters.push({
         type: "squareFeet",
         value: filters.squareFeet,
-        label: `Size: ${formatNumber(filters.squareFeet[0])} - ${formatNumber(
-          filters.squareFeet[1]
-        )} sqft`,
+        label: `Size: ${formatNumber(filters.squareFeet[0])} - ${formatNumber(filters.squareFeet[1])} sqft`,
       });
     }
 
@@ -567,9 +480,7 @@ export default function PropertiesTable({ propertyData }) {
   if (isError) {
     return (
       <div className="flex items-center justify-center h-[60vh]">
-        <h2 className="text-red-600 text-xl font-semibold">
-          Error fetching data.
-        </h2>
+        <h2 className="text-red-600 text-xl font-semibold">Error fetching data.</h2>
       </div>
     );
   }
@@ -606,12 +517,9 @@ export default function PropertiesTable({ propertyData }) {
         {/* Results Count */}
         <div className="flex justify-between items-center">
           <p className="text-sm text-gray-600">
-            {filteredData.length}{" "}
-            {filteredData.length === 1 ? "result" : "results"} found
+            {filteredData.length} {filteredData.length === 1 ? "result" : "results"} found
           </p>
-          <div className="text-sm text-gray-600">
-            {visibleColumns.length} columns visible
-          </div>
+          <div className="text-sm text-gray-600">{visibleColumns.length} columns visible</div>
         </div>
 
         {/* Data Table */}
@@ -621,14 +529,7 @@ export default function PropertiesTable({ propertyData }) {
       </div>
 
       {/* Quick Edit Modal */}
-      {selectedProperty && (
-        <QuickEditModal
-          property={selectedProperty}
-          isOpen={isQuickEditOpen}
-          onClose={() => setIsQuickEditOpen(false)}
-          onSave={handleQuickEditSave}
-        />
-      )}
+      {selectedProperty && <QuickEditModal property={selectedProperty} isOpen={isQuickEditOpen} onClose={() => setIsQuickEditOpen(false)} onSave={handleQuickEditSave} />}
 
       {/* Property Deletion Modal */}
       <PropertyDeletionModal
