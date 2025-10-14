@@ -8,24 +8,23 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Select, SelectTrigger, SelectContent, SelectItem, SelectValue } from "@/components/ui/select";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import { DayPicker } from "react-day-picker";
 import "react-day-picker/style.css";
-import { Loader2, Calculator, CalendarIcon, ArrowLeft, Percent, DollarSign } from "lucide-react";
+import { Loader2, Calculator, CalendarIcon, ArrowLeft, Percent, DollarSign, AlertTriangle } from "lucide-react";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 import { toast } from "react-toastify";
 import PaymentCalculatorBack from "@/components/PaymentCalculator/PaymentCalculatorBack";
 import PropertyDiscountDialog from "@/components/PropertyDiscount/PropertyDiscountDialog";
 
-// Format number with commas
 const formatWithCommas = (value) => {
   if (value === null || value === undefined || value === "") return "";
   return value.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
 };
 
-// Parse currency string to number
 const parseCurrency = (value) => {
   if (!value) return 0;
   return parseFloat(String(value).replace(/,/g, ""));
@@ -34,38 +33,40 @@ const parseCurrency = (value) => {
 export default function Discount() {
   const navigate = useNavigate();
   const { propertyId } = useParams();
-  // Dialog state
+
+  // Dialog states
   const [dialogOpen, setDialogOpen] = useState(false);
   const [dialogMessage, setDialogMessage] = useState("");
   const [dialogType, setDialogType] = useState("success");
 
-  // State management
+  // Warning dialog state
+  const [warningDialogOpen, setWarningDialogOpen] = useState(false);
+  const [warningMessage, setWarningMessage] = useState("");
+  const [warningType, setWarningType] = useState(""); // 'partial', 'severe', 'increase'
+  const [acknowledgedWarnings, setAcknowledgedWarnings] = useState({
+    partialDiscount: false,
+    severeDiscount: false,
+  });
+
   const [isSaving, setIsSaving] = useState(false);
   const [openCalculator, setOpenCalculator] = useState(false);
   const [tempCalculatorData, setTempCalculatorData] = useState(null);
 
-  // Discount form state
   const [discountData, setDiscountData] = useState({
-    // Original values (read-only)
     originalAskingPrice: "",
     originalDisPrice: "",
     originalMinPrice: "",
     originalPurchasePrice: "",
     originalClosingDate: null,
-
-    // New discounted values (editable)
     discountedAskingPrice: "",
     discountedDisPrice: "",
     discountedMinPrice: "",
     updatedClosingDate: null,
-
-    // Percentage selections
     askingPricePercent: "",
     disPricePercent: "",
     minPricePercent: "",
   });
 
-  // Fetch property data
   const {
     data: property,
     isLoading,
@@ -73,7 +74,6 @@ export default function Discount() {
   } = useQuery(["property", propertyId], () => getProperty(propertyId), {
     enabled: !!propertyId,
     onSuccess: (data) => {
-      // Initialize form with property data
       setDiscountData((prev) => ({
         ...prev,
         originalAskingPrice: formatWithCommas(data.askingPrice || ""),
@@ -81,8 +81,6 @@ export default function Discount() {
         originalMinPrice: formatWithCommas(data.minPrice || ""),
         originalPurchasePrice: formatWithCommas(data.purchasePrice || ""),
         originalClosingDate: data.closingDate ? new Date(data.closingDate) : null,
-
-        // Pre-fill with current values
         discountedAskingPrice: formatWithCommas(data.askingPrice || ""),
         discountedDisPrice: formatWithCommas(data.disPrice || ""),
         discountedMinPrice: formatWithCommas(data.minPrice || ""),
@@ -91,7 +89,6 @@ export default function Discount() {
     },
   });
 
-  // Calculate discounted price based on percentage
   const calculateDiscount = (originalPrice, percentage) => {
     const price = parseCurrency(originalPrice);
     if (!price || !percentage) return "";
@@ -99,7 +96,6 @@ export default function Discount() {
     return formatWithCommas(Math.round(price * discountMultiplier));
   };
 
-  // Handle percentage dropdown change
   const handlePercentChange = (field, percent) => {
     const percentNum = parseInt(percent);
     let originalField = "";
@@ -132,7 +128,6 @@ export default function Discount() {
     }
   };
 
-  // Handle manual price input
   const handlePriceChange = (field, value) => {
     const numericValue = value.replace(/,/g, "");
     if (numericValue === "" || /^\d*\.?\d*$/.test(numericValue)) {
@@ -143,7 +138,6 @@ export default function Discount() {
     }
   };
 
-  // Handle date selection
   const handleDateSelect = (date, field) => {
     setDiscountData((prev) => ({
       ...prev,
@@ -151,9 +145,7 @@ export default function Discount() {
     }));
   };
 
-  // Open payment calculator
   const openPaymentCalculator = () => {
-    // Prepare calculator data with discounted prices
     const calculatorData = {
       ...property,
       askingPrice: discountData.discountedAskingPrice,
@@ -166,7 +158,6 @@ export default function Discount() {
     setOpenCalculator(true);
   };
 
-  // Handle calculator data change
   const handleCalculatorChange = (e) => {
     const { name, value } = e.target;
     setTempCalculatorData((prev) => ({
@@ -175,23 +166,107 @@ export default function Discount() {
     }));
   };
 
-  // Save discounted property
+  const validateDiscount = () => {
+    const origAsking = parseCurrency(discountData.originalAskingPrice);
+    const origDis = parseCurrency(discountData.originalDisPrice);
+    const origMin = parseCurrency(discountData.originalMinPrice);
+
+    const newAsking = parseCurrency(discountData.discountedAskingPrice);
+    const newDis = parseCurrency(discountData.discountedDisPrice);
+    const newMin = parseCurrency(discountData.discountedMinPrice);
+
+    // Check 1: No changes made
+    if (origAsking === newAsking && origDis === newDis && origMin === newMin) {
+      setWarningType("nochange");
+      setWarningMessage("No price changes detected. Please adjust at least one price.");
+      setWarningDialogOpen(true);
+      return false;
+    }
+
+    // Check 2: Price increased
+    if (newAsking > origAsking || newDis > origDis || newMin > origMin) {
+      setWarningType("increase");
+      setWarningMessage("One or more prices have increased from the original value. This is not a discount. Please review your changes.");
+      setWarningDialogOpen(true);
+      return false;
+    }
+
+    // Check 3: Only minimum price reduced
+    if (origMin > newMin && origAsking === newAsking && origDis === newDis) {
+      setWarningType("minonly");
+      setWarningMessage("Cannot discount only the minimum price. Please reduce the asking price or discount price (or preferably both) to apply a discount.");
+      setWarningDialogOpen(true);
+      return false;
+    }
+
+    // Check 4: Partial discount (only asking or discount reduced)
+    const askingReduced = origAsking > newAsking;
+    const disReduced = origDis > newDis;
+
+    if ((askingReduced && !disReduced) || (!askingReduced && disReduced)) {
+      if (!acknowledgedWarnings.partialDiscount) {
+        setWarningType("partial");
+        setWarningMessage(
+          askingReduced
+            ? "Only the asking price has been reduced. For better results, consider reducing the discount price as well. Do you want to continue?"
+            : "Only the discount price has been reduced. For better results, consider reducing the asking price as well. Do you want to continue?"
+        );
+        setWarningDialogOpen(true);
+        return false;
+      }
+    }
+
+    // Check 5: Severe discount (>50% reduction)
+    const askingPercent = origAsking > 0 ? ((origAsking - newAsking) / origAsking) * 100 : 0;
+    const disPercent = origDis > 0 ? ((origDis - newDis) / origDis) * 100 : 0;
+    const minPercent = origMin > 0 ? ((origMin - newMin) / origMin) * 100 : 0;
+
+    if (askingPercent > 50 || disPercent > 50 || minPercent > 50) {
+      if (!acknowledgedWarnings.severeDiscount) {
+        setWarningType("severe");
+        setWarningMessage(`Warning: You're reducing the price by more than 50%. This is a significant discount. Are you sure you want to proceed?`);
+        setWarningDialogOpen(true);
+        return false;
+      }
+    }
+
+    return true;
+  };
+
+  const handleWarningConfirm = () => {
+    if (warningType === "partial") {
+      setAcknowledgedWarnings((prev) => ({ ...prev, partialDiscount: true }));
+    } else if (warningType === "severe") {
+      setAcknowledgedWarnings((prev) => ({ ...prev, severeDiscount: true }));
+    }
+    setWarningDialogOpen(false);
+  };
+
+  // Retry save when warnings are acknowledged
+  useEffect(() => {
+    if ((acknowledgedWarnings.partialDiscount || acknowledgedWarnings.severeDiscount) && !warningDialogOpen) {
+      handleSaveDiscount();
+    }
+  }, [acknowledgedWarnings]);
+
   const handleSaveDiscount = async () => {
+    // Validate discount
+    if (!validateDiscount()) {
+      return;
+    }
+
     setIsSaving(true);
     try {
       const formData = new FormData();
 
-      // Add discounted prices (remove commas for backend)
       formData.append("askingPrice", parseCurrency(discountData.discountedAskingPrice));
       formData.append("disPrice", parseCurrency(discountData.discountedDisPrice));
       formData.append("minPrice", parseCurrency(discountData.discountedMinPrice));
 
-      // Add updated closing date if changed
       if (discountData.updatedClosingDate) {
         formData.append("closingDate", discountData.updatedClosingDate.toISOString());
       }
 
-      // Preserve all existing media URLs
       if (property.imageUrls) {
         formData.append("imageUrls", JSON.stringify(property.imageUrls));
       }
@@ -201,12 +276,15 @@ export default function Discount() {
 
       await updateProperty(propertyId, formData);
 
-      // Show success dialog with email option
+      // Reset warning acknowledgments
+      setAcknowledgedWarnings({
+        partialDiscount: false,
+        severeDiscount: false,
+      });
+
       setDialogMessage("Property discounted successfully!");
       setDialogType("success");
       setDialogOpen(true);
-
-      // Don't navigate immediately - let dialog handle it
     } catch (error) {
       console.error("Error saving discount:", error);
       toast.error("Failed to save discount");
@@ -238,7 +316,6 @@ export default function Discount() {
 
   return (
     <div className="max-w-7xl mx-auto p-6 space-y-6">
-      {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-4">
           <Button onClick={() => navigate(`/admin/edit-property/${propertyId}`)} variant="outline" className="flex items-center gap-2">
@@ -253,7 +330,7 @@ export default function Discount() {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Original Pricing (Read-Only) */}
+        {/* Original Pricing */}
         <Card className="border-gray-200 shadow-lg">
           <CardHeader className="bg-gray-50">
             <CardTitle className="text-xl font-semibold text-gray-800 flex items-center gap-2">
@@ -262,31 +339,22 @@ export default function Discount() {
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4 pt-6">
-            {/* Original Asking Price */}
             <div>
               <Label className="text-sm font-semibold text-gray-700">Original Asking Price</Label>
               <Input type="text" value={discountData.originalAskingPrice} disabled className="bg-gray-100 text-gray-700 font-semibold border-gray-300" />
             </div>
-
-            {/* Original Discount Price */}
             <div>
               <Label className="text-sm font-semibold text-gray-700">Original Discount Price</Label>
               <Input type="text" value={discountData.originalDisPrice} disabled className="bg-gray-100 text-gray-700 font-semibold border-gray-300" />
             </div>
-
-            {/* Original Minimum Price */}
             <div>
               <Label className="text-sm font-semibold text-gray-700">Original Minimum Price</Label>
               <Input type="text" value={discountData.originalMinPrice} disabled className="bg-gray-100 text-gray-700 font-semibold border-gray-300" />
             </div>
-
-            {/* Purchase Price */}
             <div>
               <Label className="text-sm font-semibold text-gray-700">Purchase Price</Label>
               <Input type="text" value={discountData.originalPurchasePrice} disabled className="bg-gray-100 text-gray-700 font-semibold border-gray-300" />
             </div>
-
-            {/* Original Closing Date */}
             <div>
               <Label className="text-sm font-semibold text-gray-700">Original Closing Date</Label>
               <Input
@@ -299,7 +367,7 @@ export default function Discount() {
           </CardContent>
         </Card>
 
-        {/* Discounted Pricing (Editable) */}
+        {/* Discounted Pricing */}
         <Card className="border-[#D4A017] shadow-lg">
           <CardHeader className="bg-gradient-to-r from-[#D4A017]/10 to-[#D4A017]/5">
             <CardTitle className="text-xl font-semibold text-[#324c48] flex items-center gap-2">
@@ -308,7 +376,6 @@ export default function Discount() {
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4 pt-6">
-            {/* Discounted Asking Price */}
             <div>
               <Label className="text-sm font-semibold text-gray-700 mb-2 block">Discounted Asking Price</Label>
               <div className="flex gap-2">
@@ -337,7 +404,6 @@ export default function Discount() {
               </div>
             </div>
 
-            {/* Discounted Discount Price */}
             <div>
               <Label className="text-sm font-semibold text-gray-700 mb-2 block">Discounted Discount Price</Label>
               <div className="flex gap-2">
@@ -366,7 +432,6 @@ export default function Discount() {
               </div>
             </div>
 
-            {/* Discounted Minimum Price */}
             <div>
               <Label className="text-sm font-semibold text-gray-700 mb-2 block">Discounted Minimum Price</Label>
               <div className="flex gap-2">
@@ -395,7 +460,6 @@ export default function Discount() {
               </div>
             </div>
 
-            {/* Updated Closing Date */}
             <div>
               <Label className="text-sm font-semibold text-gray-700 mb-2 block">Updated Closing Date</Label>
               <Popover>
@@ -414,7 +478,6 @@ export default function Discount() {
         </Card>
       </div>
 
-      {/* Action Buttons */}
       <div className="flex items-center justify-between">
         <Button onClick={openPaymentCalculator} className="bg-gradient-to-r from-[#3f4f24] to-[#324c48] hover:from-[#2c3b18] hover:to-[#253838] text-white">
           <Calculator className="w-4 h-4 mr-2" />
@@ -433,15 +496,40 @@ export default function Discount() {
         </Button>
       </div>
 
+      {/* Warning Dialog */}
+      <Dialog open={warningDialogOpen} onOpenChange={setWarningDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-amber-600">
+              <AlertTriangle className="w-5 h-5" />
+              {warningType === "increase" || warningType === "nochange" || warningType === "minonly" ? "Cannot Apply Discount" : "Discount Warning"}
+            </DialogTitle>
+          </DialogHeader>
+          <DialogDescription className="text-base">{warningMessage}</DialogDescription>
+          <DialogFooter>
+            {warningType === "partial" || warningType === "severe" ? (
+              <>
+                <Button variant="outline" onClick={() => setWarningDialogOpen(false)}>
+                  Cancel
+                </Button>
+                <Button onClick={handleWarningConfirm} className="bg-[#D4A017]">
+                  Continue Anyway
+                </Button>
+              </>
+            ) : (
+              <Button onClick={() => setWarningDialogOpen(false)}>Okay</Button>
+            )}
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       {/* Payment Calculator Dialog */}
       <Dialog open={openCalculator} onOpenChange={setOpenCalculator}>
         <DialogContent className="max-w-6xl mx-auto bg-[#FDF8F2]">
           <DialogHeader>
             <DialogTitle className="text-2xl font-bold text-gray-800">Updated Payment Plan Calculator</DialogTitle>
           </DialogHeader>
-
           {tempCalculatorData && <PaymentCalculatorBack formData={tempCalculatorData} handleChange={handleCalculatorChange} />}
-
           <DialogFooter>
             <Button onClick={() => setOpenCalculator(false)} className="bg-gray-400 hover:bg-gray-500 text-white">
               Close
@@ -449,6 +537,7 @@ export default function Discount() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
       <PropertyDiscountDialog open={dialogOpen} onOpenChange={setDialogOpen} dialogType={dialogType} dialogMessage={dialogMessage} propertyId={propertyId} propertyData={property} />
     </div>
   );
