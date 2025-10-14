@@ -13,6 +13,19 @@ import { getProperty } from "@/utils/api";
 
 const ADDRESS_FORMAT_TEMPLATES = ["{county}", "{city}", "{state}", "{state} {zip}", "{city} {zip}", "{county}, {state} {zip}", "{city}, {state} {zip}", "{county}, {city}, {state} {zip}"];
 
+const DISCOUNT_PREFIXES = [
+  "Price Drop Alert 🔻 ",
+  "Just Reduced ",
+  "New Low Price ",
+  "Deal Alert 🚨 ",
+  "Investor Special 🏠 ",
+  "Discounted Deal 🏷️ ",
+  "Priced to Sell ",
+  "Exclusive Deal ",
+  "Below Market Value ",
+  "Price Improvement ",
+];
+
 export default function DiscountSubjectLineCreator({ propertyId, onSubjectChange, errors = {} }) {
   const [templates, setTemplates] = useState([]);
   const [loadingTemplates, setLoadingTemplates] = useState(true);
@@ -22,6 +35,8 @@ export default function DiscountSubjectLineCreator({ propertyId, onSubjectChange
   const [loadingCampaigns, setLoadingCampaigns] = useState(true);
   const [selectedSubjectTemplate, setSelectedSubjectTemplate] = useState("");
   const [selectedPastSubject, setSelectedPastSubject] = useState("");
+  const [selectedPrefix, setSelectedPrefix] = useState(DISCOUNT_PREFIXES[0]);
+  const [baseSubject, setBaseSubject] = useState(""); // Subject without prefix
   const [selectedAddressTemplate, setSelectedAddressTemplate] = useState("");
   const [templateRequiresAddress, setTemplateRequiresAddress] = useState(false);
   const [subjectContent, setSubjectContent] = useState("");
@@ -173,13 +188,32 @@ export default function DiscountSubjectLineCreator({ propertyId, onSubjectChange
     setSelectedSubjectTemplate(""); // Clear template selection
     setTemplateRequiresAddress(false);
 
-    // Set the subject directly
-    setSubjectContent(subject);
-    onSubjectChange(subject);
-    setCharCount(subject.length);
+    // Store base subject and automatically apply first prefix
+    setBaseSubject(subject);
+    setSelectedPrefix(DISCOUNT_PREFIXES[0]);
+
+    const finalSubject = DISCOUNT_PREFIXES[0] + subject;
+    setSubjectContent(finalSubject);
+    onSubjectChange(finalSubject);
+    setCharCount(finalSubject.length);
 
     if (editorRef.current) {
-      editorRef.current.textContent = subject;
+      editorRef.current.textContent = finalSubject;
+    }
+  };
+
+  const handlePrefixChange = (prefix) => {
+    setSelectedPrefix(prefix);
+
+    if (baseSubject) {
+      const finalSubject = prefix + baseSubject;
+      setSubjectContent(finalSubject);
+      onSubjectChange(finalSubject);
+      setCharCount(finalSubject.length);
+
+      if (editorRef.current) {
+        editorRef.current.textContent = finalSubject;
+      }
     }
   };
 
@@ -278,15 +312,38 @@ export default function DiscountSubjectLineCreator({ propertyId, onSubjectChange
                   <SelectTrigger className={errors?.subject ? "border-red-500" : ""}>
                     <SelectValue placeholder="Choose from past campaigns..." />
                   </SelectTrigger>
-                  <SelectContent>
+                  <SelectContent className="max-w-[500px]">
                     {pastCampaigns.map((item, index) => (
-                      <SelectItem key={index} value={`${item.title}|||${item.subject}`}>
-                        {item.title} - {item.subject}
+                      <SelectItem key={index} value={`${item.title}|||${item.subject}`} className="cursor-pointer">
+                        <div className="flex flex-col gap-0.5 py-1">
+                          <span className="text-sm font-medium">{item.subject}</span>
+                          <span className="text-xs text-muted-foreground truncate">{item.title}</span>
+                        </div>
                       </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
                 <p className="text-xs text-muted-foreground">Previously used subjects for this property</p>
+              </div>
+            )}
+
+            {/* Discount Prefix Selection - shown when past subject is selected */}
+            {selectedPastSubject && (
+              <div className="space-y-2">
+                <Label>Discount Prefix</Label>
+                <Select value={selectedPrefix} onValueChange={handlePrefixChange}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {DISCOUNT_PREFIXES.map((prefix, index) => (
+                      <SelectItem key={index} value={prefix}>
+                        {prefix.trim()}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <p className="text-xs text-muted-foreground">This prefix will be added to the beginning of your subject line</p>
               </div>
             )}
 
