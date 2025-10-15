@@ -190,16 +190,22 @@ const Header = () => {
               <NavigationMenuList className="flex space-x-6">
                 {/* Properties with dropdown - CLICK ONLY */}
                 <DropdownMenu>
-                  <DropdownMenuTrigger className="text-base font-medium text-[#324c48] hover:text-[#D4A017] transition bg-transparent border-none outline-none">Properties</DropdownMenuTrigger>
+                  <DropdownMenuTrigger className="text-base font-medium text-[#324c48] hover:text-[#D4A017] transition bg-transparent border-none outline-none">
+                    Properties
+                  </DropdownMenuTrigger>
                   <DropdownMenuContent className="w-[400px] md:w-[500px] bg-[#FDF8F2] border border-[#e3a04f]/20 rounded-lg shadow-lg p-4">
                     <div className="grid gap-3">
                       {/* All Properties */}
-
-                      <a
-                        href="/properties"
-                        className="flex flex-col justify-end rounded-md bg-gradient-to-b from-[#3f4f24]/10 to-[#3f4f24]/20 p-6 no-underline outline-none focus:shadow-md hover:bg-gradient-to-b hover:from-[#3f4f24]/15 hover:to-[#3f4f24]/25 transition">
-                        <div className="mb-2 text-lg font-medium text-[#3f4f24]">All Properties</div>
-                        <p className="text-sm leading-tight text-[#324c48]">Explore all available land properties across Texas</p>
+                      
+                      <a href="/properties"
+                        className="flex flex-col justify-end rounded-md bg-gradient-to-b from-[#3f4f24]/10 to-[#3f4f24]/20 p-6 no-underline outline-none focus:shadow-md hover:bg-gradient-to-b hover:from-[#3f4f24]/15 hover:to-[#3f4f24]/25 transition"
+                      >
+                        <div className="mb-2 text-lg font-medium text-[#3f4f24]">
+                          All Properties
+                        </div>
+                        <p className="text-sm leading-tight text-[#324c48]">
+                          Explore all available land properties across Texas
+                        </p>
                       </a>
 
                       {/* Other areas */}
@@ -208,8 +214,11 @@ const Header = () => {
                           <Link
                             key={item.path}
                             to={item.path}
-                            className="block select-none space-y-1 rounded-md p-3 leading-none no-underline outline-none transition-colors hover:bg-[#e3a04f]/10 hover:text-[#D4A017] focus:bg-[#e3a04f]/10 focus:text-[#D4A017]">
-                            <div className="text-sm font-medium leading-none text-[#324c48]">{item.name}</div>
+                            className="block select-none space-y-1 rounded-md p-3 leading-none no-underline outline-none transition-colors hover:bg-[#e3a04f]/10 hover:text-[#D4A017] focus:bg-[#e3a04f]/10 focus:text-[#D4A017]"
+                          >
+                            <div className="text-sm font-medium leading-none text-[#324c48]">
+                              {item.name}
+                            </div>
                             <p className="line-clamp-2 text-sm leading-snug text-[#324c48]/80">
                               {item.name === "Dallas Fort Worth" && "Discover land opportunities in the DFW metroplex"}
                               {item.name === "Austin" && "Find prime land in the Austin area"}
