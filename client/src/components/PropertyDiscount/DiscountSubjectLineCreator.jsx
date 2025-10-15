@@ -124,12 +124,12 @@ export default function DiscountSubjectLineCreator({ propertyId, onSubjectChange
       acre: data.acre?.toString() || "",
       zoning: data.zoning || "",
       restrictions: data.restrictions || "",
-      askingPrice: data.askingPrice ? `$${data.askingPrice.toLocaleString()}` : "",
-      minPrice: data.minPrice ? `$${data.minPrice.toLocaleString()}` : "",
-      disPrice: data.disPrice ? `$${data.disPrice.toLocaleString()}` : "",
+      askingPrice: data.askingPrice ? `${data.askingPrice.toLocaleString()}` : "",
+      minPrice: data.minPrice ? `${data.minPrice.toLocaleString()}` : "",
+      disPrice: data.disPrice ? `${data.disPrice.toLocaleString()}` : "",
       hoaPoa: data.hoaPoa || "",
-      hoaFee: data.hoaFee ? `$${data.hoaFee}` : "",
-      tax: data.tax ? `$${data.tax}` : "",
+      hoaFee: data.hoaFee ? `${data.hoaFee}` : "",
+      tax: data.tax ? `${data.tax}` : "",
       area: data.city || "",
     };
 
@@ -139,6 +139,21 @@ export default function DiscountSubjectLineCreator({ propertyId, onSubjectChange
     });
 
     return result;
+  };
+
+  // Remove any existing discount prefix from subject
+  const stripExistingPrefix = (subject) => {
+    let cleaned = subject;
+
+    // Try to remove each prefix if it exists at the start
+    for (const prefix of DISCOUNT_PREFIXES) {
+      if (cleaned.startsWith(prefix)) {
+        cleaned = cleaned.substring(prefix.length);
+        break; // Only remove one prefix
+      }
+    }
+
+    return cleaned.trim();
   };
 
   const generateSubjectLine = () => {
@@ -188,11 +203,14 @@ export default function DiscountSubjectLineCreator({ propertyId, onSubjectChange
     setSelectedSubjectTemplate(""); // Clear template selection
     setTemplateRequiresAddress(false);
 
+    // Remove any existing prefix before applying new one
+    const cleanedSubject = stripExistingPrefix(subject);
+
     // Store base subject and automatically apply first prefix
-    setBaseSubject(subject);
+    setBaseSubject(cleanedSubject);
     setSelectedPrefix(DISCOUNT_PREFIXES[0]);
 
-    const finalSubject = DISCOUNT_PREFIXES[0] + subject;
+    const finalSubject = DISCOUNT_PREFIXES[0] + cleanedSubject;
     setSubjectContent(finalSubject);
     onSubjectChange(finalSubject);
     setCharCount(finalSubject.length);
