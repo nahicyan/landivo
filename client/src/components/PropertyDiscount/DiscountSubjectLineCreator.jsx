@@ -306,7 +306,7 @@ export default function DiscountSubjectLineCreator({ propertyId, onSubjectChange
           Discount Email Subject Line
         </CardTitle>
       </CardHeader>
-      <CardContent className="space-y-4">
+      <CardContent className="space-y-3 max-h-[400px] overflow-y-auto">
         {isLoading ? (
           <div className="flex items-center gap-2 text-muted-foreground">
             <Loader2 className="h-4 w-4 animate-spin" />
