@@ -4,7 +4,7 @@ import PropertyCard from "@/components/PropertyCard/PropertyCard";
 import useProperties from "../../components/hooks/useProperties.js";
 
 export default function FinancingSlider() {
-  const { data = [], isError, isLoading } = useProperties(); // Ensure data has a default value
+  const { data = [], isError, isLoading } = useProperties();
   const scrollRef = useRef(null);
   const [scrollState, setScrollState] = useState({ showLeft: false, showRight: false });
 
@@ -30,6 +30,10 @@ export default function FinancingSlider() {
     };
   }, [data]);
 
+  useEffect(() => {
+    updateScrollState();
+  }, [financingProperties.length]);
+
   // Scroll Handlers
   const scrollLeft = () => {
     if (scrollRef.current) {
@@ -50,49 +54,66 @@ export default function FinancingSlider() {
 
   return (
     <div className="w-full py-6 bg-[#FDF8F2]">
-      <div className="max-w-screen-xl mx-auto relative">
-      <h2 className="text-3xl md:text-4xl font-medium text-[#3f4f24] max-w-2xl mx-auto">
-         Discover Land with Flexible Financing
-      </h2>
-      <p className="mt-4 mb-6 mx-auto max-w-2xl text-center text-lg text-gray-600">
-      Budget-friendly monthly financing plans.
-      </p>
-
-      {/* Left Scroll Button */}
-      {scrollState.showLeft && (
-        <button
-          onClick={scrollLeft}
-          className="hidden sm:block absolute -left-6 top-1/2 -translate-y-1/2 z-10 bg-white border rounded-full p-3 shadow-md hover:shadow-lg"
-        >
-          <ChevronLeftIcon className="w-6 h-6" />
-        </button>
-      )}
-
-      {/* Scrollable Row */}
-      <div className="px-2 py-4 overflow-x-auto no-scrollbar" ref={scrollRef} onScroll={updateScrollState}>
-      <div className="flex flex-col sm:flex-row space-y-8 sm:space-y-0 sm:space-x-20">
-          {financingProperties.length > 0 ? (
-            financingProperties.map((property) => (
-              <div key={property.id} className="w-72 flex-shrink-0 transition hover:scale-105">
-                <PropertyCard card={property} />
-              </div>
-            ))
-          ) : (
-            <div className="text-center w-full text-gray-500">No properties available with financing.</div>
-          )}
+      <div className="max-w-screen-xl mx-auto">
+        {/* Title Section - Matching DisplayRow style */}
+        <div className="text-center mb-6">
+          <h2 className="text-2xl sm:text-3xl font-bold mb-2">
+            Discover Land with Flexible Financing
+          </h2>
+          <p className="text-[#324c48]/80">
+            Budget-friendly monthly financing plans.
+          </p>
         </div>
-      </div>
 
-      {/* Right Scroll Button */}
-      {scrollState.showRight && (
-        <button
-          onClick={scrollRight}
-          className="hidden sm:block absolute -right-6 top-1/2 -translate-y-1/2 z-10 bg-white border rounded-full p-3 shadow-md hover:shadow-lg"
-        >
-          <ChevronRightIcon className="w-6 h-6" />
-        </button>
-      )}
+        {/* Content */}
+        {financingProperties.length > 0 ? (
+          <div className="relative">
+            {/* Left Scroll Button - Matching DisplayRow style */}
+            {scrollState.showLeft && (
+              <button
+                onClick={scrollLeft}
+                className="hidden sm:block sm:absolute -left-6 top-1/2 -translate-y-1/2 z-10 bg-white border rounded-full p-3 shadow-md hover:shadow-lg transition-all duration-200 hover:scale-105"
+                aria-label="Scroll left"
+              >
+                <ChevronLeftIcon className="w-6 h-6" />
+              </button>
+            )}
+
+            {/* Scrollable Container - Matching DisplayRow style */}
+            <div
+              className="px-2 py-4 overflow-y-auto overflow-x-hidden sm:overflow-x-auto sm:overflow-y-hidden no-scrollbar"
+              ref={scrollRef}
+              onScroll={updateScrollState}
+            >
+              <div className="flex flex-col sm:flex-row space-y-8 sm:space-y-0 sm:space-x-5 py-8">
+                {financingProperties.map((property, index) => (
+                  <div
+                    key={property.id}
+                    className={`flex-shrink-0 transition hover:scale-105 ${index === 0 ? 'ml-3' : ''}`}
+                  >
+                    <PropertyCard card={property} />
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Right Scroll Button - Matching DisplayRow style */}
+            {scrollState.showRight && (
+              <button
+                onClick={scrollRight}
+                className="hidden sm:block sm:absolute -right-6 top-1/2 -translate-y-1/2 z-10 bg-white border rounded-full p-3 shadow-md hover:shadow-lg transition-all duration-200 hover:scale-105"
+                aria-label="Scroll right"
+              >
+                <ChevronRightIcon className="w-6 h-6" />
+              </button>
+            )}
+          </div>
+        ) : (
+          <p className="text-center text-gray-600 py-4">
+            No properties available with financing.
+          </p>
+        )}
+      </div>
     </div>
-</div>
   );
 }
