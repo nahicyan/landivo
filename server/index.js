@@ -18,6 +18,7 @@ import { settingsRoute } from "./routes/settingsRoute.js";
 import { visitorRoute } from "./routes/visitorRoute.js";
 import { initScheduledTasks } from "./services/scheduledTasks.js";
 import { mailivoAutomationRoute } from "./routes/mailivoAutomationRoute.js";
+import { automationClosingDateRoute } from "./routes/automationClosingDateRoute.js";
 
 const app = express();
 const PORT = process.env.PORT || 8200;
@@ -60,7 +61,8 @@ app.use("/deal", dealRoute);
 app.use("/property-rows", propertyRowRoute);
 app.use("/settings", settingsRoute);
 app.use("/visitors", visitorRoute);
-app.use("/api/mailivo/automation", mailivoAutomationRoute);
+app.use("/mailivo/automation", mailivoAutomationRoute);
+app.use("/automation/closingDates", automationClosingDateRoute);
 app.use(trackActivity);
 
 

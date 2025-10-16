@@ -14,10 +14,27 @@ import { cn } from "@/lib/utils";
 
 export default function Pricing({ formData, handleChange, errors }) {
   const handleDateSelect = (date) => {
+    if (!date) {
+      handleChange({
+        target: {
+          name: "closingDate",
+          value: null,
+        },
+      });
+      return;
+    }
+
+    // Set the time to 5PM (17:00:00) of the selected day
+    const dateAt5PM = new Date(date);
+    dateAt5PM.setHours(17, 0, 0, 0);
+
+    // Convert to ISO-8601 string format for Prisma compatibility
+    const isoString = dateAt5PM.toISOString();
+
     handleChange({
       target: {
         name: "closingDate",
-        value: date,
+        value: isoString,
       },
     });
   };
@@ -76,38 +93,36 @@ export default function Pricing({ formData, handleChange, errors }) {
         {/* Yearly Tax and HOA/POA on the same line */}
         <div className="grid grid-cols-2 gap-4">
           {/* Yearly Tax */}
-          <div>
-            <Label className="text-sm font-semibold text-gray-700">Yearly Tax</Label>
-            <Input
-              type="text"
-              placeholder="Enter Yearly Tax"
-              name="tax"
-              value={formData.tax}
-              onChange={handleChange}
-              className="w-full border-gray-300 focus:border-[#D4A017] focus:ring-1 focus:ring-[#D4A017] rounded-md"
-            />
-            <p className="text-xs text-gray-500 mt-1">Monthly Tax Will Be Calculated Automatically From This Yearly Tax</p>
+          <div className="flex flex-col space-y-1">
+            <Label className="text-gray-700 font-semibold">Yearly Tax</Label>
+            <Input type="text" name="tax" value={formData.tax} onChange={handleChange} placeholder="Enter Yearly Tax" />
           </div>
 
-          {/* HOA / POA */}
-          <div>
-            <Label className="text-gray-700 font-semibold">HOA / POA</Label>
+          {/* HOA/POA */}
+          <div className="flex flex-col space-y-1">
+            <Label className="text-sm font-semibold text-gray-700">
+              HOA/POA <span className="text-red-500">*</span>
+            </Label>
             <Select name="hoaPoa" value={formData.hoaPoa} onValueChange={(value) => handleChange({ target: { name: "hoaPoa", value } })}>
-              <SelectTrigger className="w-full border-gray-300 focus:border-[#324c48] focus:ring-1 focus:ring-[#324c48]">
+              <SelectTrigger className={cn("w-full border-gray-300 focus:border-[#324c48] focus:ring-1 focus:ring-[#324c48]", errors?.hoaPoa && "border-red-500")}>
                 <SelectValue placeholder="Select" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="Yes">Yes</SelectItem>
-                <SelectItem value="No">No</SelectItem>
+                {["Yes", "No"].map((option) => (
+                  <SelectItem key={option} value={option}>
+                    {option}
+                  </SelectItem>
+                ))}
               </SelectContent>
             </Select>
+            {errors?.hoaPoa && <p className="text-xs text-red-500 mt-1">{errors.hoaPoa}</p>}
           </div>
         </div>
 
-        {/* Conditionally Render HOA Fee & Terms */}
+        {/* HOA Details (conditional) */}
         {formData.hoaPoa === "Yes" && (
-          <div className="grid grid-cols-2 gap-3">
-            <div className="flex flex-col space-y-1 mb-4">
+          <div className="grid grid-cols-2 gap-4">
+            <div className="flex flex-col space-y-1">
               <Label className="text-gray-700 font-semibold">HOA Payment Terms</Label>
               <Select name="hoaPaymentTerms" value={formData.hoaPaymentTerms} onValueChange={(value) => handleChange({ target: { name: "hoaPaymentTerms", value } })}>
                 <SelectTrigger className="w-full border-gray-300 focus:border-[#324c48] focus:ring-1 focus:ring-[#324c48]">
