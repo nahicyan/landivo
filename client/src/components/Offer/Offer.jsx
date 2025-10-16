@@ -660,7 +660,7 @@ export default function Offer({ propertyData }) {
               </Alert>
             )}
 
-            <form onSubmit={handleSubmit} className="space-y-3">
+            <form onSubmit={handleSubmit} className="space-y-2">
               {/* Name fields on same line */}
               <div className="flex space-x-3">
                 <div className="flex-1">

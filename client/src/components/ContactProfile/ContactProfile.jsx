@@ -57,9 +57,9 @@ const ContactProfile = ({ profileId }) => {
     `https://ui-avatars.com/api/?name=${profileData.firstName}+${profileData.lastName}&background=324c48&color=fff&size=150`;
 
   return (
-    <div className="w-full bg-[#f5faf7] rounded-lg px-6 py-6 mt-5">
-     <div className="flex items-center mb-4">
-        <div className="w-14 h-14 rounded-full overflow-hidden flex-shrink-0">
+    <div className="w-full bg-[#f5faf7] rounded-lg px-6 py-3 mt-5">
+      <div className="flex items-center mb-2">
+        <div className="w-24 h-24 rounded-full overflow-hidden flex-shrink-0 -mt-1">
           <img
             src={imageUrl}
             alt={`${profileData.firstName} ${profileData.lastName}`}
@@ -71,26 +71,25 @@ const ContactProfile = ({ profileId }) => {
           />
         </div>
         
-        <div className="ml-3">
+        <div className="ml-5">
           <h3 className="text-xl font-normal text-[#324c48]">
             {profileData.firstName} {profileData.lastName}
           </h3>
           <p className="text-[#3f4f24] text-base font-light">
             {profileData.profileRole || "Landivo Expert"}
           </p>
+          {displayPhone && (
+            <a 
+              href={`tel:${displayPhone.replace(/\D/g, '')}`}
+              className="text-lg text-[#324c48] hover:text-[#D4A017] border-b border-[#324c48] pb-1 inline-block mt-1"
+            >
+              {displayPhone}
+            </a>
+          )}
         </div>
       </div>
       
-      <div className="flex flex-col items-start space-y-2">
-        {displayPhone && (
-          <a 
-            href={`tel:${displayPhone.replace(/\D/g, '')}`}
-            className="text-lg text-[#324c48] hover:text-[#D4A017] border-b border-[#324c48] pb-1"
-          >
-            {displayPhone}
-          </a>
-        )}
-        
+      <div className="flex flex-col items-center space-y-2">
         {profileData.email && (
           <a 
             href={`mailto:${profileData.email}`}
