@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { api, getSystemSettings } from "@/utils/api";
-import { Loader2 } from "lucide-react";
+import { Loader2, Phone } from "lucide-react";
 
 const ContactProfile = ({ profileId }) => {
   const [profileData, setProfileData] = useState(null);
@@ -17,13 +17,9 @@ const ContactProfile = ({ profileId }) => {
     const fetchData = async () => {
       try {
         setLoading(true);
-        
-        // Fetch both profile data and system settings in parallel
-        const [profileResponse, settingsResponse] = await Promise.all([
-          api.get(`/user/public-profile/${profileId}`),
-          getSystemSettings()
-        ]);
-        
+
+        const [profileResponse, settingsResponse] = await Promise.all([api.get(`/user/public-profile/${profileId}`), getSystemSettings()]);
+
         setProfileData(profileResponse.data);
         setSystemSettings(settingsResponse);
       } catch (err) {
@@ -49,17 +45,16 @@ const ContactProfile = ({ profileId }) => {
     return null;
   }
 
-  // Determine which phone number to display
   const displayPhone = systemSettings?.overrideContactPhone || profileData.phone;
-  
-  const imageUrl = profileData.avatarUrl ? 
-    `${import.meta.env.VITE_SERVER_URL}/${profileData.avatarUrl}` : 
-    `https://ui-avatars.com/api/?name=${profileData.firstName}+${profileData.lastName}&background=324c48&color=fff&size=150`;
+
+  const imageUrl = profileData.avatarUrl
+    ? `${import.meta.env.VITE_SERVER_URL}/${profileData.avatarUrl}`
+    : `https://ui-avatars.com/api/?name=${profileData.firstName}+${profileData.lastName}&background=324c48&color=fff&size=150`;
 
   return (
-    <div className="w-full bg-[#f5faf7] rounded-lg px-6 py-6 mt-5">
-     <div className="flex items-center mb-4">
-        <div className="w-14 h-14 rounded-full overflow-hidden flex-shrink-0">
+    <div className="w-full bg-[#f5faf7] rounded-lg px-6 py-3 mt-5">
+      <div className="flex items-start mb-2">
+        <div className="w-24 h-24 rounded-full overflow-hidden flex-shrink-0 mt-2">
           <img
             src={imageUrl}
             alt={`${profileData.firstName} ${profileData.lastName}`}
@@ -70,32 +65,24 @@ const ContactProfile = ({ profileId }) => {
             }}
           />
         </div>
-        
-        <div className="ml-3">
+
+        <div className="ml-5">
           <h3 className="text-xl font-normal text-[#324c48]">
             {profileData.firstName} {profileData.lastName}
           </h3>
-          <p className="text-[#3f4f24] text-base font-light">
-            {profileData.profileRole || "Landivo Expert"}
-          </p>
+          <p className="text-[#3f4f24] text-base font-light">{profileData.profileRole || "Landivo Expert"}</p>
+          {displayPhone && (
+            <a href={`tel:${displayPhone.replace(/\D/g, "")}`} className="text-lg text-[#324c48] hover:text-[#D4A017] inline-flex items-center gap-2 mt-4">
+              <Phone className="h-5 w-5" />
+              <span className="border-b border-[#324c48] pb-1">{displayPhone}</span>
+            </a>
+          )}
         </div>
       </div>
-      
-      <div className="flex flex-col items-start space-y-2">
-        {displayPhone && (
-          <a 
-            href={`tel:${displayPhone.replace(/\D/g, '')}`}
-            className="text-lg text-[#324c48] hover:text-[#D4A017] border-b border-[#324c48] pb-1"
-          >
-            {displayPhone}
-          </a>
-        )}
-        
+
+      <div className="flex flex-col items-center mt-3 ">
         {profileData.email && (
-          <a 
-            href={`mailto:${profileData.email}`}
-            className="text-[#324c48] hover:text-[#D4A017] text-base font-light"
-          >
+          <a href={`mailto:${profileData.email}`} className="text-[#324c48] hover:text-[#D4A017] text-base font-light">
             {profileData.email}
           </a>
         )}
