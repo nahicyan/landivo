@@ -58,8 +58,8 @@ const ContactProfile = ({ profileId }) => {
 
   return (
     <div className="w-full bg-[#f5faf7] rounded-lg px-6 py-3 mt-5">
-      <div className="flex items-center mb-2">
-        <div className="w-24 h-24 rounded-full overflow-hidden flex-shrink-0 -mt-1">
+      <div className="flex items-start mb-2">
+        <div className="w-24 h-24 rounded-full overflow-hidden flex-shrink-0 mt-2">
           <img
             src={imageUrl}
             alt={`${profileData.firstName} ${profileData.lastName}`}
@@ -81,7 +81,7 @@ const ContactProfile = ({ profileId }) => {
           {displayPhone && (
             <a 
               href={`tel:${displayPhone.replace(/\D/g, '')}`}
-              className="text-lg text-[#324c48] hover:text-[#D4A017] border-b border-[#324c48] pb-1 inline-block mt-1"
+              className="text-lg text-[#324c48] hover:text-[#D4A017] border-b border-[#324c48] pb-1 inline-block mt-4"
             >
               {displayPhone}
             </a>
@@ -89,7 +89,7 @@ const ContactProfile = ({ profileId }) => {
         </div>
       </div>
       
-      <div className="flex flex-col items-center space-y-2">
+      <div className="flex flex-col items-center mt-3 ">
         {profileData.email && (
           <a 
             href={`mailto:${profileData.email}`}

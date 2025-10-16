@@ -635,7 +635,7 @@ export default function Offer({ propertyData }) {
           </div>
         )}
         <Card className={`w-full max-w-md border border-[#405025]/20 bg-white shadow-lg mx-auto ${isSold ? "filter blur-sm group-hover:blur-xl transition-all duration-200" : ""}`}>
-          <CardHeader className="text-center py-2 space-y-0.5">
+          <CardHeader className="text-center py-3 space-y-0.5">
             <CardTitle className="text-2xl font-bold text-[#405025]">{getCardTitle()}</CardTitle>
             <CardDescription className="text-[#324d49] text-sm">For {!propertyData.toggleObscure || showAddress ? propertyData.streetAddress : "This Property"}</CardDescription>
           </CardHeader>
@@ -809,7 +809,7 @@ export default function Offer({ propertyData }) {
                 )}
               </div>
             </form>
-            <div className="pt-3 mt-1">
+            <div className="p-2 mt-3">
               <ContactCard />
             </div>
           </CardContent>
