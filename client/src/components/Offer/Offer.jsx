@@ -10,45 +10,18 @@ import { useVipBuyer } from "@/utils/VipBuyerContext";
 import { useShowAddress } from "@/utils/addressUtils";
 
 // ShadCN UI components
-import {
-  Card,
-  CardHeader,
-  CardTitle,
-  CardDescription,
-  CardContent,
-} from "@/components/ui/card";
+import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
-import {
-  Select,
-  SelectTrigger,
-  SelectValue,
-  SelectContent,
-  SelectItem,
-} from "@/components/ui/select";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-  DialogFooter,
-} from "@/components/ui/dialog";
+import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import {
-  InfoCircledIcon,
-  CheckCircledIcon,
-  CrossCircledIcon,
-} from "@radix-ui/react-icons";
+import { InfoCircledIcon, CheckCircledIcon, CrossCircledIcon } from "@radix-ui/react-icons";
 
 export default function Offer({ propertyData }) {
   if (!propertyData) {
-    return (
-      <div className="min-h-screen bg-[#FFF] text-[#050002] flex items-center justify-center">
-        Error: Property data not found.
-      </div>
-    );
+    return <div className="min-h-screen bg-[#FFF] text-[#050002] flex items-center justify-center">Error: Property data not found.</div>;
   }
 
   const navigate = useNavigate();
@@ -104,11 +77,7 @@ export default function Offer({ propertyData }) {
   // Check for existing offers when user data is loaded
   useEffect(() => {
     // Check for existing offers once user data is populated and we have enough info
-    if (
-      (email || (user && user.email)) &&
-      !existingOfferChecked.current &&
-      propertyData?.id
-    ) {
+    if ((email || (user && user.email)) && !existingOfferChecked.current && propertyData?.id) {
       checkForExistingOffer();
       existingOfferChecked.current = true;
     }
@@ -146,9 +115,7 @@ export default function Offer({ propertyData }) {
 
         // Check for offers on this property
         if (response.data.offers) {
-          const offerForThisProperty = response.data.offers.find(
-            (offer) => offer.propertyId === propertyData.id
-          );
+          const offerForThisProperty = response.data.offers.find((offer) => offer.propertyId === propertyData.id);
 
           if (offerForThisProperty) {
             console.log("Found existing offer:", offerForThisProperty);
@@ -230,9 +197,7 @@ export default function Offer({ propertyData }) {
 
           // Check for existing offers on this property
           if (response.data.offers && propertyData?.id) {
-            const offerForThisProperty = response.data.offers.find(
-              (offer) => offer.propertyId === propertyData.id
-            );
+            const offerForThisProperty = response.data.offers.find((offer) => offer.propertyId === propertyData.id);
 
             if (offerForThisProperty) {
               setExistingOffer(offerForThisProperty);
@@ -240,9 +205,7 @@ export default function Offer({ propertyData }) {
 
               // Set the current offer price
               if (offerForThisProperty.offeredPrice) {
-                setOfferPrice(
-                  offerForThisProperty.offeredPrice.toLocaleString()
-                );
+                setOfferPrice(offerForThisProperty.offeredPrice.toLocaleString());
               }
 
               // Set the offer status and system message
@@ -278,15 +241,11 @@ export default function Offer({ propertyData }) {
 
     // Priority 1: Use VIP buyer data if available
     if (isVipBuyer && vipBuyerData) {
-      if (!firstName && vipBuyerData.firstName)
-        setFirstName(vipBuyerData.firstName);
-      if (!lastName && vipBuyerData.lastName)
-        setLastName(vipBuyerData.lastName);
+      if (!firstName && vipBuyerData.firstName) setFirstName(vipBuyerData.firstName);
+      if (!lastName && vipBuyerData.lastName) setLastName(vipBuyerData.lastName);
       if (!email && vipBuyerData.email) setEmail(vipBuyerData.email);
-      if (!phone && vipBuyerData.phone)
-        setPhone(formatPhoneNumber(vipBuyerData.phone));
-      if (!buyerType && vipBuyerData.buyerType)
-        setBuyerType(vipBuyerData.buyerType);
+      if (!phone && vipBuyerData.phone) setPhone(formatPhoneNumber(vipBuyerData.phone));
+      if (!buyerType && vipBuyerData.buyerType) setBuyerType(vipBuyerData.buyerType);
       return;
     }
 
@@ -300,8 +259,7 @@ export default function Offer({ propertyData }) {
       if ((!firstName || !lastName) && user.name) {
         const nameParts = user.name.split(" ");
         if (nameParts.length > 0 && !firstName) setFirstName(nameParts[0]);
-        if (nameParts.length > 1 && !lastName)
-          setLastName(nameParts.slice(1).join(" "));
+        if (nameParts.length > 1 && !lastName) setLastName(nameParts.slice(1).join(" "));
       }
 
       // Set email if available
@@ -364,10 +322,7 @@ export default function Offer({ propertyData }) {
     } else if (digitsOnly.length <= 6) {
       formattedNumber = `(${digitsOnly.slice(0, 3)}) ${digitsOnly.slice(3)}`;
     } else {
-      formattedNumber = `(${digitsOnly.slice(0, 3)}) ${digitsOnly.slice(
-        3,
-        6
-      )}-${digitsOnly.slice(6, Math.min(10, digitsOnly.length))}`;
+      formattedNumber = `(${digitsOnly.slice(0, 3)}) ${digitsOnly.slice(3, 6)}-${digitsOnly.slice(6, Math.min(10, digitsOnly.length))}`;
     }
 
     return formattedNumber;
@@ -393,9 +348,7 @@ export default function Offer({ propertyData }) {
   // New method for accepting counter offer
   const handleAcceptCounter = async () => {
     if (!existingOffer || !counteredPrice) {
-      setDialogMessage(
-        "Counter offer information is missing. Please try again."
-      );
+      setDialogMessage("Counter offer information is missing. Please try again.");
       setDialogType("warning");
       setDialogOpen(true);
       return;
@@ -411,9 +364,7 @@ export default function Offer({ propertyData }) {
         acceptedPrice: counteredPrice, // Explicitly include the accepted price
       });
 
-      setDialogMessage(
-        "You have accepted the counter offer! Our team will contact you soon with the next steps."
-      );
+      setDialogMessage("You have accepted the counter offer! Our team will contact you soon with the next steps.");
       setDialogType("success");
       setDialogOpen(true);
 
@@ -428,9 +379,7 @@ export default function Offer({ propertyData }) {
         offeredPrice: counteredPrice, // Update the price in our local state
       });
     } catch (error) {
-      setDialogMessage(
-        "Failed to accept counter offer. Please try again or contact support."
-      );
+      setDialogMessage("Failed to accept counter offer. Please try again or contact support.");
       setDialogType("warning");
       setDialogOpen(true);
     } finally {
@@ -442,14 +391,7 @@ export default function Offer({ propertyData }) {
     e.preventDefault();
 
     // Basic required field check
-    if (
-      !offerPrice ||
-      !email ||
-      !firstName ||
-      !lastName ||
-      !phone ||
-      !buyerType
-    ) {
+    if (!offerPrice || !email || !firstName || !lastName || !phone || !buyerType) {
       setDialogMessage("All fields are required.");
       setDialogType("warning");
       setDialogOpen(true);
@@ -499,20 +441,14 @@ export default function Offer({ propertyData }) {
 
       // If offer is below minPrice, show a warning and do not redirect
       if (parsedOfferPrice < propertyData?.minPrice) {
-        setDialogMessage(
-          `At this time we cannot accept any offers below $${propertyData?.minPrice.toLocaleString()}. Consider offering a higher price.`
-        );
+        setDialogMessage(`At this time we cannot accept any offers below $${propertyData?.minPrice.toLocaleString()}. Consider offering a higher price.`);
         setDialogType("warning");
         setDialogOpen(true);
         return;
       }
 
       // If valid offer, show success and (optionally) navigate back
-      setDialogMessage(
-        hasExistingOffer
-          ? "Your offer has been successfully updated!"
-          : "Offer submitted successfully!"
-      );
+      setDialogMessage(hasExistingOffer ? "Your offer has been successfully updated!" : "Offer submitted successfully!");
       setDialogType("success");
       setDialogOpen(true);
 
@@ -522,9 +458,7 @@ export default function Offer({ propertyData }) {
       setOfferStatus("PENDING");
       setBuyerMessage("");
     } catch (error) {
-      setDialogMessage(
-        "There was an error processing your offer. Please try again."
-      );
+      setDialogMessage("There was an error processing your offer. Please try again.");
       setDialogType("warning");
       setDialogOpen(true);
     }
@@ -550,9 +484,7 @@ export default function Offer({ propertyData }) {
     if (offerStatus === "COUNTERED") {
       // For counter offers, new price must be higher than original offer
       if (parsedNewPrice <= existingOffer.offeredPrice) {
-        setDialogMessage(
-          `Please enter an amount higher than your previous offer of $${existingOffer.offeredPrice.toLocaleString()}.`
-        );
+        setDialogMessage(`Please enter an amount higher than your previous offer of $${existingOffer.offeredPrice.toLocaleString()}.`);
         setDialogType("warning");
         setUpdateDialogOpen(false);
         setDialogOpen(true);
@@ -561,9 +493,7 @@ export default function Offer({ propertyData }) {
     } else {
       // For regular updates, price must be higher than the previous offer
       if (parsedNewPrice <= existingOffer.offeredPrice) {
-        setDialogMessage(
-          `Please enter an amount higher than your previous offer of $${existingOffer.offeredPrice.toLocaleString()}.`
-        );
+        setDialogMessage(`Please enter an amount higher than your previous offer of $${existingOffer.offeredPrice.toLocaleString()}.`);
         setDialogType("warning");
         setUpdateDialogOpen(false);
         setDialogOpen(true);
@@ -601,9 +531,7 @@ export default function Offer({ propertyData }) {
       // Reset the update message after successful submission
       setUpdateMessage("");
     } catch (error) {
-      setDialogMessage(
-        "There was an error updating your offer. Please try again."
-      );
+      setDialogMessage("There was an error updating your offer. Please try again.");
       setDialogType("warning");
       setDialogOpen(true);
     }
@@ -653,9 +581,7 @@ export default function Offer({ propertyData }) {
       case "REJECTED":
         return "We're sorry, your offer was not accepted. You can submit a new offer if you're still interested.";
       case "COUNTERED":
-        return `We've made a counter offer of $${
-          counteredPrice?.toLocaleString() || 0
-        }. You can accept this counter offer or propose a new offer.`;
+        return `We've made a counter offer of $${counteredPrice?.toLocaleString() || 0}. You can accept this counter offer or propose a new offer.`;
       case "EXPIRED":
         return "Your offer has expired. You can submit a new offer if you're still interested.";
       default:
@@ -708,23 +634,10 @@ export default function Offer({ propertyData }) {
             <span className="text-4xl font-bold text-gray-800">SOLD</span>
           </div>
         )}
-        <Card
-          className={`w-full max-w-md border border-[#405025]/20 bg-white shadow-lg mx-auto ${
-            isSold
-              ? "filter blur-sm group-hover:blur-xl transition-all duration-200"
-              : ""
-          }`}
-        >
-          <CardHeader className="text-center py-4">
-            <CardTitle className="text-2xl font-bold text-[#405025]">
-              {getCardTitle()}
-            </CardTitle>
-            <CardDescription className="text-[#324d49] text-sm">
-              For{" "}
-              {!propertyData.toggleObscure || showAddress
-                ? propertyData.streetAddress
-                : "This Property"}
-            </CardDescription>
+        <Card className={`w-full max-w-md border border-[#405025]/20 bg-white shadow-lg mx-auto ${isSold ? "filter blur-sm group-hover:blur-xl transition-all duration-200" : ""}`}>
+          <CardHeader className="text-center py-2 space-y-0.5">
+            <CardTitle className="text-2xl font-bold text-[#405025]">{getCardTitle()}</CardTitle>
+            <CardDescription className="text-[#324d49] text-sm">For {!propertyData.toggleObscure || showAddress ? propertyData.streetAddress : "This Property"}</CardDescription>
           </CardHeader>
 
           <CardContent className="px-5 pb-3">
@@ -733,13 +646,9 @@ export default function Offer({ propertyData }) {
               <Alert className={`mb-4 py-3 ${getStatusColor()}`}>
                 <div className="flex items-center">
                   {getStatusIcon()}
-                  <AlertTitle className="ml-2 text-sm">
-                    Status: {offerStatus}
-                  </AlertTitle>
+                  <AlertTitle className="ml-2 text-sm">Status: {offerStatus}</AlertTitle>
                 </div>
-                <AlertDescription className="text-sm mt-1">
-                  {getStatusMessage()}
-                </AlertDescription>
+                <AlertDescription className="text-sm mt-1">{getStatusMessage()}</AlertDescription>
 
                 {/* Show system message if exists */}
                 {sysMessage && (
@@ -755,10 +664,7 @@ export default function Offer({ propertyData }) {
               {/* Name fields on same line */}
               <div className="flex space-x-3">
                 <div className="flex-1">
-                  <Label
-                    htmlFor="firstName"
-                    className="text-sm text-[#050002] mb-1 block"
-                  >
+                  <Label htmlFor="firstName" className="text-sm text-[#050002] mb-1 block">
                     First Name
                   </Label>
                   <Input
@@ -773,10 +679,7 @@ export default function Offer({ propertyData }) {
                   />
                 </div>
                 <div className="flex-1">
-                  <Label
-                    htmlFor="lastName"
-                    className="text-sm text-[#050002] mb-1 block"
-                  >
+                  <Label htmlFor="lastName" className="text-sm text-[#050002] mb-1 block">
                     Last Name
                   </Label>
                   <Input
@@ -794,56 +697,25 @@ export default function Offer({ propertyData }) {
 
               {/* Email on separate line */}
               <div>
-                <Label
-                  htmlFor="email"
-                  className="text-sm text-[#050002] mb-1 block"
-                >
+                <Label htmlFor="email" className="text-sm text-[#050002] mb-1 block">
                   Email
                 </Label>
-                <Input
-                  id="email"
-                  type="email"
-                  placeholder="example@mail.com"
-                  value={email}
-                  onChange={handleEmailChange}
-                  required
-                  disabled={isFormDisabled()}
-                  className="h-9 text-sm"
-                />
+                <Input id="email" type="email" placeholder="example@mail.com" value={email} onChange={handleEmailChange} required disabled={isFormDisabled()} className="h-9 text-sm" />
               </div>
 
               {/* Phone on separate line */}
               <div>
-                <Label
-                  htmlFor="phone"
-                  className="text-sm text-[#050002] mb-1 block"
-                >
+                <Label htmlFor="phone" className="text-sm text-[#050002] mb-1 block">
                   Phone
                 </Label>
-                <Input
-                  id="phone"
-                  type="text"
-                  placeholder="(555) 555-5555"
-                  value={phone}
-                  onChange={handlePhoneChange}
-                  required
-                  disabled={isFormDisabled()}
-                  className="h-9 text-sm"
-                />
+                <Input id="phone" type="text" placeholder="(555) 555-5555" value={phone} onChange={handlePhoneChange} required disabled={isFormDisabled()} className="h-9 text-sm" />
               </div>
 
               {/* Offer Price and Buyer Type on same line, with Offer first */}
               <div className="flex space-x-3">
                 <div className="flex-1">
-                  <Label
-                    htmlFor="offerPrice"
-                    className="text-sm text-[#050002] mb-1 block"
-                  >
-                    {hasExistingOffer
-                      ? offerStatus === "COUNTERED"
-                        ? "Your Original Offer"
-                        : "Your Offer Price"
-                      : "Offer Price ($)"}
+                  <Label htmlFor="offerPrice" className="text-sm text-[#050002] mb-1 block">
+                    {hasExistingOffer ? (offerStatus === "COUNTERED" ? "Your Original Offer" : "Your Offer Price") : "Offer Price ($)"}
                   </Label>
                   <Input
                     id="offerPrice"
@@ -857,15 +729,8 @@ export default function Offer({ propertyData }) {
                   />
                 </div>
                 <div className="flex-1">
-                  <Label className="text-sm text-[#050002] mb-1 block">
-                    Buyer Type
-                  </Label>
-                  <Select
-                    value={buyerType}
-                    onValueChange={(val) => setBuyerType(val)}
-                    required
-                    disabled={isFormDisabled()}
-                  >
+                  <Label className="text-sm text-[#050002] mb-1 block">Buyer Type</Label>
+                  <Select value={buyerType} onValueChange={(val) => setBuyerType(val)} required disabled={isFormDisabled()}>
                     <SelectTrigger className="w-full h-9 text-sm">
                       <SelectValue placeholder="Select Type" />
                     </SelectTrigger>
@@ -884,28 +749,16 @@ export default function Offer({ propertyData }) {
               {/* Show counter offer price if applicable */}
               {offerStatus === "COUNTERED" && counteredPrice && (
                 <div className="mt-2">
-                  <Label
-                    htmlFor="counteredPrice"
-                    className="text-sm font-medium text-blue-700 mb-1 block"
-                  >
+                  <Label htmlFor="counteredPrice" className="text-sm font-medium text-blue-700 mb-1 block">
                     Counter Offer Price
                   </Label>
-                  <Input
-                    id="counteredPrice"
-                    type="text"
-                    value={counteredPrice.toLocaleString()}
-                    disabled={true}
-                    className="bg-blue-50 text-blue-800 font-medium h-9 text-sm"
-                  />
+                  <Input id="counteredPrice" type="text" value={counteredPrice.toLocaleString()} disabled={true} className="bg-blue-50 text-blue-800 font-medium h-9 text-sm" />
                 </div>
               )}
 
               {/* Buyer Message */}
               <div>
-                <Label
-                  htmlFor="buyerMessage"
-                  className="text-sm text-[#050002] mb-1 block"
-                >
+                <Label htmlFor="buyerMessage" className="text-sm text-[#050002] mb-1 block">
                   Message (Optional)
                 </Label>
                 <textarea
@@ -913,7 +766,7 @@ export default function Offer({ propertyData }) {
                   placeholder="Include any notes or questions about your offer"
                   value={buyerMessage}
                   onChange={(e) => setBuyerMessage(e.target.value)}
-                  className="w-full min-h-[70px] p-2 text-sm rounded-md border border-input bg-background resize-y"
+                  className="w-full min-h-[50px] p-2 text-sm rounded-md border border-input bg-background resize-y"
                   disabled={isFormDisabled()}
                 />
               </div>
@@ -925,48 +778,38 @@ export default function Offer({ propertyData }) {
                   <div className="grid grid-cols-2 gap-3">
                     <Button
                       type="button"
-                      className="w-full bg-[#324c48] text-[#FFF] hover:bg-[#324c48]/90 font-semibold text-sm h-9"
+                      className="w-full bg-[#324c48] text-[#FFF] hover:bg-[#324c48]/90 font-semibold text-sm h-9 mt-0"
                       onClick={handleAcceptCounter}
-                      disabled={isAcceptingCounter}
-                    >
+                      disabled={isAcceptingCounter}>
                       {isAcceptingCounter ? "Accepting..." : "Accept Counter"}
                     </Button>
 
                     <Button
                       type="button"
-                      className="w-full bg-[#405025] text-[#FFF] hover:bg-[#405025]/90 font-semibold text-sm h-9"
+                      className="w-full bg-[#405025] text-[#FFF] hover:bg-[#405025]/90 font-semibold text-sm h-9 mt-0"
                       onClick={() => {
                         setActionType("counter");
                         setNewOfferPrice("");
                         setUpdateDialogOpen(true);
                       }}
-                      disabled={isFormDisabled()}
-                    >
+                      disabled={isFormDisabled()}>
                       Counter Offer
                     </Button>
                   </div>
                 ) : offerStatus === "ACCEPTED" ? (
                   /* CASE 2: ACCEPTED status - show disabled accepted button */
-                  <Button
-                    type="button"
-                    className="w-full bg-green-600 text-[#FFF] hover:bg-green-600 font-semibold text-sm h-9 mt-1"
-                    disabled={true}
-                  >
+                  <Button type="button" className="w-full bg-green-600 text-[#FFF] hover:bg-green-600 font-semibold text-sm h-9 mt-0" disabled={true}>
                     Offer Accepted
                   </Button>
                 ) : (
                   /* CASE 3: All other statuses (PENDING, REJECTED, EXPIRED or new offer) - show single submit/update button */
-                  <Button
-                    type="submit"
-                    className="w-full bg-[#324c48] text-[#FFF] hover:bg-[#324c48]/90 font-semibold text-sm h-9 mt-1"
-                    disabled={isFormDisabled()}
-                  >
+                  <Button type="submit" className="w-full bg-[#324c48] text-[#FFF] hover:bg-[#324c48]/90 font-semibold text-sm h-9 mt-0" disabled={isFormDisabled()}>
                     {hasExistingOffer ? "Update Your Offer" : "Submit Offer"}
                   </Button>
                 )}
               </div>
             </form>
-            <div className="py-2 mt-1">
+            <div className="pt-3 mt-1">
               <ContactCard />
             </div>
           </CardContent>
@@ -976,13 +819,7 @@ export default function Offer({ propertyData }) {
         <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
           <DialogContent className="bg-[#FFF] text-[#050002] border border-[#405025]/30 shadow-lg max-w-sm">
             <DialogHeader className="pb-2">
-              <DialogTitle
-                className={
-                  dialogType === "success" ? "text-green-600" : "text-red-600"
-                }
-              >
-                {dialogType === "success" ? "Success" : "Warning"}
-              </DialogTitle>
+              <DialogTitle className={dialogType === "success" ? "text-green-600" : "text-red-600"}>{dialogType === "success" ? "Success" : "Warning"}</DialogTitle>
               <DialogDescription>{dialogMessage}</DialogDescription>
             </DialogHeader>
             <DialogFooter>
@@ -993,8 +830,7 @@ export default function Offer({ propertyData }) {
                     navigate("/properties");
                   }
                 }}
-                className="bg-[#324c48] text-[#FFF]"
-              >
+                className="bg-[#324c48] text-[#FFF]">
                 Okay
               </Button>
             </DialogFooter>
@@ -1005,35 +841,22 @@ export default function Offer({ propertyData }) {
         <Dialog open={updateDialogOpen} onOpenChange={setUpdateDialogOpen}>
           <DialogContent className="bg-[#FFF] text-[#050002] border border-[#405025]/30 shadow-lg max-w-sm">
             <DialogHeader className="pb-2">
-              <DialogTitle className="text-[#405025]">
-                {actionType === "counter"
-                  ? "Respond to Counter Offer"
-                  : "Update Your Offer"}
-              </DialogTitle>
+              <DialogTitle className="text-[#405025]">{actionType === "counter" ? "Respond to Counter Offer" : "Update Your Offer"}</DialogTitle>
               <DialogDescription className="text-sm">
                 {actionType === "counter"
-                  ? `The seller has countered with $${
-                      counteredPrice?.toLocaleString() || 0
-                    }. You can respond with a new offer.`
-                  : `Your new offer must be higher than your previous offer of $${
-                      existingOffer?.offeredPrice?.toLocaleString() || "0"
-                    }.`}
+                  ? `The seller has countered with $${counteredPrice?.toLocaleString() || 0}. You can respond with a new offer.`
+                  : `Your new offer must be higher than your previous offer of $${existingOffer?.offeredPrice?.toLocaleString() || "0"}.`}
               </DialogDescription>
             </DialogHeader>
             <div className="py-2 space-y-3">
               <div>
-                <Label
-                  htmlFor="newOfferPrice"
-                  className="text-sm text-[#050002] mb-1 block"
-                >
+                <Label htmlFor="newOfferPrice" className="text-sm text-[#050002] mb-1 block">
                   New Offer Price ($)
                 </Label>
                 <Input
                   id="newOfferPrice"
                   type="text"
-                  placeholder={`Higher than ${
-                    existingOffer?.offeredPrice?.toLocaleString() || "0"
-                  }`}
+                  placeholder={`Higher than ${existingOffer?.offeredPrice?.toLocaleString() || "0"}`}
                   value={newOfferPrice}
                   onChange={(e) => {
                     let value = e.target.value;
@@ -1053,10 +876,7 @@ export default function Offer({ propertyData }) {
                 />
               </div>
               <div>
-                <Label
-                  htmlFor="updateMessage"
-                  className="text-sm text-[#050002] mb-1 block"
-                >
+                <Label htmlFor="updateMessage" className="text-sm text-[#050002] mb-1 block">
                   Message (Optional)
                 </Label>
                 <textarea
@@ -1064,22 +884,15 @@ export default function Offer({ propertyData }) {
                   placeholder="Include any notes about your updated offer..."
                   value={updateMessage}
                   onChange={(e) => setUpdateMessage(e.target.value)}
-                  className="w-full min-h-[70px] p-2 text-sm rounded-md border border-input bg-background resize-y"
+                  className="w-full min-h-[50px] p-2 text-sm rounded-md border border-input bg-background resize-y"
                 />
               </div>
             </div>
             <DialogFooter className="flex justify-end space-x-2">
-              <Button
-                onClick={() => setUpdateDialogOpen(false)}
-                variant="outline"
-                className="text-sm"
-              >
+              <Button onClick={() => setUpdateDialogOpen(false)} variant="outline" className="text-sm">
                 Cancel
               </Button>
-              <Button
-                onClick={handleUpdateFromDialog}
-                className="bg-[#324c48] text-[#FFF] text-sm"
-              >
+              <Button onClick={handleUpdateFromDialog} className="bg-[#324c48] text-[#FFF] text-sm">
                 Submit New Offer
               </Button>
             </DialogFooter>
