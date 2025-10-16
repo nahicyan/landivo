@@ -8,6 +8,11 @@ export default function FinancingSlider() {
   const scrollRef = useRef(null);
   const [scrollState, setScrollState] = useState({ showLeft: false, showRight: false });
 
+  // Card dimensions for scrolling
+  const CARD_WIDTH = 384; // w-96 = 24rem = 384px
+  const CARD_SPACING = 20; // space-x-5 = 1.25rem = 20px
+  const SCROLL_AMOUNT = CARD_WIDTH + CARD_SPACING; // 404px total
+
   // Filter properties where financing is available
   const financingProperties = data.filter((property) => property.financing === "Available");
 
@@ -34,17 +39,17 @@ export default function FinancingSlider() {
     updateScrollState();
   }, [financingProperties.length]);
 
-  // Scroll Handlers
+  // Scroll Handlers - Now scrolls exactly one card width + spacing
   const scrollLeft = () => {
     if (scrollRef.current) {
-      scrollRef.current.scrollBy({ left: -380, behavior: "smooth" });
+      scrollRef.current.scrollBy({ left: -SCROLL_AMOUNT, behavior: "smooth" });
       setTimeout(updateScrollState, 300);
     }
   };
 
   const scrollRight = () => {
     if (scrollRef.current) {
-      scrollRef.current.scrollBy({ left: 380, behavior: "smooth" });
+      scrollRef.current.scrollBy({ left: SCROLL_AMOUNT, behavior: "smooth" });
       setTimeout(updateScrollState, 300);
     }
   };

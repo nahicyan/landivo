@@ -1,3 +1,5 @@
+// File location: server/controllers/emailListCntrl.js
+
 import asyncHandler from "express-async-handler";
 import { prisma } from "../config/prismaConfig.js";
 
@@ -29,7 +31,12 @@ export const getAllEmailLists = asyncHandler(async (req, res) => {
           const criteria = JSON.parse(JSON.stringify(list.criteria));
 
           // Check if criteria has any actual filters
-          const hasCriteriaFilters = (criteria.areas && criteria.areas.length > 0) || (criteria.buyerTypes && criteria.buyerTypes.length > 0) || criteria.isVIP;
+          const hasCriteriaFilters = 
+            (criteria.areas && criteria.areas.length > 0) || 
+            (criteria.buyerTypes && criteria.buyerTypes.length > 0) || 
+            criteria.isVIP ||
+            criteria.city ||
+            criteria.county;
 
           if (hasCriteriaFilters) {
             // Build the query based on criteria
@@ -53,6 +60,12 @@ export const getAllEmailLists = asyncHandler(async (req, res) => {
             if (criteria.isVIP) {
               query.source = "VIP Buyers List";
             }
+
+            // Note: city and county are stored in criteria for list categorization
+            // and reference purposes. They describe the property location that
+            // triggered the list creation, but are not used for buyer filtering
+            // since buyers don't have city/county fields in their profile.
+            // Buyers are matched by preferredAreas and buyerType instead.
 
             // Get buyer IDs matching the criteria
             const criteriaBuyers = await prisma.buyer.findMany({
@@ -130,7 +143,12 @@ export const getEmailList = asyncHandler(async (req, res) => {
       const criteria = JSON.parse(JSON.stringify(list.criteria));
 
       // Check if criteria has any actual filters
-      const hasCriteriaFilters = (criteria.areas && criteria.areas.length > 0) || (criteria.buyerTypes && criteria.buyerTypes.length > 0) || criteria.isVIP;
+      const hasCriteriaFilters = 
+        (criteria.areas && criteria.areas.length > 0) || 
+        (criteria.buyerTypes && criteria.buyerTypes.length > 0) || 
+        criteria.isVIP ||
+        criteria.city ||
+        criteria.county;
 
       if (hasCriteriaFilters) {
         // Build the query based on criteria
@@ -154,6 +172,10 @@ export const getEmailList = asyncHandler(async (req, res) => {
         if (criteria.isVIP) {
           query.source = "VIP Buyers List";
         }
+
+        // Note: city and county in criteria are for reference/categorization only
+        // They describe the property location but don't filter buyers
+        // since buyers don't have these fields
 
         // Get buyers matching the criteria
         criteriaBuyers = await prisma.buyer.findMany({
@@ -223,6 +245,18 @@ export const createEmailList = asyncHandler(async (req, res) => {
     // Ensure buyerIds is an array
     const buyerIdsArray = Array.isArray(buyerIds) ? buyerIds : [];
 
+    // Log criteria for debugging (especially useful for city/county)
+    if (criteria) {
+      console.log("Creating email list with criteria:", {
+        name,
+        areas: criteria.areas,
+        city: criteria.city,
+        county: criteria.county,
+        buyerTypes: criteria.buyerTypes,
+        isVIP: criteria.isVIP
+      });
+    }
+
     // Create the list with initial buyers if provided
     const newList = await prisma.emailList.create({
       data: {
@@ -274,6 +308,19 @@ export const updateEmailList = asyncHandler(async (req, res) => {
 
     if (!existingList) {
       return res.status(404).json({ message: "Email list not found" });
+    }
+
+    // Log criteria updates for debugging
+    if (criteria) {
+      console.log("Updating email list criteria:", {
+        listId: id,
+        name,
+        areas: criteria.areas,
+        city: criteria.city,
+        county: criteria.county,
+        buyerTypes: criteria.buyerTypes,
+        isVIP: criteria.isVIP
+      });
     }
 
     // Update the list
@@ -548,7 +595,12 @@ export const sendEmailToList = asyncHandler(async (req, res) => {
       const criteria = JSON.parse(JSON.stringify(list.criteria));
 
       // Check if criteria has any actual filters
-      const hasCriteriaFilters = (criteria.areas && criteria.areas.length > 0) || (criteria.buyerTypes && criteria.buyerTypes.length > 0) || criteria.isVIP;
+      const hasCriteriaFilters = 
+        (criteria.areas && criteria.areas.length > 0) || 
+        (criteria.buyerTypes && criteria.buyerTypes.length > 0) || 
+        criteria.isVIP ||
+        criteria.city ||
+        criteria.county;
 
       if (hasCriteriaFilters) {
         // Build the query based on criteria
@@ -578,6 +630,12 @@ export const sendEmailToList = asyncHandler(async (req, res) => {
         if (criteria.isVIP) {
           query.source = "VIP Buyers List";
         }
+
+        // Note: city and county are stored in criteria for categorization
+        // and reference (they describe the property location), but are not
+        // used for buyer filtering since buyers don't have city/county fields.
+        // This allows list organizers to see which geographic areas (city/county)
+        // the list was created for, even though buyer matching uses preferredAreas.
 
         // Get buyers matching the criteria
         criteriaBuyers = await prisma.buyer.findMany({

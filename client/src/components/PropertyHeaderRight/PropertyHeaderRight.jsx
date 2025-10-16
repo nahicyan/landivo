@@ -96,7 +96,7 @@ export default function PropertyHeaderRight({ propertyData }) {
 
           {/* Wrapper for all discount/VIP sections with consistent spacing */}
           {disPrice && (
-            <div className="ml-1 flex items-center flex-shrink-0">
+            <div className="ml-3 flex items-center flex-shrink-0">
               {/* Not logged in OR logged in but not VIP: Show blurred price with overlay button */}
               {(!isAuthenticated || !isVipBuyer) && (
                 <div className="relative inline-flex items-center min-w-[220px] justify-center">
