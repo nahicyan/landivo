@@ -160,7 +160,8 @@ export default function Qualify() {
       // Income level
       surveyData.gross_annual_income === "Less than $30,000" ||
       surveyData.gross_annual_income === "$30,000 - $50,000" ||
-      surveyData.gross_annual_income === "$50,000 - $75,000",
+      // Uncomment the line below to include 50-75k as disqualifier
+      // surveyData.gross_annual_income === "$50,000 - $75,000",
       
       // Legal/Credit issues
       surveyData.foreclosure_forbearance === "Yes",
