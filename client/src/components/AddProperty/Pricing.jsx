@@ -14,8 +14,22 @@ import { cn } from "@/lib/utils";
 
 export default function Pricing({ formData, handleChange, errors }) {
   const handleDateSelect = (date) => {
-    // Convert Date object to ISO-8601 string format for Prisma compatibility
-    const isoString = date ? date.toISOString() : null;
+    if (!date) {
+      handleChange({
+        target: {
+          name: "closingDate",
+          value: null,
+        },
+      });
+      return;
+    }
+
+    // Set the time to 5PM (17:00:00) of the selected day
+    const dateAt5PM = new Date(date);
+    dateAt5PM.setHours(17, 0, 0, 0);
+
+    // Convert to ISO-8601 string format for Prisma compatibility
+    const isoString = dateAt5PM.toISOString();
 
     handleChange({
       target: {
