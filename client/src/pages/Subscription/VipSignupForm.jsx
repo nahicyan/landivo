@@ -48,7 +48,8 @@ export default function VipSignupForm() {
   const { 
     isVipBuyer, 
     isLoading: vipLoading, 
-    vipBuyerData 
+    vipBuyerData,
+    refreshVipStatus 
   } = useVipBuyer();
   
   // Form state
@@ -238,6 +239,9 @@ export default function VipSignupForm() {
         ...formData,
         auth0Id: user.sub
       });
+      
+      // ✅ Refresh VIP status immediately after successful creation
+      await refreshVipStatus();
       
       setSuccess(true);
       
