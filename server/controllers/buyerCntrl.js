@@ -864,6 +864,81 @@ export const updateSubscriptionPreferences = asyncHandler(async (req, res) => {
 });
 
 /**
+ * Resubscribe buyer (in case they want to re-enable emails)
+ * @route PUT /api/buyer/resubscribe/:id
+ * @access Public
+ */
+export const resubscribeBuyer = asyncHandler(async (req, res) => {
+  const { id } = req.params;
+  const { emailTypes = [], areas = [] } = req.body;
+
+  if (!id) {
+    return res.status(400).json({ message: "Buyer ID is required" });
+  }
+
+  try {
+    // Find the buyer
+    const existingBuyer = await prisma.buyer.findUnique({
+      where: { id },
+    });
+
+    if (!existingBuyer) {
+      return res.status(404).json({ message: "Buyer not found" });
+    }
+
+    // Prepare update data
+    const updateData = {
+      emailStatus: "available",
+      emailPermissionStatus: "available",
+      preferredAreas: areas,
+      updatedAt: new Date(),
+    };
+
+    // Set specific email type preferences
+    if (emailTypes.includes("weeklyUpdates")) {
+      updateData.weeklyUpdates = "available";
+    }
+    if (emailTypes.includes("holidayDeals")) {
+      updateData.holidayDeals = "available";
+    }
+    if (emailTypes.includes("specialDiscounts")) {
+      updateData.specialDiscounts = "available";
+    }
+
+    // Update buyer
+    const updatedBuyer = await prisma.buyer.update({
+      where: { id },
+      data: updateData,
+    });
+
+    // Log the resubscribe activity
+    await prisma.buyerActivity.create({
+      data: {
+        buyerId: id,
+        eventType: "subscription_update",
+        eventData: {
+          action: "resubscribe",
+          emailTypes,
+          areas,
+          resubscribeDate: new Date().toISOString(),
+        },
+      },
+    });
+
+    res.status(200).json({
+      message: "Successfully resubscribed to emails",
+      buyer: updatedBuyer,
+    });
+  } catch (err) {
+    console.error("Error resubscribing buyer:", err);
+    res.status(500).json({
+      message: "An error occurred while resubscribing",
+      error: err.message,
+    });
+  }
+});
+
+/**
  * Complete unsubscribe from all emails
  * @route PUT /api/buyer/unsubscribe/:id/complete
  * @access Public
