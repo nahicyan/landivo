@@ -3,34 +3,34 @@ import "./Contact.css";
 
 const Contact = () => {
   return (
-    <section className="py-12 bg-[#FDF8F2] sm:py-16 lg:py-20">
+    <section className="py-8 bg-[#FDF8F2] sm:py-12 lg:py-16 xl:py-20">
       <div className="px-4 mx-auto max-w-7xl sm:px-6 lg:px-8">
         <div className="flex flex-col items-center">
           {/* Heading & Subheading */}
           <div className="text-center">
-            <p className="text-lg font-medium text-[#324c48] font-pj">
+            <p className="text-sm sm:text-base lg:text-lg font-medium text-[#324c48] font-pj">
               50+ people have secured their dream land
             </p>
-            <h2 className="mt-4 text-3xl font-bold text-[#3f4f24] sm:text-4xl xl:text-5xl font-pj">
+            <h2 className="mt-3 sm:mt-4 text-2xl sm:text-3xl lg:text-4xl xl:text-5xl font-bold text-[#3f4f24] font-pj">
               What Our Happy Clients Say
             </h2>
           </div>
 
           {/* Link to all reviews */}
-          <div className="mt-8 text-center md:mt-16 md:order-3">
+          <div className="mt-6 sm:mt-8 md:mt-12 lg:mt-16 text-center md:order-3">
             <a
               href="#"
               title=""
-              className="pb-2 text-base font-bold leading-7 text-[#3f4f24] transition-all duration-200 border-b-2 border-[#3f4f24] hover:border-[#324c48] font-pj focus:outline-none focus:ring-1 focus:ring-[#3f4f24] focus:ring-offset-2 hover:text-[#324c48]"
+              className="pb-2 text-sm sm:text-base font-bold leading-7 text-[#3f4f24] transition-all duration-200 border-b-2 border-[#3f4f24] hover:border-[#324c48] font-pj focus:outline-none focus:ring-1 focus:ring-[#3f4f24] focus:ring-offset-2 hover:text-[#324c48]"
             >
               Check all 50+ reviews
             </a>
           </div>
 
           {/* Testimonial Cards Wrapper */}
-          <div className="relative mt-10 md:mt-24 md:order-2">
-            {/* Colorful Glow Background (Optional) */}
-            <div className="absolute -inset-x-1 inset-y-16 md:-inset-x-2 md:-inset-y-6">
+          <div className="relative mt-8 sm:mt-10 md:mt-16 lg:mt-24 md:order-2 w-full">
+            {/* Colorful Glow Background */}
+            <div className="absolute -inset-x-1 inset-y-8 sm:inset-y-16 md:-inset-x-2 md:-inset-y-6">
               <div
                 className="w-full h-full max-w-5xl mx-auto rounded-3xl opacity-30 blur-lg filter"
                 style={{
@@ -41,17 +41,17 @@ const Contact = () => {
             </div>
 
             {/* Testimonial Cards Grid */}
-            <div className="relative grid max-w-lg grid-cols-1 gap-6 mx-auto md:max-w-none lg:gap-10 md:grid-cols-3">
+            <div className="relative grid max-w-lg grid-cols-1 gap-5 mx-auto sm:gap-6 md:max-w-none lg:gap-10 md:grid-cols-3">
               {/* Card 1 */}
-              <div className="flex flex-col overflow-hidden shadow-xl">
-                <div className="flex flex-col justify-between flex-1 p-6 bg-[#FDF8F2] lg:py-8 lg:px-7">
+              <div className="flex flex-col overflow-hidden shadow-xl rounded-lg">
+                <div className="flex flex-col justify-between flex-1 p-5 bg-[#FDF8F2] sm:p-6 lg:py-8 lg:px-7">
                   <div className="flex-1">
                     {/* Star Rating */}
                     <div className="flex items-center">
                       {[...Array(5)].map((_, i) => (
                         <svg
                           key={i}
-                          className="w-5 h-5 text-[#D4A017]"
+                          className="w-4 h-4 sm:w-5 sm:h-5 text-[#D4A017]"
                           xmlns="http://www.w3.org/2000/svg"
                           viewBox="0 0 20 20"
                           fill="currentColor"
@@ -62,27 +62,27 @@ const Contact = () => {
                     </div>
 
                     {/* Testimonial Text */}
-                    <blockquote className="flex-1 mt-8">
-                      <p className="text-lg leading-relaxed text-[#3f4f24] font-pj">
-                        “I found the perfect lot for my future home, and the team
+                    <blockquote className="flex-1 mt-4 sm:mt-6 lg:mt-8">
+                      <p className="text-sm sm:text-base lg:text-lg leading-relaxed text-[#3f4f24] font-pj">
+                        "I found the perfect lot for my future home, and the team
                         made everything hassle-free. Their listings are always
-                        high-quality, and I felt supported at every step!”
+                        high-quality, and I felt supported at every step!"
                       </p>
                     </blockquote>
                   </div>
 
                   {/* User Info */}
-                  <div className="flex items-center mt-8">
+                  <div className="flex items-center mt-5 sm:mt-6 lg:mt-8">
                     <img
-                      className="flex-shrink-0 object-cover rounded-full w-11 h-11"
+                      className="flex-shrink-0 object-cover rounded-full w-10 h-10 sm:w-11 sm:h-11"
                       src="https://cdn.rareblocks.xyz/collection/clarity/images/testimonial/4/avatar-male-1.png"
                       alt=""
                     />
-                    <div className="ml-4">
-                      <p className="text-base font-bold text-[#3f4f24] font-pj">
+                    <div className="ml-3 sm:ml-4">
+                      <p className="text-sm sm:text-base font-bold text-[#3f4f24] font-pj">
                         Leslie Alexander
                       </p>
-                      <p className="mt-0.5 text-sm font-pj text-[#324c48]">
+                      <p className="mt-0.5 text-xs sm:text-sm font-pj text-[#324c48]">
                         New Landowner
                       </p>
                     </div>
@@ -91,15 +91,15 @@ const Contact = () => {
               </div>
 
               {/* Card 2 */}
-              <div className="flex flex-col overflow-hidden shadow-xl">
-                <div className="flex flex-col justify-between flex-1 p-6 bg-[#FDF8F2] lg:py-8 lg:px-7">
+              <div className="flex flex-col overflow-hidden shadow-xl rounded-lg">
+                <div className="flex flex-col justify-between flex-1 p-5 bg-[#FDF8F2] sm:p-6 lg:py-8 lg:px-7">
                   <div className="flex-1">
                     {/* Star Rating */}
                     <div className="flex items-center">
                       {[...Array(5)].map((_, i) => (
                         <svg
                           key={i}
-                          className="w-5 h-5 text-[#D4A017]"
+                          className="w-4 h-4 sm:w-5 sm:h-5 text-[#D4A017]"
                           xmlns="http://www.w3.org/2000/svg"
                           viewBox="0 0 20 20"
                           fill="currentColor"
@@ -110,27 +110,27 @@ const Contact = () => {
                     </div>
 
                     {/* Testimonial Text */}
-                    <blockquote className="flex-1 mt-8">
-                      <p className="text-lg leading-relaxed text-[#3f4f24] font-pj">
-                        “They offered me a range of lots that fit my budget
+                    <blockquote className="flex-1 mt-4 sm:mt-6 lg:mt-8">
+                      <p className="text-sm sm:text-base lg:text-lg leading-relaxed text-[#3f4f24] font-pj">
+                        "They offered me a range of lots that fit my budget
                         perfectly. From choosing the land to final paperwork, it
-                        was all so smooth. I highly recommend them!”
+                        was all so smooth. I highly recommend them!"
                       </p>
                     </blockquote>
                   </div>
 
                   {/* User Info */}
-                  <div className="flex items-center mt-8">
+                  <div className="flex items-center mt-5 sm:mt-6 lg:mt-8">
                     <img
-                      className="flex-shrink-0 object-cover rounded-full w-11 h-11"
+                      className="flex-shrink-0 object-cover rounded-full w-10 h-10 sm:w-11 sm:h-11"
                       src="https://cdn.rareblocks.xyz/collection/clarity/images/testimonial/4/avatar-male-2.png"
                       alt=""
                     />
-                    <div className="ml-4">
-                      <p className="text-base font-bold text-[#3f4f24] font-pj">
+                    <div className="ml-3 sm:ml-4">
+                      <p className="text-sm sm:text-base font-bold text-[#3f4f24] font-pj">
                         Jacob Jones
                       </p>
-                      <p className="mt-0.5 text-sm font-pj text-[#324c48]">
+                      <p className="mt-0.5 text-xs sm:text-sm font-pj text-[#324c48]">
                         Budget Buyer
                       </p>
                     </div>
@@ -139,15 +139,15 @@ const Contact = () => {
               </div>
 
               {/* Card 3 */}
-              <div className="flex flex-col overflow-hidden shadow-xl">
-                <div className="flex flex-col justify-between flex-1 p-6 bg-[#FDF8F2] lg:py-8 lg:px-7">
+              <div className="flex flex-col overflow-hidden shadow-xl rounded-lg">
+                <div className="flex flex-col justify-between flex-1 p-5 bg-[#FDF8F2] sm:p-6 lg:py-8 lg:px-7">
                   <div className="flex-1">
                     {/* Star Rating */}
                     <div className="flex items-center">
                       {[...Array(5)].map((_, i) => (
                         <svg
                           key={i}
-                          className="w-5 h-5 text-[#D4A017]"
+                          className="w-4 h-4 sm:w-5 sm:h-5 text-[#D4A017]"
                           xmlns="http://www.w3.org/2000/svg"
                           viewBox="0 0 20 20"
                           fill="currentColor"
@@ -158,27 +158,27 @@ const Contact = () => {
                     </div>
 
                     {/* Testimonial Text */}
-                    <blockquote className="flex-1 mt-8">
-                      <p className="text-lg leading-relaxed text-[#3f4f24] font-pj">
-                        “I never realized buying land could be this easy. Their
+                    <blockquote className="flex-1 mt-4 sm:mt-6 lg:mt-8">
+                      <p className="text-sm sm:text-base lg:text-lg leading-relaxed text-[#3f4f24] font-pj">
+                        "I never realized buying land could be this easy. Their
                         customer service is fantastic, and the plot I chose is
-                        even better than I’d hoped for!”
+                        even better than I'd hoped for!"
                       </p>
                     </blockquote>
                   </div>
 
                   {/* User Info */}
-                  <div className="flex items-center mt-8">
+                  <div className="flex items-center mt-5 sm:mt-6 lg:mt-8">
                     <img
-                      className="flex-shrink-0 object-cover rounded-full w-11 h-11"
+                      className="flex-shrink-0 object-cover rounded-full w-10 h-10 sm:w-11 sm:h-11"
                       src="https://cdn.rareblocks.xyz/collection/clarity/images/testimonial/4/avatar-female.png"
                       alt=""
                     />
-                    <div className="ml-4">
-                      <p className="text-base font-bold text-[#3f4f24] font-pj">
+                    <div className="ml-3 sm:ml-4">
+                      <p className="text-sm sm:text-base font-bold text-[#3f4f24] font-pj">
                         Jenny Wilson
                       </p>
-                      <p className="mt-0.5 text-sm font-pj text-[#324c48]">
+                      <p className="mt-0.5 text-xs sm:text-sm font-pj text-[#324c48]">
                         Happy Landowner
                       </p>
                     </div>
