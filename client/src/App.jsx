@@ -68,6 +68,7 @@ import ApprovePropertyDeletion from "./pages/ApprovePropertyDeletion/ApproveProp
 import Offer from './pages/AdminOffer/Offer';
 import JoinVip from "./pages/JoinVip/JoinVip";
 import Discount from "./pages/Discount/Discount";
+import TestEngine from "./pages/TestEngine/TestEngine";
 
 
 const queryClient = new QueryClient({
@@ -145,6 +146,7 @@ function App() {
                                 <Route path="/unauthorized" element={<Unauthorized />} />
                                 <Route path="/property-deletion/:token" element={<ApprovePropertyDeletion />} />
                                 <Route path="/join-vip" element={<JoinVip />} />
+                                <Route path="/testEngine" element={<TestEngine />} />
                                 {/* Protected route for profile */}
                                 <Route
                                   path="/profile"
