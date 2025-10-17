@@ -2,28 +2,30 @@ import React, { useState } from "react";
 import "react-accessible-accordion/dist/fancy-example.css";
 
 const Why = () => {
-  const [expandedIndex, setExpandedIndex] = useState(null); // Centralized state
+  const [expandedIndex, setExpandedIndex] = useState(null);
 
   return (
-    <section className="bg-gradient-to-r from-[#FDF8F2] to-[#fcf3e9] py-12">
-      <div className="max-w-screen-xl mx-auto px-4">
+    <section className="bg-gradient-to-r from-[#FDF8F2] to-[#fcf3e9] py-8 sm:py-10 lg:py-12">
+      <div className="max-w-screen-xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Section Title & Subtext */}
-        <div className="text-center mb-10">
-          <h2 className="text-4xl font-bold text-[#3f4f24] mb-4">Why Choose Us</h2>
-          <p className="text-[#324c48] max-w-2xl mx-auto">
+        <div className="text-center mb-6 sm:mb-8 lg:mb-10">
+          <h2 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-[#3f4f24] mb-3 sm:mb-4">
+            Why Choose Us
+          </h2>
+          <p className="text-sm sm:text-base text-[#324c48] max-w-2xl mx-auto px-2">
             We stand out from the crowd by offering unparalleled service, expert guidance, and
             a commitment to your success.
           </p>
         </div>
 
         {/* Features Grid */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5 sm:gap-6 lg:gap-8">
           {/* Feature 1 */}
-          <div className="bg-[#FDF8F2] rounded-lg shadow-md p-6 flex flex-col items-center text-center hover:shadow-xl transition-shadow">
+          <div className="bg-[#FDF8F2] rounded-lg shadow-md p-5 sm:p-6 flex flex-col items-center text-center hover:shadow-xl transition-shadow">
             {/* Icon */}
-            <div className="mb-4">
+            <div className="mb-3 sm:mb-4">
               <svg
-                className="h-12 w-12 text-[#D4A017]"
+                className="h-10 w-10 sm:h-12 sm:w-12 text-[#D4A017]"
                 fill="none"
                 stroke="currentColor"
                 strokeWidth={2}
@@ -35,21 +37,21 @@ const Why = () => {
                 <path d="M12 12l9-5-9-5-9 5 9 5z" />
               </svg>
             </div>
-            <h3 className="text-xl font-semibold text-[#3f4f24] mb-2">
+            <h3 className="text-lg sm:text-xl font-semibold text-[#3f4f24] mb-2">
               Expert Guidance
             </h3>
-            <p className="text-[#324c48]">
+            <p className="text-sm sm:text-base text-[#324c48]">
               Our team of seasoned professionals ensures you make the best
               decisions every step of the way.
             </p>
           </div>
 
           {/* Feature 2 */}
-          <div className="bg-[#FDF8F2] rounded-lg shadow-md p-6 flex flex-col items-center text-center hover:shadow-xl transition-shadow">
+          <div className="bg-[#FDF8F2] rounded-lg shadow-md p-5 sm:p-6 flex flex-col items-center text-center hover:shadow-xl transition-shadow">
             {/* Icon */}
-            <div className="mb-4">
+            <div className="mb-3 sm:mb-4">
               <svg
-                className="h-12 w-12 text-[#D4A017]"
+                className="h-10 w-10 sm:h-12 sm:w-12 text-[#D4A017]"
                 fill="none"
                 stroke="currentColor"
                 strokeWidth={2}
@@ -61,21 +63,21 @@ const Why = () => {
                 <path d="M8 12l2 2 4-4" />
               </svg>
             </div>
-            <h3 className="text-xl font-semibold text-[#3f4f24] mb-2">
+            <h3 className="text-lg sm:text-xl font-semibold text-[#3f4f24] mb-2">
               Exclusive Listings
             </h3>
-            <p className="text-[#324c48]">
+            <p className="text-sm sm:text-base text-[#324c48]">
               Access properties you won't find anywhere else, giving you a
               competitive edge.
             </p>
           </div>
 
           {/* Feature 3 */}
-          <div className="bg-[#FDF8F2] rounded-lg shadow-md p-6 flex flex-col items-center text-center hover:shadow-xl transition-shadow">
+          <div className="bg-[#FDF8F2] rounded-lg shadow-md p-5 sm:p-6 flex flex-col items-center text-center hover:shadow-xl transition-shadow">
             {/* Icon */}
-            <div className="mb-4">
+            <div className="mb-3 sm:mb-4">
               <svg
-                className="h-12 w-12 text-[#D4A017]"
+                className="h-10 w-10 sm:h-12 sm:w-12 text-[#D4A017]"
                 fill="none"
                 stroke="currentColor"
                 strokeWidth={2}
@@ -87,21 +89,21 @@ const Why = () => {
                 <circle cx="12" cy="7" r="4" />
               </svg>
             </div>
-            <h3 className="text-xl font-semibold text-[#3f4f24] mb-2">
+            <h3 className="text-lg sm:text-xl font-semibold text-[#3f4f24] mb-2">
               Personalized Support
             </h3>
-            <p className="text-[#324c48]">
+            <p className="text-sm sm:text-base text-[#324c48]">
               We tailor our approach to meet your unique needs, providing a
               one-on-one experience.
             </p>
           </div>
 
           {/* Feature 4 */}
-          <div className="bg-[#FDF8F2] rounded-lg shadow-md p-6 flex flex-col items-center text-center hover:shadow-xl transition-shadow">
+          <div className="bg-[#FDF8F2] rounded-lg shadow-md p-5 sm:p-6 flex flex-col items-center text-center hover:shadow-xl transition-shadow">
             {/* Icon */}
-            <div className="mb-4">
+            <div className="mb-3 sm:mb-4">
               <svg
-                className="h-12 w-12 text-[#D4A017]"
+                className="h-10 w-10 sm:h-12 sm:w-12 text-[#D4A017]"
                 fill="none"
                 stroke="currentColor"
                 strokeWidth={2}
@@ -113,10 +115,10 @@ const Why = () => {
                 <path d="M17 21v-8H7v8" />
               </svg>
             </div>
-            <h3 className="text-xl font-semibold text-[#3f4f24] mb-2">
+            <h3 className="text-lg sm:text-xl font-semibold text-[#3f4f24] mb-2">
               Secure Transactions
             </h3>
-            <p className="text-[#324c48]">
+            <p className="text-sm sm:text-base text-[#324c48]">
               From offer to closing, rest assured your investments and data are
               fully protected.
             </p>

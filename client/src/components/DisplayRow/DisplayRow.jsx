@@ -18,47 +18,48 @@ const DisplayRow = ({
   const containerRef = useRef(null);
   const [scrollState, setScrollState] = useState({ showLeft: false, showRight: false });
   const [currentPage, setCurrentPage] = useState(1);
-  const [itemsPerPage, setItemsPerPage] = useState(4); // Changed to 4 for mobile 2x2 grid
+  const [itemsPerPage, setItemsPerPage] = useState(3);
   const [usePagination, setUsePagination] = useState(true);
-  const [isMobileView, setIsMobileView] = useState(false);
+  const [useVerticalLayout, setUseVerticalLayout] = useState(false);
 
-  // Calculate items per page and layout mode based on screen size
-  const calculateLayout = () => {
-    if (!containerRef.current) return;
+  // Calculate items per page based on container width
+  const calculateItemsPerPage = () => {
+    if (!containerRef.current) return 3;
     
-    const containerWidth = window.innerWidth;
+    const containerWidth = containerRef.current.offsetWidth;
+    const cardWidth = 380;
+    const padding = 32;
+    const spacing = 20;
     
-    // Mobile/Tablet view (< 1024px) - Use 2-column grid with pagination
-    if (containerWidth < 1024) {
-      setIsMobileView(true);
+    const availableWidth = containerWidth - padding;
+    const minWidthForTwoCards = (cardWidth * 2) + spacing;
+    
+    // Mobile vertical layout
+    if (availableWidth < minWidthForTwoCards) {
+      setUseVerticalLayout(true);
+      setUsePagination(false);
+      return 1;
+    }
+    
+    // Horizontal layout
+    setUseVerticalLayout(false);
+    const cardsPerRow = Math.floor((availableWidth + spacing) / (cardWidth + spacing));
+    
+    if (cardsPerRow < 2) {
+      setUsePagination(false);
+      return cardsPerRow;
+    } else {
       setUsePagination(true);
-      setItemsPerPage(4); // Show 4 items per page (2x2 grid)
-    } 
-    // Desktop view (>= 1024px) - Use horizontal scroll
-    else {
-      setIsMobileView(false);
-      const cardWidth = 380;
-      const padding = 32;
-      const spacing = 20;
-      const availableWidth = containerWidth - padding;
-      
-      const cardsPerRow = Math.floor((availableWidth + spacing) / (cardWidth + spacing));
-      
-      if (cardsPerRow < 2) {
-        setUsePagination(false);
-        setItemsPerPage(cardsPerRow);
-      } else {
-        setUsePagination(true);
-        setItemsPerPage(Math.max(2, cardsPerRow));
-      }
+      return Math.max(2, cardsPerRow);
     }
   };
 
-  // Update layout on mount and resize
+  // Update items per page on resize
   useEffect(() => {
     const updateLayout = () => {
-      calculateLayout();
-      setCurrentPage(1); // Reset to first page
+      const newItemsPerPage = calculateItemsPerPage();
+      setItemsPerPage(newItemsPerPage);
+      setCurrentPage(1);
     };
 
     updateLayout();
@@ -173,9 +174,6 @@ const DisplayRow = ({
     ? filteredProperties.slice(startIndex, endIndex)
     : filteredProperties;
 
-  // Check if last item is alone (for centering)
-  const isLastItemAlone = isMobileView && currentProperties.length % 2 !== 0;
-
   // Reset to first page when properties change
   useEffect(() => {
     setCurrentPage(1);
@@ -247,7 +245,7 @@ const DisplayRow = ({
   // Generate pagination numbers (mobile-optimized)
   const getPaginationNumbers = () => {
     const pages = [];
-    const maxVisiblePages = window.innerWidth < 640 ? 5 : 7;
+    const maxVisiblePages = window.innerWidth < 640 ? 5 : 7; // Fewer pages on mobile
     
     if (totalPages <= maxVisiblePages) {
       for (let i = 1; i <= totalPages; i++) {
@@ -295,65 +293,41 @@ const DisplayRow = ({
       ) : currentProperties.length > 0 ? (
         <>
           <div className="relative">
-            {/* Left Scroll Button - Only for desktop horizontal scroll */}
-            {!isMobileView && scrollState.showLeft && (
+            {/* Left Scroll Button - Hidden on mobile */}
+            {!useVerticalLayout && (!usePagination || scrollState.showLeft) && (
               <button
                 onClick={handleScrollLeft}
-                className="hidden lg:block lg:absolute -left-4 xl:-left-6 top-1/2 -translate-y-1/2 z-10 bg-white border rounded-full p-2 lg:p-3 shadow-md hover:shadow-lg transition-all duration-200 hover:scale-105"
+                className="hidden md:block md:absolute -left-4 lg:-left-6 top-1/2 -translate-y-1/2 z-10 bg-white border rounded-full p-2 lg:p-3 shadow-md hover:shadow-lg transition-all duration-200 hover:scale-105"
                 aria-label="Scroll left"
               >
                 <ChevronLeftIcon className="w-5 h-5 lg:w-6 lg:h-6" />
               </button>
             )}
 
-            {/* Container - Grid for mobile, Flex for desktop */}
+            {/* Scrollable Container */}
             <div
-              className={`px-2 sm:px-4 py-4 ${
-                isMobileView 
-                  ? 'overflow-hidden' 
-                  : 'overflow-x-auto lg:overflow-hidden no-scrollbar'
-              }`}
+              className={`px-2 py-4 ${usePagination ? 'overflow-hidden' : 'overflow-y-auto overflow-x-hidden sm:overflow-x-auto sm:overflow-y-hidden'} no-scrollbar`}
               ref={scrollRef}
               onScroll={updateScrollState}
             >
-              {/* Mobile: 2-column grid | Desktop: Horizontal flex */}
-              <div className={`
-                ${isMobileView 
-                  ? 'grid grid-cols-2 gap-3 sm:gap-4' 
-                  : 'flex flex-nowrap space-x-4 lg:space-x-5'
-                } 
-                py-4
-              `}>
-                {currentProperties.map((property, index) => {
-                  // Check if this is the last item and it's alone
-                  const isLastAndAlone = isMobileView && isLastItemAlone && index === currentProperties.length - 1;
-                  
-                  return (
-                    <div
-                      key={property.id}
-                      className={`
-                        ${isMobileView 
-                          ? isLastAndAlone 
-                            ? 'col-span-2 flex justify-center' // Center the odd last item
-                            : '' // Normal grid item
-                          : 'flex-shrink-0' // Desktop horizontal scroll
-                        }
-                        transition hover:scale-105
-                      `}
-                      onClick={() => handlePropertyClick(property)}
-                    >
-                      <PropertyCard card={property} isMobileGrid={isMobileView} />
-                    </div>
-                  );
-                })}
+              <div className={`flex ${useVerticalLayout ? 'flex-col space-y-6 sm:space-y-8 items-center' : 'flex-col sm:flex-row space-y-6 sm:space-y-0 sm:space-x-4 lg:space-x-5'} py-4 sm:py-8`}>
+                {currentProperties.map((property, index) => (
+                  <div
+                    key={property.id}
+                    className={`${useVerticalLayout ? 'w-full max-w-sm' : 'flex-shrink-0 w-full max-w-sm sm:w-auto'} transition hover:scale-105`}
+                    onClick={() => handlePropertyClick(property)}
+                  >
+                    <PropertyCard card={property} />
+                  </div>
+                ))}
               </div>
             </div>
 
-            {/* Right Scroll Button - Only for desktop horizontal scroll */}
-            {!isMobileView && scrollState.showRight && (
+            {/* Right Scroll Button - Hidden on mobile */}
+            {!useVerticalLayout && (!usePagination || scrollState.showRight) && (
               <button
                 onClick={handleScrollRight}
-                className="hidden lg:block lg:absolute -right-4 xl:-right-6 top-1/2 -translate-y-1/2 z-10 bg-white border rounded-full p-2 lg:p-3 shadow-md hover:shadow-lg transition-all duration-200 hover:scale-105"
+                className="hidden md:block md:absolute -right-4 lg:-right-6 top-1/2 -translate-y-1/2 z-10 bg-white border rounded-full p-2 lg:p-3 shadow-md hover:shadow-lg transition-all duration-200 hover:scale-105"
                 aria-label="Scroll right"
               >
                 <ChevronRightIcon className="w-5 h-5 lg:w-6 lg:h-6" />
@@ -361,7 +335,7 @@ const DisplayRow = ({
             )}
           </div>
 
-          {/* Pagination Controls */}
+          {/* Pagination Controls - Mobile optimized */}
           {usePagination && totalPages > 1 && (
             <div className="flex flex-col items-center mt-6 sm:mt-8 space-y-3 sm:space-y-4 px-4">
               {/* Pagination Buttons */}
