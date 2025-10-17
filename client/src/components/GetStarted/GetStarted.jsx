@@ -57,10 +57,8 @@ const GetStarted = () => {
             <div className="grid grid-cols-1 md:grid-cols-2">
               {/* Left Side */}
               <div className="bg-gradient-to-br from-white to-[#FDF8F2] p-6 sm:p-8 lg:p-10">
-                <h2 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-[#3f4f24] mb-3 sm:mb-4 leading-tight">
-                  Join Our Exclusive
-                  <br className="hidden sm:block" />
-                  <span className="sm:inline"> Buyers List</span>
+                <h2 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-[#3f4f24] mb-3 sm:mb-4 leading-tight text-center sm:text-left">
+                  Join Our Exclusive<br className="sm:hidden" /> <span className="hidden sm:inline"><br /></span>Buyers List
                 </h2>
                 
                 <p className="text-sm sm:text-base text-[#324c48] mb-6 sm:mb-8 leading-relaxed font-medium">
