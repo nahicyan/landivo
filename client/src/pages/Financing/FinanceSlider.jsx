@@ -39,7 +39,7 @@ export default function FinancingSlider() {
     updateScrollState();
   }, [financingProperties.length]);
 
-  // Scroll Handlers - Now scrolls exactly one card width + spacing
+  // Scroll Handlers
   const scrollLeft = () => {
     if (scrollRef.current) {
       scrollRef.current.scrollBy({ left: -SCROLL_AMOUNT, behavior: "smooth" });
@@ -58,14 +58,14 @@ export default function FinancingSlider() {
   if (isLoading) return <div className="text-center py-4">Loading properties...</div>;
 
   return (
-    <div className="w-full py-6 bg-[#FDF8F2]">
-      <div className="max-w-screen-xl mx-auto">
-        {/* Title Section - Matching DisplayRow style */}
-        <div className="text-center mb-6">
-          <h2 className="text-2xl sm:text-3xl font-bold mb-2">
+    <div className="w-full py-6 sm:py-8 lg:py-12 bg-[#FDF8F2]">
+      <div className="max-w-screen-xl mx-auto px-4 sm:px-6 lg:px-8">
+        {/* Title Section */}
+        <div className="text-center mb-6 sm:mb-8">
+          <h2 className="text-xl sm:text-2xl lg:text-3xl font-bold mb-2 text-[#324c48]">
             Discover Land with Flexible Financing
           </h2>
-          <p className="text-[#324c48]/80">
+          <p className="text-sm sm:text-base text-[#324c48]/80">
             Budget-friendly monthly financing plans.
           </p>
         </div>
@@ -73,28 +73,29 @@ export default function FinancingSlider() {
         {/* Content */}
         {financingProperties.length > 0 ? (
           <div className="relative">
-            {/* Left Scroll Button - Matching DisplayRow style */}
+            {/* Left Scroll Button - Desktop only */}
             {scrollState.showLeft && (
               <button
                 onClick={scrollLeft}
-                className="hidden sm:block sm:absolute -left-6 top-1/2 -translate-y-1/2 z-10 bg-white border rounded-full p-3 shadow-md hover:shadow-lg transition-all duration-200 hover:scale-105"
+                className="hidden lg:block absolute -left-4 xl:-left-6 top-1/2 -translate-y-1/2 z-10 bg-white border border-gray-200 rounded-full p-2 lg:p-3 shadow-md hover:shadow-lg transition-all duration-200 hover:scale-105 hover:bg-gray-50"
                 aria-label="Scroll left"
               >
-                <ChevronLeftIcon className="w-6 h-6" />
+                <ChevronLeftIcon className="w-5 h-5 lg:w-6 lg:h-6 text-[#324c48]" />
               </button>
             )}
 
-            {/* Scrollable Container - Matching DisplayRow style */}
+            {/* Scrollable Container */}
             <div
-              className="px-2 py-4 overflow-y-auto overflow-x-hidden sm:overflow-x-auto sm:overflow-y-hidden no-scrollbar"
+              className="overflow-y-auto overflow-x-hidden sm:overflow-x-auto sm:overflow-y-hidden no-scrollbar"
               ref={scrollRef}
               onScroll={updateScrollState}
             >
-              <div className="flex flex-col sm:flex-row space-y-8 sm:space-y-0 sm:space-x-5 py-8">
-                {financingProperties.map((property, index) => (
+              {/* Mobile: Stack vertically, Desktop: Horizontal scroll */}
+              <div className="flex flex-col sm:flex-row space-y-6 sm:space-y-0 sm:space-x-5 py-4 sm:py-6">
+                {financingProperties.map((property) => (
                   <div
                     key={property.id}
-                    className={`flex-shrink-0 transition hover:scale-105 ${index === 0 ? 'ml-3' : ''}`}
+                    className="flex-shrink-0 w-full sm:w-96 transition-transform duration-200 hover:scale-105"
                   >
                     <PropertyCard card={property} />
                   </div>
@@ -102,19 +103,19 @@ export default function FinancingSlider() {
               </div>
             </div>
 
-            {/* Right Scroll Button - Matching DisplayRow style */}
+            {/* Right Scroll Button - Desktop only */}
             {scrollState.showRight && (
               <button
                 onClick={scrollRight}
-                className="hidden sm:block sm:absolute -right-6 top-1/2 -translate-y-1/2 z-10 bg-white border rounded-full p-3 shadow-md hover:shadow-lg transition-all duration-200 hover:scale-105"
+                className="hidden lg:block absolute -right-4 xl:-right-6 top-1/2 -translate-y-1/2 z-10 bg-white border border-gray-200 rounded-full p-2 lg:p-3 shadow-md hover:shadow-lg transition-all duration-200 hover:scale-105 hover:bg-gray-50"
                 aria-label="Scroll right"
               >
-                <ChevronRightIcon className="w-6 h-6" />
+                <ChevronRightIcon className="w-5 h-5 lg:w-6 lg:h-6 text-[#324c48]" />
               </button>
             )}
           </div>
         ) : (
-          <p className="text-center text-gray-600 py-4">
+          <p className="text-center text-gray-600 py-4 text-sm sm:text-base">
             No properties available with financing.
           </p>
         )}
