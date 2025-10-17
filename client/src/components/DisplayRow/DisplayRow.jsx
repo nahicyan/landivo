@@ -3,19 +3,6 @@ import { ChevronLeftIcon, ChevronRightIcon } from "@heroicons/react/24/solid";
 import PropertyCard from "../PropertyCard/PropertyCard";
 import { PuffLoader } from "react-spinners";
 
-/**
- * DisplayRow Component with Dynamic Pagination
- * 
- * @param {Object} props
- * @param {Array} props.properties - All properties data
- * @param {Object} props.filter - Filter configuration
- * @param {string} props.title - Section title
- * @param {string} props.subtitle - Section subtitle (optional)
- * @param {boolean} props.showDivider - Show divider line above section (optional)
- * @param {boolean} props.loading - Loading state (optional)
- * @param {string} props.emptyMessage - Message when no properties found (optional)
- * @param {Function} props.onPropertyClick - Callback when property clicked (optional)
- */
 const DisplayRow = ({
   properties = [],
   filter = { type: 'all' },
@@ -31,50 +18,46 @@ const DisplayRow = ({
   const containerRef = useRef(null);
   const [scrollState, setScrollState] = useState({ showLeft: false, showRight: false });
   const [currentPage, setCurrentPage] = useState(1);
-  const [itemsPerPage, setItemsPerPage] = useState(3);
+  const [itemsPerPage, setItemsPerPage] = useState(4); // Changed to 4 for mobile 2x2 grid
   const [usePagination, setUsePagination] = useState(true);
-  const [useVerticalLayout, setUseVerticalLayout] = useState(false);
+  const [isMobileView, setIsMobileView] = useState(false);
 
-  // Calculate items per page based on container width
-  const calculateItemsPerPage = () => {
-    if (!containerRef.current) return 3;
+  // Calculate items per page and layout mode based on screen size
+  const calculateLayout = () => {
+    if (!containerRef.current) return;
     
-    const containerWidth = containerRef.current.offsetWidth;
-    const cardWidth = 380; // Based on PropertyCard width + spacing
-    const padding = 32; // Container padding
-    const spacing = 20; // Space between cards
+    const containerWidth = window.innerWidth;
     
-    const availableWidth = containerWidth - padding;
-    const minWidthForTwoCards = (cardWidth * 2) + spacing;
-    
-    // If can't fit 2 cards horizontally, switch to vertical layout
-    if (availableWidth < minWidthForTwoCards) {
-      setUseVerticalLayout(true);
-      setUsePagination(false);
-      return 1;
-    }
-    
-    // Horizontal layout
-    setUseVerticalLayout(false);
-    const cardsPerRow = Math.floor((availableWidth + spacing) / (cardWidth + spacing));
-    
-    // Mobile: <2 cards = scroll mode, no pagination
-    // Tablet: 2 cards = pagination with 2 per page
-    // Desktop: 3+ cards = pagination with that many per page
-    if (cardsPerRow < 2) {
-      setUsePagination(false);
-      return cardsPerRow;
-    } else {
+    // Mobile/Tablet view (< 1024px) - Use 2-column grid with pagination
+    if (containerWidth < 1024) {
+      setIsMobileView(true);
       setUsePagination(true);
-      return Math.max(2, cardsPerRow);
+      setItemsPerPage(4); // Show 4 items per page (2x2 grid)
+    } 
+    // Desktop view (>= 1024px) - Use horizontal scroll
+    else {
+      setIsMobileView(false);
+      const cardWidth = 380;
+      const padding = 32;
+      const spacing = 20;
+      const availableWidth = containerWidth - padding;
+      
+      const cardsPerRow = Math.floor((availableWidth + spacing) / (cardWidth + spacing));
+      
+      if (cardsPerRow < 2) {
+        setUsePagination(false);
+        setItemsPerPage(cardsPerRow);
+      } else {
+        setUsePagination(true);
+        setItemsPerPage(Math.max(2, cardsPerRow));
+      }
     }
   };
 
-  // Update items per page on resize
+  // Update layout on mount and resize
   useEffect(() => {
     const updateLayout = () => {
-      const newItemsPerPage = calculateItemsPerPage();
-      setItemsPerPage(newItemsPerPage);
+      calculateLayout();
       setCurrentPage(1); // Reset to first page
     };
 
@@ -190,6 +173,9 @@ const DisplayRow = ({
     ? filteredProperties.slice(startIndex, endIndex)
     : filteredProperties;
 
+  // Check if last item is alone (for centering)
+  const isLastItemAlone = isMobileView && currentProperties.length % 2 !== 0;
+
   // Reset to first page when properties change
   useEffect(() => {
     setCurrentPage(1);
@@ -258,10 +244,10 @@ const DisplayRow = ({
     }
   };
 
-  // Generate pagination numbers
+  // Generate pagination numbers (mobile-optimized)
   const getPaginationNumbers = () => {
     const pages = [];
-    const maxVisiblePages = 7;
+    const maxVisiblePages = window.innerWidth < 640 ? 5 : 7;
     
     if (totalPages <= maxVisiblePages) {
       for (let i = 1; i <= totalPages; i++) {
@@ -269,11 +255,11 @@ const DisplayRow = ({
       }
     } else {
       if (currentPage <= 3) {
-        pages.push(1, 2, 3, 4, 5, '...', totalPages);
+        pages.push(1, 2, 3, '...', totalPages);
       } else if (currentPage >= totalPages - 2) {
-        pages.push(1, '...', totalPages - 4, totalPages - 3, totalPages - 2, totalPages - 1, totalPages);
+        pages.push(1, '...', totalPages - 2, totalPages - 1, totalPages);
       } else {
-        pages.push(1, '...', currentPage - 1, currentPage, currentPage + 1, '...', totalPages);
+        pages.push(1, '...', currentPage, '...', totalPages);
       }
     }
     
@@ -288,16 +274,16 @@ const DisplayRow = ({
   return (
     <div className={`display-row-section ${className}`} ref={containerRef}>
       {/* Divider */}
-      {showDivider && <hr className="my-8 border-t border-[#4b5b4d]/20" />}
+      {showDivider && <hr className="my-6 sm:my-8 border-t border-[#4b5b4d]/20" />}
 
       {/* Title Section */}
       {title && (
-        <div className="text-center mb-6">
-          <h2 className="text-2xl sm:text-3xl font-bold mb-2">{title}</h2>
+        <div className="text-center mb-4 sm:mb-6 px-4">
+          <h2 className="text-xl sm:text-2xl lg:text-3xl font-bold mb-2">{title}</h2>
           {filter.type === 'featured' && (
-            <div className="mx-auto w-16 h-1 bg-[#D4A017] mb-3"></div>
+            <div className="mx-auto w-12 sm:w-16 h-1 bg-[#D4A017] mb-2 sm:mb-3"></div>
           )}
-          {subtitle && <p className="text-[#324c48]/80">{subtitle}</p>}
+          {subtitle && <p className="text-sm sm:text-base text-[#324c48]/80">{subtitle}</p>}
         </div>
       )}
 
@@ -309,59 +295,83 @@ const DisplayRow = ({
       ) : currentProperties.length > 0 ? (
         <>
           <div className="relative">
-            {/* Left Scroll Button - Show in scroll mode or when content overflows (not in vertical layout) */}
-            {!useVerticalLayout && (!usePagination || scrollState.showLeft) && (
+            {/* Left Scroll Button - Only for desktop horizontal scroll */}
+            {!isMobileView && scrollState.showLeft && (
               <button
                 onClick={handleScrollLeft}
-                className="hidden sm:block sm:absolute -left-6 top-1/2 -translate-y-1/2 z-10 bg-white border rounded-full p-3 shadow-md hover:shadow-lg transition-all duration-200 hover:scale-105"
+                className="hidden lg:block lg:absolute -left-4 xl:-left-6 top-1/2 -translate-y-1/2 z-10 bg-white border rounded-full p-2 lg:p-3 shadow-md hover:shadow-lg transition-all duration-200 hover:scale-105"
                 aria-label="Scroll left"
               >
-                <ChevronLeftIcon className="w-6 h-6" />
+                <ChevronLeftIcon className="w-5 h-5 lg:w-6 lg:h-6" />
               </button>
             )}
 
-            {/* Scrollable Container */}
+            {/* Container - Grid for mobile, Flex for desktop */}
             <div
-              className={`px-2 py-4 ${usePagination ? 'overflow-hidden' : 'overflow-y-auto overflow-x-hidden sm:overflow-x-auto sm:overflow-y-hidden'} no-scrollbar`}
+              className={`px-2 sm:px-4 py-4 ${
+                isMobileView 
+                  ? 'overflow-hidden' 
+                  : 'overflow-x-auto lg:overflow-hidden no-scrollbar'
+              }`}
               ref={scrollRef}
               onScroll={updateScrollState}
             >
-              <div className={`flex ${useVerticalLayout ? 'flex-col space-y-8 items-center' : 'flex-col sm:flex-row space-y-8 sm:space-y-0 sm:space-x-5'} py-8`}>
-                {currentProperties.map((property, index) => (
-                  <div
-                    key={property.id}
-                    className={`${useVerticalLayout ? 'w-full' : 'flex-shrink-0'} transition hover:scale-105 ${!useVerticalLayout && index === 0 ? 'ml-3' : ''}`}
-                    onClick={() => handlePropertyClick(property)}
-                  >
-                    <PropertyCard card={property} />
-                  </div>
-                ))}
+              {/* Mobile: 2-column grid | Desktop: Horizontal flex */}
+              <div className={`
+                ${isMobileView 
+                  ? 'grid grid-cols-2 gap-3 sm:gap-4' 
+                  : 'flex flex-nowrap space-x-4 lg:space-x-5'
+                } 
+                py-4
+              `}>
+                {currentProperties.map((property, index) => {
+                  // Check if this is the last item and it's alone
+                  const isLastAndAlone = isMobileView && isLastItemAlone && index === currentProperties.length - 1;
+                  
+                  return (
+                    <div
+                      key={property.id}
+                      className={`
+                        ${isMobileView 
+                          ? isLastAndAlone 
+                            ? 'col-span-2 flex justify-center' // Center the odd last item
+                            : '' // Normal grid item
+                          : 'flex-shrink-0' // Desktop horizontal scroll
+                        }
+                        transition hover:scale-105
+                      `}
+                      onClick={() => handlePropertyClick(property)}
+                    >
+                      <PropertyCard card={property} isMobileGrid={isMobileView} />
+                    </div>
+                  );
+                })}
               </div>
             </div>
 
-            {/* Right Scroll Button - Show in scroll mode or when content overflows (not in vertical layout) */}
-            {!useVerticalLayout && (!usePagination || scrollState.showRight) && (
+            {/* Right Scroll Button - Only for desktop horizontal scroll */}
+            {!isMobileView && scrollState.showRight && (
               <button
                 onClick={handleScrollRight}
-                className="hidden sm:block sm:absolute -right-6 top-1/2 -translate-y-1/2 z-10 bg-white border rounded-full p-3 shadow-md hover:shadow-lg transition-all duration-200 hover:scale-105"
+                className="hidden lg:block lg:absolute -right-4 xl:-right-6 top-1/2 -translate-y-1/2 z-10 bg-white border rounded-full p-2 lg:p-3 shadow-md hover:shadow-lg transition-all duration-200 hover:scale-105"
                 aria-label="Scroll right"
               >
-                <ChevronRightIcon className="w-6 h-6" />
+                <ChevronRightIcon className="w-5 h-5 lg:w-6 lg:h-6" />
               </button>
             )}
           </div>
 
-          {/* Pagination Controls - Only show when using pagination mode */}
+          {/* Pagination Controls */}
           {usePagination && totalPages > 1 && (
-            <div className="flex flex-col items-center mt-8 space-y-4">
+            <div className="flex flex-col items-center mt-6 sm:mt-8 space-y-3 sm:space-y-4 px-4">
               {/* Pagination Buttons */}
-              <div className="flex items-center space-x-2">
+              <div className="flex items-center space-x-1 sm:space-x-2">
                 {/* Previous Button */}
                 <button
                   onClick={handlePrevPage}
                   disabled={currentPage === 1}
                   className={`
-                    flex items-center justify-center w-10 h-10 rounded-full transition-all duration-200
+                    flex items-center justify-center w-8 h-8 sm:w-10 sm:h-10 rounded-full transition-all duration-200
                     ${currentPage === 1 
                       ? 'bg-gray-100 text-gray-400 cursor-not-allowed' 
                       : 'bg-[#324c48] text-white hover:bg-[#3f4f24] hover:scale-110 shadow-lg hover:shadow-xl'
@@ -369,19 +379,19 @@ const DisplayRow = ({
                   `}
                   aria-label="Previous page"
                 >
-                  <ChevronLeftIcon className="w-5 h-5" />
+                  <ChevronLeftIcon className="w-4 h-4 sm:w-5 sm:h-5" />
                 </button>
 
                 {/* Page Numbers */}
                 {getPaginationNumbers().map((page, index) => (
                   <React.Fragment key={index}>
                     {page === '...' ? (
-                      <span className="px-3 py-2 text-gray-500">...</span>
+                      <span className="px-2 py-2 text-gray-500 text-sm">...</span>
                     ) : (
                       <button
                         onClick={() => handlePageChange(page)}
                         className={`
-                          w-10 h-10 rounded-full font-semibold transition-all duration-200 transform
+                          w-8 h-8 sm:w-10 sm:h-10 rounded-full font-semibold text-sm sm:text-base transition-all duration-200 transform
                           ${currentPage === page
                             ? 'bg-[#D4A017] text-white shadow-lg scale-110 ring-2 ring-[#D4A017]/30'
                             : 'bg-white text-[#324c48] border border-[#324c48]/20 hover:bg-[#324c48] hover:text-white hover:scale-105 hover:shadow-md'
@@ -399,7 +409,7 @@ const DisplayRow = ({
                   onClick={handleNextPage}
                   disabled={currentPage === totalPages}
                   className={`
-                    flex items-center justify-center w-10 h-10 rounded-full transition-all duration-200
+                    flex items-center justify-center w-8 h-8 sm:w-10 sm:h-10 rounded-full transition-all duration-200
                     ${currentPage === totalPages 
                       ? 'bg-gray-100 text-gray-400 cursor-not-allowed' 
                       : 'bg-[#324c48] text-white hover:bg-[#3f4f24] hover:scale-110 shadow-lg hover:shadow-xl'
@@ -407,19 +417,19 @@ const DisplayRow = ({
                   `}
                   aria-label="Next page"
                 >
-                  <ChevronRightIcon className="w-5 h-5" />
+                  <ChevronRightIcon className="w-4 h-4 sm:w-5 sm:h-5" />
                 </button>
               </div>
 
               {/* Results Info */}
-              <div className="text-sm text-gray-600">
+              <div className="text-xs sm:text-sm text-gray-600">
                 {startIndex + 1}-{Math.min(endIndex, filteredProperties.length)} of {filteredProperties.length} results
               </div>
             </div>
           )}
         </>
       ) : (
-        <p className="text-center text-gray-600 py-4">{emptyMessage}</p>
+        <p className="text-center text-gray-600 py-4 text-sm sm:text-base">{emptyMessage}</p>
       )}
     </div>
   );
@@ -427,7 +437,7 @@ const DisplayRow = ({
 
 export default DisplayRow;
 
-// Export filter helper functions for easier usage
+// Export filter helper functions
 export const createFilter = {
   all: () => ({ type: 'all' }),
   
@@ -457,7 +467,6 @@ export const createFilter = {
     excludeIds: propertyIds
   }),
   
-  // Combination filters
   and: (...filters) => ({
     type: 'combination',
     operator: 'AND',
