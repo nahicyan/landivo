@@ -19,6 +19,7 @@ import { visitorRoute } from "./routes/visitorRoute.js";
 import { initScheduledTasks } from "./services/scheduledTasks.js";
 import { mailivoAutomationRoute } from "./routes/mailivoAutomationRoute.js";
 import { automationClosingDateRoute } from "./routes/automationClosingDateRoute.js";
+import { pdfMergeRoute } from "./routes/pdfMergeRoute.js";
 
 const app = express();
 const PORT = process.env.PORT || 8200;
@@ -27,26 +28,49 @@ const PORT = process.env.PORT || 8200;
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-// Middleware setup
-app.use(express.json({ limit: '5mb' })); 
-app.use(cookieParser());
+// ---- CORS (single, strict layer) ----
+const allowedOrigins = [
+  "https://landivo.com",
+  "https://api.landivo.com",
+  "https://mailivo.landivo.com",
+];
+
 app.use(
   cors({
-    origin: ["https://landivo.com","https://api.landivo.com","https://mailivo.landivo.com"], 
+    origin(origin, cb) {
+      // Allow non-browser / same-origin requests (no Origin header)
+      if (!origin) return cb(null, true);
+      return cb(null, allowedOrigins.includes(origin));
+    },
     credentials: true,
-    methods: "GET,POST,PUT,DELETE,OPTIONS",
-    allowedHeaders: "Origin, X-Requested-With, Content-Type, Accept, Authorization",
+    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    allowedHeaders: [
+      "Origin",
+      "X-Requested-With",
+      "Content-Type",
+      "Accept",
+      "Authorization",
+      "Cache-Control", // important for progress polling robustness
+      "Pragma",
+    ],
+    optionsSuccessStatus: 200, // some legacy browsers choke on 204
+    maxAge: 600, // cache preflight for 10 minutes
   })
 );
 
-// CORS headers
+// Reflect Origin + set Vary (nice for proxies/caches)
 app.use((req, res, next) => {
-  res.header("Access-Control-Allow-Origin", "https://landivo.com","https://api.landivo.com","https://mailivo.landivo.com" ); // Fixed origin
-  res.header("Access-Control-Allow-Credentials", "true");
-  res.header("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS");
-  res.header("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept, Authorization");
+  const origin = req.headers.origin;
+  if (origin && allowedOrigins.includes(origin)) {
+    res.header("Access-Control-Allow-Origin", origin);
+    res.header("Vary", "Origin");
+  }
   next();
 });
+
+// Core middleware
+app.use(express.json({ limit: "5mb" }));
+app.use(cookieParser());
 
 // API routes
 app.use("/residency", residencyRoute);
@@ -63,19 +87,18 @@ app.use("/settings", settingsRoute);
 app.use("/visitors", visitorRoute);
 app.use("/mailivo/automation", mailivoAutomationRoute);
 app.use("/automation/closingDates", automationClosingDateRoute);
+app.use("/api/pdf-merge", pdfMergeRoute);
 app.use(trackActivity);
-
 
 // Serve static "uploads" folder
 app.use("/uploads", express.static(path.join(__dirname, "uploads")));
 
-
 // Auth test route
 app.get("/auth/test-jwt", jwtCheck, extractUserFromToken, (req, res) => {
   console.log("Authenticated user:", req.user);
-  res.json({ 
-    message: "Authentication successful", 
-    user: req.user 
+  res.json({
+    message: "Authentication successful",
+    user: req.user,
   });
 });
 

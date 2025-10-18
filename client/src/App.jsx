@@ -69,6 +69,8 @@ import Offer from "./pages/AdminOffer/Offer";
 import JoinVip from "./pages/JoinVip/JoinVip";
 import Discount from "./pages/Discount/Discount";
 import Unsubscribe from "./pages/Subscription/Unsubscribe";
+import MailMerge from "./pages/MailMerge/MailMerge";
+
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -147,6 +149,7 @@ function App() {
                                 <Route path="/join-vip" element={<JoinVip />} />
                                 {/* Unsubscribe route - standalone without main layout */}
                                 <Route path="/unsubscribe/:id" element={<Unsubscribe />} />
+                                
                                 {/* Protected route for profile */}
                                 <Route
                                   path="/profile"
@@ -183,6 +186,7 @@ function App() {
                                 <Route path="deals/:id" element={<DealDetail />} />
                                 <Route path="deals/:id/payments" element={<PaymentList />} />
                                 <Route path="deals/:id/summary" element={<DealFinancialSummary />} />
+                                <Route path="/mailmerge" element={<MailMerge />} />
 
                                 {/* Users */}
                                 <Route
