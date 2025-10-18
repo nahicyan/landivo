@@ -186,7 +186,7 @@ function App() {
                                 <Route path="deals/:id" element={<DealDetail />} />
                                 <Route path="deals/:id/payments" element={<PaymentList />} />
                                 <Route path="deals/:id/summary" element={<DealFinancialSummary />} />
-                                <Route path="/mailmerge" element={<MailMerge />} />
+                                <Route path="mailmerge" element={<MailMerge />} />
 
                                 {/* Users */}
                                 <Route
