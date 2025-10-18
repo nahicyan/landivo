@@ -226,9 +226,7 @@ router.post(
       const serverRoot = ROOT_DIR;
 
       const isWin = process.platform === "win32";
-      const pythonPath = isWin
-        ? path.join(ROOT_DIR, "venv", "Scripts", "python.exe") // keep if you still support Windows+venv
-        : process.env.PYTHON_BIN || "python3"; // bare-metal Linux
+      const pythonPath = process.env.PYTHON_BIN || "python3";
       const scriptPath = path.join(serverRoot, "scripts", "analyze_files.py");
 
       if (!fs.existsSync(pythonPath)) {
