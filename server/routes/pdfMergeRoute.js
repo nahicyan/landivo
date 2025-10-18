@@ -13,16 +13,16 @@ const __dirname = path.dirname(__filename);
 const ROOT_DIR = path.resolve(__dirname, "..");
 
 // ---- Timeouts & defaults ----
-const ANALYZE_TASK_TIMEOUT_SECS = Number(process.env.ANALYZE_TASK_TIMEOUT_SECS || 3600);       // per-task in analyzer
-const PY_ANALYZE_TIMEOUT_MS     = Number(process.env.PY_ANALYZE_TIMEOUT_MS || 3600000);   // Node->Py overall
-const PY_GENERATE_TIMEOUT_MS    = Number(process.env.PY_GENERATE_TIMEOUT_MS || 3600000); // Node->Py overall
+const ANALYZE_TASK_TIMEOUT_SECS = Number(process.env.ANALYZE_TASK_TIMEOUT_SECS || 3600); // per-task in analyzer
+const PY_ANALYZE_TIMEOUT_MS = Number(process.env.PY_ANALYZE_TIMEOUT_MS || 3600000); // Node->Py overall
+const PY_GENERATE_TIMEOUT_MS = Number(process.env.PY_GENERATE_TIMEOUT_MS || 3600000); // Node->Py overall
 
-const DEFAULT_CHUNK_SIZE        = Number(process.env.MERGE_CHUNK_SIZE || 200);
-const CPU_COUNT                 = (os.cpus()?.length) || 2;
-const DEFAULT_GEN_WORKERS       = Number(process.env.MERGE_GEN_WORKERS || Math.max(1, Math.floor(CPU_COUNT / 2)));
-const DEFAULT_CONV_WORKERS      = Number(process.env.MERGE_CONV_WORKERS || Math.max(1, Math.floor(CPU_COUNT / 2)));
+const DEFAULT_CHUNK_SIZE = Number(process.env.MERGE_CHUNK_SIZE || 200);
+const CPU_COUNT = os.cpus()?.length || 2;
+const DEFAULT_GEN_WORKERS = Number(process.env.MERGE_GEN_WORKERS || Math.max(1, Math.floor(CPU_COUNT / 2)));
+const DEFAULT_CONV_WORKERS = Number(process.env.MERGE_CONV_WORKERS || Math.max(1, Math.floor(CPU_COUNT / 2)));
 
-const PROGRESS_TTL              = Number(process.env.PROGRESS_TTL || 60 * 60); // 1 hour
+const PROGRESS_TTL = Number(process.env.PROGRESS_TTL || 60 * 60); // 1 hour
 
 // ---- Progress store: Redis (no-auth by default) with memory fallback ----
 const memStore = new Map();
@@ -83,7 +83,9 @@ async function patchProgress(id, patch) {
 
 async function delProgress(id) {
   if (redis) {
-    try { await redis.del(progressKey(id)); } catch {}
+    try {
+      await redis.del(progressKey(id));
+    } catch {}
   } else {
     memStore.delete(id);
   }
@@ -129,7 +131,7 @@ function runPythonScript(pythonPath, scriptPath, args, env, serverRoot, timeoutM
       }
     }, timeoutMs);
 
-    child.stdout.on("data", d => {
+    child.stdout.on("data", (d) => {
       const s = d.toString();
       buf += s;
 
@@ -150,17 +152,19 @@ function runPythonScript(pythonPath, scriptPath, args, env, serverRoot, timeoutM
           if (Object.prototype.hasOwnProperty.call(obj, "success")) {
             lastStructured = obj;
           }
-        } catch { /* ignore non-JSON lines */ }
+        } catch {
+          /* ignore non-JSON lines */
+        }
       }
     });
 
-    child.stderr.on("data", d => {
+    child.stderr.on("data", (d) => {
       const s = d.toString();
       console.error("Python stderr:", s);
       err += s;
     });
 
-    child.on("close", code => {
+    child.on("close", (code) => {
       done = true;
       clearTimeout(t);
       // Try to parse any final complete line left in buf
@@ -169,12 +173,16 @@ function runPythonScript(pythonPath, scriptPath, args, env, serverRoot, timeoutM
         try {
           const obj = JSON.parse(tail);
           if (typeof onJsonLine === "function") {
-            try { Promise.resolve(onJsonLine(obj)).catch(() => {}); } catch {}
+            try {
+              Promise.resolve(onJsonLine(obj)).catch(() => {});
+            } catch {}
           }
           if (Object.prototype.hasOwnProperty.call(obj, "success")) {
             lastStructured = obj;
           }
-        } catch {/* ignore */}
+        } catch {
+          /* ignore */
+        }
       }
 
       console.log("Python process exited with code:", code);
@@ -187,7 +195,7 @@ function runPythonScript(pythonPath, scriptPath, args, env, serverRoot, timeoutM
       }
     });
 
-    child.on("error", e => {
+    child.on("error", (e) => {
       done = true;
       clearTimeout(t);
       console.error("Failed to start Python process:", e);
@@ -216,7 +224,11 @@ router.post(
       dataPath = req.files.csv[0].path;
 
       const serverRoot = ROOT_DIR;
-      const pythonPath = path.join(serverRoot, "venv", "Scripts", "python.exe");
+
+      const isWin = process.platform === "win32";
+      const pythonPath = isWin
+        ? path.join(ROOT_DIR, "venv", "Scripts", "python.exe") // keep if you still support Windows+venv
+        : process.env.PYTHON_BIN || "python3"; // bare-metal Linux
       const scriptPath = path.join(serverRoot, "scripts", "analyze_files.py");
 
       if (!fs.existsSync(pythonPath)) {
@@ -235,15 +247,15 @@ router.post(
       env.PYTHONPATH = venvLibPath;
 
       // Optional analyzer flags (sent as text fields in the same multipart form)
-      const sheetName  = typeof req.body.sheetName === "string" ? req.body.sheetName : null;
+      const sheetName = typeof req.body.sheetName === "string" ? req.body.sheetName : null;
       const sheetIndex = Number.isFinite(Number(req.body.sheetIndex)) ? String(Number(req.body.sheetIndex)) : null;
-      const encoding   = typeof req.body.encoding === "string" ? req.body.encoding : null;
+      const encoding = typeof req.body.encoding === "string" ? req.body.encoding : null;
       const perTaskTimeout = String(ANALYZE_TASK_TIMEOUT_SECS);
 
       const args = ["--template", templatePath, "--data", dataPath, "--timeout", perTaskTimeout];
-      if (sheetName)  args.push("--sheet-name", sheetName);
+      if (sheetName) args.push("--sheet-name", sheetName);
       if (sheetIndex !== null) args.push("--sheet-index", sheetIndex);
-      if (encoding)   args.push("--encoding", encoding);
+      if (encoding) args.push("--encoding", encoding);
 
       const result = await runPythonScript(pythonPath, scriptPath, args, env, serverRoot, PY_ANALYZE_TIMEOUT_MS);
 
@@ -291,10 +303,7 @@ router.post(
       dataPath = req.files.csv[0].path;
 
       // progress: client-provided or auto-generate
-      const progressId =
-        typeof req.body.progressId === "string" && req.body.progressId.trim()
-          ? req.body.progressId.trim()
-          : `job-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+      const progressId = typeof req.body.progressId === "string" && req.body.progressId.trim() ? req.body.progressId.trim() : `job-${Date.now()}-${Math.random().toString(36).slice(2)}`;
 
       // initialize progress store
       await setProgress(progressId, {
@@ -334,27 +343,25 @@ router.post(
       fs.writeFileSync(mappingPath, JSON.stringify(mapping));
 
       // Tuning knobs (accept from form fields or fall back to env/defaults)
-      const chunkSize = Math.max(
-        1,
-        Number.isFinite(Number(req.body.chunkSize)) ? Number(req.body.chunkSize) : DEFAULT_CHUNK_SIZE
-      );
-      const genWorkers = Math.max(
-        1,
-        Number.isFinite(Number(req.body.genWorkers)) ? Number(req.body.genWorkers) : DEFAULT_GEN_WORKERS
-      );
-      const convWorkers = Math.max(
-        1,
-        Number.isFinite(Number(req.body.convWorkers)) ? Number(req.body.convWorkers) : DEFAULT_CONV_WORKERS
-      );
+      const chunkSize = Math.max(1, Number.isFinite(Number(req.body.chunkSize)) ? Number(req.body.chunkSize) : DEFAULT_CHUNK_SIZE);
+      const genWorkers = Math.max(1, Number.isFinite(Number(req.body.genWorkers)) ? Number(req.body.genWorkers) : DEFAULT_GEN_WORKERS);
+      const convWorkers = Math.max(1, Number.isFinite(Number(req.body.convWorkers)) ? Number(req.body.convWorkers) : DEFAULT_CONV_WORKERS);
 
       const args = [
-        "--template", templatePath,
-        "--data", dataPath,
-        "--output", outputPath,
-        "--mapping", mappingPath,
-        "--chunk-size", String(chunkSize),
-        "--gen-workers", String(genWorkers),
-        "--conv-workers", String(convWorkers),
+        "--template",
+        templatePath,
+        "--data",
+        dataPath,
+        "--output",
+        outputPath,
+        "--mapping",
+        mappingPath,
+        "--chunk-size",
+        String(chunkSize),
+        "--gen-workers",
+        String(genWorkers),
+        "--conv-workers",
+        String(convWorkers),
       ];
 
       // Consume streaming NDJSON from Python to update progress store
@@ -387,15 +394,7 @@ router.post(
         })().catch(() => {});
       };
 
-      const result = await runPythonScript(
-        pythonPath,
-        scriptPath,
-        args,
-        env,
-        serverRoot,
-        PY_GENERATE_TIMEOUT_MS,
-        onJsonLine
-      );
+      const result = await runPythonScript(pythonPath, scriptPath, args, env, serverRoot, PY_GENERATE_TIMEOUT_MS, onJsonLine);
 
       // Cleanup temp files
       if (fs.existsSync(templatePath)) fs.unlinkSync(templatePath);
@@ -427,9 +426,7 @@ router.post(
           },
         });
       } else {
-        return res
-          .status(500)
-          .json({ success: false, message: result.error || "PDF generation failed", progressId });
+        return res.status(500).json({ success: false, message: result.error || "PDF generation failed", progressId });
       }
     } catch (error) {
       try {
@@ -463,8 +460,8 @@ router.get("/progress/:id", async (req, res) => {
   // prevent any caching
   res.set({
     "Cache-Control": "no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0",
-    "Pragma": "no-cache",
-    "Expires": "0",
+    Pragma: "no-cache",
+    Expires: "0",
     "Surrogate-Control": "no-store",
   });
 
