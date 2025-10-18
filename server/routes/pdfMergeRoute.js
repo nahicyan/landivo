@@ -7,6 +7,7 @@ import fs from "fs";
 import os from "os";
 import { fileURLToPath } from "url";
 import Redis from "ioredis";
+import { spawnSync } from "child_process";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -88,6 +89,30 @@ async function delProgress(id) {
     } catch {}
   } else {
     memStore.delete(id);
+  }
+}
+
+function resolvePythonPath() {
+  // Allow override
+  if (process.env.PYTHON_BIN) return process.env.PYTHON_BIN;
+
+  // Default per-OS
+  if (process.platform === "win32") {
+    return path.join(ROOT_DIR, "venv", "Scripts", "python.exe");
+  }
+  return "python3";
+}
+
+function checkPythonExists(pythonCmd) {
+  // Absolute path? check file. Bare command? use `which`.
+  if (path.isAbsolute(pythonCmd)) {
+    return fs.existsSync(pythonCmd);
+  }
+  try {
+    const out = spawnSync("which", [pythonCmd], { encoding: "utf8" });
+    return out.status === 0 && out.stdout.trim().length > 0;
+  } catch {
+    return false;
   }
 }
 
@@ -226,23 +251,31 @@ router.post(
       const serverRoot = ROOT_DIR;
 
       const isWin = process.platform === "win32";
-      const pythonPath = process.env.PYTHON_BIN || "python3";
-      const scriptPath = path.join(serverRoot, "scripts", "analyze_files.py");
-
-      if (!fs.existsSync(pythonPath)) {
-        return res.status(500).json({ success: false, message: "Python environment not properly configured" });
+      const pythonPath = resolvePythonPath();
+      if (!checkPythonExists(pythonPath)) {
+        return res.status(500).json({
+          success: false,
+          message: `Python not found: "${pythonPath}". Set PYTHON_BIN or install python3 in PATH.`,
+        });
       }
+
+      const scriptPath = path.join(ROOT_DIR, "scripts", "analyze_files.py");
       if (!fs.existsSync(scriptPath)) {
-        return res.status(500).json({ success: false, message: "Analysis script not found" });
+        return res.status(500).json({
+          success: false,
+          message: "Analysis script not found",
+        });
       }
 
       const env = { ...process.env };
-      const venvPath = path.join(serverRoot, "venv");
-      const venvScriptsPath = path.join(venvPath, "Scripts");
-      const venvLibPath = path.join(venvPath, "Lib", "site-packages");
-      env.PATH = `${venvScriptsPath};${env.PATH}`;
-      env.VIRTUAL_ENV = venvPath;
-      env.PYTHONPATH = venvLibPath;
+      if (process.platform === "win32") {
+        const venvPath = path.join(serverRoot, "venv");
+        const venvScriptsPath = path.join(venvPath, "Scripts");
+        const venvLibPath = path.join(venvPath, "Lib", "site-packages");
+        env.PATH = `${venvScriptsPath};${env.PATH}`;
+        env.VIRTUAL_ENV = venvPath;
+        env.PYTHONPATH = venvLibPath;
+      }
 
       // Optional analyzer flags (sent as text fields in the same multipart form)
       const sheetName = typeof req.body.sheetName === "string" ? req.body.sheetName : null;
@@ -318,14 +351,20 @@ router.post(
       const outputPath = path.join(ROOT_DIR, "uploads", "pdf-merge", outputFileName);
 
       const serverRoot = ROOT_DIR;
-      const pythonPath = path.join(serverRoot, "venv", "Scripts", "python.exe");
-      const scriptPath = path.join(serverRoot, "scripts", "generate_merged_pdf.py");
-
-      if (!fs.existsSync(pythonPath)) {
-        return res.status(500).json({ success: false, message: "Python environment not properly configured" });
+      const pythonPath = resolvePythonPath();
+      if (!checkPythonExists(pythonPath)) {
+        return res.status(500).json({
+          success: false,
+          message: `Python not found: "${pythonPath}". Set PYTHON_BIN or install python3 in PATH.`,
+        });
       }
+
+      const scriptPath = path.join(ROOT_DIR, "scripts", "generate_merged_pdf.py");
       if (!fs.existsSync(scriptPath)) {
-        return res.status(500).json({ success: false, message: "Generation script not found" });
+        return res.status(500).json({
+          success: false,
+          message: "Generation script not found",
+        });
       }
 
       const env = { ...process.env };
