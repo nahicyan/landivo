@@ -15,7 +15,7 @@ const api = axios.create({
   timeout: 3600000,
 });
 
-export default function TestEngine() {
+export default function MailMerge() {
   // File state
   const [templateFile, setTemplateFile] = useState(null);
   const [csvFile, setCsvFile] = useState(null);
