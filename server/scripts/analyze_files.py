@@ -118,7 +118,7 @@ if __name__ == "__main__":
     p = argparse.ArgumentParser()
     p.add_argument("--template", required=True, help="Path to DOCX template")
     p.add_argument("--data", required=True, help="Path to CSV or XLSX")
-    p.add_argument("--timeout", type=int, default=30, help="Per-task timeout in seconds (default: 30)")
+    p.add_argument("--timeout", type=int, default=3600, help="Per-task timeout in seconds (default: 30)")
     p.add_argument("--sheet-name", default=None, help="Excel sheet name (optional)")
     p.add_argument("--sheet-index", type=int, default=None, help="Excel sheet index (0-based, optional)")
     p.add_argument("--encoding", default=None, help="CSV encoding (e.g., utf-8, windows-1252)")

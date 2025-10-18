@@ -12,7 +12,7 @@ import VariableMappingDialog from "@/components/PdfMerge/VariableMappingDialog";
 // Simple API instance
 const api = axios.create({
   baseURL: import.meta.env.VITE_SERVER_URL || "http://localhost:8200",
-  timeout: 120000,
+  timeout: 3600000,
 });
 
 export default function TestEngine() {

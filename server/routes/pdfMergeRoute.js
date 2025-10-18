@@ -13,9 +13,9 @@ const __dirname = path.dirname(__filename);
 const ROOT_DIR = path.resolve(__dirname, "..");
 
 // ---- Timeouts & defaults ----
-const ANALYZE_TASK_TIMEOUT_SECS = Number(process.env.ANALYZE_TASK_TIMEOUT_SECS || 60);       // per-task in analyzer
-const PY_ANALYZE_TIMEOUT_MS     = Number(process.env.PY_ANALYZE_TIMEOUT_MS || 5 * 60_000);   // Node->Py overall
-const PY_GENERATE_TIMEOUT_MS    = Number(process.env.PY_GENERATE_TIMEOUT_MS || 30 * 60_000); // Node->Py overall
+const ANALYZE_TASK_TIMEOUT_SECS = Number(process.env.ANALYZE_TASK_TIMEOUT_SECS || 3600);       // per-task in analyzer
+const PY_ANALYZE_TIMEOUT_MS     = Number(process.env.PY_ANALYZE_TIMEOUT_MS || 3600000);   // Node->Py overall
+const PY_GENERATE_TIMEOUT_MS    = Number(process.env.PY_GENERATE_TIMEOUT_MS || 3600000); // Node->Py overall
 
 const DEFAULT_CHUNK_SIZE        = Number(process.env.MERGE_CHUNK_SIZE || 200);
 const CPU_COUNT                 = (os.cpus()?.length) || 2;
