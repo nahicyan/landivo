@@ -20,6 +20,7 @@ import { initScheduledTasks } from "./services/scheduledTasks.js";
 import { mailivoAutomationRoute } from "./routes/mailivoAutomationRoute.js";
 import { automationClosingDateRoute } from "./routes/automationClosingDateRoute.js";
 import { pdfMergeRoute } from "./routes/pdfMergeRoute.js";
+import { ensureUploadDirectories } from "./middlewares/uploadMiddleware.js";
 
 const app = express();
 const PORT = process.env.PORT || 8200;
@@ -28,7 +29,16 @@ const PORT = process.env.PORT || 8200;
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-// ---- CORS (single, strict layer) ----
+// ===========================
+// INITIALIZE UPLOAD DIRECTORIES
+// ===========================
+
+ensureUploadDirectories();
+
+// ===========================
+// CORS CONFIGURATION
+// ===========================
+
 const allowedOrigins = [
   "https://landivo.com",
   "https://api.landivo.com",
@@ -50,15 +60,15 @@ app.use(
       "Content-Type",
       "Accept",
       "Authorization",
-      "Cache-Control", // important for progress polling robustness
+      "Cache-Control",
       "Pragma",
     ],
-    optionsSuccessStatus: 200, // some legacy browsers choke on 204
-    maxAge: 600, // cache preflight for 10 minutes
+    optionsSuccessStatus: 200,
+    maxAge: 600,
   })
 );
 
-// Reflect Origin + set Vary (nice for proxies/caches)
+// Reflect Origin + set Vary
 app.use((req, res, next) => {
   const origin = req.headers.origin;
   if (origin && allowedOrigins.includes(origin)) {
@@ -68,11 +78,17 @@ app.use((req, res, next) => {
   next();
 });
 
-// Core middleware
+// ===========================
+// CORE MIDDLEWARE
+// ===========================
+
 app.use(express.json({ limit: "5mb" }));
 app.use(cookieParser());
 
-// API routes
+// ===========================
+// API ROUTES
+// ===========================
+
 app.use("/residency", residencyRoute);
 app.use("/user", userManagementRoute);
 app.use("/property-rows", propertyRowRoute);
@@ -82,7 +98,6 @@ app.use("/buyer", buyerActivityRoute);
 app.use("/qualification", qualificationRoute);
 app.use("/email-lists", emailListRoute);
 app.use("/deal", dealRoute);
-app.use("/property-rows", propertyRowRoute);
 app.use("/settings", settingsRoute);
 app.use("/visitors", visitorRoute);
 app.use("/mailivo/automation", mailivoAutomationRoute);
@@ -90,8 +105,16 @@ app.use("/automation/closingDates", automationClosingDateRoute);
 app.use("/api/pdf-merge", pdfMergeRoute);
 app.use(trackActivity);
 
+// ===========================
+// STATIC FILE SERVING
+// ===========================
+
 // Serve static "uploads" folder
 app.use("/uploads", express.static(path.join(__dirname, "uploads")));
+
+// ===========================
+// TEST ROUTES
+// ===========================
 
 // Auth test route
 app.get("/auth/test-jwt", jwtCheck, extractUserFromToken, (req, res) => {
@@ -102,11 +125,18 @@ app.get("/auth/test-jwt", jwtCheck, extractUserFromToken, (req, res) => {
   });
 });
 
-// Initialize scheduled tasks
+// ===========================
+// INITIALIZE SCHEDULED TASKS
+// ===========================
+
 initScheduledTasks();
 
-// Start the server
+// ===========================
+// START SERVER
+// ===========================
+
 app.listen(PORT, () => {
-  console.log("Uploads folder path:", path.join(__dirname, "uploads"));
-  console.log(`Backend is running on port ${PORT}`);
+  console.log("=".repeat(50));
+  console.log(`Server started on port ${PORT}`);
+  console.log("=".repeat(50));
 });

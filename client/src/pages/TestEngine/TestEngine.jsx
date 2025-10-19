@@ -1,13 +1,38 @@
 import React, { useState, useEffect, useRef } from "react";
 import axios from "axios";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Progress } from "@/components/ui/progress";
 import { Input } from "@/components/ui/input";
-import { FileText, Upload, Download, CheckCircle, XCircle, Loader2, Settings } from "lucide-react";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  FileText,
+  Upload,
+  Download,
+  CheckCircle,
+  XCircle,
+  Loader2,
+  Settings,
+  Plus,
+  Trash2,
+  RefreshCw,
+} from "lucide-react";
 import VariableMappingDialog from "@/components/PdfMerge/VariableMappingDialog";
+import TemplateDialog from "@/components/PdfMerge/TemplateDialog";
 
 // Simple API instance
 const api = axios.create({
@@ -16,8 +41,13 @@ const api = axios.create({
 });
 
 export default function TestEngine() {
+  // Template state
+  const [templates, setTemplates] = useState([]);
+  const [selectedTemplateId, setSelectedTemplateId] = useState("");
+  const [loadingTemplates, setLoadingTemplates] = useState(false);
+  const [showTemplateDialog, setShowTemplateDialog] = useState(false);
+
   // File state
-  const [templateFile, setTemplateFile] = useState(null);
   const [csvFile, setCsvFile] = useState(null);
 
   // Flow state
@@ -33,26 +63,31 @@ export default function TestEngine() {
   const [csvHeaders, setCsvHeaders] = useState([]);
   const [analyzeNotes, setAnalyzeNotes] = useState("");
 
-  // Analyzer options (frontend defaults; backend also has fallbacks)
+  // Analyzer options
   const [sheetName, setSheetName] = useState("");
-  const [sheetIndex, setSheetIndex] = useState(""); // keep string for empty/0 distinction
-  const [encoding, setEncoding] = useState("");     // e.g., 'utf-8', 'windows-1252'; blank = let pandas decide
+  const [sheetIndex, setSheetIndex] = useState("");
+  const [encoding, setEncoding] = useState("");
 
-  // Generation options (frontend defaults; backend also has fallbacks)
-  const [chunkSize, setChunkSize] = useState(200);  // aligns with server DEFAULT_CHUNK_SIZE
+  // Generation options
+  const [chunkSize, setChunkSize] = useState(200);
   const [genWorkers, setGenWorkers] = useState(2);
   const [convWorkers, setConvWorkers] = useState(2);
 
   // Toggle Advanced panel
   const [showAdvanced, setShowAdvanced] = useState(false);
 
-  // NEW: live counters for progress
+  // Live counters for progress
   const [progressId, setProgressId] = useState(null);
   const [processedRows, setProcessedRows] = useState(0);
   const [totalRows, setTotalRows] = useState(0);
 
-  // Polling interval ref to survive re-renders
+  // Polling interval ref
   const pollTimerRef = useRef(null);
+
+  // Fetch templates on mount
+  useEffect(() => {
+    fetchTemplates();
+  }, []);
 
   // Cleanup polling on unmount
   useEffect(() => {
@@ -64,23 +99,43 @@ export default function TestEngine() {
     };
   }, []);
 
-  // Handle file selection
-  const handleTemplateChange = (e) => {
-    const file = e.target.files[0];
-    const ok =
-      file &&
-      (file.name.toLowerCase().endsWith(".docx") ||
-        file.type === "application/vnd.openxmlformats-officedocument.wordprocessingml.document");
-    if (ok) {
-      setTemplateFile(file);
-      setError(null);
-      setResult(null);
-    } else {
-      setTemplateFile(null);
-      setError("Please select a valid DOCX template file");
+  // Fetch templates from API
+  const fetchTemplates = async () => {
+    setLoadingTemplates(true);
+    try {
+      const response = await api.get("/api/pdf-merge/templates");
+      if (response.data && response.data.success) {
+        setTemplates(response.data.templates || []);
+      }
+    } catch (err) {
+      console.error("Failed to fetch templates:", err);
+    } finally {
+      setLoadingTemplates(false);
     }
   };
 
+  // Handle template deletion
+  const handleDeleteTemplate = async (templateId, e) => {
+    e.stopPropagation();
+
+    if (!confirm("Are you sure you want to delete this template?")) {
+      return;
+    }
+
+    try {
+      const response = await api.delete(`/api/pdf-merge/templates/${templateId}`);
+      if (response.data && response.data.success) {
+        setTemplates(templates.filter((t) => t.id !== templateId));
+        if (selectedTemplateId === templateId) {
+          setSelectedTemplateId("");
+        }
+      }
+    } catch (err) {
+      setError(err.response?.data?.message || "Failed to delete template");
+    }
+  };
+
+  // Handle CSV file selection
   const handleCsvChange = (e) => {
     const file = e.target.files[0];
     const name = (file?.name || "").toLowerCase();
@@ -106,8 +161,8 @@ export default function TestEngine() {
 
   // Analyze files and extract variables/headers
   const handleAnalyzeFiles = async () => {
-    if (!templateFile || !csvFile) {
-      setError("Please select both DOCX template and CSV/XLSX file");
+    if (!selectedTemplateId || !csvFile) {
+      setError("Please select a template and upload a CSV/XLSX file");
       return;
     }
 
@@ -117,12 +172,13 @@ export default function TestEngine() {
 
     try {
       const formData = new FormData();
-      formData.append("template", templateFile);
+      formData.append("templateId", selectedTemplateId);
       formData.append("csv", csvFile);
 
-      // Pass analyzer hints (all optional; backend tolerates blanks)
+      // Pass analyzer hints
       if (sheetName.trim()) formData.append("sheetName", sheetName.trim());
-      if (String(sheetIndex).trim() !== "") formData.append("sheetIndex", String(Number(sheetIndex)));
+      if (String(sheetIndex).trim() !== "")
+        formData.append("sheetIndex", String(Number(sheetIndex)));
       if (encoding.trim()) formData.append("encoding", encoding.trim());
 
       const response = await api.post("/api/pdf-merge/analyze", formData, {
@@ -151,7 +207,9 @@ export default function TestEngine() {
     stopPolling();
     pollTimerRef.current = setInterval(async () => {
       try {
-        const r = await api.get(`/api/pdf-merge/progress/${id}`, { params: { t: Date.now() }});
+        const r = await api.get(`/api/pdf-merge/progress/${id}`, {
+          params: { t: Date.now() },
+        });
         if (r.data && r.data.success) {
           const { processed = 0, total = 0, percent = 0, done = false } = r.data;
           setProcessedRows(processed);
@@ -172,7 +230,7 @@ export default function TestEngine() {
     }
   };
 
-  // Generate PDF with mapping (uses real server progress)
+  // Generate PDF with mapping
   const handleGenerateWithMapping = async (mapping) => {
     setShowMappingDialog(false);
     setIsGenerating(true);
@@ -180,8 +238,8 @@ export default function TestEngine() {
     setError(null);
     setResult(null);
 
-    // create a client progressId
-    const id = (window?.crypto?.randomUUID?.() || Math.random().toString(36).slice(2));
+    const id =
+      window?.crypto?.randomUUID?.() || Math.random().toString(36).slice(2);
     setProgressId(id);
     setProcessedRows(0);
     setTotalRows(0);
@@ -189,10 +247,10 @@ export default function TestEngine() {
 
     try {
       const formData = new FormData();
-      formData.append("template", templateFile);
+      formData.append("templateId", selectedTemplateId);
       formData.append("csv", csvFile);
       formData.append("mapping", JSON.stringify(mapping));
-      formData.append("progressId", id); // tell server which entry to update
+      formData.append("progressId", id);
 
       // knobs
       formData.append("chunkSize", String(Math.max(1, Number(chunkSize) || 200)));
@@ -203,9 +261,11 @@ export default function TestEngine() {
         headers: { "Content-Type": "multipart/form-data" },
       });
 
-      // ensure final progress fetch (race-safe)
+      // ensure final progress fetch
       try {
-        const r = await api.get(`/api/pdf-merge/progress/${id}`, { params: { t: Date.now() } });
+        const r = await api.get(`/api/pdf-merge/progress/${id}`, {
+          params: { t: Date.now() },
+        });
         if (r.data && r.data.success) {
           setProcessedRows(r.data.processed ?? processedRows);
           setTotalRows(r.data.total ?? totalRows);
@@ -243,7 +303,7 @@ export default function TestEngine() {
 
   // Reset form
   const handleReset = () => {
-    setTemplateFile(null);
+    setSelectedTemplateId("");
     setCsvFile(null);
     setResult(null);
     setError(null);
@@ -268,18 +328,10 @@ export default function TestEngine() {
     setTotalRows(0);
     stopPolling();
 
-    const templateInput = document.getElementById("template-upload");
     const csvInput = document.getElementById("csv-upload");
-    if (templateInput) templateInput.value = "";
     if (csvInput) csvInput.value = "";
   };
 
-  const removeTemplateFile = () => {
-    setTemplateFile(null);
-    setResult(null);
-    const input = document.getElementById("template-upload");
-    if (input) input.value = "";
-  };
   const removeCsvFile = () => {
     setCsvFile(null);
     setResult(null);
@@ -296,55 +348,82 @@ export default function TestEngine() {
               DOCX Mail Merge Engine
             </CardTitle>
             <CardDescription>
-              Upload a DOCX template and CSV/Excel data to generate a merged PDF
+              Select a stored template and upload CSV/Excel data to generate a merged PDF
             </CardDescription>
           </CardHeader>
 
           <CardContent className="space-y-6">
-            {/* Template DOCX Upload */}
+            {/* Template Selection */}
             <div className="space-y-2">
-              <Label htmlFor="template-upload" className="text-sm font-medium">
-                DOCX Template
-              </Label>
-              <div className="flex items-center gap-3">
-                <Button
-                  type="button"
-                  variant="outline"
-                  className="border-[#324c48] text-[#324c48] hover:bg-[#324c48] hover:text-white"
-                  onClick={() => document.getElementById("template-upload").click()}
-                  disabled={isGenerating || isAnalyzing}
-                >
-                  <Upload className="h-4 w-4 mr-2" />
-                  Browse DOCX
-                </Button>
-                <input
-                  id="template-upload"
-                  type="file"
-                  accept=".docx,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
-                  className="hidden"
-                  onChange={handleTemplateChange}
-                  disabled={isGenerating || isAnalyzing}
-                />
-                {templateFile && (
-                  <div className="flex items-center gap-2 text-sm text-gray-600">
-                    <FileText className="h-4 w-4 text-[#324c48]" />
-                    <span className="font-medium">{templateFile.name}</span>
-                    <span className="text-gray-400">
-                      ({(templateFile.size / 1024).toFixed(1)} KB)
-                    </span>
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="sm"
-                      className="h-6 w-6 p-0 ml-auto"
-                      onClick={removeTemplateFile}
-                      disabled={isGenerating || isAnalyzing}
-                    >
-                      <XCircle className="h-4 w-4" />
-                    </Button>
-                  </div>
-                )}
+              <div className="flex items-center justify-between">
+                <Label htmlFor="template-select" className="text-sm font-medium">
+                  Select Template
+                </Label>
+                <div className="flex gap-2">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={fetchTemplates}
+                    disabled={loadingTemplates || isGenerating || isAnalyzing}
+                  >
+                    <RefreshCw
+                      className={`h-4 w-4 ${loadingTemplates ? "animate-spin" : ""}`}
+                    />
+                  </Button>
+                  <Button
+                    type="button"
+                    size="sm"
+                    className="bg-[#324c48] hover:bg-[#243a36]"
+                    onClick={() => setShowTemplateDialog(true)}
+                    disabled={isGenerating || isAnalyzing}
+                  >
+                    <Plus className="h-4 w-4 mr-1" />
+                    Create Template
+                  </Button>
+                </div>
               </div>
+
+              <Select
+                value={selectedTemplateId}
+                onValueChange={setSelectedTemplateId}
+                disabled={isGenerating || isAnalyzing}
+              >
+                <SelectTrigger id="template-select">
+                  <SelectValue placeholder="Choose a template..." />
+                </SelectTrigger>
+                <SelectContent>
+                  {templates.length === 0 ? (
+                    <div className="p-4 text-sm text-gray-500 text-center">
+                      No templates found. Create one first!
+                    </div>
+                  ) : (
+                    templates.map((template) => (
+                      <SelectItem key={template.id} value={template.id}>
+                        <div className="flex items-center justify-between w-full">
+                          <span>{template.name}</span>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            className="h-6 w-6 p-0 ml-2"
+                            onClick={(e) => handleDeleteTemplate(template.id, e)}
+                          >
+                            <Trash2 className="h-3 w-3 text-red-500" />
+                          </Button>
+                        </div>
+                      </SelectItem>
+                    ))
+                  )}
+                </SelectContent>
+              </Select>
+
+              {selectedTemplateId && (
+                <p className="text-xs text-gray-500">
+                  Selected:{" "}
+                  {templates.find((t) => t.id === selectedTemplateId)?.name}
+                </p>
+              )}
             </div>
 
             {/* CSV/XLSX Upload */}
@@ -393,47 +472,55 @@ export default function TestEngine() {
               </div>
             </div>
 
-            {/* NEW: Advanced Options */}
+            {/* Advanced Options */}
             <div className="rounded-lg border border-gray-200">
               <button
                 type="button"
                 className="w-full flex items-center justify-between px-4 py-3 hover:bg-gray-50"
-                onClick={() => setShowAdvanced(v => !v)}
+                onClick={() => setShowAdvanced((v) => !v)}
               >
                 <span className="flex items-center gap-2 font-semibold text-gray-800">
                   <Settings className="h-4 w-4" /> Advanced Options
                 </span>
-                <span className="text-sm text-gray-500">{showAdvanced ? "Hide" : "Show"}</span>
+                <span className="text-sm text-gray-500">
+                  {showAdvanced ? "Hide" : "Show"}
+                </span>
               </button>
 
               {showAdvanced && (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-4 pt-0">
                   {/* Analyzer options */}
                   <div className="space-y-2">
-                    <Label className="text-sm font-medium">Excel Sheet Name (optional)</Label>
+                    <Label className="text-sm font-medium">
+                      Excel Sheet Name (optional)
+                    </Label>
                     <Input
                       placeholder="e.g., Sheet1"
                       value={sheetName}
-                      onChange={e => setSheetName(e.target.value)}
+                      onChange={(e) => setSheetName(e.target.value)}
                       disabled={isAnalyzing || isGenerating}
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label className="text-sm font-medium">Excel Sheet Index (optional)</Label>
+                    <Label className="text-sm font-medium">
+                      Excel Sheet Index (optional)
+                    </Label>
                     <Input
                       type="number"
                       placeholder="0 for first sheet"
                       value={sheetIndex}
-                      onChange={e => setSheetIndex(e.target.value)}
+                      onChange={(e) => setSheetIndex(e.target.value)}
                       disabled={isAnalyzing || isGenerating}
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label className="text-sm font-medium">CSV Encoding (optional)</Label>
+                    <Label className="text-sm font-medium">
+                      CSV Encoding (optional)
+                    </Label>
                     <Input
                       placeholder="utf-8 / windows-1252"
                       value={encoding}
-                      onChange={e => setEncoding(e.target.value)}
+                      onChange={(e) => setEncoding(e.target.value)}
                       disabled={isAnalyzing || isGenerating}
                     />
                   </div>
@@ -446,29 +533,33 @@ export default function TestEngine() {
                       min={1}
                       placeholder="200"
                       value={chunkSize}
-                      onChange={e => setChunkSize(e.target.value)}
+                      onChange={(e) => setChunkSize(e.target.value)}
                       disabled={isAnalyzing || isGenerating}
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label className="text-sm font-medium">Merge Workers (DOCX generation)</Label>
+                    <Label className="text-sm font-medium">
+                      Merge Workers (DOCX generation)
+                    </Label>
                     <Input
                       type="number"
                       min={1}
                       placeholder="2"
                       value={genWorkers}
-                      onChange={e => setGenWorkers(e.target.value)}
+                      onChange={(e) => setGenWorkers(e.target.value)}
                       disabled={isAnalyzing || isGenerating}
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label className="text-sm font-medium">Convert Workers (DOCX→PDF)</Label>
+                    <Label className="text-sm font-medium">
+                      Convert Workers (DOCX→PDF)
+                    </Label>
                     <Input
                       type="number"
                       min={1}
                       placeholder="2"
                       value={convWorkers}
-                      onChange={e => setConvWorkers(e.target.value)}
+                      onChange={(e) => setConvWorkers(e.target.value)}
                       disabled={isAnalyzing || isGenerating}
                     />
                   </div>
@@ -476,7 +567,7 @@ export default function TestEngine() {
               )}
             </div>
 
-            {/* Progress Bar (live processed/total · percent) */}
+            {/* Progress Bar */}
             {(isGenerating || isAnalyzing) && (
               <div className="space-y-2">
                 <div className="flex items-center justify-between text-sm">
@@ -487,7 +578,9 @@ export default function TestEngine() {
                     <div className="text-[#324c48] font-medium flex items-center gap-3">
                       {totalRows > 0 ? (
                         <>
-                          <span>{processedRows}/{totalRows}</span>
+                          <span>
+                            {processedRows}/{totalRows}
+                          </span>
                           <span>•</span>
                           <span>{progress}%</span>
                         </>
@@ -509,7 +602,7 @@ export default function TestEngine() {
               </Alert>
             )}
 
-            {/* Optional: analyzer notes */}
+            {/* Analyzer notes */}
             {analyzeNotes && !error && (
               <Alert className="border-blue-400 bg-blue-50">
                 <AlertDescription className="text-blue-800">
@@ -541,7 +634,9 @@ export default function TestEngine() {
             <div className="flex gap-3">
               <Button
                 onClick={handleAnalyzeFiles}
-                disabled={!templateFile || !csvFile || isGenerating || isAnalyzing}
+                disabled={
+                  !selectedTemplateId || !csvFile || isGenerating || isAnalyzing
+                }
                 className="flex-1 bg-[#324c48] hover:bg-[#243a36] text-white"
               >
                 {isAnalyzing ? (
@@ -586,11 +681,26 @@ export default function TestEngine() {
             <div className="mt-6 p-4 bg-blue-50 rounded-lg border border-blue-200">
               <h3 className="font-semibold text-blue-900 mb-2">Instructions:</h3>
               <ul className="text-sm text-blue-800 space-y-1 list-disc list-inside">
-                <li>Upload a <b>DOCX</b> template with <b>Mail Merge fields</b> (e.g., first_name, address, amount).</li>
-                <li>Upload a <b>CSV</b> or <b>Excel</b> file with matching column headers.</li>
-                <li>Click <b>Continue to Mapping</b> to map variables to columns.</li>
-                <li>Use <b>Advanced Options</b> to specify Excel sheet/encoding and performance knobs.</li>
-                <li>Generate your merged <b>PDF</b> when mappings look right.</li>
+                <li>
+                  Click <b>Create Template</b> to upload and save a DOCX template with
+                  Mail Merge fields.
+                </li>
+                <li>
+                  <b>Select a saved template</b> from the dropdown.
+                </li>
+                <li>
+                  Upload a <b>CSV</b> or <b>Excel</b> file with matching column headers.
+                </li>
+                <li>
+                  Click <b>Continue to Mapping</b> to map variables to columns.
+                </li>
+                <li>
+                  Use <b>Advanced Options</b> to specify Excel sheet/encoding and
+                  performance knobs.
+                </li>
+                <li>
+                  Generate your merged <b>PDF</b> when mappings look right.
+                </li>
               </ul>
             </div>
           </CardContent>
@@ -605,6 +715,16 @@ export default function TestEngine() {
         csvHeaders={csvHeaders}
         onConfirmMapping={handleGenerateWithMapping}
         isGenerating={isGenerating}
+      />
+
+      {/* Template Creation Dialog */}
+      <TemplateDialog
+        open={showTemplateDialog}
+        onOpenChange={setShowTemplateDialog}
+        onTemplateCreated={(template) => {
+          fetchTemplates();
+          setSelectedTemplateId(template.id);
+        }}
       />
     </>
   );
