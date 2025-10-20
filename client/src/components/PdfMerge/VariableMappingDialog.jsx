@@ -18,9 +18,44 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { ArrowRight, CheckCircle2, AlertCircle, Type, Database } from "lucide-react";
+import { 
+  ArrowRight, 
+  CheckCircle2, 
+  AlertCircle, 
+  Type, 
+  Database,
+  Calendar as CalendarIcon
+} from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { DayPicker } from "react-day-picker";
+import "react-day-picker/style.css";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import { format } from "date-fns";
+import { cn } from "@/lib/utils";
+
+// Helper function to check if a variable name suggests it's a date field
+const isDateVariable = (variableName) => {
+  const lower = variableName.toLowerCase();
+  const datePatterns = [
+    'date',
+    'mailing_date',
+    'mailingdate',
+    'closing_date',
+    'closingdate',
+    'effective_date',
+    'effectivedate',
+    'start_date',
+    'startdate',
+    'end_date',
+    'enddate'
+  ];
+  return datePatterns.some(pattern => lower.includes(pattern));
+};
 
 export default function VariableMappingDialog({
   open,
@@ -30,13 +65,13 @@ export default function VariableMappingDialog({
   onConfirmMapping,
   isGenerating = false,
 }) {
-  // mapping structure: { variableName: { type: 'csv' | 'custom', value: 'column_name' | 'custom_text' } }
+  // mapping structure: { variableName: { type: 'csv' | 'custom' | 'date', value: 'column_name' | 'custom_text' | Date } }
   const [mapping, setMapping] = useState({});
   const [unmappedCount, setUnmappedCount] = useState(0);
 
-  // Initialize mapping with automatic CSV matches
+  // Initialize mapping with automatic CSV matches and date defaults
   useEffect(() => {
-    if (templateVariables.length > 0 && csvHeaders.length > 0) {
+    if (templateVariables.length > 0) {
       const autoMapping = {};
       const csvHeadersLower = csvHeaders.map((h) =>
         h.toLowerCase().replace(/\s+/g, "_")
@@ -44,13 +79,25 @@ export default function VariableMappingDialog({
 
       templateVariables.forEach((variable) => {
         const varLower = variable.toLowerCase();
-        const matchIndex = csvHeadersLower.findIndex((h) => h === varLower);
-
-        if (matchIndex !== -1) {
+        
+        // Check if it's a date variable first
+        if (isDateVariable(variable)) {
+          // Set default to today's date at 5PM
+          const today = new Date();
+          today.setHours(17, 0, 0, 0);
           autoMapping[variable] = {
-            type: "csv",
-            value: csvHeaders[matchIndex],
+            type: "date",
+            value: today.toISOString(),
           };
+        } else {
+          // Try to auto-match with CSV columns
+          const matchIndex = csvHeadersLower.findIndex((h) => h === varLower);
+          if (matchIndex !== -1) {
+            autoMapping[variable] = {
+              type: "csv",
+              value: csvHeaders[matchIndex],
+            };
+          }
         }
       });
 
@@ -67,11 +114,14 @@ export default function VariableMappingDialog({
   }, [mapping, templateVariables]);
 
   const handleTypeChange = (variable, type) => {
+    const today = new Date();
+    today.setHours(17, 0, 0, 0);
+    
     setMapping((prev) => ({
       ...prev,
       [variable]: {
         type,
-        value: type === "csv" ? "" : "",
+        value: type === "date" ? today.toISOString() : "",
       },
     }));
   };
@@ -82,6 +132,31 @@ export default function VariableMappingDialog({
       [variable]: {
         ...prev[variable],
         value: value === "none" ? "" : value,
+      },
+    }));
+  };
+
+  const handleDateSelect = (variable, date) => {
+    if (!date) {
+      setMapping((prev) => ({
+        ...prev,
+        [variable]: {
+          type: "date",
+          value: "",
+        },
+      }));
+      return;
+    }
+
+    // Set the time to 5PM (17:00:00) of the selected day
+    const dateAt5PM = new Date(date);
+    dateAt5PM.setHours(17, 0, 0, 0);
+
+    setMapping((prev) => ({
+      ...prev,
+      [variable]: {
+        type: "date",
+        value: dateAt5PM.toISOString(),
       },
     }));
   };
@@ -107,7 +182,7 @@ export default function VariableMappingDialog({
         <DialogHeader>
           <DialogTitle>Map Variables to Data Sources</DialogTitle>
           <DialogDescription>
-            Map each template variable to a CSV column or enter a custom value
+            Map each template variable to a CSV column, enter a custom value, or select a date
           </DialogDescription>
         </DialogHeader>
 
@@ -154,6 +229,7 @@ export default function VariableMappingDialog({
           {templateVariables.map((variable) => {
             const mappingType = mapping[variable]?.type || "csv";
             const mappingValue = mapping[variable]?.value || "";
+            const isDate = isDateVariable(variable);
 
             return (
               <div
@@ -165,6 +241,11 @@ export default function VariableMappingDialog({
                   <div className="flex-1">
                     <Label className="text-sm font-medium text-gray-700 mb-1 block">
                       Template Variable
+                      {isDate && (
+                        <Badge variant="secondary" className="ml-2 text-xs">
+                          Date Field
+                        </Badge>
+                      )}
                     </Label>
                     <code className="px-3 py-2 bg-white border border-[#324c48]/30 rounded text-[#324c48] font-mono text-sm inline-block">
                       &lt;&lt;{variable}&gt;&gt;
@@ -197,6 +278,18 @@ export default function VariableMappingDialog({
                         Custom Value
                       </Label>
                     </div>
+                    {isDate && (
+                      <div className="flex items-center space-x-2">
+                        <RadioGroupItem value="date" id={`${variable}-date`} />
+                        <Label
+                          htmlFor={`${variable}-date`}
+                          className="text-sm cursor-pointer flex items-center gap-1"
+                        >
+                          <CalendarIcon className="h-3 w-3" />
+                          Date Picker
+                        </Label>
+                      </div>
+                    )}
                   </RadioGroup>
                 </div>
 
@@ -231,6 +324,76 @@ export default function VariableMappingDialog({
                           </SelectContent>
                         </Select>
                       </>
+                    ) : mappingType === "date" ? (
+                      <>
+                        <Label className="text-sm font-medium text-gray-700 mb-1 block">
+                          Select Date
+                        </Label>
+                        <Popover>
+                          <PopoverTrigger asChild>
+                            <Button
+                              variant="outline"
+                              className={cn(
+                                "w-full justify-start text-left font-normal border-[#324c48]/30",
+                                !mappingValue && "text-muted-foreground"
+                              )}
+                            >
+                              <CalendarIcon className="mr-2 h-4 w-4" />
+                              {mappingValue ? (
+                                format(new Date(mappingValue), "MM/dd/yyyy")
+                              ) : (
+                                <span>Pick a date</span>
+                              )}
+                            </Button>
+                          </PopoverTrigger>
+                          <PopoverContent align="start" className="w-auto p-1 bg-white border border-gray-300 rounded-md shadow-lg">
+                            <style>{`
+                              .compact-calendar * {
+                                margin: 0 !important;
+                              }
+                              .compact-calendar table {
+                                border-collapse: collapse !important;
+                                width: auto !important;
+                              }
+                              .compact-calendar td,
+                              .compact-calendar th {
+                                padding: 2px !important;
+                                width: 28px !important;
+                                height: 28px !important;
+                              }
+                              .compact-calendar button {
+                                width: 24px !important;
+                                height: 24px !important;
+                                font-size: 0.875rem !important;
+                                padding: 0 !important;
+                              }
+                              .compact-calendar .rdp-day_button {
+                                width: 24px !important;
+                                height: 24px !important;
+                              }
+                              .compact-calendar .rdp-weekday {
+                                font-size: 0.75rem !important;
+                                padding: 2px !important;
+                              }
+                              .compact-calendar .rdp-month {
+                                margin: 0.5rem !important;
+                              }
+                              .compact-calendar .rdp-month_caption {
+                                margin-bottom: 0.5rem !important;
+                              }
+                            `}</style>
+                            <div className="border border-gray-200 rounded-md">
+                              <DayPicker
+                                mode="single"
+                                selected={mappingValue ? new Date(mappingValue) : undefined}
+                                onSelect={(date) => handleDateSelect(variable, date)}
+                                initialFocus
+                                className="compact-calendar p-2"
+                              />
+                            </div>
+                          </PopoverContent>
+                        </Popover>
+                      </>
                     ) : (
                       <>
                         <Label className="text-sm font-medium text-gray-700 mb-1 block">
@@ -258,6 +421,10 @@ export default function VariableMappingDialog({
                         <>
                           Will use data from <code className="text-[#324c48]">{mappingValue}</code> column
                         </>
+                      ) : mappingType === "date" ? (
+                        <>
+                          Will insert: <code className="text-[#324c48]">{format(new Date(mappingValue), "MM/dd/yyyy")}</code>
+                        </>
                       ) : (
                         <>
                           Will insert: <code className="text-[#324c48]">"{mappingValue}"</code>
@@ -282,7 +449,8 @@ export default function VariableMappingDialog({
           <p className="text-sm text-blue-800">
             <strong>Tip:</strong> Use <strong>CSV Column</strong> for dynamic data that
             changes per row. Use <strong>Custom Value</strong> for static text that stays
-            the same across all generated PDFs (e.g., company name, date).
+            the same across all generated PDFs. Use <strong>Date Picker</strong> for date fields
+            (automatically detected and set to today by default).
           </p>
         </div>
 

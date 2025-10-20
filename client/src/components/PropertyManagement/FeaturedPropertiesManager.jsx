@@ -10,6 +10,7 @@ import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, us
 import { SortableContext, verticalListSortingStrategy, useSortable, arrayMove } from "@dnd-kit/sortable";
 import { restrictToVerticalAxis } from "@dnd-kit/modifiers";
 import { CSS } from "@dnd-kit/utilities";
+import { updatePropertyRow } from "@/utils/api";
 import axios from 'axios';
 
 // Sortable item component
@@ -132,9 +133,7 @@ export function FeaturedPropertiesManager() {
       // Update the property row's display order
       const updatedOrder = properties.map(property => property.id);
       
-      await axios.put(`${import.meta.env.VITE_SERVER_URL}/property-rows/${selectedRow}`, {
-        displayOrder: updatedOrder
-      });
+      await updatePropertyRow(selectedRow, { displayOrder: updatedOrder });
       
       toast.success("Display order updated successfully");
     } catch (error) {

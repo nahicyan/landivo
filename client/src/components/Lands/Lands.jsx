@@ -4,6 +4,7 @@ import { PuffLoader } from "react-spinners";
 import { useNavigate } from "react-router-dom";
 import useProperties from "../../components/hooks/useProperties.js";
 import DisplayRow, { createFilter } from "../../components/DisplayRow/DisplayRow";
+import { getPropertyRows } from "@/utils/api.js";
 import axios from "axios";
 
 // Simple variants for fade-up animation
@@ -31,7 +32,7 @@ export const Lands = () => {
       
       setLoadingFeatured(true);
       try {
-        const response = await axios.get(`${import.meta.env.VITE_SERVER_URL}/property-rows?rowType=homepage`);
+        const response = await getPropertyRows('?rowType=homepage');
         
         if (response.data && Array.isArray(response.data.displayOrder)) {
           const displayOrder = response.data.displayOrder;
