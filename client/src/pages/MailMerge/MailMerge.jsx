@@ -40,9 +40,9 @@ export default function MailMerge() {
     sheetName: "",
     sheetIndex: "",
     encoding: "",
-    chunkSize: 200,
-    genWorkers: 2,
-    convWorkers: 2,
+    chunkSize: 8,
+    genWorkers: 4,
+    convWorkers: 4,
   });
 
   // Live counters for progress
@@ -221,9 +221,9 @@ export default function MailMerge() {
       if (advancedOptions.encoding.trim()) formData.append("encoding", advancedOptions.encoding.trim());
 
       // Performance knobs
-      formData.append("chunkSize", String(Math.max(1, Number(advancedOptions.chunkSize) || 200)));
-      formData.append("genWorkers", String(Math.max(1, Number(advancedOptions.genWorkers) || 2)));
-      formData.append("convWorkers", String(Math.max(1, Number(advancedOptions.convWorkers) || 2)));
+      formData.append("chunkSize", String(Math.max(1, Number(advancedOptions.chunkSize) || 8)));
+      formData.append("genWorkers", String(Math.max(1, Number(advancedOptions.genWorkers) || 4)));
+      formData.append("convWorkers", String(Math.max(1, Number(advancedOptions.convWorkers) || 4)));
 
       const response = await generateMergedPdf(formData);
 
@@ -282,9 +282,9 @@ export default function MailMerge() {
       sheetName: "",
       sheetIndex: "",
       encoding: "",
-      chunkSize: 200,
-      genWorkers: 2,
-      convWorkers: 2,
+      chunkSize: 8,
+      genWorkers: 4,
+      convWorkers: 4,
     });
 
     // Reset progress
