@@ -17,7 +17,7 @@ import { cn } from "@/lib/utils";
 // Helper function to check if a variable name suggests it's a date field
 const isDateVariable = (variableName) => {
   const lower = variableName.toLowerCase();
-  const datePatterns = ["date", "mailing_date", "mailingdate", "closing_date", "closingdate", "effective_date", "effectivedate", "start_date", "startdate", "end_date", "enddate"];
+  const datePatterns = ["date", "mailing_date", "mailingdate", "Mailing_Date", "MalingDate"];
   return datePatterns.some((pattern) => lower.includes(pattern));
 };
 
@@ -175,8 +175,8 @@ export default function VariableMappingDialog({ open, onOpenChange, templateVari
             return (
               <div key={variable} className="flex flex-col gap-3 p-4 bg-gray-50 rounded-lg border border-gray-200">
                 {/* Template Variable Header */}
-                <div className="flex items-center justify-between gap-4">
-                  <div className="flex-shrink-0">
+                <div className="flex items-center justify-between">
+                  <div className="flex-1">
                     <Label className="text-sm font-medium text-gray-700 mb-1 block">
                       Template Variable
                       {isDate && (
