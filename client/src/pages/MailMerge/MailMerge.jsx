@@ -175,8 +175,8 @@ export default function VariableMappingDialog({ open, onOpenChange, templateVari
             return (
               <div key={variable} className="flex flex-col gap-3 p-4 bg-gray-50 rounded-lg border border-gray-200">
                 {/* Template Variable Header */}
-                <div className="flex items-center justify-between gap-4">
-                  <div className="flex-shrink-0">
+                <div className="flex items-center justify-between">
+                  <div className="flex-1">
                     <Label className="text-sm font-medium text-gray-700 mb-1 block">
                       Template Variable
                       {isDate && (
