@@ -31,6 +31,7 @@ import LiensOrJudgments from "@/components/FinanceQualify/LiensOrJudgments";
 import UserInfo from "@/components/FinanceQualify/UserInfo";
 import DownPayment from "@/components/FinanceQualify/DownPayment";
 import SurveyCompletion from "@/components/FinanceQualify/SurveyCompletion";
+import { submitQualification } from "@/utils/api";
 
 export default function Qualify() {
   const { propertyId } = useParams();
@@ -254,14 +255,7 @@ const handleSubmitSurvey = async () => {
     console.log("Submitting qualification data:", qualificationData);
     
     // Submit to backend
-    const response = await fetch(`${import.meta.env.VITE_SERVER_URL}/qualification/create`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(qualificationData),
-      credentials: 'include'
-    });
+    const response = await submitQualification(qualificationData);
     
     if (!response.ok) {
       throw new Error(`Submission failed: ${response.status}`);

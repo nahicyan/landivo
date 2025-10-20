@@ -8,6 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Checkbox } from "@/components/ui/checkbox";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { parsePhoneNumber } from "libphonenumber-js";
+import { createBuyer } from "@/utils/api";
 
 // Define the available areas
 const AREAS = [
@@ -230,13 +231,7 @@ export default function CreateBuyer() {
       setLoading(true);
       
       // Create API request to create a buyer
-      const response = await fetch(`${import.meta.env.VITE_SERVER_URL}/buyer/create`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(formData),
-      });
+      const response = await createBuyer(formData);
   
       if (!response.ok) {
         const errorData = await response.json();

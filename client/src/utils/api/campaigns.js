@@ -1,10 +1,6 @@
 // client/src/utils/api/campaigns.js
 
-import axios from 'axios';
 import { mailivoApi, handleRequestError } from './config';
-
-// Direct Mailivo API URL for templates and campaigns history
-const MAILIVO_API_URL = 'https://api.mailivo.landivo.com';
 
 // ============================================================================
 // CAMPAIGN SENDING
@@ -48,11 +44,10 @@ export const sendPropertyDiscountCampaign = async (campaignData) => {
  */
 export const getSubjectTemplates = async () => {
   try {
-    const response = await axios.get(`${MAILIVO_API_URL}/subject-templates`);
+    const response = await mailivoApi.get('/subject-templates');
     return response.data;
   } catch (error) {
-    console.error("Error loading subject templates:", error);
-    throw error;
+    handleRequestError(error, "Failed to load subject templates");
   }
 };
 
@@ -63,10 +58,9 @@ export const getSubjectTemplates = async () => {
  */
 export const getPastCampaignSubjects = async (propertyId) => {
   try {
-    const response = await axios.get(`${MAILIVO_API_URL}/campaigns/subjects/${propertyId}`);
+    const response = await mailivoApi.get(`/campaigns/subjects/${propertyId}`);
     return response.data;
   } catch (error) {
-    console.error("Error loading past campaigns:", error);
-    throw error;
+    handleRequestError(error, "Failed to load past campaigns");
   }
 };

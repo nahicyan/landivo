@@ -127,9 +127,9 @@ const ProfileDetails = ({
 
   // Get avatar URL with fallback
   const avatarUrl = dbUserData?.avatarUrl ?
-    `${import.meta.env.VITE_SERVER_URL}/${dbUserData.avatarUrl}` :
-    user?.picture || null;
-
+  getAvatarUrl(dbUserData.avatarUrl) :
+  user?.picture || null;
+  
   return (
     <div className="space-y-5">
       {isEditing ? (

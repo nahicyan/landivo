@@ -7,15 +7,23 @@
  * and re-exporting them for easy consumption by components.
  * 
  * Usage:
- * import { getAllProperties, createBuyer, getSystemSettings } from '@/utils/api';
+ * import { getAllProperties, createBuyer, getSystemSettings, getAvatarUrl } from '@/utils/api';
  */
 
 // ============================================================================
 // CONFIGURATION & CORE
 // ============================================================================
 
-// Export axios instances and config
-export { api, mailivoApi, handleRequestError } from './api/config';
+// Export axios instances, config, and URL helpers
+export { 
+  api, 
+  mailivoApi, 
+  handleRequestError,
+  getServerUrl,
+  getAvatarUrl,
+  getUploadUrl,
+  getMailivoApiUrl
+} from './api/config';
 
 // ============================================================================
 // PROPERTIES API
@@ -138,10 +146,10 @@ export {
   
   // Property Profiles
   getUserPropertyProfiles,
+  updateUserProfilesById,
+  updateUserProfiles,
   
   // Authenticated Profile Hook
-  
-  updateUserProfiles,
   useUserProfileApi
 } from './api/users';
 
