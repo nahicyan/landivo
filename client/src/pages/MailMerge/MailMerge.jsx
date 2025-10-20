@@ -317,10 +317,11 @@ export default function MailMerge() {
 
   return (
     <>
-      <div className="flex items-center justify-center min-h-screen bg-gray-100 p-4">
-        <Card className="w-full max-w-2xl">
+          <div className="w-full bg-white">
+      <div className="max-w-screen-xl mx-auto px-4 py-6">
+        <Card className="border-0 shadow-none">
           <CardHeader>
-            <CardTitle className="text-3xl font-bold text-gray-800">
+            <CardTitle className="text-2xl font-bold text-[#324c48]">
               DOCX Mail Merge Engine
             </CardTitle>
             <CardDescription>
@@ -392,6 +393,7 @@ export default function MailMerge() {
           </CardContent>
         </Card>
       </div>
+       </div>
 
       {/* Variable Mapping Dialog */}
       <VariableMappingDialog
