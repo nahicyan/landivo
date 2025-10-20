@@ -9,7 +9,6 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogT
 import { Table, TableBody, TableCaption, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { toast } from "react-toastify";
 import { Loader2, Plus, Edit, Trash } from "lucide-react";
-import axios from "axios";
 
 export function PropertyRowManager() {
   const [propertyRows, setPropertyRows] = useState([]);

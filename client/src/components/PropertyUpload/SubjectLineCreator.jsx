@@ -8,7 +8,6 @@ import { Mail, Loader2, AlertTriangle, Smile } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import EmojiPicker from "emoji-picker-react";
-import axios from "axios";
 import { getProperty } from "@/utils/api";
 
 const ADDRESS_FORMAT_TEMPLATES = [

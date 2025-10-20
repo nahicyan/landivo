@@ -5,7 +5,6 @@ import { useNavigate } from "react-router-dom";
 import useProperties from "../../components/hooks/useProperties.js";
 import DisplayRow, { createFilter } from "../../components/DisplayRow/DisplayRow";
 import { getPropertyRows } from "@/utils/api.js";
-import axios from "axios";
 
 // Simple variants for fade-up animation
 const fadeUp = {
