@@ -1,23 +1,26 @@
 // client/src/utils/api.js
 
 import axios from 'axios';
-import dayjs from 'dayjs';
-import { toast } from 'react-toastify';
 import { useAuth0 } from '@auth0/auth0-react';
 import { useCallback } from 'react';
+import { toast } from 'react-toastify';
 
+// Create axios instance
 export const api = axios.create({
   baseURL: import.meta.env.VITE_SERVER_URL,
-  withCredentials: true, // Enable cookies for cross-origin requests
+  withCredentials: true,
 });
 
-// Helper function to handle errors and provide consistent logging
+// Helper function to handle errors
 const handleRequestError = (error, message) => {
   console.error(`${message}:`, error);
   throw error;
 };
 
-// Get all properties
+// ============================================================================
+// PROPERTIES
+// ============================================================================
+
 export const getAllProperties = async () => {
   try {
     const response = await api.get('/residency/allresd');
@@ -27,96 +30,28 @@ export const getAllProperties = async () => {
   }
 };
 
-// Get a specific property
 export const getProperty = async (id) => {
   try {
     const response = await api.get(`/residency/${id}`);
     return response.data;
   } catch (error) {
     console.error("Error fetching property details:", error);
-    // Return a basic object instead of throwing to avoid breaking the UI
-    return { 
-      title: "Unknown Property", 
-      streetAddress: "Address not available" 
+    return {
+      title: "Unknown Property",
+      streetAddress: "Address not available"
     };
   }
 };
 
-// Make an offer on a property - Updated to use the new offer endpoint
-export const makeOffer = async (offerData) => {
+export const createProperty = async (propertyData) => {
   try {
-    const response = await api.post('/offer/makeOffer', offerData);
+    const response = await api.post('/residency/create', propertyData);
     return response.data;
   } catch (error) {
-    handleRequestError(error, "Failed to make offer");
+    handleRequestError(error, "Failed to create property");
   }
 };
 
-// Update property
-export const updateProperty = async (id, updatedData) => {
-  try {
-    const response = await api.put(`/residency/update/${id}`, updatedData);
-    return response.data;
-  } catch (error) {
-    handleRequestError(error, "Failed to update property");
-  }
-};
-
-// Get offers for a specific property - Updated to use the new offer endpoint
-export const getPropertyOffers = async (propertyId) => {
-  try {
-    const response = await api.get(`/offer/property/${propertyId}`);
-    return response.data;
-  } catch (error) {
-    handleRequestError(error, "Failed to fetch property offers");
-  }
-};
-
-// Get offers for a specific buyer - Updated to use the new offer endpoint
-export const getBuyerOffers = async (params) => {
-  try {
-    // Handle different parameter formats
-    let endpoint;
-    
-    if (typeof params === 'string') {
-      // Direct buyerId as string
-      endpoint = `/offer/buyer?buyerId=${params}`;
-    } else if (params && typeof params === 'object') {
-      // Object with parameters - extract the buyerId properly
-      if (params.buyerId) {
-        if (typeof params.buyerId === 'object') {
-          console.error('Invalid buyerId format:', params.buyerId);
-          return { offers: [] };
-        }
-        endpoint = `/offer/buyer?buyerId=${params.buyerId}`;
-      } else if (params.email) {
-        endpoint = `/offer/buyer?email=${encodeURIComponent(params.email)}`;
-      } else if (params.phone) {
-        endpoint = `/offer/buyer?phone=${encodeURIComponent(params.phone)}`;
-      } else {
-        console.error('Missing required parameter in getBuyerOffers:', params);
-        return { offers: [] };
-      }
-    } else {
-      console.error('Invalid parameters for getBuyerOffers:', params);
-      return { offers: [] };
-    }
-    
-    console.log(`Making GET request to ${endpoint}`);
-    const response = await api.get(endpoint);
-    return response.data;
-  } catch (error) {
-    console.error("Error fetching buyer offers:", error);
-    // Return empty object with offers array to avoid UI errors
-    return { 
-      offers: [],
-      buyer: null,
-      totalOffers: 0 
-    };
-  }
-};
-
-// New function to create residency with files
 export const createResidencyWithFiles = async (formData) => {
   try {
     const response = await api.post('/residency/createWithFile', formData, {
@@ -128,73 +63,62 @@ export const createResidencyWithFiles = async (formData) => {
   }
 };
 
-// Submit qualification data
-export const submitQualification = async (qualificationData) => {
+export const updateProperty = async (id, updatedData) => {
   try {
-    const response = await api.post('/qualification/create', qualificationData);
+    const response = await api.put(`/residency/update/${id}`, updatedData);
     return response.data;
   } catch (error) {
-    handleRequestError(error, "Failed to submit qualification");
+    handleRequestError(error, "Failed to update property");
   }
 };
 
-// Get qualifications for a property
-export const getPropertyQualifications = async (propertyId) => {
+export const deleteProperty = async (id) => {
   try {
-    const response = await api.get(`/qualification/property/${propertyId}`);
+    const response = await api.delete(`/residency/delete/${id}`);
     return response.data;
   } catch (error) {
-    handleRequestError(error, "Failed to fetch property qualifications");
+    handleRequestError(error, "Failed to delete property");
   }
 };
 
-// Get all qualifications with optional filtering
-export const getAllQualifications = async (page = 1, limit = 10, filters = {}) => {
+/**
+ * Request property deletion (for users without delete permissions)
+ * @param {string} propertyId - Property ID
+ * @param {string} reason - Reason for deletion
+ * @returns {Promise<Object>} Response data
+ */
+export const requestPropertyDeletion = async (propertyId, reason) => {
   try {
-    const queryParams = new URLSearchParams({
-      page,
-      limit,
-      ...filters
+    const response = await api.post(`/residency/request-deletion/${propertyId}`, {
+      reason
     });
-    
-    const response = await api.get(`/qualification/all?${queryParams}`);
     return response.data;
   } catch (error) {
-    handleRequestError(error, "Failed to fetch qualifications");
+    handleRequestError(error, "Failed to request property deletion");
   }
 };
 
-// Create A VIP Buyer
-export const createVipBuyer = async (buyerData) => {
+/**
+ * Direct property deletion (for users with delete permissions)
+ * @param {string} propertyId - Property ID
+ * @param {string} reason - Reason for deletion
+ * @returns {Promise<Object>} Response data
+ */
+export const deletePropertyDirect = async (propertyId, reason) => {
   try {
-    const response = await api.post('/buyer/createVipBuyer', buyerData);
+    const response = await api.delete(`/residency/delete/${propertyId}`, {
+      data: { reason }
+    });
     return response.data;
   } catch (error) {
-    handleRequestError(error, "Failed to create VIP buyer");
+    handleRequestError(error, "Failed to delete property");
   }
 };
 
-// 9. API Client Function for User Detail
-export const getUserById = async (id) => {
-  try {
-    const response = await api.get(`/user/${id}`);
-    return response.data;
-  } catch (error) {
-    handleRequestError(error, "Failed to fetch user details");
-  }
-};
+// ============================================================================
+// BUYERS
+// ============================================================================
 
-// Get All Users
-export const getAllUsers = async () => {
-  try {
-    const response = await api.get('/user/all');
-    return response.data;
-  } catch (error) {
-    handleRequestError(error, "Failed to fetch users");
-  }
-};
-
-// Get All Buyers
 export const getAllBuyers = async () => {
   try {
     const response = await api.get('/buyer/all');
@@ -204,18 +128,51 @@ export const getAllBuyers = async () => {
   }
 };
 
-// Get Buyer by ID
 export const getBuyerById = async (id) => {
   try {
     const response = await api.get(`/buyer/${id}`);
     return response.data;
   } catch (error) {
-    console.error("Error fetching buyer details:", error);
-    throw error;
+    handleRequestError(error, "Failed to fetch buyer");
   }
 };
 
-// Update Buyer
+export const getBuyerByAuth0Id = async (auth0Id) => {
+  try {
+    const response = await api.get(`/buyer/byAuth0Id?auth0Id=${auth0Id}`);
+    return response.data;
+  } catch (error) {
+    handleRequestError(error, "Failed to fetch buyer by Auth0 ID");
+  }
+};
+
+export const getBuyersByArea = async (areaId) => {
+  try {
+    const response = await api.get(`/buyer/byArea/${areaId}`);
+    return response.data;
+  } catch (error) {
+    handleRequestError(error, "Failed to fetch buyers by area");
+  }
+};
+
+export const createBuyer = async (buyerData) => {
+  try {
+    const response = await api.post('/buyer/create', buyerData);
+    return response.data;
+  } catch (error) {
+    handleRequestError(error, "Failed to create buyer");
+  }
+};
+
+export const createVipBuyer = async (buyerData) => {
+  try {
+    const response = await api.post('/buyer/createVipBuyer', buyerData);
+    return response.data;
+  } catch (error) {
+    handleRequestError(error, "Failed to create VIP buyer");
+  }
+};
+
 export const updateBuyer = async (id, buyerData) => {
   try {
     const response = await api.put(`/buyer/update/${id}`, buyerData);
@@ -225,7 +182,6 @@ export const updateBuyer = async (id, buyerData) => {
   }
 };
 
-// Delete Buyer
 export const deleteBuyer = async (id) => {
   try {
     const response = await api.delete(`/buyer/delete/${id}`);
@@ -234,6 +190,45 @@ export const deleteBuyer = async (id) => {
     handleRequestError(error, "Failed to delete buyer");
   }
 };
+
+export const importBuyers = async (buyers, source = "CSV Import") => {
+  try {
+    const response = await api.post('/buyer/import', {
+      buyers,
+      source
+    });
+    return response.data;
+  } catch (error) {
+    handleRequestError(error, "Failed to import buyers");
+  }
+};
+
+export const getBuyerStats = async () => {
+  try {
+    const response = await api.get('/buyer/stats');
+    return response.data;
+  } catch (error) {
+    handleRequestError(error, "Failed to fetch buyer statistics");
+  }
+};
+
+export const sendEmailToBuyers = async (buyerIds, subject, content, includeUnsubscribed = false) => {
+  try {
+    const response = await api.post('/buyer/sendEmail', {
+      buyerIds,
+      subject,
+      content,
+      includeUnsubscribed
+    });
+    return response.data;
+  } catch (error) {
+    handleRequestError(error, "Failed to send emails to buyers");
+  }
+};
+
+// ============================================================================
+// BUYER ACTIVITY
+// ============================================================================
 
 /**
  * Record buyer activity events
@@ -249,13 +244,12 @@ export const recordBuyerActivity = async (events) => {
   }
 };
 
-
 /**
  * Get activity data for a specific buyer
  * @param {string} buyerId - Buyer ID
  * @param {Object} [options] - Query options
  * @param {number} [options.page=1] - Page number
- * @param {number} [options.limit=500] - Results per page (increased from 50)
+ * @param {number} [options.limit=500] - Results per page
  * @param {string} [options.type] - Filter by event type
  * @param {string} [options.startDate] - Filter by start date
  * @param {string} [options.endDate] - Filter by end date
@@ -266,7 +260,7 @@ export const getBuyerActivity = async (buyerId, options = {}) => {
   try {
     const queryParams = new URLSearchParams({
       page: options.page || 1,
-      limit: options.limit || 500, // Increased from 50
+      limit: options.limit || 500,
       ...(options.type && { type: options.type }),
       ...(options.startDate && { startDate: options.startDate }),
       ...(options.endDate && { endDate: options.endDate }),
@@ -316,8 +310,135 @@ export const deleteBuyerActivity = async (buyerId, options = {}) => {
   }
 };
 
-// Get all email lists
-export const getEmailLists = async () => {
+// ============================================================================
+// OFFERS
+// ============================================================================
+
+export const makeOffer = async (offerData) => {
+  try {
+    const response = await api.post('/offer/makeOffer', offerData);
+    return response.data;
+  } catch (error) {
+    handleRequestError(error, "Failed to make offer");
+  }
+};
+
+export const getOfferById = async (offerId) => {
+  try {
+    const response = await api.get(`/offer/${offerId}`);
+    return response.data;
+  } catch (error) {
+    handleRequestError(error, "Failed to fetch offer");
+  }
+};
+
+export const getOfferHistory = async (offerId) => {
+  try {
+    const response = await api.get(`/offer/${offerId}/history`);
+    return response.data;
+  } catch (error) {
+    handleRequestError(error, "Failed to fetch offer history");
+  }
+};
+
+export const getPropertyOffers = async (propertyId) => {
+  try {
+    const response = await api.get(`/offer/property/${propertyId}`);
+    return response.data;
+  } catch (error) {
+    handleRequestError(error, "Failed to fetch property offers");
+  }
+};
+
+export const getBuyerOffers = async (params) => {
+  try {
+    let endpoint;
+    
+    if (typeof params === 'string') {
+      endpoint = `/offer/buyer?buyerId=${params}`;
+    } else if (params && typeof params === 'object') {
+      if (params.buyerId) {
+        endpoint = `/offer/buyer?buyerId=${params.buyerId}`;
+      } else if (params.email) {
+        endpoint = `/offer/buyer?email=${encodeURIComponent(params.email)}`;
+      } else if (params.phone) {
+        endpoint = `/offer/buyer?phone=${encodeURIComponent(params.phone)}`;
+      } else if (params.auth0Id) {
+        endpoint = `/offer/buyer?auth0Id=${params.auth0Id}`;
+      } else {
+        console.error('Missing required parameter in getBuyerOffers:', params);
+        return { offers: [] };
+      }
+    } else {
+      console.error('Invalid parameters for getBuyerOffers:', params);
+      return { offers: [] };
+    }
+    
+    const response = await api.get(endpoint);
+    return response.data;
+  } catch (error) {
+    console.error("Error fetching buyer offers:", error);
+    return { 
+      offers: [],
+      buyer: null,
+      totalOffers: 0 
+    };
+  }
+};
+
+export const acceptOffer = async (offerId) => {
+  try {
+    const response = await api.put(`/offer/${offerId}/accept`);
+    return response.data;
+  } catch (error) {
+    handleRequestError(error, "Failed to accept offer");
+  }
+};
+
+export const rejectOffer = async (offerId, message = "") => {
+  try {
+    const response = await api.put(`/offer/${offerId}/reject`, { message });
+    return response.data;
+  } catch (error) {
+    handleRequestError(error, "Failed to reject offer");
+  }
+};
+
+export const counterOffer = async (offerId, counterPrice, message = "") => {
+  try {
+    const response = await api.put(`/offer/${offerId}/counter`, {
+      counterPrice,
+      message
+    });
+    return response.data;
+  } catch (error) {
+    handleRequestError(error, "Failed to counter offer");
+  }
+};
+
+export const acceptCounterOffer = async (offerId) => {
+  try {
+    const response = await api.put(`/offer/${offerId}/accept-counter`);
+    return response.data;
+  } catch (error) {
+    handleRequestError(error, "Failed to accept counter offer");
+  }
+};
+
+export const withdrawOffer = async (offerId) => {
+  try {
+    const response = await api.put(`/offer/${offerId}/withdraw`);
+    return response.data;
+  } catch (error) {
+    handleRequestError(error, "Failed to withdraw offer");
+  }
+};
+
+// ============================================================================
+// EMAIL LISTS
+// ============================================================================
+
+export const getAllEmailLists = async () => {
   try {
     const response = await api.get('/email-lists');
     return response.data;
@@ -326,7 +447,9 @@ export const getEmailLists = async () => {
   }
 };
 
-// Get a specific email list with its members
+// Alias for backward compatibility
+export const getEmailLists = getAllEmailLists;
+
 export const getEmailList = async (id) => {
   try {
     const response = await api.get(`/email-lists/${id}`);
@@ -336,7 +459,6 @@ export const getEmailList = async (id) => {
   }
 };
 
-// Create a new email list
 export const createEmailList = async (listData) => {
   try {
     const response = await api.post('/email-lists', listData);
@@ -346,7 +468,6 @@ export const createEmailList = async (listData) => {
   }
 };
 
-// Update a email list
 export const updateEmailList = async (id, listData) => {
   try {
     const response = await api.put(`/email-lists/${id}`, listData);
@@ -356,11 +477,10 @@ export const updateEmailList = async (id, listData) => {
   }
 };
 
-// Delete a email list
 export const deleteEmailList = async (id, deleteBuyers = false) => {
   try {
     const response = await api.delete(`/email-lists/${id}`, {
-      data: { deleteBuyers } // Send in request body
+      data: { deleteBuyers }
     });
     return response.data;
   } catch (error) {
@@ -368,7 +488,6 @@ export const deleteEmailList = async (id, deleteBuyers = false) => {
   }
 };
 
-// Add buyers to a list
 export const addBuyersToList = async (listId, buyerIds) => {
   try {
     const response = await api.post(`/email-lists/${listId}/add-buyers`, { buyerIds });
@@ -378,7 +497,6 @@ export const addBuyersToList = async (listId, buyerIds) => {
   }
 };
 
-// Remove buyers from a list
 export const removeBuyersFromList = async (listId, buyerIds) => {
   try {
     const response = await api.post(`/email-lists/${listId}/remove-buyers`, { buyerIds });
@@ -388,7 +506,6 @@ export const removeBuyersFromList = async (listId, buyerIds) => {
   }
 };
 
-// Send email to list members
 export const sendEmailToList = async (listId, emailData) => {
   try {
     const response = await api.post(`/email-lists/${listId}/send-email`, emailData);
@@ -398,8 +515,47 @@ export const sendEmailToList = async (listId, emailData) => {
   }
 };
 
+// ============================================================================
+// QUALIFICATIONS
+// ============================================================================
 
-// Create a new deal
+export const submitQualification = async (qualificationData) => {
+  try {
+    const response = await api.post('/qualification/create', qualificationData);
+    return response.data;
+  } catch (error) {
+    handleRequestError(error, "Failed to submit qualification");
+  }
+};
+
+export const getPropertyQualifications = async (propertyId) => {
+  try {
+    const response = await api.get(`/qualification/property/${propertyId}`);
+    return response.data;
+  } catch (error) {
+    handleRequestError(error, "Failed to fetch property qualifications");
+  }
+};
+
+export const getAllQualifications = async (page = 1, limit = 10, filters = {}) => {
+  try {
+    const queryParams = new URLSearchParams({
+      page,
+      limit,
+      ...filters
+    });
+    
+    const response = await api.get(`/qualification/all?${queryParams}`);
+    return response.data;
+  } catch (error) {
+    handleRequestError(error, "Failed to fetch qualifications");
+  }
+};
+
+// ============================================================================
+// DEALS
+// ============================================================================
+
 export const createDeal = async (dealData) => {
   try {
     console.log("Creating deal with data:", JSON.stringify(dealData, null, 2));
@@ -411,7 +567,6 @@ export const createDeal = async (dealData) => {
   }
 };
 
-// Get all deals
 export const getAllDeals = async (filters = {}) => {
   try {
     const queryParams = new URLSearchParams(filters);
@@ -422,7 +577,6 @@ export const getAllDeals = async (filters = {}) => {
   }
 };
 
-// Get deal by ID
 export const getDealById = async (id) => {
   try {
     const response = await api.get(`/deal/${id}`);
@@ -432,7 +586,6 @@ export const getDealById = async (id) => {
   }
 };
 
-// Update deal
 export const updateDeal = async (id, dealData) => {
   try {
     const response = await api.put(`/deal/update/${id}`, dealData);
@@ -442,7 +595,6 @@ export const updateDeal = async (id, dealData) => {
   }
 };
 
-// Record a payment
 export const recordPayment = async (paymentData) => {
   try {
     const response = await api.post('/deal/payment', paymentData);
@@ -452,7 +604,6 @@ export const recordPayment = async (paymentData) => {
   }
 };
 
-// Get deal financial summary
 export const getDealFinancialSummary = async (id) => {
   try {
     const response = await api.get(`/deal/${id}/summary`);
@@ -462,64 +613,66 @@ export const getDealFinancialSummary = async (id) => {
   }
 };
 
-// Create a custom hook for authenticated user profile operations
-export function useUserProfileApi() {
-  const { getAccessTokenSilently } = useAuth0();
-  
-  // Get user profile - with auth token
-  const getUserProfile = useCallback(async () => {
-    try {
-      // Get the Auth0 token first
-      const token = await getAccessTokenSilently();
-      
-      // Make the API request with the token in the Authorization header
-      const response = await api.get('/user/profile', {
-        headers: {
-          Authorization: `Bearer ${token}`
-        }
-      });
-      
-      return response.data;
-    } catch (error) {
-      console.error("Error fetching user profile:", error);
-      if (error.response?.status === 401) {
-        // Token might be expired or invalid
-        console.log("Authentication error: Your session may have expired");
-      }
-      throw error;
-    }
-  }, [getAccessTokenSilently]);
-  
-  // Update user profile - with auth token
-  const updateUserProfile = useCallback(async (profileData) => {
-    try {
-      // Get the Auth0 token first
-      const token = await getAccessTokenSilently();
-      
-      // Make the API request with the token in the Authorization header
-      const response = await api.put('/user/profile', profileData, {
-        headers: {
-          Authorization: `Bearer ${token}`
-        }
-      });
-      
-      return response.data;
-    } catch (error) {
-      console.error("Error updating user profile:", error);
-      if (error.response?.status === 401) {
-        // Token might be expired or invalid
-        console.log("Authentication error: Your session may have expired");
-      }
-      throw error;
-    }
-  }, [getAccessTokenSilently]);
-  
-  // Return the functions
-  return {
-    getUserProfile,
-    updateUserProfile
-  };
-}
+// ============================================================================
+// USERS
+// ============================================================================
+
+export const getAllUsers = async () => {
+  try {
+    const response = await api.get('/user/all');
+    return response.data;
+  } catch (error) {
+    handleRequestError(error, "Failed to fetch users");
+  }
+};
+
+// Alias for backward compatibility
+export const getAllUserAccounts = getAllUsers;
+
+export const getUserById = async (id) => {
+  try {
+    const response = await api.get(`/user/${id}`);
+    return response.data;
+  } catch (error) {
+    handleRequestError(error, "Failed to fetch user");
+  }
+};
+
+// Alias for backward compatibility
+export const getUserAccountById = getUserById;
+
+export const updateUser = async (id, userData) => {
+  try {
+    const response = await api.put(`/user/update/${id}`, userData);
+    return response.data;
+  } catch (error) {
+    handleRequestError(error, "Failed to update user");
+  }
+};
+
+export const deleteUser = async (id) => {
+  try {
+    const response = await api.delete(`/user/delete/${id}`);
+    return response.data;
+  } catch (error) {
+    handleRequestError(error, "Failed to delete user");
+  }
+};
+
+/**
+ * Update user status (enable/disable)
+ * @param {string} id - User ID
+ * @param {boolean} isActive - Active status
+ * @returns {Promise<Object>} Updated user
+ */
+export const updateUserStatus = async (id, isActive) => {
+  try {
+    const response = await api.put(`/user/${id}/status`, { isActive });
+    return response.data;
+  } catch (error) {
+    handleRequestError(error, "Failed to update user status");
+  }
+};
 
 /**
  * Check if user exists in database by Auth0 ID
@@ -532,7 +685,7 @@ export const checkUserExists = async (auth0Id) => {
     return response.data;
   } catch (error) {
     if (error.response && error.response.status === 404) {
-      return null; // User not found
+      return null;
     }
     handleRequestError(error, "Failed to check if user exists");
   }
@@ -552,30 +705,152 @@ export const syncAuth0User = async (userData) => {
   }
 };
 
+// ============================================================================
+// USER PROFILE (with Auth0 token)
+// ============================================================================
+
 /**
- * Get all users (admin only)
- * @returns {Promise<Array>} List of users
+ * Custom hook for authenticated user profile operations
+ * Uses Auth0 token for authentication
  */
-export const getAllUserAccounts = async () => {
+export function useUserProfileApi() {
+  const { getAccessTokenSilently } = useAuth0();
+  
+  const getUserProfile = useCallback(async () => {
+    try {
+      const token = await getAccessTokenSilently();
+      const response = await api.get('/user/profile', {
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
+      });
+      return response.data;
+    } catch (error) {
+      console.error("Error fetching user profile:", error);
+      if (error.response?.status === 401) {
+        console.log("Authentication error: Your session may have expired");
+      }
+      throw error;
+    }
+  }, [getAccessTokenSilently]);
+  
+  const updateUserProfile = useCallback(async (profileData) => {
+    try {
+      const token = await getAccessTokenSilently();
+      const response = await api.put('/user/profile', profileData, {
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
+      });
+      return response.data;
+    } catch (error) {
+      console.error("Error updating user profile:", error);
+      if (error.response?.status === 401) {
+        console.log("Authentication error: Your session may have expired");
+      }
+      throw error;
+    }
+  }, [getAccessTokenSilently]);
+  
+  return {
+    getUserProfile,
+    updateUserProfile
+  };
+}
+
+// ============================================================================
+// SETTINGS
+// ============================================================================
+
+export const getSystemSettings = async () => {
   try {
-    const response = await api.get('/user/all');
+    const response = await api.get('/settings');
     return response.data;
   } catch (error) {
-    handleRequestError(error, "Failed to fetch user accounts");
+    console.error("Error fetching system settings:", error);
+    return null;
+  }
+};
+
+export const updateSystemSettings = async (settingsData) => {
+  try {
+    const response = await api.put('/settings', settingsData);
+    return response.data;
+  } catch (error) {
+    handleRequestError(error, "Failed to update system settings");
+  }
+};
+
+export const testSmtpConnection = async (smtpData) => {
+  try {
+    const response = await api.post('/settings/test-smtp', smtpData);
+    return response.data;
+  } catch (error) {
+    console.error("SMTP test failed:", error.response?.data || error);
+    throw error;
+  }
+};
+
+// ============================================================================
+// VISITORS
+// ============================================================================
+
+export const getVisitorStats = async (options = {}) => {
+  try {
+    const queryParams = new URLSearchParams({
+      period: options.period || 'week',
+      ...(options.startDate && { startDate: options.startDate }),
+      ...(options.endDate && { endDate: options.endDate })
+    });
+    
+    const response = await api.get(`/visitors/stats?${queryParams}`);
+    return response.data;
+  } catch (error) {
+    console.error("Error fetching visitor statistics:", error);
+    return {
+      dailyStats: [],
+      currentPeriod: { uniqueVisitors: 0, totalVisits: 0, newVisitors: 0, returningVisitors: 0 },
+      previousPeriod: { uniqueVisitors: 0, totalVisits: 0, newVisitors: 0, returningVisitors: 0 },
+      topPages: [],
+      deviceBreakdown: []
+    };
+  }
+};
+
+export const getVisitorActivity = async (options = {}) => {
+  try {
+    const queryParams = new URLSearchParams(options);
+    const response = await api.get(`/visitors/activity?${queryParams}`);
+    return response.data;
+  } catch (error) {
+    handleRequestError(error, "Failed to fetch visitor activity");
   }
 };
 
 /**
- * Get user by ID (admin only)
- * @param {string} id - User ID
- * @returns {Promise<Object>} User data
+ * Get current active visitor count
+ * @returns {Promise<Object>} Current visitor count
  */
-export const getUserAccountById = async (id) => {
+export const getCurrentVisitorCount = async () => {
   try {
-    const response = await api.get(`/user/${id}`);
+    const response = await api.get('/visitors/current');
     return response.data;
   } catch (error) {
-    handleRequestError(error, "Failed to fetch user account");
+    console.error("Error fetching current visitor count:", error);
+    return { currentVisitors: 0 };
+  }
+};
+
+// ============================================================================
+// PROPERTY ROWS
+// ============================================================================
+
+export const getAllPropertyRows = async () => {
+  try {
+    const response = await api.get('/property-rows');
+    return response.data;
+  } catch (error) {
+    handleRequestError(error, "Failed to fetch property rows");
   }
 };
 
@@ -624,150 +899,29 @@ export const getFeaturedPropertiesRow = async () => {
   }
 };
 
-// Update user status (enable/disable)
-export const updateUserStatus = async (id, isActive) => {
+export const createPropertyRow = async (rowData) => {
   try {
-    const response = await api.put(`/user/${id}/status`, { isActive });
+    const response = await api.post('/property-rows', rowData);
     return response.data;
   } catch (error) {
-    handleRequestError(error, "Failed to update user status");
+    handleRequestError(error, "Failed to create property row");
   }
 };
 
-// Update updateUserProfile to handle new fields
-export const updateUserProfileWithFields = async (profileData) => {
+export const updatePropertyRow = async (id, rowData) => {
   try {
-    const token = await getAccessTokenSilently();
-    const response = await api.put('/user/profile', profileData, {
-      headers: {
-        Authorization: `Bearer ${token}`
-      }
-    });
+    const response = await api.put(`/property-rows/${id}`, rowData);
     return response.data;
   } catch (error) {
-    console.error("Error updating user profile:", error);
-    throw error;
+    handleRequestError(error, "Failed to update property row");
   }
 };
 
-
-// client/src/utils/api.js - Add/Update functions for email settings
-
-/**
- * Get system settings
- * @returns {Promise<Object>} Settings object
- */
-export const getSystemSettings = async () => {
+export const deletePropertyRow = async (id) => {
   try {
-    const response = await api.get('/settings');
+    const response = await api.delete(`/property-rows/${id}`);
     return response.data;
   } catch (error) {
-    console.error("Error fetching system settings:", error);
-    return null;
-  }
-};
-
-/**
- * Update system settings
- * @param {Object} settingsData - Settings data to update
- * @returns {Promise<Object>} Updated settings
- */
-export const updateSystemSettings = async (settingsData) => {
-  try {
-    const response = await api.put('/settings', settingsData);
-    return response.data;
-  } catch (error) {
-    handleRequestError(error, "Failed to update system settings");
-  }
-};
-
-/**
- * Test SMTP connection
- * @param {Object} smtpData - SMTP connection details and test recipient
- * @returns {Promise<Object>} Response with success/failure message
- */
-export const testSmtpConnection = async (smtpData) => {
-  try {
-    const response = await api.post('/settings/test-smtp', smtpData);
-    return response.data;
-  } catch (error) {
-    console.error("SMTP test failed:", error.response?.data || error);
-    throw error; // Rethrow to handle in the component
-  }
-};
-
-/**
- * Get visitor statistics for dashboard
- * @param {Object} options - Query options
- * @returns {Promise<Object>} Visitor statistics
- */
-export const getVisitorStats = async (options = {}) => {
-  try {
-    const queryParams = new URLSearchParams({
-      period: options.period || 'week',
-      ...(options.startDate && { startDate: options.startDate }),
-      ...(options.endDate && { endDate: options.endDate })
-    });
-    
-    const response = await api.get(`/visitors/stats?${queryParams}`);
-    return response.data;
-  } catch (error) {
-    console.error("Error fetching visitor statistics:", error);
-    return {
-      dailyStats: [],
-      currentPeriod: { uniqueVisitors: 0, totalVisits: 0, newVisitors: 0, returningVisitors: 0 },
-      previousPeriod: { uniqueVisitors: 0, totalVisits: 0, newVisitors: 0, returningVisitors: 0 },
-      topPages: [],
-      deviceBreakdown: []
-    };
-  }
-};
-
-/**
- * Get current active visitor count
- * @returns {Promise<Object>} Current visitor count
- */
-export const getCurrentVisitorCount = async () => {
-  try {
-    const response = await api.get('/visitors/current');
-    return response.data;
-  } catch (error) {
-    console.error("Error fetching current visitor count:", error);
-    return { currentVisitors: 0 };
-  }
-};
-
-
-/**
- * Request property deletion (existing function - for users without delete permissions)
- * @param {string} propertyId - Property ID
- * @param {string} reason - Reason for deletion
- * @returns {Promise<Object>} Response data
- */
-export const requestPropertyDeletion = async (propertyId, reason) => {
-  try {
-    const response = await api.post(`/residency/request-deletion/${propertyId}`, {
-      reason
-    });
-    return response.data;
-  } catch (error) {
-    handleRequestError(error, "Failed to request property deletion");
-  }
-};
-
-/**
- * Direct property deletion
- * @param {string} propertyId - Property ID
- * @param {string} reason - Reason for deletion
- * @returns {Promise<Object>} Response data
- */
-export const deletePropertyDirect = async (propertyId, reason) => {
-  try {
-    const response = await api.delete(`/residency/delete/${propertyId}`, {
-      data: { reason }
-    });
-    return response.data;
-  } catch (error) {
-    handleRequestError(error, "Failed to delete property");
+    handleRequestError(error, "Failed to delete property row");
   }
 };
