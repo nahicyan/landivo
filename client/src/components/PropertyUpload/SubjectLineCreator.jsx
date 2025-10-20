@@ -66,7 +66,7 @@ export default function SubjectLineCreator({
   useEffect(() => {
     const fetchTemplates = async () => {
       try {
-        const response = await axios.get("https://api.mailivo.landivo.com/subject-templates");
+        const response = await getSubjectTemplates();
         if (response.data.success) {
           const enabled = response.data.templates.filter(t => t.isEnabled);
           setTemplates(enabled);

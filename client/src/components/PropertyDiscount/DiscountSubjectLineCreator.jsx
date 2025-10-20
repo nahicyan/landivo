@@ -70,7 +70,7 @@ export default function DiscountSubjectLineCreator({ propertyId, onSubjectChange
   useEffect(() => {
     const fetchTemplates = async () => {
       try {
-        const response = await axios.get("https://api.mailivo.landivo.com/subject-templates");
+        const response = await getSubjectTemplates();
         if (response.data.success) {
           const enabled = response.data.templates.filter((t) => t.isEnabled);
           setTemplates(enabled);
@@ -95,7 +95,7 @@ export default function DiscountSubjectLineCreator({ propertyId, onSubjectChange
 
       try {
         setLoadingCampaigns(true);
-        const response = await axios.get(`https://api.mailivo.landivo.com/campaigns/subjects/${propertyId}`);
+        const response = await getPastCampaignSubjects(propertyId);
 
         if (response.data.success && response.data.subjects) {
           setPastCampaigns(response.data.subjects);

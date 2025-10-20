@@ -199,5 +199,7 @@ export {
 
 export {
   sendPropertyUploadCampaign,
-  sendPropertyDiscountCampaign
+  sendPropertyDiscountCampaign,
+  getSubjectTemplates,
+  getPastCampaignSubjects
 } from './api/campaigns';
