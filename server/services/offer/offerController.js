@@ -1,29 +1,9 @@
 // server/services/offer/offerController.js
 import asyncHandler from "express-async-handler";
 import { prisma } from "../../config/prismaConfig.js";
-import {
-  validateOfferInput,
-  findOrCreateBuyer,
-  checkExistingOffer,
-  updateExistingOffer,
-  createNewOffer,
-  checkOfferBelowMinimum,
-} from "./offerService.js";
-import {
-  sendOfferNotification,
-  newOfferTemplate,
-  updatedOfferTemplate,
-  lowOfferTemplate,
-  generateOfferSubject,
-} from "./offerEmailService.js";
-import {
-  sendBuyerOfferNotification,
-  acceptedOfferTemplate,
-  rejectedOfferTemplate,
-  counterOfferTemplate,
-  expiredOfferTemplate,
-  generateBuyerOfferSubject,
-} from "./offerBuyerEmailService.js";
+import { validateOfferInput, findOrCreateBuyer, checkExistingOffer, updateExistingOffer, createNewOffer, checkOfferBelowMinimum } from "./offerService.js";
+import { sendOfferNotification, newOfferTemplate, updatedOfferTemplate, lowOfferTemplate, generateOfferSubject } from "./offerEmailService.js";
+import { sendBuyerOfferNotification, acceptedOfferTemplate, rejectedOfferTemplate, counterOfferTemplate, expiredOfferTemplate, generateBuyerOfferSubject } from "./offerBuyerEmailService.js";
 // Add this import
 import { handleOfferEmailList } from "./offerEmailListService.js";
 
@@ -32,6 +12,7 @@ import { handleOfferEmailList } from "./offerEmailListService.js";
  * @route POST /api/offer/makeOffer
  * @access Public
  */
+// server/services/offer/offerController.js
 export const makeOffer = asyncHandler(async (req, res) => {
   try {
     // 1. Validate input
@@ -40,21 +21,9 @@ export const makeOffer = asyncHandler(async (req, res) => {
       return res.status(400).json({ message: validation.message });
     }
 
-    const {
-      email,
-      phone,
-      buyerType,
-      propertyId,
-      offeredPrice,
-      firstName,
-      lastName,
-      auth0Id,
-      buyerMessage,
-    } = req.body;
+    const { email, phone, buyerType, propertyId, offeredPrice, firstName, lastName, auth0Id, buyerMessage } = req.body;
 
-    console.log(
-      `Received offer: propertyId: ${propertyId}, price: ${offeredPrice}, email: ${email}, auth0Id: ${auth0Id || "not provided"}`
-    );
+    console.log(`Received offer: propertyId: ${propertyId}, price: ${offeredPrice}, email: ${email}, auth0Id: ${auth0Id || "not provided"}`);
 
     // 2. Find or create buyer
     const buyer = await findOrCreateBuyer({
@@ -75,22 +44,12 @@ export const makeOffer = asyncHandler(async (req, res) => {
     }
 
     // 4. Check if the buyer already made an offer on the same property
-    const existingOfferCheck = await checkExistingOffer(
-      buyer.id,
-      propertyId,
-      offeredPrice
-    );
+    const existingOfferCheck = await checkExistingOffer(buyer.id, propertyId, offeredPrice);
 
     if (existingOfferCheck.exists) {
       if (existingOfferCheck.canUpdate) {
         // Update the existing offer with the higher price and add to history
-        const updatedOffer = await updateExistingOffer(
-          existingOfferCheck.offer.id,
-          offeredPrice,
-          buyerMessage,
-          req.userId || null,
-          req.user?.name || null
-        );
+        const updatedOffer = await updateExistingOffer(existingOfferCheck.offer.id, offeredPrice, buyerMessage, req.userId || null, req.user?.name || null);
 
         // Handle email list management for updated offers
         try {
@@ -100,49 +59,55 @@ export const makeOffer = asyncHandler(async (req, res) => {
           // Don't fail the offer update if email list fails
         }
 
-        // Send response first
+        // Check if the updated offer is below the minimum price
+        const isBelowMinimum = checkOfferBelowMinimum(offeredPrice, property);
+
+        if (isBelowMinimum) {
+          // Send response first with a low offer warning
+          res.status(200).json({
+            message: `Your offer has been updated, but it is below the minimum price of $${property.minPrice.toLocaleString()}. Consider offering a higher price.`,
+            offer: updatedOffer,
+          });
+
+          // Send low offer notification in the background
+          await sendOfferNotification(generateOfferSubject("low_offer", buyer, property), lowOfferTemplate(property, buyer, offeredPrice, buyerMessage, updatedOffer.id));
+          return;
+        }
+
+        // Send response for valid updated offer
         res.status(200).json({
           message: "Your previous offer was updated to the new higher price.",
           offer: updatedOffer,
         });
 
         // Send notification email in the background
-        await sendOfferNotification(
-          generateOfferSubject("updated", buyer, property),
-          updatedOfferTemplate(
-            property,
-            buyer,
-            offeredPrice,
-            buyerMessage,
-            updatedOffer.id
-          )
-        );
+        await sendOfferNotification(generateOfferSubject("updated", buyer, property), updatedOfferTemplate(property, buyer, offeredPrice, buyerMessage, updatedOffer.id));
         return;
       } else {
+        // Offer is same or lower - just show warning, don't update
+        // Check if it's below minimum to provide appropriate message
+        const isBelowMinimum = checkOfferBelowMinimum(offeredPrice, property);
+
+        if (isBelowMinimum) {
+          return res.status(400).json({
+            message: `At this time we cannot accept any offers below $${property.minPrice.toLocaleString()}. You previously offered $${existingOfferCheck.offer.offeredPrice.toLocaleString()}. Consider offering a higher price.`,
+            existingOffer: existingOfferCheck.offer,
+          });
+        }
+
         return res.status(400).json({
-          message: `You have already made an offer of $${existingOfferCheck.offer.offeredPrice}. Offer a higher price to update.`,
+          message: `You have already made an offer of $${existingOfferCheck.offer.offeredPrice.toLocaleString()}. Offer a higher price to update.`,
           existingOffer: existingOfferCheck.offer,
         });
       }
     }
 
     // 5. Create a new offer with initial history
-    const newOffer = await createNewOffer(
-      propertyId,
-      offeredPrice,
-      buyer.id,
-      buyerMessage,
-      req.userId || null,
-      req.user?.name || null
-    );
+    const newOffer = await createNewOffer(propertyId, offeredPrice, buyer.id, buyerMessage, req.userId || null, req.user?.name || null);
 
     // 6. Handle email list management for new offers
     try {
-      const emailListResult = await handleOfferEmailList(
-        buyer,
-        property,
-        "Offer"
-      );
+      const emailListResult = await handleOfferEmailList(buyer, property, "Offer");
       console.log("Email list management result:", emailListResult);
     } catch (emailListError) {
       console.error("Email list management failed:", emailListError);
@@ -155,21 +120,12 @@ export const makeOffer = asyncHandler(async (req, res) => {
     if (isBelowMinimum) {
       // Send response first with a low offer warning
       res.status(201).json({
-        message: `Offer submitted successfully, but it is below the minimum price of $${property.minPrice}. Consider offering a higher price.`,
+        message: `Offer submitted successfully, but it is below the minimum price of $${property.minPrice.toLocaleString()}. Consider offering a higher price.`,
         offer: newOffer,
       });
 
       // Send low offer notification in the background
-      await sendOfferNotification(
-        generateOfferSubject("low_offer", buyer, property),
-        lowOfferTemplate(
-          property,
-          buyer,
-          offeredPrice,
-          buyerMessage,
-          newOffer.id
-        )
-      );
+      await sendOfferNotification(generateOfferSubject("low_offer", buyer, property), lowOfferTemplate(property, buyer, offeredPrice, buyerMessage, newOffer.id));
       return;
     }
 
@@ -180,10 +136,7 @@ export const makeOffer = asyncHandler(async (req, res) => {
     });
 
     // 9. Send new offer notification in the background
-    await sendOfferNotification(
-      generateOfferSubject("submitted", buyer, property),
-      newOfferTemplate(property, buyer, offeredPrice, buyerMessage, newOffer.id)
-    );
+    await sendOfferNotification(generateOfferSubject("submitted", buyer, property), newOfferTemplate(property, buyer, offeredPrice, buyerMessage, newOffer.id));
   } catch (err) {
     console.error(err);
     res.status(500).json({
@@ -322,17 +275,12 @@ export const updateOfferStatus = asyncHandler(async (req, res) => {
   const { status, counteredPrice, message } = req.body;
 
   // Validate input
-  if (
-    !status ||
-    !["ACCEPTED", "REJECTED", "COUNTERED", "EXPIRED"].includes(status)
-  ) {
+  if (!status || !["ACCEPTED", "REJECTED", "COUNTERED", "EXPIRED"].includes(status)) {
     return res.status(400).json({ message: "Invalid status provided" });
   }
 
   if (status === "COUNTERED" && !counteredPrice) {
-    return res
-      .status(400)
-      .json({ message: "Counter price is required for COUNTERED status" });
+    return res.status(400).json({ message: "Counter price is required for COUNTERED status" });
   }
 
   try {
@@ -369,8 +317,7 @@ export const updateOfferStatus = asyncHandler(async (req, res) => {
       previousStatus: existingOffer.offerStatus,
       newStatus: status, // Changed from 'status' to 'newStatus'
       previousPrice: existingOffer.offeredPrice, // Added previousPrice
-      counteredPrice:
-        status === "COUNTERED" ? parseFloat(counteredPrice) : null,
+      counteredPrice: status === "COUNTERED" ? parseFloat(counteredPrice) : null,
       sysMessage: updatedSysMessage,
       updatedById: req.userId || null,
       updatedByName: req.user?.name || "Admin",
@@ -384,8 +331,7 @@ export const updateOfferStatus = asyncHandler(async (req, res) => {
       where: { id },
       data: {
         offerStatus: status,
-        counteredPrice:
-          status === "COUNTERED" ? parseFloat(counteredPrice) : null,
+        counteredPrice: status === "COUNTERED" ? parseFloat(counteredPrice) : null,
         sysMessage: updatedSysMessage,
         //buyerMessage: null,
         offerHistory: [...existingHistory, historyEntry],
@@ -406,67 +352,30 @@ export const updateOfferStatus = asyncHandler(async (req, res) => {
 
         switch (status) {
           case "ACCEPTED":
-            emailSubject = generateBuyerOfferSubject(
-              "accepted",
-              existingOffer.property
-            );
-            emailTemplate = acceptedOfferTemplate(
-              existingOffer.property,
-              existingOffer.buyer,
-              existingOffer,
-              updatedSysMessage
-            );
+            emailSubject = generateBuyerOfferSubject("accepted", existingOffer.property);
+            emailTemplate = acceptedOfferTemplate(existingOffer.property, existingOffer.buyer, existingOffer, updatedSysMessage);
 
             break;
 
           case "REJECTED":
-            emailSubject = generateBuyerOfferSubject(
-              "rejected",
-              existingOffer.property
-            );
-            emailTemplate = rejectedOfferTemplate(
-              existingOffer.property,
-              existingOffer.buyer,
-              existingOffer,
-              updatedSysMessage
-            );
+            emailSubject = generateBuyerOfferSubject("rejected", existingOffer.property);
+            emailTemplate = rejectedOfferTemplate(existingOffer.property, existingOffer.buyer, existingOffer, updatedSysMessage);
             break;
 
           case "COUNTERED":
-            emailSubject = generateBuyerOfferSubject(
-              "countered",
-              existingOffer.property
-            );
-            emailTemplate = counterOfferTemplate(
-              existingOffer.property,
-              existingOffer.buyer,
-              existingOffer,
-              parseFloat(counteredPrice),
-              updatedSysMessage
-            );
+            emailSubject = generateBuyerOfferSubject("countered", existingOffer.property);
+            emailTemplate = counterOfferTemplate(existingOffer.property, existingOffer.buyer, existingOffer, parseFloat(counteredPrice), updatedSysMessage);
             break;
 
           case "EXPIRED":
-            emailSubject = generateBuyerOfferSubject(
-              "expired",
-              existingOffer.property
-            );
-            emailTemplate = expiredOfferTemplate(
-              existingOffer.property,
-              existingOffer.buyer,
-              existingOffer,
-              updatedSysMessage
-            );
+            emailSubject = generateBuyerOfferSubject("expired", existingOffer.property);
+            emailTemplate = expiredOfferTemplate(existingOffer.property, existingOffer.buyer, existingOffer, updatedSysMessage);
             break;
         }
 
         // Send buyer notification if we have both subject and template
         if (emailSubject && emailTemplate) {
-          await sendBuyerOfferNotification(
-            existingOffer.buyer,
-            emailSubject,
-            emailTemplate
-          );
+          await sendBuyerOfferNotification(existingOffer.buyer, emailSubject, emailTemplate);
         }
       } catch (emailError) {
         console.error("Failed to send buyer notification:", emailError);
