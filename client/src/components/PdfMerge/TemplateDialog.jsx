@@ -61,7 +61,7 @@ export default function TemplateDialog({ open, onOpenChange, onTemplateCreated }
       formData.append("template", file);
 
       const response = await fetch(
-        `${import.meta.env.VITE_SERVER_URL}/api/pdf-merge/templates`,
+        `${import.meta.env.VITE_SERVER_URL}/pdf-merge/templates`,
         {
           method: "POST",
           body: formData,
