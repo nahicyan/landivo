@@ -1,13 +1,7 @@
 // MailMerge.jsx
 import React, { useState, useEffect, useRef } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { 
-  getPdfMergeTemplates, 
-  deletePdfMergeTemplate,
-  analyzePdfMergeFiles,
-  generateMergedPdf,
-  getPdfMergeProgress 
-} from "@/utils/api";
+import { getPdfMergeTemplates, deletePdfMergeTemplate, analyzePdfMergeFiles, generateMergedPdf, getPdfMergeProgress } from "@/utils/api";
 import TemplateSelector from "@/components/MailMerge/TemplateSelector";
 import DataFileUploader from "@/components/MailMerge/DataFileUploader";
 import AdvancedOptions from "@/components/MailMerge/AdvancedOptions";
@@ -149,12 +143,9 @@ export default function MailMerge() {
       formData.append("csv", csvFile);
 
       // Pass analyzer hints
-      if (advancedOptions.sheetName.trim())
-        formData.append("sheetName", advancedOptions.sheetName.trim());
-      if (String(advancedOptions.sheetIndex).trim() !== "")
-        formData.append("sheetIndex", String(Number(advancedOptions.sheetIndex)));
-      if (advancedOptions.encoding.trim())
-        formData.append("encoding", advancedOptions.encoding.trim());
+      if (advancedOptions.sheetName.trim()) formData.append("sheetName", advancedOptions.sheetName.trim());
+      if (String(advancedOptions.sheetIndex).trim() !== "") formData.append("sheetIndex", String(Number(advancedOptions.sheetIndex)));
+      if (advancedOptions.encoding.trim()) formData.append("encoding", advancedOptions.encoding.trim());
 
       const response = await analyzePdfMergeFiles(formData);
 
@@ -225,26 +216,14 @@ export default function MailMerge() {
       formData.append("progressId", id);
 
       // Advanced options
-      if (advancedOptions.sheetName.trim())
-        formData.append("sheetName", advancedOptions.sheetName.trim());
-      if (String(advancedOptions.sheetIndex).trim() !== "")
-        formData.append("sheetIndex", String(Number(advancedOptions.sheetIndex)));
-      if (advancedOptions.encoding.trim())
-        formData.append("encoding", advancedOptions.encoding.trim());
+      if (advancedOptions.sheetName.trim()) formData.append("sheetName", advancedOptions.sheetName.trim());
+      if (String(advancedOptions.sheetIndex).trim() !== "") formData.append("sheetIndex", String(Number(advancedOptions.sheetIndex)));
+      if (advancedOptions.encoding.trim()) formData.append("encoding", advancedOptions.encoding.trim());
 
       // Performance knobs
-      formData.append(
-        "chunkSize",
-        String(Math.max(1, Number(advancedOptions.chunkSize) || 200))
-      );
-      formData.append(
-        "genWorkers",
-        String(Math.max(1, Number(advancedOptions.genWorkers) || 2))
-      );
-      formData.append(
-        "convWorkers",
-        String(Math.max(1, Number(advancedOptions.convWorkers) || 2))
-      );
+      formData.append("chunkSize", String(Math.max(1, Number(advancedOptions.chunkSize) || 200)));
+      formData.append("genWorkers", String(Math.max(1, Number(advancedOptions.genWorkers) || 2)));
+      formData.append("convWorkers", String(Math.max(1, Number(advancedOptions.convWorkers) || 2)));
 
       const response = await generateMergedPdf(formData);
 
@@ -317,80 +296,57 @@ export default function MailMerge() {
 
   return (
     <>
-      <div className="flex items-center justify-center min-h-screen bg-gray-100 p-4">
-        <Card className="w-full max-w-2xl">
-          <CardHeader>
-            <CardTitle className="text-3xl font-bold text-gray-800">
-              DOCX Mail Merge Engine
-            </CardTitle>
-            <CardDescription>
-              Select a stored template and upload CSV/Excel data to generate a merged PDF
-            </CardDescription>
-          </CardHeader>
+      <div className="w-full bg-white">
+        <div className="max-w-screen-xl mx-auto px-4 py-6">
+          <Card className="border-0 shadow-none">
+            <CardHeader>
+              <CardTitle className="text-2xl font-bold text-[#324c48]">DOCX Mail Merge Engine</CardTitle>
+              <CardDescription>Select a stored template and upload CSV/Excel data to generate a merged PDF</CardDescription>
+            </CardHeader>
 
-          <CardContent className="space-y-6">
-            {/* Template Selection */}
-            <TemplateSelector
-              templates={templates}
-              selectedTemplateId={selectedTemplateId}
-              setSelectedTemplateId={setSelectedTemplateId}
-              loadingTemplates={loadingTemplates}
-              isGenerating={isGenerating}
-              isAnalyzing={isAnalyzing}
-              onRefresh={fetchTemplates}
-              onCreateTemplate={() => setShowTemplateDialog(true)}
-              onDeleteTemplate={handleDeleteTemplate}
-            />
+            <CardContent className="space-y-6">
+              {/* Template Selection */}
+              <TemplateSelector
+                templates={templates}
+                selectedTemplateId={selectedTemplateId}
+                setSelectedTemplateId={setSelectedTemplateId}
+                loadingTemplates={loadingTemplates}
+                isGenerating={isGenerating}
+                isAnalyzing={isAnalyzing}
+                onRefresh={fetchTemplates}
+                onCreateTemplate={() => setShowTemplateDialog(true)}
+                onDeleteTemplate={handleDeleteTemplate}
+              />
 
-            {/* CSV/XLSX Upload */}
-            <DataFileUploader
-              csvFile={csvFile}
-              onFileChange={handleCsvChange}
-              onRemoveFile={() => setCsvFile(null)}
-              isGenerating={isGenerating}
-              isAnalyzing={isAnalyzing}
-            />
+              {/* CSV/XLSX Upload */}
+              <DataFileUploader csvFile={csvFile} onFileChange={handleCsvChange} onRemoveFile={() => setCsvFile(null)} isGenerating={isGenerating} isAnalyzing={isAnalyzing} />
 
-            {/* Advanced Options */}
-            <AdvancedOptions
-              options={advancedOptions}
-              setOptions={setAdvancedOptions}
-              isAnalyzing={isAnalyzing}
-              isGenerating={isGenerating}
-            />
+              {/* Advanced Options */}
+              <AdvancedOptions options={advancedOptions} setOptions={setAdvancedOptions} isAnalyzing={isAnalyzing} isGenerating={isGenerating} />
 
-            {/* Progress Bar */}
-            <ProgressDisplay
-              isGenerating={isGenerating}
-              isAnalyzing={isAnalyzing}
-              progress={progress}
-              processedRows={processedRows}
-              totalRows={totalRows}
-            />
+              {/* Progress Bar */}
+              <ProgressDisplay isGenerating={isGenerating} isAnalyzing={isAnalyzing} progress={progress} processedRows={processedRows} totalRows={totalRows} />
 
-            {/* Result Display (Errors, Notes, Success) */}
-            <ResultDisplay
-              error={error}
-              analyzeNotes={analyzeNotes}
-              result={result}
-            />
+              {/* Result Display (Errors, Notes, Success) */}
+              <ResultDisplay error={error} analyzeNotes={analyzeNotes} result={result} />
 
-            {/* Action Buttons */}
-            <ActionButtons
-              selectedTemplateId={selectedTemplateId}
-              csvFile={csvFile}
-              isGenerating={isGenerating}
-              isAnalyzing={isAnalyzing}
-              result={result}
-              onAnalyze={handleAnalyzeFiles}
-              onDownload={handleDownload}
-              onReset={handleReset}
-            />
+              {/* Action Buttons */}
+              <ActionButtons
+                selectedTemplateId={selectedTemplateId}
+                csvFile={csvFile}
+                isGenerating={isGenerating}
+                isAnalyzing={isAnalyzing}
+                result={result}
+                onAnalyze={handleAnalyzeFiles}
+                onDownload={handleDownload}
+                onReset={handleReset}
+              />
 
-            {/* Instructions */}
-            <Instructions />
-          </CardContent>
-        </Card>
+              {/* Instructions */}
+              <Instructions />
+            </CardContent>
+          </Card>
+        </div>
       </div>
 
       {/* Variable Mapping Dialog */}
