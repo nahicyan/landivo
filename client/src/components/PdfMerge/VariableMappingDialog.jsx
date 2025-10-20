@@ -119,7 +119,17 @@ export default function VariableMappingDialog({ open, onOpenChange, templateVari
     const backendMapping = {};
     Object.keys(mapping).forEach((variable) => {
       if (mapping[variable] && mapping[variable].value) {
-        backendMapping[variable] = mapping[variable];
+        const mapConfig = mapping[variable];
+
+        // Convert date type to custom with formatted string
+        if (mapConfig.type === "date") {
+          backendMapping[variable] = {
+            type: "custom",
+            value: format(new Date(mapConfig.value), "MM/dd/yyyy"),
+          };
+        } else {
+          backendMapping[variable] = mapConfig;
+        }
       }
     });
     onConfirmMapping(backendMapping);
