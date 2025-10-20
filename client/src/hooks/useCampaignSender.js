@@ -1,6 +1,6 @@
 // client/src/hooks/useCampaignSender.js
 import { useState } from "react";
-import axios from "axios";
+import { sendPropertyUploadCampaign } from "@/utils/api";
 import { toast } from "react-toastify";
 
 export function useCampaignSender(propertyId, propertyData) {
@@ -25,30 +25,18 @@ export function useCampaignSender(propertyId, propertyData) {
         emailTemplate: "default",
         source: "Property-Upload-Landivo",
         emailSchedule: "immediate",
-        sendType: sendType, // "now" or "mailivo"
+        sendType: sendType,
       };
 
-      if (sendType === "mailivo") {
-        // Redirect to Mailivo
-        const response = await axios.post(
-          `${import.meta.env.VITE_MAILIVO_API_URL}/automation-landivo/propertyUpload`,
-          payload
-        );
+      const response = await sendPropertyUploadCampaign(payload);
 
-        if (response.data.redirectUrl) {
-          window.location.href = response.data.redirectUrl;
-        }
-        return true;
-      } else {
-        // Send now
-        await axios.post(
-          `${import.meta.env.VITE_MAILIVO_API_URL}/automation-landivo/propertyUpload`,
-          payload
-        );
-
-        toast.success("Campaign sent successfully!");
+      if (sendType === "mailivo" && response.redirectUrl) {
+        window.location.href = response.redirectUrl;
         return true;
       }
+
+      toast.success("Campaign sent successfully!");
+      return true;
     } catch (error) {
       console.error("Error sending campaign:", error);
       toast.error("Failed to send campaign");

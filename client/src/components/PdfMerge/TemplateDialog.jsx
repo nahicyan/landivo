@@ -1,3 +1,4 @@
+// client/src/components/PdfMerge/TemplateDialog.jsx
 import React, { useState } from "react";
 import {
   Dialog,
@@ -12,6 +13,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Upload, Loader2, CheckCircle, XCircle } from "lucide-react";
+import { createPdfMergeTemplate } from "@/utils/api"; // ✅ Import the API function
 
 export default function TemplateDialog({ open, onOpenChange, onTemplateCreated }) {
   const [name, setName] = useState("");
@@ -60,15 +62,8 @@ export default function TemplateDialog({ open, onOpenChange, onTemplateCreated }
       formData.append("description", description.trim());
       formData.append("template", file);
 
-      const response = await fetch(
-        `${import.meta.env.VITE_SERVER_URL}/pdf-merge/templates`,
-        {
-          method: "POST",
-          body: formData,
-        }
-      );
-
-      const data = await response.json();
+      // ✅ Use the API function instead of raw fetch
+      const data = await createPdfMergeTemplate(formData);
 
       if (data.success) {
         setSuccess(true);
@@ -80,7 +75,12 @@ export default function TemplateDialog({ open, onOpenChange, onTemplateCreated }
         setError(data.message || "Failed to create template");
       }
     } catch (err) {
-      setError(err.message || "Error creating template");
+      // Better error handling
+      const errorMessage = 
+        err.response?.data?.message || 
+        err.message || 
+        "Error creating template";
+      setError(errorMessage);
     } finally {
       setIsUploading(false);
     }

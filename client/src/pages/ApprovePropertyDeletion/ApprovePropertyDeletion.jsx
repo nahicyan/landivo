@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { CircularProgress, Box, Typography, Alert } from '@mui/material';
-import axios from 'axios';
+import { approvePropertyDeletion } from '@/utils/api';
 
 const ApprovePropertyDeletion = () => {
   const { token } = useParams();
@@ -12,21 +12,15 @@ const ApprovePropertyDeletion = () => {
 
   useEffect(() => {
     const approveDeletion = async () => {
-      // Prevent duplicate requests
       if (hasRequested.current) return;
       hasRequested.current = true;
 
       try {
-        const response = await axios.post(
-          `https://api.landivo.com/residency/approve-deletion/${token}`,
-          {},
-          { timeout: 30000 } // 30 second timeout
-        );
+        const response = await approvePropertyDeletion(token);
         
         setStatus('success');
-        setMessage(response.data.message || 'Property deleted successfully');
+        setMessage(response.message || 'Property deleted successfully');
         
-        // Redirect after 3 seconds
         setTimeout(() => {
           navigate('/');
         }, 3000);

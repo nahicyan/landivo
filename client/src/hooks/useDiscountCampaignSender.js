@@ -1,6 +1,6 @@
 // client/src/hooks/useDiscountCampaignSender.js
 import { useState } from "react";
-import axios from "axios";
+import { sendPropertyDiscountCampaign } from "@/utils/api";
 import { toast } from "react-toastify";
 
 export function useDiscountCampaignSender(propertyId, propertyData) {
@@ -25,30 +25,18 @@ export function useDiscountCampaignSender(propertyId, propertyData) {
         emailTemplate: "default",
         source: "Property-Discount-Landivo",
         emailSchedule: "immediate",
-        sendType: sendType, // "now" or "mailivo"
+        sendType: sendType,
       };
 
-      if (sendType === "mailivo") {
-        // Redirect to Mailivo
-        const response = await axios.post(
-          `${import.meta.env.VITE_MAILIVO_API_URL}/automation-landivo/propertyUpdate/discount`,
-          payload
-        );
+      const response = await sendPropertyDiscountCampaign(payload);
 
-        if (response.data.redirectUrl) {
-          window.location.href = response.data.redirectUrl;
-        }
-        return true;
-      } else {
-        // Send now
-        await axios.post(
-          `${import.meta.env.VITE_MAILIVO_API_URL}/automation-landivo/propertyUpdate/discount`,
-          payload
-        );
-
-        toast.success("Discount notification sent successfully!");
+      if (sendType === "mailivo" && response.redirectUrl) {
+        window.location.href = response.redirectUrl;
         return true;
       }
+
+      toast.success("Discount notification sent successfully!");
+      return true;
     } catch (error) {
       console.error("Error sending discount campaign:", error);
       toast.error("Failed to send discount notification");

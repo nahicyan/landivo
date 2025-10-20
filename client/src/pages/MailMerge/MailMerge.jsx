@@ -1,7 +1,13 @@
 // MailMerge.jsx
 import React, { useState, useEffect, useRef } from "react";
-import axios from "axios";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { 
+  getPdfMergeTemplates, 
+  deletePdfMergeTemplate,
+  analyzePdfMergeFiles,
+  generateMergedPdf,
+  getPdfMergeProgress 
+} from "@/utils/api";
 import TemplateSelector from "@/components/MailMerge/TemplateSelector";
 import DataFileUploader from "@/components/MailMerge/DataFileUploader";
 import AdvancedOptions from "@/components/MailMerge/AdvancedOptions";
@@ -11,12 +17,6 @@ import ActionButtons from "@/components/MailMerge/ActionButtons";
 import Instructions from "@/components/MailMerge/Instructions";
 import VariableMappingDialog from "@/components/PdfMerge/VariableMappingDialog";
 import TemplateDialog from "@/components/PdfMerge/TemplateDialog";
-
-// Simple API instance
-const api = axios.create({
-  baseURL: import.meta.env.VITE_SERVER_URL || "http://localhost:8200",
-  timeout: 3600000,
-});
 
 export default function MailMerge() {
   // Template state
@@ -78,12 +78,13 @@ export default function MailMerge() {
   const fetchTemplates = async () => {
     setLoadingTemplates(true);
     try {
-      const response = await api.get("/pdf-merge/templates");
-      if (response.data && response.data.success) {
-        setTemplates(response.data.templates || []);
+      const response = await getPdfMergeTemplates();
+      if (response && response.success) {
+        setTemplates(response.templates || []);
       }
     } catch (err) {
       console.error("Failed to fetch templates:", err);
+      setError(err.response?.data?.message || "Failed to load templates");
     } finally {
       setLoadingTemplates(false);
     }
@@ -91,13 +92,13 @@ export default function MailMerge() {
 
   // Handle template deletion
   const handleDeleteTemplate = async (templateId) => {
-    if (!confirm("Are you sure you want to delete this template?")) {
+    if (!window.confirm("Are you sure you want to delete this template?")) {
       return;
     }
 
     try {
-      const response = await api.delete(`/pdf-merge/templates/${templateId}`);
-      if (response.data && response.data.success) {
+      const response = await deletePdfMergeTemplate(templateId);
+      if (response && response.success) {
         setTemplates(templates.filter((t) => t.id !== templateId));
         if (selectedTemplateId === templateId) {
           setSelectedTemplateId("");
@@ -155,17 +156,15 @@ export default function MailMerge() {
       if (advancedOptions.encoding.trim())
         formData.append("encoding", advancedOptions.encoding.trim());
 
-      const response = await api.post("/pdf-merge/analyze", formData, {
-        headers: { "Content-Type": "multipart/form-data" },
-      });
+      const response = await analyzePdfMergeFiles(formData);
 
-      if (response.data && response.data.success) {
-        setTemplateVariables(response.data.templateVariables || []);
-        setCsvHeaders(response.data.csvHeaders || []);
-        setAnalyzeNotes(response.data.notes || "");
+      if (response && response.success) {
+        setTemplateVariables(response.templateVariables || []);
+        setCsvHeaders(response.csvHeaders || []);
+        setAnalyzeNotes(response.notes || "");
         setShowMappingDialog(true);
       } else {
-        setError(response.data?.message || "Failed to analyze files");
+        setError(response?.message || "Failed to analyze files");
       }
     } catch (err) {
       if (err.response?.data?.message) setError(err.response.data.message);
@@ -178,23 +177,22 @@ export default function MailMerge() {
 
   // Polling helpers
   const startPolling = (id) => {
-    stopPolling();
+    stopPolling(); // Stop any existing polling first
     pollTimerRef.current = setInterval(async () => {
       try {
-        const r = await api.get(`/pdf-merge/progress/${id}`, {
-          params: { t: Date.now() },
-        });
-        if (r.data && r.data.success) {
-          const { processed = 0, total = 0, percent = 0, done = false } = r.data;
+        const response = await getPdfMergeProgress(id);
+        if (response && response.success) {
+          const { processed = 0, total = 0, percent = 0, done = false } = response;
           setProcessedRows(processed);
           setTotalRows(total);
           setProgress(percent);
           if (done) stopPolling();
         }
-      } catch {
-        // ignore transient polling errors
+      } catch (err) {
+        // Ignore transient polling errors
+        console.error("Polling error:", err);
       }
-    }, 500);
+    }, 500); // Poll every 500ms
   };
 
   const stopPolling = () => {
@@ -212,8 +210,8 @@ export default function MailMerge() {
     setError(null);
     setResult(null);
 
-    const id =
-      window?.crypto?.randomUUID?.() || Math.random().toString(36).slice(2);
+    // Generate unique progress ID
+    const id = window?.crypto?.randomUUID?.() || Math.random().toString(36).slice(2);
     setProgressId(id);
     setProcessedRows(0);
     setTotalRows(0);
@@ -226,7 +224,15 @@ export default function MailMerge() {
       formData.append("mapping", JSON.stringify(mapping));
       formData.append("progressId", id);
 
-      // knobs
+      // Advanced options
+      if (advancedOptions.sheetName.trim())
+        formData.append("sheetName", advancedOptions.sheetName.trim());
+      if (String(advancedOptions.sheetIndex).trim() !== "")
+        formData.append("sheetIndex", String(Number(advancedOptions.sheetIndex)));
+      if (advancedOptions.encoding.trim())
+        formData.append("encoding", advancedOptions.encoding.trim());
+
+      // Performance knobs
       formData.append(
         "chunkSize",
         String(Math.max(1, Number(advancedOptions.chunkSize) || 200))
@@ -240,27 +246,23 @@ export default function MailMerge() {
         String(Math.max(1, Number(advancedOptions.convWorkers) || 2))
       );
 
-      const response = await api.post("/pdf-merge/generate", formData, {
-        headers: { "Content-Type": "multipart/form-data" },
-      });
+      const response = await generateMergedPdf(formData);
 
-      // ensure final progress fetch
+      // Ensure final progress fetch
       try {
-        const r = await api.get(`/pdf-merge/progress/${id}`, {
-          params: { t: Date.now() },
-        });
-        if (r.data && r.data.success) {
-          setProcessedRows(r.data.processed ?? processedRows);
-          setTotalRows(r.data.total ?? totalRows);
-          setProgress(r.data.percent ?? 100);
+        const finalProgress = await getPdfMergeProgress(id);
+        if (finalProgress && finalProgress.success) {
+          setProcessedRows(finalProgress.processed ?? processedRows);
+          setTotalRows(finalProgress.total ?? totalRows);
+          setProgress(finalProgress.percent ?? 100);
         }
       } catch {}
 
-      if (response.data && response.data.success) {
-        setResult(response.data);
+      if (response && response.success) {
+        setResult(response);
         setError(null);
       } else {
-        setError(response.data?.message || "PDF generation failed. Please try again.");
+        setError(response?.message || "PDF generation failed. Please try again.");
       }
     } catch (err) {
       if (err.response?.data?.message) setError(err.response.data.message);
@@ -296,7 +298,7 @@ export default function MailMerge() {
     setCsvHeaders([]);
     setAnalyzeNotes("");
 
-    // reset advanced
+    // Reset advanced options
     setAdvancedOptions({
       sheetName: "",
       sheetIndex: "",
@@ -306,7 +308,7 @@ export default function MailMerge() {
       convWorkers: 2,
     });
 
-    // reset progress
+    // Reset progress
     setProgressId(null);
     setProcessedRows(0);
     setTotalRows(0);
