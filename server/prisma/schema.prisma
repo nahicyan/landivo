@@ -608,3 +608,15 @@ model VisitorStat {
   createdAt         DateTime @default(now())
   updatedAt         DateTime @updatedAt
 }
+
+model PdfTemplate {
+  id          String   @id @default(auto()) @map("_id") @db.ObjectId
+  name        String   @unique
+  fileName    String
+  filePath    String
+  description String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("pdf_templates")
+}

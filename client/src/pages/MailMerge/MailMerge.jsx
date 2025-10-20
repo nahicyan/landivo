@@ -1,23 +1,25 @@
+// MailMerge.jsx
 import React, { useState, useEffect, useRef } from "react";
-import axios from "axios";
-import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Label } from "@/components/ui/label";
-import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Progress } from "@/components/ui/progress";
-import { Input } from "@/components/ui/input";
-import { FileText, Upload, Download, CheckCircle, XCircle, Loader2, Settings } from "lucide-react";
+import { getPdfMergeTemplates, deletePdfMergeTemplate, analyzePdfMergeFiles, generateMergedPdf, getPdfMergeProgress } from "@/utils/api";
+import TemplateSelector from "@/components/MailMerge/TemplateSelector";
+import DataFileUploader from "@/components/MailMerge/DataFileUploader";
+import AdvancedOptions from "@/components/MailMerge/AdvancedOptions";
+import ProgressDisplay from "@/components/MailMerge/ProgressDisplay";
+import ResultDisplay from "@/components/MailMerge/ResultDisplay";
+import ActionButtons from "@/components/MailMerge/ActionButtons";
+import Instructions from "@/components/MailMerge/Instructions";
 import VariableMappingDialog from "@/components/PdfMerge/VariableMappingDialog";
-
-// Simple API instance
-const api = axios.create({
-  baseURL: import.meta.env.VITE_SERVER_URL || "http://localhost:8200",
-  timeout: 3600000,
-});
+import TemplateDialog from "@/components/PdfMerge/TemplateDialog";
 
 export default function MailMerge() {
+  // Template state
+  const [templates, setTemplates] = useState([]);
+  const [selectedTemplateId, setSelectedTemplateId] = useState("");
+  const [loadingTemplates, setLoadingTemplates] = useState(false);
+  const [showTemplateDialog, setShowTemplateDialog] = useState(false);
+
   // File state
-  const [templateFile, setTemplateFile] = useState(null);
   const [csvFile, setCsvFile] = useState(null);
 
   // Flow state
@@ -33,26 +35,28 @@ export default function MailMerge() {
   const [csvHeaders, setCsvHeaders] = useState([]);
   const [analyzeNotes, setAnalyzeNotes] = useState("");
 
-  // Analyzer options (frontend defaults; backend also has fallbacks)
-  const [sheetName, setSheetName] = useState("");
-  const [sheetIndex, setSheetIndex] = useState(""); // keep string for empty/0 distinction
-  const [encoding, setEncoding] = useState("");     // e.g., 'utf-8', 'windows-1252'; blank = let pandas decide
+  // Analyzer options
+  const [advancedOptions, setAdvancedOptions] = useState({
+    sheetName: "",
+    sheetIndex: "",
+    encoding: "",
+    chunkSize: 200,
+    genWorkers: 2,
+    convWorkers: 2,
+  });
 
-  // Generation options (frontend defaults; backend also has fallbacks)
-  const [chunkSize, setChunkSize] = useState(200);  // aligns with server DEFAULT_CHUNK_SIZE
-  const [genWorkers, setGenWorkers] = useState(2);
-  const [convWorkers, setConvWorkers] = useState(2);
-
-  // Toggle Advanced panel
-  const [showAdvanced, setShowAdvanced] = useState(false);
-
-  // NEW: live counters for progress
+  // Live counters for progress
   const [progressId, setProgressId] = useState(null);
   const [processedRows, setProcessedRows] = useState(0);
   const [totalRows, setTotalRows] = useState(0);
 
-  // Polling interval ref to survive re-renders
+  // Polling interval ref
   const pollTimerRef = useRef(null);
+
+  // Fetch templates on mount
+  useEffect(() => {
+    fetchTemplates();
+  }, []);
 
   // Cleanup polling on unmount
   useEffect(() => {
@@ -64,25 +68,43 @@ export default function MailMerge() {
     };
   }, []);
 
-  // Handle file selection
-  const handleTemplateChange = (e) => {
-    const file = e.target.files[0];
-    const ok =
-      file &&
-      (file.name.toLowerCase().endsWith(".docx") ||
-        file.type === "application/vnd.openxmlformats-officedocument.wordprocessingml.document");
-    if (ok) {
-      setTemplateFile(file);
-      setError(null);
-      setResult(null);
-    } else {
-      setTemplateFile(null);
-      setError("Please select a valid DOCX template file");
+  // Fetch templates from API
+  const fetchTemplates = async () => {
+    setLoadingTemplates(true);
+    try {
+      const response = await getPdfMergeTemplates();
+      if (response && response.success) {
+        setTemplates(response.templates || []);
+      }
+    } catch (err) {
+      console.error("Failed to fetch templates:", err);
+      setError(err.response?.data?.message || "Failed to load templates");
+    } finally {
+      setLoadingTemplates(false);
     }
   };
 
-  const handleCsvChange = (e) => {
-    const file = e.target.files[0];
+  // Handle template deletion
+  const handleDeleteTemplate = async (templateId) => {
+    if (!window.confirm("Are you sure you want to delete this template?")) {
+      return;
+    }
+
+    try {
+      const response = await deletePdfMergeTemplate(templateId);
+      if (response && response.success) {
+        setTemplates(templates.filter((t) => t.id !== templateId));
+        if (selectedTemplateId === templateId) {
+          setSelectedTemplateId("");
+        }
+      }
+    } catch (err) {
+      setError(err.response?.data?.message || "Failed to delete template");
+    }
+  };
+
+  // Handle CSV file selection
+  const handleCsvChange = (file) => {
     const name = (file?.name || "").toLowerCase();
     const type = file?.type || "";
     const ok =
@@ -106,8 +128,8 @@ export default function MailMerge() {
 
   // Analyze files and extract variables/headers
   const handleAnalyzeFiles = async () => {
-    if (!templateFile || !csvFile) {
-      setError("Please select both DOCX template and CSV/XLSX file");
+    if (!selectedTemplateId || !csvFile) {
+      setError("Please select a template and upload a CSV/XLSX file");
       return;
     }
 
@@ -117,25 +139,23 @@ export default function MailMerge() {
 
     try {
       const formData = new FormData();
-      formData.append("template", templateFile);
+      formData.append("templateId", selectedTemplateId);
       formData.append("csv", csvFile);
 
-      // Pass analyzer hints (all optional; backend tolerates blanks)
-      if (sheetName.trim()) formData.append("sheetName", sheetName.trim());
-      if (String(sheetIndex).trim() !== "") formData.append("sheetIndex", String(Number(sheetIndex)));
-      if (encoding.trim()) formData.append("encoding", encoding.trim());
+      // Pass analyzer hints
+      if (advancedOptions.sheetName.trim()) formData.append("sheetName", advancedOptions.sheetName.trim());
+      if (String(advancedOptions.sheetIndex).trim() !== "") formData.append("sheetIndex", String(Number(advancedOptions.sheetIndex)));
+      if (advancedOptions.encoding.trim()) formData.append("encoding", advancedOptions.encoding.trim());
 
-      const response = await api.post("/api/pdf-merge/analyze", formData, {
-        headers: { "Content-Type": "multipart/form-data" },
-      });
+      const response = await analyzePdfMergeFiles(formData);
 
-      if (response.data && response.data.success) {
-        setTemplateVariables(response.data.templateVariables || []);
-        setCsvHeaders(response.data.csvHeaders || []);
-        setAnalyzeNotes(response.data.notes || "");
+      if (response && response.success) {
+        setTemplateVariables(response.templateVariables || []);
+        setCsvHeaders(response.csvHeaders || []);
+        setAnalyzeNotes(response.notes || "");
         setShowMappingDialog(true);
       } else {
-        setError(response.data?.message || "Failed to analyze files");
+        setError(response?.message || "Failed to analyze files");
       }
     } catch (err) {
       if (err.response?.data?.message) setError(err.response.data.message);
@@ -148,21 +168,22 @@ export default function MailMerge() {
 
   // Polling helpers
   const startPolling = (id) => {
-    stopPolling();
+    stopPolling(); // Stop any existing polling first
     pollTimerRef.current = setInterval(async () => {
       try {
-        const r = await api.get(`/api/pdf-merge/progress/${id}`, { params: { t: Date.now() }});
-        if (r.data && r.data.success) {
-          const { processed = 0, total = 0, percent = 0, done = false } = r.data;
+        const response = await getPdfMergeProgress(id);
+        if (response && response.success) {
+          const { processed = 0, total = 0, percent = 0, done = false } = response;
           setProcessedRows(processed);
           setTotalRows(total);
           setProgress(percent);
           if (done) stopPolling();
         }
-      } catch {
-        // ignore transient polling errors
+      } catch (err) {
+        // Ignore transient polling errors
+        console.error("Polling error:", err);
       }
-    }, 500);
+    }, 500); // Poll every 500ms
   };
 
   const stopPolling = () => {
@@ -172,7 +193,7 @@ export default function MailMerge() {
     }
   };
 
-  // Generate PDF with mapping (uses real server progress)
+  // Generate PDF with mapping
   const handleGenerateWithMapping = async (mapping) => {
     setShowMappingDialog(false);
     setIsGenerating(true);
@@ -180,8 +201,8 @@ export default function MailMerge() {
     setError(null);
     setResult(null);
 
-    // create a client progressId
-    const id = (window?.crypto?.randomUUID?.() || Math.random().toString(36).slice(2));
+    // Generate unique progress ID
+    const id = window?.crypto?.randomUUID?.() || Math.random().toString(36).slice(2);
     setProgressId(id);
     setProcessedRows(0);
     setTotalRows(0);
@@ -189,35 +210,38 @@ export default function MailMerge() {
 
     try {
       const formData = new FormData();
-      formData.append("template", templateFile);
+      formData.append("templateId", selectedTemplateId);
       formData.append("csv", csvFile);
       formData.append("mapping", JSON.stringify(mapping));
-      formData.append("progressId", id); // tell server which entry to update
+      formData.append("progressId", id);
 
-      // knobs
-      formData.append("chunkSize", String(Math.max(1, Number(chunkSize) || 200)));
-      formData.append("genWorkers", String(Math.max(1, Number(genWorkers) || 2)));
-      formData.append("convWorkers", String(Math.max(1, Number(convWorkers) || 2)));
+      // Advanced options
+      if (advancedOptions.sheetName.trim()) formData.append("sheetName", advancedOptions.sheetName.trim());
+      if (String(advancedOptions.sheetIndex).trim() !== "") formData.append("sheetIndex", String(Number(advancedOptions.sheetIndex)));
+      if (advancedOptions.encoding.trim()) formData.append("encoding", advancedOptions.encoding.trim());
 
-      const response = await api.post("/api/pdf-merge/generate", formData, {
-        headers: { "Content-Type": "multipart/form-data" },
-      });
+      // Performance knobs
+      formData.append("chunkSize", String(Math.max(1, Number(advancedOptions.chunkSize) || 200)));
+      formData.append("genWorkers", String(Math.max(1, Number(advancedOptions.genWorkers) || 2)));
+      formData.append("convWorkers", String(Math.max(1, Number(advancedOptions.convWorkers) || 2)));
 
-      // ensure final progress fetch (race-safe)
+      const response = await generateMergedPdf(formData);
+
+      // Ensure final progress fetch
       try {
-        const r = await api.get(`/api/pdf-merge/progress/${id}`, { params: { t: Date.now() } });
-        if (r.data && r.data.success) {
-          setProcessedRows(r.data.processed ?? processedRows);
-          setTotalRows(r.data.total ?? totalRows);
-          setProgress(r.data.percent ?? 100);
+        const finalProgress = await getPdfMergeProgress(id);
+        if (finalProgress && finalProgress.success) {
+          setProcessedRows(finalProgress.processed ?? processedRows);
+          setTotalRows(finalProgress.total ?? totalRows);
+          setProgress(finalProgress.percent ?? 100);
         }
       } catch {}
 
-      if (response.data && response.data.success) {
-        setResult(response.data);
+      if (response && response.success) {
+        setResult(response);
         setError(null);
       } else {
-        setError(response.data?.message || "PDF generation failed. Please try again.");
+        setError(response?.message || "PDF generation failed. Please try again.");
       }
     } catch (err) {
       if (err.response?.data?.message) setError(err.response.data.message);
@@ -243,7 +267,7 @@ export default function MailMerge() {
 
   // Reset form
   const handleReset = () => {
-    setTemplateFile(null);
+    setSelectedTemplateId("");
     setCsvFile(null);
     setResult(null);
     setError(null);
@@ -253,348 +277,76 @@ export default function MailMerge() {
     setCsvHeaders([]);
     setAnalyzeNotes("");
 
-    // reset advanced
-    setSheetName("");
-    setSheetIndex("");
-    setEncoding("");
-    setChunkSize(200);
-    setGenWorkers(2);
-    setConvWorkers(2);
-    setShowAdvanced(false);
+    // Reset advanced options
+    setAdvancedOptions({
+      sheetName: "",
+      sheetIndex: "",
+      encoding: "",
+      chunkSize: 200,
+      genWorkers: 2,
+      convWorkers: 2,
+    });
 
-    // reset progress
+    // Reset progress
     setProgressId(null);
     setProcessedRows(0);
     setTotalRows(0);
     stopPolling();
-
-    const templateInput = document.getElementById("template-upload");
-    const csvInput = document.getElementById("csv-upload");
-    if (templateInput) templateInput.value = "";
-    if (csvInput) csvInput.value = "";
-  };
-
-  const removeTemplateFile = () => {
-    setTemplateFile(null);
-    setResult(null);
-    const input = document.getElementById("template-upload");
-    if (input) input.value = "";
-  };
-  const removeCsvFile = () => {
-    setCsvFile(null);
-    setResult(null);
-    const input = document.getElementById("csv-upload");
-    if (input) input.value = "";
   };
 
   return (
     <>
-      <div className="flex items-center justify-center min-h-screen bg-gray-100 p-4">
-        <Card className="w-full max-w-2xl">
-          <CardHeader>
-            <CardTitle className="text-3xl font-bold text-gray-800">
-              DOCX Mail Merge Engine
-            </CardTitle>
-            <CardDescription>
-              Upload a DOCX template and CSV/Excel data to generate a merged PDF
-            </CardDescription>
-          </CardHeader>
+      <div className="w-full bg-white">
+        <div className="max-w-screen-xl mx-auto px-4 py-6">
+          <Card className="border-0 shadow-none">
+            <CardHeader>
+              <CardTitle className="text-2xl font-bold text-[#324c48]">DOCX Mail Merge Engine</CardTitle>
+              <CardDescription>Select a stored template and upload CSV/Excel data to generate a merged PDF</CardDescription>
+            </CardHeader>
 
-          <CardContent className="space-y-6">
-            {/* Template DOCX Upload */}
-            <div className="space-y-2">
-              <Label htmlFor="template-upload" className="text-sm font-medium">
-                DOCX Template
-              </Label>
-              <div className="flex items-center gap-3">
-                <Button
-                  type="button"
-                  variant="outline"
-                  className="border-[#324c48] text-[#324c48] hover:bg-[#324c48] hover:text-white"
-                  onClick={() => document.getElementById("template-upload").click()}
-                  disabled={isGenerating || isAnalyzing}
-                >
-                  <Upload className="h-4 w-4 mr-2" />
-                  Browse DOCX
-                </Button>
-                <input
-                  id="template-upload"
-                  type="file"
-                  accept=".docx,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
-                  className="hidden"
-                  onChange={handleTemplateChange}
-                  disabled={isGenerating || isAnalyzing}
-                />
-                {templateFile && (
-                  <div className="flex items-center gap-2 text-sm text-gray-600">
-                    <FileText className="h-4 w-4 text-[#324c48]" />
-                    <span className="font-medium">{templateFile.name}</span>
-                    <span className="text-gray-400">
-                      ({(templateFile.size / 1024).toFixed(1)} KB)
-                    </span>
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="sm"
-                      className="h-6 w-6 p-0 ml-auto"
-                      onClick={removeTemplateFile}
-                      disabled={isGenerating || isAnalyzing}
-                    >
-                      <XCircle className="h-4 w-4" />
-                    </Button>
-                  </div>
-                )}
-              </div>
-            </div>
+            <CardContent className="space-y-6">
+              {/* Template Selection */}
+              <TemplateSelector
+                templates={templates}
+                selectedTemplateId={selectedTemplateId}
+                setSelectedTemplateId={setSelectedTemplateId}
+                loadingTemplates={loadingTemplates}
+                isGenerating={isGenerating}
+                isAnalyzing={isAnalyzing}
+                onRefresh={fetchTemplates}
+                onCreateTemplate={() => setShowTemplateDialog(true)}
+                onDeleteTemplate={handleDeleteTemplate}
+              />
 
-            {/* CSV/XLSX Upload */}
-            <div className="space-y-2">
-              <Label htmlFor="csv-upload" className="text-sm font-medium">
-                Data File (CSV or Excel)
-              </Label>
-              <div className="flex items-center gap-3">
-                <Button
-                  type="button"
-                  variant="outline"
-                  className="border-[#324c48] text-[#324c48] hover:bg-[#324c48] hover:text-white"
-                  onClick={() => document.getElementById("csv-upload").click()}
-                  disabled={isGenerating || isAnalyzing}
-                >
-                  <Upload className="h-4 w-4 mr-2" />
-                  Browse CSV/XLSX
-                </Button>
-                <input
-                  id="csv-upload"
-                  type="file"
-                  accept=".csv,.xlsx,.xls,text/csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel"
-                  className="hidden"
-                  onChange={handleCsvChange}
-                  disabled={isGenerating || isAnalyzing}
-                />
-                {csvFile && (
-                  <div className="flex items-center gap-2 text-sm text-gray-600">
-                    <FileText className="h-4 w-4 text-[#324c48]" />
-                    <span className="font-medium">{csvFile.name}</span>
-                    <span className="text-gray-400">
-                      ({(csvFile.size / 1024).toFixed(1)} KB)
-                    </span>
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="sm"
-                      className="h-6 w-6 p-0 ml-auto"
-                      onClick={removeCsvFile}
-                      disabled={isGenerating || isAnalyzing}
-                    >
-                      <XCircle className="h-4 w-4" />
-                    </Button>
-                  </div>
-                )}
-              </div>
-            </div>
+              {/* CSV/XLSX Upload */}
+              <DataFileUploader csvFile={csvFile} onFileChange={handleCsvChange} onRemoveFile={() => setCsvFile(null)} isGenerating={isGenerating} isAnalyzing={isAnalyzing} />
 
-            {/* NEW: Advanced Options */}
-            <div className="rounded-lg border border-gray-200">
-              <button
-                type="button"
-                className="w-full flex items-center justify-between px-4 py-3 hover:bg-gray-50"
-                onClick={() => setShowAdvanced(v => !v)}
-              >
-                <span className="flex items-center gap-2 font-semibold text-gray-800">
-                  <Settings className="h-4 w-4" /> Advanced Options
-                </span>
-                <span className="text-sm text-gray-500">{showAdvanced ? "Hide" : "Show"}</span>
-              </button>
+              {/* Advanced Options */}
+              <AdvancedOptions options={advancedOptions} setOptions={setAdvancedOptions} isAnalyzing={isAnalyzing} isGenerating={isGenerating} />
 
-              {showAdvanced && (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-4 pt-0">
-                  {/* Analyzer options */}
-                  <div className="space-y-2">
-                    <Label className="text-sm font-medium">Excel Sheet Name (optional)</Label>
-                    <Input
-                      placeholder="e.g., Sheet1"
-                      value={sheetName}
-                      onChange={e => setSheetName(e.target.value)}
-                      disabled={isAnalyzing || isGenerating}
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label className="text-sm font-medium">Excel Sheet Index (optional)</Label>
-                    <Input
-                      type="number"
-                      placeholder="0 for first sheet"
-                      value={sheetIndex}
-                      onChange={e => setSheetIndex(e.target.value)}
-                      disabled={isAnalyzing || isGenerating}
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label className="text-sm font-medium">CSV Encoding (optional)</Label>
-                    <Input
-                      placeholder="utf-8 / windows-1252"
-                      value={encoding}
-                      onChange={e => setEncoding(e.target.value)}
-                      disabled={isAnalyzing || isGenerating}
-                    />
-                  </div>
+              {/* Progress Bar */}
+              <ProgressDisplay isGenerating={isGenerating} isAnalyzing={isAnalyzing} progress={progress} processedRows={processedRows} totalRows={totalRows} />
 
-                  {/* Generation options */}
-                  <div className="space-y-2">
-                    <Label className="text-sm font-medium">Chunk Size</Label>
-                    <Input
-                      type="number"
-                      min={1}
-                      placeholder="200"
-                      value={chunkSize}
-                      onChange={e => setChunkSize(e.target.value)}
-                      disabled={isAnalyzing || isGenerating}
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label className="text-sm font-medium">Merge Workers (DOCX generation)</Label>
-                    <Input
-                      type="number"
-                      min={1}
-                      placeholder="2"
-                      value={genWorkers}
-                      onChange={e => setGenWorkers(e.target.value)}
-                      disabled={isAnalyzing || isGenerating}
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label className="text-sm font-medium">Convert Workers (DOCX→PDF)</Label>
-                    <Input
-                      type="number"
-                      min={1}
-                      placeholder="2"
-                      value={convWorkers}
-                      onChange={e => setConvWorkers(e.target.value)}
-                      disabled={isAnalyzing || isGenerating}
-                    />
-                  </div>
-                </div>
-              )}
-            </div>
+              {/* Result Display (Errors, Notes, Success) */}
+              <ResultDisplay error={error} analyzeNotes={analyzeNotes} result={result} />
 
-            {/* Progress Bar (live processed/total · percent) */}
-            {(isGenerating || isAnalyzing) && (
-              <div className="space-y-2">
-                <div className="flex items-center justify-between text-sm">
-                  <span className="text-gray-600">
-                    {isAnalyzing ? "Analyzing files..." : "Generating PDF..."}
-                  </span>
-                  {!isAnalyzing && (
-                    <div className="text-[#324c48] font-medium flex items-center gap-3">
-                      {totalRows > 0 ? (
-                        <>
-                          <span>{processedRows}/{totalRows}</span>
-                          <span>•</span>
-                          <span>{progress}%</span>
-                        </>
-                      ) : (
-                        <span>{progress}%</span>
-                      )}
-                    </div>
-                  )}
-                </div>
-                <Progress value={isAnalyzing ? undefined : progress} className="h-2" />
-              </div>
-            )}
+              {/* Action Buttons */}
+              <ActionButtons
+                selectedTemplateId={selectedTemplateId}
+                csvFile={csvFile}
+                isGenerating={isGenerating}
+                isAnalyzing={isAnalyzing}
+                result={result}
+                onAnalyze={handleAnalyzeFiles}
+                onDownload={handleDownload}
+                onReset={handleReset}
+              />
 
-            {/* Error Alert */}
-            {error && (
-              <Alert variant="destructive">
-                <XCircle className="h-4 w-4" />
-                <AlertDescription>{error}</AlertDescription>
-              </Alert>
-            )}
-
-            {/* Optional: analyzer notes */}
-            {analyzeNotes && !error && (
-              <Alert className="border-blue-400 bg-blue-50">
-                <AlertDescription className="text-blue-800">
-                  {analyzeNotes}
-                </AlertDescription>
-              </Alert>
-            )}
-
-            {/* Success Result */}
-            {result && result.success && (
-              <Alert className="border-green-500 bg-green-50">
-                <CheckCircle className="h-4 w-4 text-green-600" />
-                <AlertDescription className="text-green-800">
-                  <div className="space-y-2">
-                    <p className="font-medium">PDF generated successfully!</p>
-                    {result.stats && (
-                      <div className="text-sm space-y-1">
-                        <p>Pages created: {result.stats.pageCount || 0}</p>
-                        <p>Variables found: {result.stats.variablesFound || 0}</p>
-                        <p>Variables mapped: {result.stats.variablesMapped || 0}</p>
-                      </div>
-                    )}
-                  </div>
-                </AlertDescription>
-              </Alert>
-            )}
-
-            {/* Action Buttons */}
-            <div className="flex gap-3">
-              <Button
-                onClick={handleAnalyzeFiles}
-                disabled={!templateFile || !csvFile || isGenerating || isAnalyzing}
-                className="flex-1 bg-[#324c48] hover:bg-[#243a36] text-white"
-              >
-                {isAnalyzing ? (
-                  <>
-                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                    Analyzing...
-                  </>
-                ) : isGenerating ? (
-                  <>
-                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                    Generating...
-                  </>
-                ) : (
-                  <>
-                    <FileText className="h-4 w-4 mr-2" />
-                    Continue to Mapping
-                  </>
-                )}
-              </Button>
-
-              {result && result.success && (
-                <Button
-                  onClick={handleDownload}
-                  variant="outline"
-                  className="border-[#324c48] text-[#324c48] hover:bg-[#324c48] hover:text-white"
-                >
-                  <Download className="h-4 w-4 mr-2" />
-                  Download
-                </Button>
-              )}
-
-              <Button
-                onClick={handleReset}
-                variant="outline"
-                disabled={isGenerating || isAnalyzing}
-              >
-                Reset
-              </Button>
-            </div>
-
-            {/* Instructions */}
-            <div className="mt-6 p-4 bg-blue-50 rounded-lg border border-blue-200">
-              <h3 className="font-semibold text-blue-900 mb-2">Instructions:</h3>
-              <ul className="text-sm text-blue-800 space-y-1 list-disc list-inside">
-                <li>Upload a <b>DOCX</b> template with <b>Mail Merge fields</b> (e.g., first_name, address, amount).</li>
-                <li>Upload a <b>CSV</b> or <b>Excel</b> file with matching column headers.</li>
-                <li>Click <b>Continue to Mapping</b> to map variables to columns.</li>
-                <li>Use <b>Advanced Options</b> to specify Excel sheet/encoding and performance knobs.</li>
-                <li>Generate your merged <b>PDF</b> when mappings look right.</li>
-              </ul>
-            </div>
-          </CardContent>
-        </Card>
+              {/* Instructions */}
+              <Instructions />
+            </CardContent>
+          </Card>
+        </div>
       </div>
 
       {/* Variable Mapping Dialog */}
@@ -605,6 +357,16 @@ export default function MailMerge() {
         csvHeaders={csvHeaders}
         onConfirmMapping={handleGenerateWithMapping}
         isGenerating={isGenerating}
+      />
+
+      {/* Template Creation Dialog */}
+      <TemplateDialog
+        open={showTemplateDialog}
+        onOpenChange={setShowTemplateDialog}
+        onTemplateCreated={(template) => {
+          fetchTemplates();
+          setSelectedTemplateId(template.id);
+        }}
       />
     </>
   );

@@ -1,6 +1,6 @@
 // components/PropertyManagement/PropertyRowManager.jsx
 import React, { useState, useEffect } from "react";
-import { getPropertyRows, getProperty } from "@/utils/api";
+import { getPropertyRows, getProperty, createPropertyRow, updatePropertyRow, deletePropertyRow } from "@/utils/api";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -65,7 +65,7 @@ export function PropertyRowManager() {
 
   const handleCreateRow = async () => {
     try {
-      const response = await axios.post(`${import.meta.env.VITE_SERVER_URL}/property-rows`, newRowData);
+      await createPropertyRow(newRowData);
       toast.success("Property row created successfully");
       setNewRowData({
         name: "",
@@ -83,7 +83,7 @@ export function PropertyRowManager() {
 
   const handleUpdateRow = async () => {
     try {
-      await axios.put(`${import.meta.env.VITE_SERVER_URL}/property-rows/${selectedRow.id}`, newRowData);
+      await updatePropertyRow(selectedRow.id, newRowData);
       toast.success("Property row updated successfully");
       setIsEditing(false);
       fetchPropertyRows();
@@ -95,12 +95,8 @@ export function PropertyRowManager() {
 
   const handleDeleteRow = async (rowId) => {
     try {
-      await axios.delete(`${import.meta.env.VITE_SERVER_URL}/property-rows/${rowId}`);
+      await deletePropertyRow(rowId);
       toast.success("Property row deleted successfully");
-      if (selectedRow && selectedRow.id === rowId) {
-        setSelectedRow(null);
-        setProperties([]);
-      }
       fetchPropertyRows();
     } catch (error) {
       console.error("Error deleting property row:", error);

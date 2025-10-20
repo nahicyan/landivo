@@ -121,18 +121,58 @@ def main(template_path, data_path, output_pdf_path, mapping_json_path,
         df = load_df(data_path)
         log(f"[pdf-merge] data loaded: {len(df)} rows")
 
-        # Build records list
+        # Check if ALL mappings are custom values (no CSV columns used)
+        all_custom = all(
+            isinstance(cfg, dict) and cfg.get("type") == "custom"
+            for cfg in mapping.values()
+        )
+
+        # Build records list with support for CSV columns AND custom values
         records = []
-        for _, row in df.iterrows():
-            rec = {tvar: str(row.get(col, "") or "") for tvar, col in mapping.items()}
+        csv_mappings = 0
+        custom_mappings = 0
+        
+        if all_custom:
+            # If ALL mappings are custom values, create only ONE record
+            log("[pdf-merge] All mappings are custom values - generating single page")
+            rec = {}
+            for tvar, map_config in mapping.items():
+                map_value = map_config.get("value", "")
+                rec[tvar] = str(map_value)
+                custom_mappings += 1
             records.append(rec)
+        else:
+            # If there are CSV mappings, iterate through all rows
+            for _, row in df.iterrows():
+                rec = {}
+                for tvar, map_config in mapping.items():
+                    # Handle both old format (string) and new format (object)
+                    if isinstance(map_config, dict):
+                        map_type = map_config.get("type", "csv")
+                        map_value = map_config.get("value", "")
+                        
+                        if map_type == "custom":
+                            # Use the custom value directly (same for all rows)
+                            rec[tvar] = str(map_value)
+                            custom_mappings += 1 if _ == 0 else 0  # count once
+                        else:
+                            # Use CSV column value (varies per row)
+                            rec[tvar] = str(row.get(map_value, "") or "")
+                            csv_mappings += 1 if _ == 0 else 0  # count once
+                    else:
+                        # Old format: direct column name (backward compatibility)
+                        rec[tvar] = str(row.get(map_config, "") or "")
+                        csv_mappings += 1 if _ == 0 else 0  # count once
+                records.append(rec)
+
+        log(f"[pdf-merge] mapping breakdown: {csv_mappings} CSV columns, {custom_mappings} custom values")
 
         total = len(records)
         if total == 0:
-            raise ValueError("No rows found in data file")
+            raise ValueError("No records to generate")
 
-        emit_meta(total)                 # JSON (stdout)
-        log(f"[pdf-merge] total rows to process: {total}")  # readable (stderr)
+        emit_meta(total)
+        log(f"[pdf-merge] total rows to process: {total}")
 
         # Workdir for chunks
         workdir = Path(tempfile.mkdtemp(prefix="merge_chunks_"))

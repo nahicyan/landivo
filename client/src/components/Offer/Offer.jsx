@@ -458,7 +458,9 @@ export default function Offer({ propertyData }) {
       setOfferStatus("PENDING");
       setBuyerMessage("");
     } catch (error) {
-      setDialogMessage("There was an error processing your offer. Please try again.");
+      // Extract the specific error message from the server response
+      const errorMessage = error.response?.data?.message || "There was an error processing your offer. Please try again.";
+      setDialogMessage(errorMessage);
       setDialogType("warning");
       setDialogOpen(true);
     }
