@@ -9,7 +9,7 @@ import SearchAreaWithTracking from "@/components/SearchArea/SearchAreaWithTracki
 import DisplayRow, { createFilter } from "@/components/DisplayRow/DisplayRow";
 import DisplayGrid from "@/components/DisplayGrid/DisplayGrid";
 import { Button } from "@/components/ui/button";
-import axios from "axios";
+import { getPropertyRows } from "@/utils/api";
 
 export default function SanAntonioProperty() {
   const { data, isError, isLoading } = useProperties();
@@ -26,10 +26,11 @@ export default function SanAntonioProperty() {
     const fetchSanAntonioRow = async () => {
       setLoadingFeatured(true);
       try {
-        const response = await axios.get(`${import.meta.env.VITE_SERVER_URL}/property-rows?rowType=SanAntonio`);
+        // Use the centralized API function with rowType filter
+        const rows = await getPropertyRows("SanAntonio");
         
-        if (Array.isArray(response.data) && response.data.length > 0) {
-          const sanAntonioRow = response.data.find(row => row.rowType === "SanAntonio");
+        if (Array.isArray(rows) && rows.length > 0) {
+          const sanAntonioRow = rows.find(row => row.rowType === "SanAntonio");
           
           if (sanAntonioRow && Array.isArray(sanAntonioRow.displayOrder) && sanAntonioRow.displayOrder.length > 0) {
             const orderedIds = sanAntonioRow.displayOrder;

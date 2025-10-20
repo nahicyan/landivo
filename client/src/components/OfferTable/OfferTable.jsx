@@ -1,9 +1,9 @@
+// client/src/components/OfferTable/OfferTable.jsx
 "use client";
 
 import React from "react";
 import { useQuery } from "react-query";
 import { useParams } from "react-router-dom";
-import axios from "axios";
 import {
   Table,
   TableBody,
@@ -16,24 +16,21 @@ import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { format } from "date-fns";
-
-const fetchOffers = async (propertyId) => {
-  const { data } = await axios.get(
-    `${import.meta.env.VITE_SERVER_URL}/offer/property/${propertyId}`
-  );
-  return data;
-};
+import { getPropertyOffers } from "@/utils/api";
 
 export default function OfferTable() {
-  const { propertyId } = useParams(); // Get property ID from URL
+  const { propertyId } = useParams();
+
+  // Fetch offers using the centralized API function
   const { data, isLoading, isError } = useQuery(
     ["offers", propertyId],
-    () => fetchOffers(propertyId),
+    () => getPropertyOffers(propertyId),
     {
       enabled: !!propertyId,
     }
   );
 
+  // Loading state
   if (isLoading) {
     return (
       <Card className="p-6">
@@ -49,6 +46,7 @@ export default function OfferTable() {
     );
   }
 
+  // Error state
   if (isError) {
     return (
       <Alert className="bg-red-100 border-red-500 text-red-700">
@@ -65,7 +63,7 @@ export default function OfferTable() {
       <CardHeader>
         <CardTitle>Offers on Property</CardTitle>
         <p className="text-gray-500 text-sm">
-          Total Offers: {data.totalOffers}
+          Total Offers: {data?.totalOffers || 0}
         </p>
       </CardHeader>
       <CardContent>
@@ -80,32 +78,33 @@ export default function OfferTable() {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {data.offers.length > 0 ? (
+            {data?.offers && data.offers.length > 0 ? (
               data.offers.map((offer) => (
                 <TableRow
                   key={offer.id}
                   className="hover:bg-gray-100 transition"
                 >
                   <TableCell>
-                    {offer.buyer.firstName} {offer.buyer.lastName}
+                    {offer.buyer?.firstName} {offer.buyer?.lastName}
                   </TableCell>
-                  <TableCell>{offer.buyer.email}</TableCell>
-                  <TableCell>{offer.buyer.phone || "N/A"}</TableCell>
+                  <TableCell>{offer.buyer?.email || "N/A"}</TableCell>
+                  <TableCell>{offer.buyer?.phone || "N/A"}</TableCell>
                   <TableCell className="text-green-600 font-semibold">
                     {typeof offer.offeredPrice === "number"
                       ? `$${offer.offeredPrice.toLocaleString("en-US")}`
                       : "N/A"}
                   </TableCell>
-
                   <TableCell>
-                    {format(new Date(offer.timestamp), "PPpp")}
+                    {offer.timestamp 
+                      ? format(new Date(offer.timestamp), "PPpp")
+                      : "N/A"}
                   </TableCell>
                 </TableRow>
               ))
             ) : (
               <TableRow>
                 <TableCell
-                  colSpan="5"
+                  colSpan={5}
                   className="text-center text-gray-500 py-4"
                 >
                   No offers yet.

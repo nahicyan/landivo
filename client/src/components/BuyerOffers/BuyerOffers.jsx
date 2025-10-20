@@ -1,7 +1,8 @@
+// client/src/components/BuyerOffers/BuyerOffers.jsx
 import React, { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { PuffLoader } from "react-spinners";
-import { getBuyerById, getPropertyOffers } from "@/utils/api";
+import { getBuyerById, getProperty } from "@/utils/api";
 import { format } from "date-fns";
 
 import {
@@ -37,7 +38,8 @@ export default function BuyerOffers() {
     const fetchBuyerAndOffers = async () => {
       try {
         setLoading(true);
-        // Fetch buyer data
+        
+        // Fetch buyer data using centralized API function
         const buyerData = await getBuyerById(buyerId);
         setBuyer(buyerData);
         
@@ -49,19 +51,17 @@ export default function BuyerOffers() {
           // Get unique property IDs
           const uniquePropertyIds = [...new Set(buyerData.offers.map(offer => offer.propertyId))];
           
-          // Fetch property details for each property
+          // Fetch property details for each property using centralized API function
           for (const propertyId of uniquePropertyIds) {
             try {
-              const propertyData = await fetch(`${import.meta.env.VITE_SERVER_URL}/residency/${propertyId}`);
-              if (propertyData.ok) {
-                const property = await propertyData.json();
-                propertyDetails[propertyId] = property;
-              } else {
-                propertyDetails[propertyId] = { title: "Property Not Found", streetAddress: "N/A" };
-              }
+              const property = await getProperty(propertyId);
+              propertyDetails[propertyId] = property;
             } catch (err) {
               console.error(`Error fetching property ${propertyId}:`, err);
-              propertyDetails[propertyId] = { title: "Error Loading Property", streetAddress: "N/A" };
+              propertyDetails[propertyId] = { 
+                title: "Error Loading Property", 
+                streetAddress: "N/A" 
+              };
             }
           }
         }

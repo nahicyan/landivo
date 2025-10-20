@@ -1,15 +1,26 @@
 // client/src/utils/api.js
 
 /**
- * Central API export file
+ * Central API Export File
+ * =======================
  * This file acts as a barrel export - importing all API functions from modular files
- * and re-exporting them for easy consumption by components
+ * and re-exporting them for easy consumption by components.
+ * 
+ * Usage:
+ * import { getAllProperties, createBuyer, getSystemSettings } from '@/utils/api';
  */
+
+// ============================================================================
+// CONFIGURATION & CORE
+// ============================================================================
 
 // Export axios instances and config
 export { api, mailivoApi, handleRequestError } from './api/config';
 
-// Properties API
+// ============================================================================
+// PROPERTIES API
+// ============================================================================
+
 export {
   getAllProperties,
   getProperty,
@@ -22,7 +33,10 @@ export {
   approvePropertyDeletion
 } from './api/properties';
 
-// Buyers API
+// ============================================================================
+// BUYERS API
+// ============================================================================
+
 export {
   getAllBuyers,
   getBuyerById,
@@ -37,7 +51,10 @@ export {
   sendEmailToBuyers
 } from './api/buyers';
 
-// Buyer Activity API
+// ============================================================================
+// BUYER ACTIVITY API
+// ============================================================================
+
 export {
   recordBuyerActivity,
   getBuyerActivity,
@@ -45,7 +62,10 @@ export {
   deleteBuyerActivity
 } from './api/buyerActivity';
 
-// Offers API
+// ============================================================================
+// OFFERS API
+// ============================================================================
+
 export {
   makeOffer,
   getOfferById,
@@ -59,7 +79,10 @@ export {
   withdrawOffer
 } from './api/offers';
 
-// Email Lists API
+// ============================================================================
+// EMAIL LISTS API
+// ============================================================================
+
 export {
   getAllEmailLists,
   getEmailLists,
@@ -72,14 +95,20 @@ export {
   sendEmailToList
 } from './api/emailLists';
 
-// Qualifications API
+// ============================================================================
+// QUALIFICATIONS API
+// ============================================================================
+
 export {
   submitQualification,
   getPropertyQualifications,
   getAllQualifications
 } from './api/qualifications';
 
-// Deals API
+// ============================================================================
+// DEALS API
+// ============================================================================
+
 export {
   createDeal,
   getAllDeals,
@@ -89,8 +118,12 @@ export {
   getDealFinancialSummary
 } from './api/deals';
 
-// Users API
+// ============================================================================
+// USERS API
+// ============================================================================
+
 export {
+  // Basic CRUD
   getAllUsers,
   getAllUserAccounts,
   getUserById,
@@ -98,26 +131,43 @@ export {
   updateUser,
   deleteUser,
   updateUserStatus,
+  
+  // User Existence & Sync
   checkUserExists,
   syncAuth0User,
-  useUserProfileApi
+  
+  // Property Profiles
+  getUserPropertyProfiles,
+  
+  // Authenticated Profile Hook
+  useUserProfileApi,
+  updateUserProfiles
 } from './api/users';
 
-// Settings API
+// ============================================================================
+// SETTINGS API
+// ============================================================================
+
 export {
   getSystemSettings,
   updateSystemSettings,
   testSmtpConnection
 } from './api/settings';
 
-// Visitors API
+// ============================================================================
+// VISITORS API
+// ============================================================================
+
 export {
   getVisitorStats,
   getVisitorActivity,
   getCurrentVisitorCount
 } from './api/visitors';
 
-// Property Rows API
+// ============================================================================
+// PROPERTY ROWS API
+// ============================================================================
+
 export {
   getAllPropertyRows,
   getPropertyRows,
@@ -128,7 +178,10 @@ export {
   deletePropertyRow
 } from './api/propertyRows';
 
-// PDF Merge API
+// ============================================================================
+// PDF MERGE API
+// ============================================================================
+
 export {
   getPdfMergeTemplates,
   getPdfMergeTemplateById,
@@ -139,7 +192,10 @@ export {
   getPdfMergeProgress
 } from './api/pdfMerge';
 
-// Campaigns API
+// ============================================================================
+// CAMPAIGNS API
+// ============================================================================
+
 export {
   sendPropertyUploadCampaign,
   sendPropertyDiscountCampaign

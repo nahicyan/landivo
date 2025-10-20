@@ -9,7 +9,7 @@ import SearchAreaWithTracking from "@/components/SearchArea/SearchAreaWithTracki
 import DisplayRow, { createFilter } from "@/components/DisplayRow/DisplayRow";
 import DisplayGrid from "@/components/DisplayGrid/DisplayGrid";
 import { Button } from "@/components/ui/button";
-import axios from "axios";
+import { getPropertyRows } from "@/utils/api";
 
 export default function HoustonProperty() {
   const { data, isError, isLoading } = useProperties();
@@ -26,10 +26,11 @@ export default function HoustonProperty() {
     const fetchHoustonRow = async () => {
       setLoadingFeatured(true);
       try {
-        const response = await axios.get(`${import.meta.env.VITE_SERVER_URL}/property-rows?rowType=Houston`);
+        // Use the centralized API function with rowType filter
+        const rows = await getPropertyRows("Houston");
         
-        if (Array.isArray(response.data) && response.data.length > 0) {
-          const houstonRow = response.data.find(row => row.rowType === "Houston");
+        if (Array.isArray(rows) && rows.length > 0) {
+          const houstonRow = rows.find(row => row.rowType === "Houston");
           
           if (houstonRow && Array.isArray(houstonRow.displayOrder) && houstonRow.displayOrder.length > 0) {
             const orderedIds = houstonRow.displayOrder;

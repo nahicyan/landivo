@@ -26,12 +26,13 @@ import {
   DialogTitle,
   DialogFooter,
 } from "@/components/ui/dialog";
-import { Plus, X, ChevronDown, Loader2 } from "lucide-react";
-import axios from "axios";
-import { useAuth0 } from "@auth0/auth0-react";
+import { Plus, X, Loader2 } from "lucide-react";
+import { getPropertyRows, getPropertyRowById, useUserProfileApi } from "@/utils/api";
 
 export default function SystemInfoCard({ formData, handleChange, errors }) {
-  const { getAccessTokenSilently } = useAuth0();
+  // Use the authenticated user profile API hook
+  const { getUserPropertyProfiles } = useUserProfileApi();
+  
   const [propertyRows, setPropertyRows] = useState([]);
   const [isLoadingRows, setIsLoadingRows] = useState(false);
   const [showFeaturedDialog, setShowFeaturedDialog] = useState(false);
@@ -67,37 +68,26 @@ export default function SystemInfoCard({ formData, handleChange, errors }) {
 
   // Fetch user's allowed profiles
   useEffect(() => {
-    // Update the fetchUserProfiles function
-const fetchUserProfiles = async () => {
-  setLoadingProfiles(true);
-  try {
-    // Get the Auth0 token
-    const token = await getAccessTokenSilently();
-
-    // Use the new endpoint that works with write:properties permission
-    const response = await axios.get(
-      `${import.meta.env.VITE_SERVER_URL}/user/property-profiles`, 
-      {
-        headers: {
-          Authorization: `Bearer ${token}`
+    const fetchUserProfiles = async () => {
+      setLoadingProfiles(true);
+      try {
+        const profiles = await getUserPropertyProfiles();
+        
+        if (profiles && Array.isArray(profiles)) {
+          setAllowedProfiles(profiles);
+        } else {
+          setAllowedProfiles([]);
         }
+      } catch (error) {
+        console.error("Error fetching user profiles:", error);
+        setAllowedProfiles([]);
+      } finally {
+        setLoadingProfiles(false);
       }
-    );
+    };
 
-    if (response.data && Array.isArray(response.data)) {
-      setAllowedProfiles(response.data);
-    } else {
-      setAllowedProfiles([]);
-    }
-  } catch (error) {
-    console.error("Error fetching user profiles:", error);
-    setAllowedProfiles([]);
-  } finally {
-    setLoadingProfiles(false);
-  }
-};
     fetchUserProfiles();
-  }, [getAccessTokenSilently]);
+  }, [getUserPropertyProfiles]);
 
   // If we're editing a property, load its existing row associations
   useEffect(() => {
@@ -107,27 +97,32 @@ const fetchUserProfiles = async () => {
     }
   }, [formData.id]);
 
+  /**
+   * Fetch all property rows
+   */
   const fetchPropertyRows = async () => {
     setIsLoadingRows(true);
     try {
-      const response = await axios.get(`${import.meta.env.VITE_SERVER_URL}/property-rows`);
-      setPropertyRows(response.data || []);
+      const rows = await getPropertyRows();
+      setPropertyRows(rows || []);
     } catch (error) {
       console.error("Error fetching property rows:", error);
+      setPropertyRows([]);
     } finally {
       setIsLoadingRows(false);
     }
   };
 
+  /**
+   * Fetch property row associations for a specific property (edit mode)
+   */
   const fetchPropertyRowAssociations = async (propertyId) => {
     if (!propertyId) return;
 
     setLoadingPropertyRows(true);
     try {
       // Find which rows include this property
-      const response = await axios.get(`${import.meta.env.VITE_SERVER_URL}/property-rows`);
-      const rows = response.data || [];
-
+      const rows = await getPropertyRows();
       const propertyAssociations = [];
 
       // Look through each row to find if it includes the property
@@ -157,17 +152,19 @@ const fetchUserProfiles = async () => {
     }
   };
 
-  // Fetch properties in the selected row to show position options
+  /**
+   * Fetch properties in the selected row to show position options
+   */
   const fetchRowProperties = async (rowId) => {
     if (!rowId) return;
 
     setLoadingRowProperties(true);
     try {
-      const response = await axios.get(`${import.meta.env.VITE_SERVER_URL}/property-rows/${rowId}`);
+      const rowData = await getPropertyRowById(rowId);
 
-      if (response.data && response.data.propertyDetails) {
+      if (rowData && rowData.propertyDetails) {
         // Store complete list of properties in this row
-        const allProperties = response.data.propertyDetails || [];
+        const allProperties = rowData.propertyDetails || [];
         setAllRowProperties(allProperties);
 
         // Filter out the current property if we're in edit mode
@@ -190,7 +187,9 @@ const fetchUserProfiles = async () => {
     }
   };
 
-  // Handle row selection
+  /**
+   * Handle row selection in the dialog
+   */
   const handleRowSelect = (rowId) => {
     // Find the row name
     const selectedRow = propertyRows.find(row => row.id === rowId);
@@ -211,7 +210,9 @@ const fetchUserProfiles = async () => {
     fetchRowProperties(rowId);
   };
 
-  // Add current row selection to the list
+  /**
+   * Add current row selection to the list
+   */
   const addRowToSelection = () => {
     if (!currentRowSelection.rowId) return;
 
@@ -246,7 +247,9 @@ const fetchUserProfiles = async () => {
     });
   };
 
-  // Remove a row from selection
+  /**
+   * Remove a row from selection
+   */
   const removeRowFromSelection = (rowId) => {
     // First make sure this is a valid operation
     if (!rowId || !selectedRowEntries.some(entry => entry.rowId === rowId)) {
@@ -265,6 +268,9 @@ const fetchUserProfiles = async () => {
     console.log(`Removed property from row ${rowId}. Updated entries:`, updatedEntries);
   };
 
+  /**
+   * Update form data with the selected property rows
+   */
   const updateFormDataWithRows = (entries) => {
     // Make sure entries is an array
     const dataToStore = Array.isArray(entries) ? entries : [];
@@ -291,7 +297,9 @@ const fetchUserProfiles = async () => {
     console.log("JSON string for propertyRows:", jsonString);
   };
 
-  // Format property address for display
+  /**
+   * Format property address for display
+   */
   const formatPropertyAddress = (property) => {
     if (!property) return "Unknown Address";
 
@@ -304,7 +312,9 @@ const fetchUserProfiles = async () => {
     return address || "Unknown Address";
   };
 
-  // Generate position options for the selected row
+  /**
+   * Generate position options for the selected row
+   */
   const generatePositionOptions = () => {
     // If no properties in the row, just show "1. First position"
     if (rowProperties.length === 0) {
@@ -342,7 +352,7 @@ const fetchUserProfiles = async () => {
       </CardHeader>
 
       <CardContent className="space-y-4">
-        {/* Profile Selector - UPDATED: Added required indicator and error state */}
+        {/* Profile Selector */}
         <div className="flex flex-col space-y-1">
           <Label htmlFor="profileId" className="text-gray-700 font-semibold">
             Profile <span className="text-red-500">*</span>

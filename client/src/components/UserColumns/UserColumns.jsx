@@ -1,3 +1,4 @@
+// client/src/components/UserColumns/UserColumns.jsx
 "use client";
 
 import React, { useState, useEffect } from "react";
@@ -29,9 +30,12 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "react-toastify";
-import { api } from "@/utils/api"; // Use the api object directly
+import { getAllUsers, getUserById, updateUserProfiles } from "@/utils/api";
 
-// Updated ProfileManagementDialog component with better profile display
+/**
+ * Profile Management Dialog Component
+ * Allows adding/removing profiles for a user
+ */
 const ProfileManagementDialog = ({ user, isOpen, onClose, onSuccess }) => {
   const [profiles, setProfiles] = useState([]);
   const [allUsers, setAllUsers] = useState([]);
@@ -46,11 +50,14 @@ const ProfileManagementDialog = ({ user, isOpen, onClose, onSuccess }) => {
     }
   }, [isOpen, user]);
   
+  /**
+   * Fetch all users for the dropdown
+   */
   const fetchAllUsers = async () => {
     setLoading(true);
     try {
-      const response = await api.get('/user/all');
-      setAllUsers(response.data || []);
+      const users = await getAllUsers();
+      setAllUsers(users || []);
     } catch (error) {
       console.error("Failed to fetch users:", error);
       toast.error("Failed to load users");
@@ -59,6 +66,9 @@ const ProfileManagementDialog = ({ user, isOpen, onClose, onSuccess }) => {
     }
   };
 
+  /**
+   * Fetch full details for each profile the user has access to
+   */
   const fetchUserProfiles = async () => {
     setLoading(true);
     try {
@@ -67,8 +77,8 @@ const ProfileManagementDialog = ({ user, isOpen, onClose, onSuccess }) => {
         const profileDetails = await Promise.all(
           user.allowedProfiles.map(async (profileId) => {
             try {
-              const userData = await api.get(`/user/${profileId}`);
-              return userData.data;
+              const userData = await getUserById(profileId);
+              return userData;
             } catch (error) {
               console.error(`Failed to fetch profile ${profileId}:`, error);
               return { id: profileId, firstName: "Unknown", lastName: "User" };
@@ -86,7 +96,9 @@ const ProfileManagementDialog = ({ user, isOpen, onClose, onSuccess }) => {
     }
   };
   
-  // Add handleAddProfile function
+  /**
+   * Add a new profile to the user
+   */
   const handleAddProfile = async () => {
     if (!selectedUserId) return;
     
@@ -102,10 +114,8 @@ const ProfileManagementDialog = ({ user, isOpen, onClose, onSuccess }) => {
     const updatedProfileIds = [...(user.allowedProfiles || []), selectedUserId];
     
     try {
-      // Update the user with new allowedProfiles
-      await api.put(`/user/${user.id}/profiles`, { 
-        allowedProfiles: updatedProfileIds 
-      });
+      // Update the user with new allowedProfiles using centralized API
+      await updateUserProfiles(user.id, updatedProfileIds);
       
       // Find the selected user to add to profiles list
       const selectedUser = allUsers.find(u => u.id === selectedUserId);
@@ -124,7 +134,9 @@ const ProfileManagementDialog = ({ user, isOpen, onClose, onSuccess }) => {
     }
   };
 
-  // Add handleRemoveProfile function
+  /**
+   * Remove a profile from the user
+   */
   const handleRemoveProfile = async (profileId) => {
     setLoading(true);
     
@@ -132,10 +144,8 @@ const ProfileManagementDialog = ({ user, isOpen, onClose, onSuccess }) => {
     const updatedProfileIds = (user.allowedProfiles || []).filter(id => id !== profileId);
     
     try {
-      // Update user with new profile list
-      await api.put(`/user/${user.id}/profiles`, { 
-        allowedProfiles: updatedProfileIds 
-      });
+      // Update user with new profile list using centralized API
+      await updateUserProfiles(user.id, updatedProfileIds);
       
       // Update local state
       setProfiles(profiles.filter(profile => profile.id !== profileId));

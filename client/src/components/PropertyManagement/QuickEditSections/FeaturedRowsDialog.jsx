@@ -1,11 +1,11 @@
 // client/src/components/PropertyManagement/QuickEditSections/FeaturedRowsDialog.jsx
 import React, { useState, useEffect } from "react";
-import axios from "axios";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Loader2 } from "lucide-react";
+import { getPropertyRows, getPropertyRowById } from "@/utils/api";
 
 export default function FeaturedRowsDialog({
   showFeaturedDialog,
@@ -32,29 +32,34 @@ export default function FeaturedRowsDialog({
     }
   }, [showFeaturedDialog]);
 
-  // Fetch property rows
+  /**
+   * Fetch all property rows
+   */
   const fetchPropertyRows = async () => {
     setIsLoadingRows(true);
     try {
-      const response = await axios.get(`${import.meta.env.VITE_SERVER_URL}/property-rows`);
-      setPropertyRows(response.data || []);
+      const rows = await getPropertyRows();
+      setPropertyRows(rows || []);
     } catch (error) {
       console.error("Error fetching property rows:", error);
+      setPropertyRows([]);
     } finally {
       setIsLoadingRows(false);
     }
   };
 
-  // Fetch row properties
+  /**
+   * Fetch properties in a specific row
+   */
   const fetchRowProperties = async (rowId) => {
     if (!rowId) return;
     
     setLoadingRowProperties(true);
     try {
-      const response = await axios.get(`${import.meta.env.VITE_SERVER_URL}/property-rows/${rowId}`);
+      const rowData = await getPropertyRowById(rowId);
       
-      if (response.data && response.data.propertyDetails) {
-        const allProperties = response.data.propertyDetails || [];
+      if (rowData && rowData.propertyDetails) {
+        const allProperties = rowData.propertyDetails || [];
         
         // Filter out the current property
         const filteredProperties = propertyId ? 
@@ -73,7 +78,9 @@ export default function FeaturedRowsDialog({
     }
   };
 
-  // Handle row selection
+  /**
+   * Handle row selection
+   */
   const handleRowSelect = (rowId) => {
     const selectedRow = propertyRows.find(row => row.id === rowId);
     const rowName = selectedRow ? (selectedRow.name || selectedRow.rowType || "Unnamed Row") : "";
@@ -90,7 +97,9 @@ export default function FeaturedRowsDialog({
     fetchRowProperties(rowId);
   };
 
-  // Add row to selection
+  /**
+   * Add row to selection
+   */
   const addRowToSelection = () => {
     if (!currentRowSelection.rowId) return;
     
@@ -120,7 +129,9 @@ export default function FeaturedRowsDialog({
     });
   };
 
-  // Format property address
+  /**
+   * Format property address for display
+   */
   const formatPropertyAddress = (property) => {
     if (!property) return "Unknown Address";
     
@@ -131,7 +142,9 @@ export default function FeaturedRowsDialog({
     return address || "Unknown Address";
   };
 
-  // Generate position options
+  /**
+   * Generate position options for dropdown
+   */
   const generatePositionOptions = () => {
     if (rowProperties.length === 0) {
       return [
@@ -164,6 +177,7 @@ export default function FeaturedRowsDialog({
         </DialogHeader>
         
         <div className="grid grid-cols-2 gap-4 py-4">
+          {/* Row Selection */}
           <div className="space-y-2">
             <Label htmlFor="row-list">Featured List</Label>
             <Select
@@ -184,6 +198,7 @@ export default function FeaturedRowsDialog({
             </Select>
           </div>
           
+          {/* Position Selection */}
           <div className="space-y-2">
             <Label htmlFor="position">Position</Label>
             <Select
@@ -204,6 +219,7 @@ export default function FeaturedRowsDialog({
           </div>
         </div>
         
+        {/* Current Properties in List */}
         {currentRowSelection.rowId && rowProperties.length > 0 && (
           <div className="py-2">
             <h4 className="text-sm font-medium mb-2">Current Properties in List:</h4>
@@ -217,6 +233,7 @@ export default function FeaturedRowsDialog({
           </div>
         )}
         
+        {/* Status Message */}
         {currentRowSelection.rowId && (
           <div className="py-2">
             {selectedRowEntries.some(entry => entry.rowId === currentRowSelection.rowId) ? (
