@@ -18,9 +18,9 @@ import BuyerOffersTable from './BuyerOffersTable';
 import BuyerQualificationsTable from './BuyerQualificationsTable';
 
 const Profile = () => {
-  const { user, isLoading, isAuthenticated, getAccessTokenSilently } = useAuth0();
+  const { user, isLoading, isAuthenticated } = useAuth0();
   const { userRoles, userPermissions } = useAuth();
-  const { getUserProfile } = useUserProfileApi();
+  const { getUserProfile, updateUserProfileWithFiles } = useUserProfileApi(); // ✅ Added updateUserProfileWithFiles
   const { isVipBuyer } = useVipBuyer();
 
   const [isEditing, setIsEditing] = useState(false);
@@ -88,7 +88,7 @@ const Profile = () => {
     loadUserProfile();
   }, [isAuthenticated, user, getUserProfile, isSystemUser]);
 
-  // Handle profile form submission with file upload
+  // ✅ UPDATED: Handle profile form submission with file upload using API function
   const handleSubmit = async (e) => {
     e.preventDefault();
     setIsSubmitting(true);
@@ -119,27 +119,16 @@ const Profile = () => {
         formData.append("removeAvatar", "true");
       }
 
-      // Send to API
-      const token = await getAccessTokenSilently();
-      const response = await fetch(`${import.meta.env.VITE_SERVER_URL}/user/profile`, {
-        method: "PUT",
-        headers: {
-          Authorization: `Bearer ${token}`
-        },
-        body: formData
-      });
-
-      if (!response.ok) {
-        throw new Error("Failed to update profile");
-      }
-
-      const updatedUser = await response.json();
+      // ✅ Use API function instead of manual fetch
+      const updatedUser = await updateUserProfileWithFiles(formData);
       
       setUpdateSuccess(true);
       setIsEditing(false);
 
       // Update local data
-      setDbUserData(updatedUser.user);
+      if (updatedUser && updatedUser.user) {
+        setDbUserData(updatedUser.user);
+      }
       
       // Reset file state
       setSelectedFile(null);

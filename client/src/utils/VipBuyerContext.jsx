@@ -1,13 +1,13 @@
-// src/utils/VipBuyerContext.jsx
+// client/src/utils/VipBuyerContext.jsx
 import React, { createContext, useState, useEffect, useContext, useCallback } from "react";
 import { useAuth0 } from "@auth0/auth0-react";
-import axios from "axios";
+import { getBuyerByAuth0Id } from "@/utils/api"; // ✅ Import API function
 
 // Create a context for VIP buyer information
 export const VipBuyerContext = createContext(null);
 
 export const VipBuyerProvider = ({ children }) => {
-  const { isAuthenticated, user, getAccessTokenSilently } = useAuth0();
+  const { isAuthenticated, user } = useAuth0(); // ✅ Removed getAccessTokenSilently
   const [isVipBuyer, setIsVipBuyer] = useState(false);
   const [vipBuyerData, setVipBuyerData] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -28,40 +28,30 @@ export const VipBuyerProvider = ({ children }) => {
     try {
       setIsLoading(true);
       
-      // Get access token for API request
-      const token = await getAccessTokenSilently();
+      // ✅ Use API function instead of manual axios call
+      const buyerData = await getBuyerByAuth0Id(user.sub);
       
-      // Make API call to check if the Auth0 ID matches a VIP buyer
-      const response = await axios.get(
-        `${import.meta.env.VITE_SERVER_URL}/buyer/byAuth0Id?auth0Id=${encodeURIComponent(user.sub)}`,
-        {
-          headers: {
-            Authorization: `Bearer ${token}`
-          }
-        }
-      );
-      
-      // If we got a successful response with buyer data
-      if (response.data) {
+      // If we got buyer data (function returns null for 404)
+      if (buyerData) {
         setIsVipBuyer(true);
-        setVipBuyerData(response.data);
-      } 
-      
-      setError(null);
-    } catch (err) {
-      // If error is 404, it means no buyer was found for this Auth0 ID (not a VIP)
-      if (err.response && err.response.status === 404) {
+        setVipBuyerData(buyerData);
+        setError(null);
+      } else {
+        // No buyer found (404) - user is not a VIP
         setIsVipBuyer(false);
         setVipBuyerData(null);
-      } else {
-        // For other errors, log them but don't disrupt the application
-        console.error("Error checking VIP buyer status:", err);
-        setError("Failed to verify VIP status");
+        setError(null);
       }
+    } catch (err) {
+      // For other errors (non-404), log them but don't disrupt the application
+      console.error("Error checking VIP buyer status:", err);
+      setError("Failed to verify VIP status");
+      setIsVipBuyer(false);
+      setVipBuyerData(null);
     } finally {
       setIsLoading(false);
     }
-  }, [isAuthenticated, user, getAccessTokenSilently]);
+  }, [isAuthenticated, user]); // ✅ Removed getAccessTokenSilently from dependencies
 
   // Check VIP status on initial load and when dependencies change
   useEffect(() => {

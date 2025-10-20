@@ -140,8 +140,9 @@ export {
   getUserPropertyProfiles,
   
   // Authenticated Profile Hook
-  useUserProfileApi,
-  updateUserProfiles
+  
+  updateUserProfiles,
+  useUserProfileApi
 } from './api/users';
 
 // ============================================================================

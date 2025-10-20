@@ -78,7 +78,7 @@ export const deleteUser = async (id) => {
 };
 
 /**
- * Update user status (enable/disable)
+ * Update user status (enable/disable) - Boolean version
  * @param {string} id - User ID
  * @param {boolean} isActive - Active status
  * @returns {Promise<Object>} Updated user
@@ -92,12 +92,29 @@ export const updateUserStatus = async (id, isActive) => {
   }
 };
 
+/**
+ * Update user status - String version (alternative endpoint)
+ * Use this when your backend expects a status string instead of boolean
+ * @param {string} id - User ID
+ * @param {string} status - Status string (e.g., "active", "inactive", "suspended")
+ * @returns {Promise<Object>} Updated user
+ */
+export const updateUserStatusString = async (id, status) => {
+  try {
+    const response = await api.put(`/user/${id}/status`, { status });
+    return response.data;
+  } catch (error) {
+    handleRequestError(error, "Failed to update user status");
+  }
+};
+
 // ============================================================================
 // USER EXISTENCE & SYNCHRONIZATION
 // ============================================================================
 
 /**
- * Check if user exists in database by Auth0 ID
+ * Check if user exists in database by Auth0 ID (Query param version)
+ * Returns null if user not found (404)
  * @param {string} auth0Id - Auth0 user ID
  * @returns {Promise<Object|null>} User object or null if not found
  */
@@ -110,6 +127,24 @@ export const checkUserExists = async (auth0Id) => {
       return null;
     }
     handleRequestError(error, "Failed to check if user exists");
+  }
+};
+
+/**
+ * Check if user exists by Auth0 ID (Path param version)
+ * Use this if your backend uses /user/exists/:auth0Id endpoint
+ * @param {string} auth0Id - Auth0 user ID
+ * @returns {Promise<Object>} User existence status
+ */
+export const checkUserExistsByPath = async (auth0Id) => {
+  try {
+    const response = await api.get(`/user/exists/${auth0Id}`);
+    return response.data;
+  } catch (error) {
+    if (error.response && error.response.status === 404) {
+      return null;
+    }
+    handleRequestError(error, "Failed to check user existence");
   }
 };
 
@@ -142,6 +177,38 @@ export const getUserPropertyProfiles = async () => {
     return response.data;
   } catch (error) {
     handleRequestError(error, "Failed to fetch user property profiles");
+  }
+};
+
+/**
+ * Update user's allowed profiles (Version 1 - with userId)
+ * @param {string} userId - User ID
+ * @param {Array<string>} profileIds - Array of profile IDs
+ * @returns {Promise<Object>} Updated user data
+ */
+export const updateUserProfilesById = async (userId, profileIds) => {
+  try {
+    const response = await api.put(`/user/${userId}/profiles`, { 
+      allowedProfiles: profileIds 
+    });
+    return response.data;
+  } catch (error) {
+    handleRequestError(error, "Failed to update user profiles");
+  }
+};
+
+/**
+ * Update current user's property profiles (Version 2 - for current user)
+ * Use this when updating the currently authenticated user's profiles
+ * @param {Array<string>} profiles - Array of profile IDs
+ * @returns {Promise<Object>} Updated user data
+ */
+export const updateUserProfiles = async (profiles) => {
+  try {
+    const response = await api.put('/user/profiles', { profiles });
+    return response.data;
+  } catch (error) {
+    handleRequestError(error, "Failed to update user profiles");
   }
 };
 
@@ -184,7 +251,7 @@ export function useUserProfileApi() {
   }, [getAccessTokenSilently]);
   
   /**
-   * Update current user's profile
+   * Update current user's profile (JSON data only)
    * @param {Object} profileData - Updated profile data
    * @returns {Promise<Object>} Updated user profile
    */
@@ -199,6 +266,30 @@ export function useUserProfileApi() {
       return response.data;
     } catch (error) {
       console.error("Error updating user profile:", error);
+      if (error.response?.status === 401) {
+        console.log("Authentication error: Your session may have expired");
+      }
+      throw error;
+    }
+  }, [getAccessTokenSilently]);
+
+  /**
+   * Update current user's profile with file upload (avatar/images)
+   * @param {FormData} formData - FormData with profile data and files
+   * @returns {Promise<Object>} Updated user profile
+   */
+  const updateUserProfileWithFiles = useCallback(async (formData) => {
+    try {
+      const token = await getAccessTokenSilently();
+      const response = await api.put('/user/profile', formData, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'multipart/form-data'
+        }
+      });
+      return response.data;
+    } catch (error) {
+      console.error("Error updating user profile with files:", error);
       if (error.response?.status === 401) {
         console.log("Authentication error: Your session may have expired");
       }
@@ -231,23 +322,7 @@ export function useUserProfileApi() {
   return {
     getUserProfile,
     updateUserProfile,
+    updateUserProfileWithFiles,
     getUserPropertyProfiles
   };
 }
-
-/**
- * Update user's allowed profiles
- * @param {string} userId - User ID
- * @param {Array<string>} profileIds - Array of profile IDs
- * @returns {Promise<Object>} Updated user data
- */
-export const updateUserProfiles = async (userId, profileIds) => {
-  try {
-    const response = await api.put(`/user/${userId}/profiles`, { 
-      allowedProfiles: profileIds 
-    });
-    return response.data;
-  } catch (error) {
-    handleRequestError(error, "Failed to update user profiles");
-  }
-};
