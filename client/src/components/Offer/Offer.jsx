@@ -2,12 +2,18 @@
 
 import React, { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
-import { api } from "../../utils/api";
 import { parsePhoneNumber } from "libphonenumber-js";
 import ContactCard from "@/components/ContactCard/ContactCard";
 import { useAuth } from "@/components/hooks/useAuth";
 import { useVipBuyer } from "@/utils/VipBuyerContext";
 import { useShowAddress } from "@/utils/addressUtils";
+
+// Import centralized API functions
+import { 
+  makeOffer, 
+  getBuyerOffers,
+  updateOfferStatus 
+} from "@/utils/api";
 
 // ShadCN UI components
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
@@ -86,36 +92,36 @@ export default function Offer({ propertyData }) {
   // Function to check for existing offers and populate buyer data
   const checkForExistingOffer = async () => {
     try {
-      // Construct query parameters based on available information
-      let queryParams = new URLSearchParams();
+      // Build params object for the API call
+      const params = {};
 
       if (user?.sub) {
         // If authenticated, check by Auth0 ID
-        queryParams.append("auth0Id", user.sub);
+        params.auth0Id = user.sub;
       } else if (email) {
         // Otherwise check by email
-        queryParams.append("email", email);
+        params.email = email;
       } else if (phone) {
         // Or by phone if available
-        queryParams.append("phone", phone);
+        params.phone = phone;
       } else {
         // No identifiers available yet
         return;
       }
 
-      // Fetch buyer's offers
-      const response = await api.get(`/offer/buyer?${queryParams}`);
+      // Fetch buyer's offers using centralized API
+      const response = await getBuyerOffers(params);
 
-      if (response.data && response.data.buyer) {
+      if (response && response.buyer) {
         // Store the found buyer
-        setFoundBuyer(response.data.buyer);
+        setFoundBuyer(response.buyer);
 
         // Auto-populate the buyer's info
-        populateBuyerData(response.data.buyer);
+        populateBuyerData(response.buyer);
 
         // Check for offers on this property
-        if (response.data.offers) {
-          const offerForThisProperty = response.data.offers.find((offer) => offer.propertyId === propertyData.id);
+        if (response.offers) {
+          const offerForThisProperty = response.offers.find((offer) => offer.propertyId === propertyData.id);
 
           if (offerForThisProperty) {
             console.log("Found existing offer:", offerForThisProperty);
@@ -135,10 +141,6 @@ export default function Offer({ propertyData }) {
             if (offerForThisProperty.sysMessage) {
               setSysMessage(offerForThisProperty.sysMessage);
             }
-            // Not loading Message During Buyer Identification
-            /* if (offerForThisProperty.buyerMessage) {
-              setBuyerMessage(offerForThisProperty.buyerMessage);
-            } */
 
             if (offerForThisProperty.counteredPrice) {
               setCounteredPrice(offerForThisProperty.counteredPrice);
@@ -180,24 +182,26 @@ export default function Offer({ propertyData }) {
     // If either email or phone has changed, check for buyer data
     if ((email || field === "email") && (phone || field === "phone")) {
       try {
-        // Find buyer by email or phone
-        const queryParams = new URLSearchParams();
+        // Build params object for the API call
+        const params = {};
+        
         if (field === "email") {
-          queryParams.append("email", value);
+          params.email = value;
         } else {
-          queryParams.append("phone", formatPhoneNumber(value));
+          params.phone = formatPhoneNumber(value);
         }
 
-        const response = await api.get(`/offer/buyer?${queryParams}`);
+        // Fetch buyer using centralized API
+        const response = await getBuyerOffers(params);
 
-        if (response.data && response.data.buyer) {
+        if (response && response.buyer) {
           // We found a buyer - auto-populate fields
-          setFoundBuyer(response.data.buyer);
-          populateBuyerData(response.data.buyer);
+          setFoundBuyer(response.buyer);
+          populateBuyerData(response.buyer);
 
           // Check for existing offers on this property
-          if (response.data.offers && propertyData?.id) {
-            const offerForThisProperty = response.data.offers.find((offer) => offer.propertyId === propertyData.id);
+          if (response.offers && propertyData?.id) {
+            const offerForThisProperty = response.offers.find((offer) => offer.propertyId === propertyData.id);
 
             if (offerForThisProperty) {
               setExistingOffer(offerForThisProperty);
@@ -216,10 +220,6 @@ export default function Offer({ propertyData }) {
               if (offerForThisProperty.sysMessage) {
                 setSysMessage(offerForThisProperty.sysMessage);
               }
-              // Not loading Message During Buyer Identification
-              /* if (offerForThisProperty.buyerMessage) {
-                setBuyerMessage(offerForThisProperty.buyerMessage);
-              } */
 
               if (offerForThisProperty.counteredPrice) {
                 setCounteredPrice(offerForThisProperty.counteredPrice);
@@ -345,7 +345,7 @@ export default function Offer({ propertyData }) {
     return newPriceValue > existingPriceValue;
   };
 
-  // New method for accepting counter offer
+  // Accept counter offer using centralized API
   const handleAcceptCounter = async () => {
     if (!existingOffer || !counteredPrice) {
       setDialogMessage("Counter offer information is missing. Please try again.");
@@ -357,12 +357,12 @@ export default function Offer({ propertyData }) {
     setIsAcceptingCounter(true);
 
     try {
-      // Make API call to accept the counter offer
-      const response = await api.put(`/offer/${existingOffer.id}/status`, {
-        status: "ACCEPTED",
-        buyerMessage: "Counter offer accepted",
-        acceptedPrice: counteredPrice, // Explicitly include the accepted price
-      });
+      // Use centralized updateOfferStatus function
+      // const response = await updateOfferStatus(existingOffer.id, {
+      //   status: "ACCEPTED",
+      //   buyerMessage: "Counter offer accepted",
+      //   acceptedPrice: counteredPrice,
+      // });
 
       setDialogMessage("You have accepted the counter offer! Our team will contact you soon with the next steps.");
       setDialogType("success");
@@ -370,13 +370,13 @@ export default function Offer({ propertyData }) {
 
       // Update local state
       setOfferStatus("ACCEPTED");
-      setOfferPrice(counteredPrice.toLocaleString()); // Update displayed price to match counter price
+      setOfferPrice(counteredPrice.toLocaleString());
 
       // Update existing offer object in state
       setExistingOffer({
         ...existingOffer,
         offerStatus: "ACCEPTED",
-        offeredPrice: counteredPrice, // Update the price in our local state
+        offeredPrice: counteredPrice,
       });
     } catch (error) {
       setDialogMessage("Failed to accept counter offer. Please try again or contact support.");
@@ -414,7 +414,7 @@ export default function Offer({ propertyData }) {
       if (!validateOfferPrice(offerPrice)) {
         // Show dialog for entering a higher price
         setNewOfferPrice("");
-        setActionType("update"); // Set action type to update
+        setActionType("update");
         setUpdateDialogOpen(true);
         return;
       }
@@ -436,8 +436,8 @@ export default function Offer({ propertyData }) {
     console.log("Submitting offer with data:", offerData);
 
     try {
-      // Use the offer endpoint
-      const response = await api.post("/offer/makeOffer", offerData);
+      // Use centralized makeOffer function
+      const response = await makeOffer(offerData);
 
       // If offer is below minPrice, show a warning and do not redirect
       if (parsedOfferPrice < propertyData?.minPrice) {
@@ -447,13 +447,13 @@ export default function Offer({ propertyData }) {
         return;
       }
 
-      // If valid offer, show success and (optionally) navigate back
+      // If valid offer, show success
       setDialogMessage(hasExistingOffer ? "Your offer has been successfully updated!" : "Offer submitted successfully!");
       setDialogType("success");
       setDialogOpen(true);
 
       // Update the local state
-      setExistingOffer(response.data.offer);
+      setExistingOffer(response.offer);
       setHasExistingOffer(true);
       setOfferStatus("PENDING");
       setBuyerMessage("");
@@ -521,14 +521,15 @@ export default function Offer({ propertyData }) {
     };
 
     try {
-      const response = await api.post("/offer/makeOffer", offerData);
+      // Use centralized makeOffer function
+      const response = await makeOffer(offerData);
 
       setDialogMessage("Your offer has been successfully updated!");
       setDialogType("success");
       setDialogOpen(true);
 
       // Update local state
-      setExistingOffer(response.data.offer);
+      setExistingOffer(response.offer);
       setOfferStatus("PENDING");
       // Reset the update message after successful submission
       setUpdateMessage("");

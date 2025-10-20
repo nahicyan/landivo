@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { api } from "@/utils/api";
+import { getUserById } from "@/utils/api";
 import { PuffLoader } from "react-spinners";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -17,9 +17,8 @@ export default function UserDetail() {
     const fetchUser = async () => {
       try {
         setLoading(true);
-        // You'll need to create this API endpoint
-        const response = await api.get(`/user/${userId}`);
-        setUser(response.data);
+        const userData = await getUserById(userId);
+        setUser(userData);
       } catch (err) {
         console.error("Error fetching user:", err);
         setError("Failed to load user details");
@@ -27,7 +26,6 @@ export default function UserDetail() {
         setLoading(false);
       }
     };
-
     fetchUser();
   }, [userId]);
 

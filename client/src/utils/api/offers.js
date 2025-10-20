@@ -174,3 +174,63 @@ export const withdrawOffer = async (offerId) => {
     handleRequestError(error, "Failed to withdraw offer");
   }
 };
+
+/**
+ * Update offer status (CENTRALIZED STATUS UPDATE FUNCTION)
+ * This replaces all manual api.put('/offer/{id}/status') calls
+ * @param {string} offerId - Offer ID
+ * @param {Object} statusData - Status update data
+ * @param {string} statusData.status - New status (PENDING, ACCEPTED, REJECTED, COUNTERED, EXPIRED)
+ * @param {string} [statusData.message] - Optional message (for admin/system)
+ * @param {string} [statusData.buyerMessage] - Optional buyer message
+ * @param {number} [statusData.counteredPrice] - Counter offer price
+ * @param {number} [statusData.acceptedPrice] - Accepted price (when accepting counter)
+ * @returns {Promise<Object>} Updated offer with new status
+ */
+export const updateOfferStatus = async (offerId, statusData) => {
+  try {
+    const response = await api.put(`/offer/${offerId}/status`, statusData);
+    return response.data;
+  } catch (error) {
+    handleRequestError(error, "Failed to update offer status");
+  }
+};
+
+/**
+ * Get recent offer activity across all properties
+ * Returns a feed of recent offer actions (created, accepted, rejected, etc.)
+ * @param {number} [limit=10] - Maximum number of activities to return
+ * @returns {Promise<Array>} List of recent offer activities
+ */
+export const getRecentOfferActivity = async (limit = 10) => {
+  try {
+    const response = await api.get(`/offer/activity/recent?limit=${limit}`);
+    return response.data.activities || [];
+  } catch (error) {
+    console.error("Error fetching offer activity:", error);
+    return [];
+  }
+};
+
+/**
+ * Get all offers across all properties
+ * Used for admin/management views
+ * @param {Object} [options] - Optional query parameters
+ * @param {string} [options.status] - Filter by status
+ * @param {number} [options.limit] - Limit number of results
+ * @param {number} [options.offset] - Offset for pagination
+ * @returns {Promise<Object>} Object with offers array and metadata
+ */
+export const getAllOffers = async (options = {}) => {
+  try {
+    const queryParams = new URLSearchParams(options);
+    const endpoint = queryParams.toString() 
+      ? `/offer/all?${queryParams}` 
+      : '/offer/all';
+    
+    const response = await api.get(endpoint);
+    return response.data;
+  } catch (error) {
+    handleRequestError(error, "Failed to fetch all offers");
+  }
+};

@@ -1,7 +1,7 @@
 // client/src/components/PropertyManagement/QuickEditModal.jsx
 import React, { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
-import { updateProperty } from "@/utils/api";
+import { updateProperty, getPropertyRowAssociations } from "@/utils/api";
 import { toast } from "react-toastify";
 
 // UI Components
@@ -92,20 +92,7 @@ export function QuickEditModal({ property, isOpen, onClose, onSave }) {
     if (!propertyId) return;
     
     try {
-      const response = await axios.get(`${import.meta.env.VITE_SERVER_URL}/property-rows`);
-      const rows = response.data || [];
-      
-      const propertyAssociations = [];
-      
-      for (const row of rows) {
-        if (row.displayOrder && Array.isArray(row.displayOrder) && row.displayOrder.includes(propertyId)) {
-          propertyAssociations.push({
-            rowId: row.id,
-            rowName: row.name || row.rowType || "Unnamed Row",
-            position: row.displayOrder.indexOf(propertyId)
-          });
-        }
-      }
+      const propertyAssociations = await getPropertyRowAssociations(propertyId);
       
       setSelectedRowEntries(propertyAssociations);
       

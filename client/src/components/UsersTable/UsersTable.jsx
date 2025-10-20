@@ -4,7 +4,7 @@
 import React, { useState, useEffect, useMemo } from "react";
 import { PuffLoader } from "react-spinners";
 import useUsers from "@/components/hooks/useUsers.js";
-import { updateUserStatus, api } from "@/utils/api";
+import { updateUserStatus, getUserPropertiesCount } from "@/utils/api";
 import { columns } from "@/components/UserColumns/UserColumns";
 import { DataTable } from "@/components/DataTable/DataTable";
 import { Input } from "@/components/ui/input";
@@ -60,8 +60,7 @@ export default function UsersTable() {
     
     // If disabling, check if user has properties
     try {
-      const response = await api.get(`/user/${user.id}/properties-count`);
-      const propertiesCount = response.data.count;
+      const propertiesCount = await getUserPropertiesCount(user.id);
       
       if (propertiesCount > 0) {
         // Show reassignment modal

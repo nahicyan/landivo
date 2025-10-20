@@ -2,6 +2,7 @@
 import React, { useEffect, useState } from 'react';
 import { useAuth } from '@/components/hooks/useAuth';
 import { useAuthApi } from '@/utils/authApi';
+import { getAllUsers } from '@/utils/api';
 
 export default function Auth0DebugComponent() {
   const { 
@@ -47,7 +48,7 @@ export default function Auth0DebugComponent() {
       setApiTestResult(null);
       setApiTestError(null);
       
-      const result = await api.get('/user/all');
+      const result = await getAllUsers();
       setApiTestResult(result);
     } catch (error) {
       setApiTestError(error.response?.data || error.message);

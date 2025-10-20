@@ -10,7 +10,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { DollarSign, CreditCard, FileText, Calendar } from 'lucide-react';
-import { api } from '@/utils/api';
+import { getPropertyFinanceApplications } from '@/utils/api';
 
 export default function FinanceDialog({ isOpen, onClose, propertyData }) {
   const [applications, setApplications] = useState([]);
@@ -25,10 +25,12 @@ export default function FinanceDialog({ isOpen, onClose, propertyData }) {
   const fetchFinanceData = async () => {
     setLoading(true);
     try {
-      const response = await api.get(`/properties/${propertyData.id}/finance-applications`);
-      setApplications(response.data || []);
+      // Use centralized API function
+      const financeApplications = await getPropertyFinanceApplications(propertyData.id);
+      setApplications(financeApplications || []);
     } catch (error) {
       console.error('Error fetching finance data:', error);
+      setApplications([]); // Set empty array on error
     } finally {
       setLoading(false);
     }

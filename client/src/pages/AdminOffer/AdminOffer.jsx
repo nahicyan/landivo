@@ -1,7 +1,7 @@
 // client/src/pages/AdminOffer/AdminOffer.jsx
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { api } from "@/utils/api";
+import { getAllOffers, getRecentOfferActivity } from "@/utils/api";
 import { toast } from "react-toastify";
 
 // Import child components
@@ -39,8 +39,8 @@ export default function AdminOffer() {
         setLoading(true);
         
         // Fetch all offers
-        const response = await api.get("/offer/all");
-        setOffers(response.data.offers || []);
+        const response = await getAllOffers();
+        setOffers(response.offers || []);
         
         // Calculate stats
         calculateStats(response.data.offers || []);
@@ -115,11 +115,10 @@ export default function AdminOffer() {
   // Fetch recent offer activity
   const fetchRecentActivity = async () => {
     try {
-      const response = await api.get("/offer/activity/recent");
-      setRecentActivity(response.data.activities || []);
+      const activities = await getRecentOfferActivity(); // Default limit is 10
+      setRecentActivity(activities);
     } catch (error) {
       console.error("Error fetching recent activity:", error);
-      // Don't show error toast for this as it's not critical
       setRecentActivity([]);
     }
   };

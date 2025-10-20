@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { api, getSystemSettings } from "@/utils/api";
+import { getSystemSettings, getUserPublicProfile, getAvatarUrl } from "@/utils/api";
 import { Loader2, Phone } from "lucide-react";
 
 const ContactProfile = ({ profileId }) => {
@@ -18,9 +18,12 @@ const ContactProfile = ({ profileId }) => {
       try {
         setLoading(true);
 
-        const [profileResponse, settingsResponse] = await Promise.all([api.get(`/user/public-profile/${profileId}`), getSystemSettings()]);
+        const [profileData, settingsResponse] = await Promise.all([
+          getUserPublicProfile(profileId), 
+          getSystemSettings()
+        ]);
 
-        setProfileData(profileResponse.data);
+        setProfileData(profileData);
         setSystemSettings(settingsResponse);
       } catch (err) {
         console.error("Error fetching data:", err);
@@ -48,8 +51,8 @@ const ContactProfile = ({ profileId }) => {
   const displayPhone = systemSettings?.overrideContactPhone || profileData.phone;
 
   const imageUrl = profileData.avatarUrl
-    ? `${import.meta.env.VITE_SERVER_URL}/${profileData.avatarUrl}`
-    : `https://ui-avatars.com/api/?name=${profileData.firstName}+${profileData.lastName}&background=324c48&color=fff&size=150`;
+  ? getAvatarUrl(profileData.avatarUrl)
+  : `https://ui-avatars.com/api/?name=${profileData.firstName}+${profileData.lastName}&background=324c48&color=fff&size=150`;
 
   return (
     <div className="w-full bg-[#f5faf7] rounded-lg px-6 py-3 mt-5">

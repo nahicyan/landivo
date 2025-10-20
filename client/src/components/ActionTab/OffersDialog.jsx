@@ -10,7 +10,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { FileText, Clock, DollarSign, User } from 'lucide-react';
-import { api } from '@/utils/api';
+import { getPropertyOffersData, getPropertyActivities } from '@/utils/api';
 
 export default function OffersDialog({ isOpen, onClose, propertyData }) {
   const [offers, setOffers] = useState([]);
@@ -26,15 +26,19 @@ export default function OffersDialog({ isOpen, onClose, propertyData }) {
   const fetchData = async () => {
     setLoading(true);
     try {
-      const [offersRes, activitiesRes] = await Promise.all([
-        api.get(`/properties/${propertyData.id}/offers`),
-        api.get(`/properties/${propertyData.id}/activities`)
+      // Use centralized API functions with Promise.all for parallel requests
+      const [propertyOffers, propertyActivities] = await Promise.all([
+        getPropertyOffersData(propertyData.id),
+        getPropertyActivities(propertyData.id)
       ]);
       
-      setOffers(offersRes.data || []);
-      setActivities(activitiesRes.data || []);
+      setOffers(propertyOffers || []);
+      setActivities(propertyActivities || []);
     } catch (error) {
       console.error('Error fetching offers data:', error);
+      // Set empty arrays on error to prevent UI breaks
+      setOffers([]);
+      setActivities([]);
     } finally {
       setLoading(false);
     }

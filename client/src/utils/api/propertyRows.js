@@ -102,3 +102,32 @@ export const deletePropertyRow = async (id) => {
     handleRequestError(error, "Failed to delete property row");
   }
 };
+
+/**
+ * Get property row associations for a specific property
+ * Returns which rows contain this property and its position in each row
+ * @param {string} propertyId - Property ID to search for
+ * @returns {Promise<Array>} Array of row associations with rowId, rowName, and position
+ */
+export const getPropertyRowAssociations = async (propertyId) => {
+  try {
+    const rows = await getAllPropertyRows();
+    
+    const propertyAssociations = [];
+    
+    for (const row of rows) {
+      if (row.displayOrder && Array.isArray(row.displayOrder) && row.displayOrder.includes(propertyId)) {
+        propertyAssociations.push({
+          rowId: row.id,
+          rowName: row.name || row.rowType || "Unnamed Row",
+          position: row.displayOrder.indexOf(propertyId)
+        });
+      }
+    }
+    
+    return propertyAssociations;
+  } catch (error) {
+    console.error("Error fetching property row associations:", error);
+    return [];
+  }
+};

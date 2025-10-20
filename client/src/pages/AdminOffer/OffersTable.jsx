@@ -1,7 +1,7 @@
 // client/src/pages/AdminOffer/OffersTable.jsx
 import React, { useState } from "react";
 import { format } from "date-fns";
-import { api } from "@/utils/api";
+import { getOfferHistory } from "@/utils/api";
 import { useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
 
@@ -40,6 +40,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
+import { updateOfferStatus } from "@/utils/api";
 import {
   Check,
   X,
@@ -170,8 +171,7 @@ const OffersTable = ({ offers, onOfferUpdated }) => {
         requestData.counteredPrice = parseFloat(counterPrice.replace(/,/g, ""));
       }
 
-      // Make API request - remove leading slash to avoid duplicate /api/api
-      await api.put(`offer/${selectedOffer.id}/status`, requestData);
+      await updateOfferStatus(selectedOffer.id, requestData);
 
       // Close dialog and notify
       setIsDialogOpen(false);
@@ -193,9 +193,9 @@ const OffersTable = ({ offers, onOfferUpdated }) => {
     setSelectedOffer(offer);
 
     try {
-      // Fetch history for this offer
-      const response = await api.get(`/offer/${offer.id}/history`);
-      setSelectedHistory(response.data.history || []);
+      // Fetch history for this offer using centralized function
+      const history = await getOfferHistory(offer.id);
+      setSelectedHistory(history || []);
       setIsHistoryOpen(true);
     } catch (error) {
       console.error("Error fetching offer history:", error);

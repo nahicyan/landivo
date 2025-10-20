@@ -10,7 +10,7 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { formatPrice } from "@/utils/format";
 import { format } from "date-fns";
 import { useQuery } from "react-query";
-import { api } from "@/utils/api";
+import { getRecentOfferActivity } from "@/utils/api";
 import { 
   DollarSign, 
   Check,
@@ -28,10 +28,7 @@ export default function OffersWidget({ isLoading: externalLoading = false }) {
   // Fetch recent offers data
   const { data, isLoading: offersLoading, error } = useQuery(
     'recentOffers',
-    async () => {
-      const response = await api.get('/offer/activity/recent?limit=5');
-      return response.data;
-    },
+    () => getRecentOfferActivity(5),
     {
       refetchOnWindowFocus: false,
       enabled: !externalLoading,

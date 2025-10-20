@@ -4,7 +4,7 @@ import React, { useState, useEffect } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
-import { api, getSystemSettings } from "@/utils/api";
+import { getSystemSettings, getUserPublicProfile } from "@/utils/api";
 import { Loader2 } from "lucide-react";
 
 export default function ContactCard({ profileId }) {
@@ -18,10 +18,12 @@ export default function ContactCard({ profileId }) {
       try {
         setLoading(true);
 
-        // Fetch both profile data and system settings in parallel
-        const [profileResponse, settingsResponse] = await Promise.all([profileId ? api.get(`/user/public-profile/${profileId}`) : Promise.resolve({ data: null }), getSystemSettings()]);
+        const [profileData, settingsResponse] = await Promise.all([
+          profileId ? getUserPublicProfile(profileId) : Promise.resolve(null), 
+          getSystemSettings()
+        ]);
 
-        setProfileData(profileResponse.data);
+        setProfileData(profileData);
         setSystemSettings(settingsResponse);
       } catch (err) {
         console.error("Error fetching data:", err);

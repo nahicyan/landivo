@@ -38,7 +38,10 @@ export {
   deleteProperty,
   requestPropertyDeletion,
   deletePropertyDirect,
-  approvePropertyDeletion
+  approvePropertyDeletion,
+  getPropertyFinanceApplications,
+  getPropertyOffersData,      // NEW
+  getPropertyActivities  
 } from './api/properties';
 
 // ============================================================================
@@ -84,7 +87,10 @@ export {
   rejectOffer,
   counterOffer,
   acceptCounterOffer,
-  withdrawOffer
+  withdrawOffer,
+  updateOfferStatus,
+  getRecentOfferActivity,
+  getAllOffers
 } from './api/offers';
 
 // ============================================================================
@@ -148,6 +154,11 @@ export {
   getUserPropertyProfiles,
   updateUserProfilesById,
   updateUserProfiles,
+
+  getUserProperties,
+  reassignUserProperties,
+  getUserPublicProfile,
+  getUserPropertiesCount,
   
   // Authenticated Profile Hook
   useUserProfileApi
@@ -184,7 +195,8 @@ export {
   getFeaturedPropertiesRow,
   createPropertyRow,
   updatePropertyRow,
-  deletePropertyRow
+  deletePropertyRow,
+  getPropertyRowAssociations
 } from './api/propertyRows';
 
 // ============================================================================

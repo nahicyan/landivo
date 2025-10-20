@@ -141,3 +141,51 @@ export const approvePropertyDeletion = async (token) => {
     handleRequestError(error, "Failed to approve property deletion");
   }
 };
+
+/**
+ * Get finance applications for a property
+ * @param {string} propertyId - Property ID
+ * @returns {Promise<Array>} List of finance applications for the property
+ */
+export const getPropertyFinanceApplications = async (propertyId) => {
+  try {
+    const response = await api.get(`/properties/${propertyId}/finance-applications`);
+    return response.data;
+  } catch (error) {
+    console.error("Error fetching finance applications:", error);
+    // Return empty array instead of throwing to prevent UI breaks
+    return [];
+  }
+};
+
+/**
+ * Get offers for a property (property-centric endpoint)
+ * Alternative to getPropertyOffers from offers.js
+ * @param {string} propertyId - Property ID
+ * @returns {Promise<Array>} List of offers for the property
+ */
+export const getPropertyOffersData = async (propertyId) => {
+  try {
+    const response = await api.get(`/properties/${propertyId}/offers`);
+    return response.data;
+  } catch (error) {
+    console.error("Error fetching property offers:", error);
+    return [];
+  }
+};
+
+/**
+ * Get activity history for a property
+ * Includes views, inquiries, and other property-related activities
+ * @param {string} propertyId - Property ID
+ * @returns {Promise<Array>} List of activities for the property
+ */
+export const getPropertyActivities = async (propertyId) => {
+  try {
+    const response = await api.get(`/properties/${propertyId}/activities`);
+    return response.data;
+  } catch (error) {
+    console.error("Error fetching property activities:", error);
+    return [];
+  }
+};

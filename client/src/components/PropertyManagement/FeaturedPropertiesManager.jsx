@@ -11,7 +11,6 @@ import { SortableContext, verticalListSortingStrategy, useSortable, arrayMove } 
 import { restrictToVerticalAxis } from "@dnd-kit/modifiers";
 import { CSS } from "@dnd-kit/utilities";
 import { updatePropertyRow } from "@/utils/api";
-import axios from 'axios';
 
 // Sortable item component
 const SortableItem = ({id, title, address, position}) => {

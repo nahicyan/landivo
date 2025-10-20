@@ -17,7 +17,11 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { api } from "@/utils/api";
+import { 
+  getUserProperties,
+  getUserPropertyProfiles,
+  reassignUserProperties
+} from "@/utils/api";
 
 const ProfileReassignmentModal = ({ 
   isOpen, 
@@ -40,20 +44,21 @@ const ProfileReassignmentModal = ({
   const fetchProfileData = async () => {
     setLoading(true);
     try {
-      // Get properties using this profile
-      const propertiesResponse = await api.get(`/user/${user.id}/properties`);
-      setProperties(propertiesResponse.data || []);
+      // Get properties using this profile - using centralized API
+      const userProperties = await getUserProperties(user.id);
+      setProperties(userProperties || []);
       
-      // Get available profiles for reassignment
-      const profilesResponse = await api.get('/user/property-profiles');
+      // Get available profiles for reassignment - using centralized API
+      const availableProfiles = await getUserPropertyProfiles();
+      
       // Filter out the current user being disabled
-      const availableProfiles = profilesResponse.data.filter(
+      const filteredProfiles = availableProfiles.filter(
         profile => profile.id !== user.id
       );
-      setProfiles(availableProfiles);
+      setProfiles(filteredProfiles);
       
-      if (availableProfiles.length > 0) {
-        setSelectedProfileId(availableProfiles[0].id);
+      if (filteredProfiles.length > 0) {
+        setSelectedProfileId(filteredProfiles[0].id);
       }
     } catch (error) {
       console.error("Error fetching profile data:", error);
@@ -67,9 +72,8 @@ const ProfileReassignmentModal = ({
     
     setProcessing(true);
     try {
-      await api.put(`/user/${user.id}/reassign-properties`, {
-        newProfileId: selectedProfileId
-      });
+      // Reassign properties using centralized API
+      await reassignUserProperties(user.id, selectedProfileId);
       onConfirm();
     } catch (error) {
       console.error("Error reassigning properties:", error);

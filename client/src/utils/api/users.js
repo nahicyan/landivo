@@ -326,3 +326,68 @@ export function useUserProfileApi() {
     getUserPropertyProfiles
   };
 }
+
+/**
+ * Get properties associated with a user's profile
+ * @param {string} userId - User ID
+ * @returns {Promise<Array>} List of properties using this user's profile
+ */
+export const getUserProperties = async (userId) => {
+  try {
+    const response = await api.get(`/user/${userId}/properties`);
+    return response.data;
+  } catch (error) {
+    handleRequestError(error, "Failed to fetch user properties");
+  }
+};
+
+
+/**
+ * Reassign properties from one user profile to another
+ * Used when disabling a user who has properties associated with their profile
+ * @param {string} userId - Current user ID whose properties need reassignment
+ * @param {string} newProfileId - New profile ID to assign properties to
+ * @returns {Promise<Object>} Reassignment result
+ */
+export const reassignUserProperties = async (userId, newProfileId) => {
+  try {
+    const response = await api.put(`/user/${userId}/reassign-properties`, {
+      newProfileId
+    });
+    return response.data;
+  } catch (error) {
+    handleRequestError(error, "Failed to reassign user properties");
+  }
+};
+
+/**
+ * Get public profile information for a user
+ * Used for displaying contact information without authentication
+ * @param {string} profileId - Profile ID
+ * @returns {Promise<Object|null>} Public profile data or null if not found
+ */
+export const getUserPublicProfile = async (profileId) => {
+  try {
+    const response = await api.get(`/user/public-profile/${profileId}`);
+    return response.data;
+  } catch (error) {
+    console.error("Error fetching public profile:", error);
+    return null;
+  }
+};
+
+/**
+ * Get count of properties associated with a user's profile
+ * Useful for checking before disabling a user
+ * @param {string} userId - User ID
+ * @returns {Promise<number>} Count of properties using this user's profile
+ */
+export const getUserPropertiesCount = async (userId) => {
+  try {
+    const response = await api.get(`/user/${userId}/properties-count`);
+    return response.data.count || 0;
+  } catch (error) {
+    console.error("Error fetching user properties count:", error);
+    return 0; // Return 0 on error to allow proceeding safely
+  }
+};

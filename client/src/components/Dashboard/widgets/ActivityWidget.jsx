@@ -34,7 +34,7 @@ import {
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Skeleton } from "@/components/ui/skeleton";
 import { formatPrice } from "@/utils/format";
-import { getAllBuyers } from "@/utils/api";
+import { getAllBuyers, getRecentOfferActivity } from "@/utils/api";
 
 /**
  * ActivityWidget component
@@ -73,14 +73,7 @@ const ActivityWidget = () => {
 
   // Function to fetch offer activity specifically
   const fetchOfferActivity = async () => {
-    try {
-      // Fetch recent offer activity using the same endpoint as RecentOfferActivity
-      const response = await api.get("/offer/activity/recent?limit=5");
-      return response.data.activities || [];
-    } catch (error) {
-      console.error("Error fetching offer activity:", error);
-      return [];
-    }
+    return await getRecentOfferActivity(5);
   };
 
   // Get activity icon based on status
