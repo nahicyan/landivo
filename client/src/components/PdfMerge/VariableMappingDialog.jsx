@@ -174,21 +174,8 @@ export default function VariableMappingDialog({ open, onOpenChange, templateVari
 
             return (
               <div key={variable} className="flex flex-col gap-3 p-4 bg-gray-50 rounded-lg border border-gray-200">
-                {/* Template Variable Header */}
-                <div className="flex items-center justify-between">
-                  <div className="flex-1">
-                    <Label className="text-sm font-medium text-gray-700 mb-1 block">
-                      Template Variable
-                      {isDate && (
-                        <Badge variant="secondary" className="ml-2 text-xs">
-                          Date Field
-                        </Badge>
-                      )}
-                    </Label>
-                    <code className="px-3 py-2 bg-white border border-[#324c48]/30 rounded text-[#324c48] font-mono text-sm inline-block">&lt;&lt;{variable}&gt;&gt;</code>
-                  </div>
-
-                  {/* Type Selector */}
+                {/* Type Selector - Top Row */}
+                <div className="flex items-center justify-end">
                   <RadioGroup value={mappingType} onValueChange={(type) => handleTypeChange(variable, type)} className="flex gap-4">
                     <div className="flex items-center space-x-2">
                       <RadioGroupItem value="csv" id={`${variable}-csv`} />
@@ -216,9 +203,21 @@ export default function VariableMappingDialog({ open, onOpenChange, templateVari
                   </RadioGroup>
                 </div>
 
-                {/* Value Input */}
-                <div className="flex items-center gap-4">
-                  <ArrowRight className="h-5 w-5 text-gray-400 flex-shrink-0" />
+                {/* Template Variable + Input - Same Row */}
+                <div className="flex items-start gap-4">
+                  <div className="flex-shrink-0">
+                    <Label className="text-sm font-medium text-gray-700 mb-1 block">
+                      Template Variable
+                      {isDate && (
+                        <Badge variant="secondary" className="ml-2 text-xs">
+                          Date Field
+                        </Badge>
+                      )}
+                    </Label>
+                    <code className="px-3 py-2 bg-white border border-[#324c48]/30 rounded text-[#324c48] font-mono text-sm inline-block">&lt;&lt;{variable}&gt;&gt;</code>
+                  </div>
+
+                  <ArrowRight className="h-5 w-5 text-gray-400 flex-shrink-0 mt-8" />
 
                   <div className="flex-1">
                     {mappingType === "csv" ? (
@@ -252,40 +251,40 @@ export default function VariableMappingDialog({ open, onOpenChange, templateVari
                           </PopoverTrigger>
                           <PopoverContent align="start" className="w-auto p-1 bg-white border border-gray-300 rounded-md shadow-lg">
                             <style>{`
-                              .compact-calendar * {
-                                margin: 0 !important;
-                              }
-                              .compact-calendar table {
-                                border-collapse: collapse !important;
-                                width: auto !important;
-                              }
-                              .compact-calendar td,
-                              .compact-calendar th {
-                                padding: 2px !important;
-                                width: 28px !important;
-                                height: 28px !important;
-                              }
-                              .compact-calendar button {
-                                width: 24px !important;
-                                height: 24px !important;
-                                font-size: 0.875rem !important;
-                                padding: 0 !important;
-                              }
-                              .compact-calendar .rdp-day_button {
-                                width: 24px !important;
-                                height: 24px !important;
-                              }
-                              .compact-calendar .rdp-weekday {
-                                font-size: 0.75rem !important;
-                                padding: 2px !important;
-                              }
-                              .compact-calendar .rdp-month {
-                                margin: 0.5rem !important;
-                              }
-                              .compact-calendar .rdp-month_caption {
-                                margin-bottom: 0.5rem !important;
-                              }
-                            `}</style>
+                .compact-calendar * {
+                  margin: 0 !important;
+                }
+                .compact-calendar table {
+                  border-collapse: collapse !important;
+                  width: auto !important;
+                }
+                .compact-calendar td,
+                .compact-calendar th {
+                  padding: 2px !important;
+                  width: 28px !important;
+                  height: 28px !important;
+                }
+                .compact-calendar button {
+                  width: 24px !important;
+                  height: 24px !important;
+                  font-size: 0.875rem !important;
+                  padding: 0 !important;
+                }
+                .compact-calendar .rdp-day_button {
+                  width: 24px !important;
+                  height: 24px !important;
+                }
+                .compact-calendar .rdp-weekday {
+                  font-size: 0.75rem !important;
+                  padding: 2px !important;
+                }
+                .compact-calendar .rdp-month {
+                  margin: 0.5rem !important;
+                }
+                .compact-calendar .rdp-month_caption {
+                  margin-bottom: 0.5rem !important;
+                }
+              `}</style>
                             <div className="border border-gray-200 rounded-md">
                               <DayPicker
                                 mode="single"
@@ -311,7 +310,6 @@ export default function VariableMappingDialog({ open, onOpenChange, templateVari
                     )}
                   </div>
                 </div>
-
                 {/* Preview */}
                 {mappingValue && (
                   <div className="mt-2 p-2 bg-white rounded border border-gray-200">
