@@ -43,6 +43,7 @@ export default function DiscountSubjectLineCreator({ propertyId, onSubjectChange
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const [charCount, setCharCount] = useState(0);
   const editorRef = useRef(null);
+  const savedSelectionRef = useRef(null);
 
   // Fetch property data
   useEffect(() => {
@@ -271,16 +272,61 @@ export default function DiscountSubjectLineCreator({ propertyId, onSubjectChange
     onSubjectChange(content);
   };
 
+  const saveSelection = () => {
+    const selection = window.getSelection();
+    if (selection && selection.rangeCount > 0) {
+      const range = selection.getRangeAt(0);
+      savedSelectionRef.current = {
+        startContainer: range.startContainer,
+        startOffset: range.startOffset,
+        endContainer: range.endContainer,
+        endOffset: range.endOffset,
+      };
+    }
+  };
+
+  const restoreSelection = () => {
+    if (editorRef.current && savedSelectionRef.current) {
+      const selection = window.getSelection();
+      const range = document.createRange();
+      try {
+        range.setStart(savedSelectionRef.current.startContainer, savedSelectionRef.current.startOffset);
+        range.setEnd(savedSelectionRef.current.endContainer || savedSelectionRef.current.startContainer, savedSelectionRef.current.endOffset);
+        selection?.removeAllRanges();
+        selection?.addRange(range);
+      } catch (e) {
+        range.selectNodeContents(editorRef.current);
+        range.collapse(false);
+        selection?.removeAllRanges();
+        selection?.addRange(range);
+      }
+    }
+  };
+
+  const handleEmojiPickerOpenChange = (open) => {
+    if (open) {
+      saveSelection();
+    }
+    setShowEmojiPicker(open);
+  };
+
+  // Update handleEmojiClick to restore selection first
   const handleEmojiClick = (emojiData) => {
     const emoji = emojiData.emoji;
 
     if (editorRef.current) {
+      restoreSelection(); // Add this line
+
       const selection = window.getSelection();
       if (selection.rangeCount > 0) {
         const range = selection.getRangeAt(0);
         range.deleteContents();
-        range.insertNode(document.createTextNode(emoji));
-        range.collapse(false);
+        const textNode = document.createTextNode(emoji);
+        range.insertNode(textNode);
+        range.setStartAfter(textNode);
+        range.collapse(true);
+        selection.removeAllRanges();
+        selection.addRange(range);
       } else {
         editorRef.current.textContent += emoji;
       }
@@ -425,7 +471,7 @@ export default function DiscountSubjectLineCreator({ propertyId, onSubjectChange
                   }`}
                   style={{ whiteSpace: "pre-wrap", wordWrap: "break-word" }}
                 />
-                <Popover open={showEmojiPicker} onOpenChange={setShowEmojiPicker}>
+                <Popover open={showEmojiPicker} onOpenChange={handleEmojiPickerOpenChange}>
                   <PopoverTrigger asChild>
                     <Button type="button" variant="ghost" size="sm" className="absolute bottom-2 right-2">
                       <Smile className="h-4 w-4" />
