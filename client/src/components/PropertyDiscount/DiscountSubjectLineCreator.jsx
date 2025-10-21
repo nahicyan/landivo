@@ -117,6 +117,7 @@ export default function DiscountSubjectLineCreator({ propertyId, onSubjectChange
     let result = template;
 
     const replacements = {
+      title: data.title || "", 
       county: data.county || "",
       city: data.city || "",
       state: data.state || "",
