@@ -64,7 +64,7 @@ export default function PropertyDiscountDialog({ open, onOpenChange, dialogType,
                   <Button onClick={() => setShowSubjectCreator(true)} className="flex-1 bg-[#324c48] hover:bg-[#3f4f24] text-white">
                     Send Now
                   </Button>
-                  <Button onClick={onSendFromMailivo} variant="outline" className="flex-1" disabled={sendingCampaign}>
+                  <Button onClick={onSendFromMailivo} variant="outline" className="flex-1" disabled={true}>
                     {sendingCampaign ? (
                       <>
                         <Loader2 className="w-4 h-4 mr-2 animate-spin" />
