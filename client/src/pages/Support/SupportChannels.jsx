@@ -22,7 +22,7 @@ export default function SupportChannels() {
       description: "Speak directly with our land experts for personalized help and guidance.",
       availability: "Mon-Fri, 9AM-6PM EST",
       cta: "Call Us",
-      link: "tel:+18001234567",
+      link: "tel:+18172471312",
       color: "bg-[#3f4f24]",
       hoverColor: "hover:bg-[#2c3b18]",
     },
@@ -112,7 +112,7 @@ export default function SupportChannels() {
               href="tel:+18001234567"
               className="font-semibold text-[#3f4f24] hover:text-[#D4A017] transition-colors"
             >
-              (800) 123-4567
+              (817) 247-1312
             </a>
           </p>
         </div>

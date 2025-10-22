@@ -40,8 +40,16 @@ def find_soffice():
     if which:
         return which
     candidates = [
-        r"C:\Program Files\LibreOffice\program\soffice.exe",
-        r"C:\Program Files (x86)\LibreOffice\program\soffice.exe",
+        # Linux
+        "/usr/bin/soffice",
+        "/usr/local/bin/soffice",
+        "/usr/lib/libreoffice/program/soffice",
+        #"/snap/bin/libreoffice",
+        # macOS
+        #"/Applications/LibreOffice.app/Contents/MacOS/soffice",
+        # Windows
+        #r"C:\Program Files\LibreOffice\program\soffice.exe",
+        #r"C:\Program Files (x86)\LibreOffice\program\soffice.exe",
     ]
     for c in candidates:
         if os.path.exists(c):

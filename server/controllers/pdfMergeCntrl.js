@@ -1,10 +1,10 @@
-import { spawn } from "child_process";
 import fs from "fs";
 import os from "os";
 import path from "path";
 import { fileURLToPath } from "url";
 import Redis from "ioredis";
 import { PrismaClient } from "@prisma/client";
+import { spawn, spawnSync } from "child_process";
 
 const prisma = new PrismaClient();
 
@@ -12,19 +12,35 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const ROOT_DIR = path.resolve(__dirname, "..");
 
+// ----------- LINUX PYTHON HELPERS --------------------
+const PYTHON_CMD = process.env.PYTHON_BIN || "python3";
+
+function checkPythonExists(cmd = PYTHON_CMD) {
+  try {
+    const out = spawnSync("which", [cmd], { encoding: "utf8" });
+    return out.status === 0 && out.stdout.trim().length > 0;
+  } catch {
+    return false;
+  }
+}
+
+function buildScriptPath(filename) {
+  return path.join(ROOT_DIR, "scripts", filename);
+}
+
+function makePyEnv(baseEnv = process.env) {
+  return { ...baseEnv }; // no venv, no Windows injection
+}
+
 // ---- Timeouts & defaults ----
 const ANALYZE_TASK_TIMEOUT_SECS = Number(process.env.ANALYZE_TASK_TIMEOUT_SECS || 3600);
 const PY_ANALYZE_TIMEOUT_MS = Number(process.env.PY_ANALYZE_TIMEOUT_MS || 3600000);
 const PY_GENERATE_TIMEOUT_MS = Number(process.env.PY_GENERATE_TIMEOUT_MS || 3600000);
 
-const DEFAULT_CHUNK_SIZE = Number(process.env.MERGE_CHUNK_SIZE || 200);
+const DEFAULT_CHUNK_SIZE = Number(process.env.MERGE_CHUNK_SIZE || 8);
 const CPU_COUNT = os.cpus()?.length || 2;
-const DEFAULT_GEN_WORKERS = Number(
-  process.env.MERGE_GEN_WORKERS || Math.max(1, Math.floor(CPU_COUNT / 2))
-);
-const DEFAULT_CONV_WORKERS = Number(
-  process.env.MERGE_CONV_WORKERS || Math.max(1, Math.floor(CPU_COUNT / 2))
-);
+const DEFAULT_GEN_WORKERS = Number(process.env.MERGE_GEN_WORKERS || Math.max(1, Math.floor(CPU_COUNT / 4)));
+const DEFAULT_CONV_WORKERS = Number(process.env.MERGE_CONV_WORKERS || Math.max(1, Math.floor(CPU_COUNT / 4)));
 
 const PROGRESS_TTL = Number(process.env.PROGRESS_TTL || 60 * 60); // 1 hour
 
@@ -96,15 +112,7 @@ async function delProgress(id) {
 }
 
 // ---- Run Python helper (NDJSON-capable) ----
-function runPythonScript(
-  pythonPath,
-  scriptPath,
-  args,
-  env,
-  serverRoot,
-  timeoutMs = 300000,
-  onJsonLine = null
-) {
+function runPythonScript(pythonPath, scriptPath, args, env, serverRoot, timeoutMs = 300000, onJsonLine = null) {
   return new Promise((resolve, reject) => {
     console.log(`Starting Python process: ${pythonPath} ${scriptPath} ${args.join(" ")}`);
     const child = spawn(pythonPath, [scriptPath, ...args], { env, cwd: serverRoot });
@@ -459,51 +467,33 @@ export const analyzeFilesController = async (req, res) => {
     dataPath = req.files.csv[0].path;
 
     const serverRoot = ROOT_DIR;
-    const pythonPath = path.join(serverRoot, "venv", "Scripts", "python.exe");
-    const scriptPath = path.join(serverRoot, "scripts", "analyze_files.py");
 
-    if (!fs.existsSync(pythonPath)) {
+    const pythonPath = PYTHON_CMD;
+    const scriptPath = buildScriptPath("analyze_files.py");
+
+    if (!checkPythonExists(pythonPath)) {
       return res.status(500).json({
         success: false,
-        message: "Python environment not properly configured",
+        message: `Python not found: "${pythonPath}". Set PYTHON_BIN or install python3 in PATH.`,
       });
     }
     if (!fs.existsSync(scriptPath)) {
-      return res.status(500).json({
-        success: false,
-        message: "Analysis script not found",
-      });
+      return res.status(500).json({ success: false, message: "Analysis script not found" });
     }
 
-    const env = { ...process.env };
-    const venvPath = path.join(serverRoot, "venv");
-    const venvScriptsPath = path.join(venvPath, "Scripts");
-    const venvLibPath = path.join(venvPath, "Lib", "site-packages");
-    env.PATH = `${venvScriptsPath};${env.PATH}`;
-    env.VIRTUAL_ENV = venvPath;
-    env.PYTHONPATH = venvLibPath;
+    const env = makePyEnv(process.env);
 
     // Optional analyzer flags
     const sheetName = typeof req.body.sheetName === "string" ? req.body.sheetName : null;
-    const sheetIndex = Number.isFinite(Number(req.body.sheetIndex))
-      ? String(Number(req.body.sheetIndex))
-      : null;
+    const sheetIndex = Number.isFinite(Number(req.body.sheetIndex)) ? String(Number(req.body.sheetIndex)) : null;
     const encoding = typeof req.body.encoding === "string" ? req.body.encoding : null;
-    const perTaskTimeout = String(ANALYZE_TASK_TIMEOUT_SECS);
 
-    const args = ["--template", templatePath, "--data", dataPath, "--timeout", perTaskTimeout];
+    const args = ["--template", templatePath, "--data", dataPath, "--timeout", String(ANALYZE_TASK_TIMEOUT_SECS)];
     if (sheetName) args.push("--sheet-name", sheetName);
     if (sheetIndex !== null) args.push("--sheet-index", sheetIndex);
     if (encoding) args.push("--encoding", encoding);
 
-    const result = await runPythonScript(
-      pythonPath,
-      scriptPath,
-      args,
-      env,
-      serverRoot,
-      PY_ANALYZE_TIMEOUT_MS
-    );
+    const result = await runPythonScript(pythonPath, scriptPath, args, env, serverRoot, PY_ANALYZE_TIMEOUT_MS);
 
     // Clean up only the data file (keep template)
     cleanupFiles(dataPath);
@@ -578,10 +568,7 @@ export const generatePdfController = async (req, res) => {
     dataPath = req.files.csv[0].path;
 
     // progress: client-provided or auto-generate
-    const progressId =
-      typeof req.body.progressId === "string" && req.body.progressId.trim()
-        ? req.body.progressId.trim()
-        : `job-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+    const progressId = typeof req.body.progressId === "string" && req.body.progressId.trim() ? req.body.progressId.trim() : `job-${Date.now()}-${Math.random().toString(36).slice(2)}`;
 
     // initialize progress store
     await setProgress(progressId, {
@@ -598,51 +585,30 @@ export const generatePdfController = async (req, res) => {
     const outputPath = path.join(ROOT_DIR, "uploads", "pdf-merge", outputFileName);
 
     const serverRoot = ROOT_DIR;
-    const pythonPath = path.join(serverRoot, "venv", "Scripts", "python.exe");
-    const scriptPath = path.join(serverRoot, "scripts", "generate_merged_pdf.py");
 
-    if (!fs.existsSync(pythonPath)) {
+    const pythonPath = PYTHON_CMD;
+    const scriptPath = buildScriptPath("generate_merged_pdf.py");
+
+    if (!checkPythonExists(pythonPath)) {
       return res.status(500).json({
         success: false,
-        message: "Python environment not properly configured",
+        message: `Python not found: "${pythonPath}". Set PYTHON_BIN or install python3 in PATH.`,
       });
     }
     if (!fs.existsSync(scriptPath)) {
-      return res.status(500).json({
-        success: false,
-        message: "Generation script not found",
-      });
+      return res.status(500).json({ success: false, message: "Generation script not found" });
     }
 
-    const env = { ...process.env };
-    const venvPath = path.join(serverRoot, "venv");
-    const venvScriptsPath = path.join(venvPath, "Scripts");
-    const venvLibPath = path.join(venvPath, "Lib", "site-packages");
-    env.PATH = `${venvScriptsPath};${env.PATH}`;
-    env.VIRTUAL_ENV = venvPath;
-    env.PYTHONPATH = venvLibPath;
+    const env = makePyEnv(process.env);
 
     // Save mapping JSON
     mappingPath = path.join(ROOT_DIR, "uploads", "pdf-merge", `mapping-${Date.now()}.json`);
     fs.writeFileSync(mappingPath, JSON.stringify(mapping));
 
     // Tuning knobs
-    const chunkSize = Math.max(
-      1,
-      Number.isFinite(Number(req.body.chunkSize)) ? Number(req.body.chunkSize) : DEFAULT_CHUNK_SIZE
-    );
-    const genWorkers = Math.max(
-      1,
-      Number.isFinite(Number(req.body.genWorkers))
-        ? Number(req.body.genWorkers)
-        : DEFAULT_GEN_WORKERS
-    );
-    const convWorkers = Math.max(
-      1,
-      Number.isFinite(Number(req.body.convWorkers))
-        ? Number(req.body.convWorkers)
-        : DEFAULT_CONV_WORKERS
-    );
+    const chunkSize = Math.max(1, Number.isFinite(Number(req.body.chunkSize)) ? Number(req.body.chunkSize) : DEFAULT_CHUNK_SIZE);
+    const genWorkers = Math.max(1, Number.isFinite(Number(req.body.genWorkers)) ? Number(req.body.genWorkers) : DEFAULT_GEN_WORKERS);
+    const convWorkers = Math.max(1, Number.isFinite(Number(req.body.convWorkers)) ? Number(req.body.convWorkers) : DEFAULT_CONV_WORKERS);
 
     const args = [
       "--template",
@@ -691,15 +657,7 @@ export const generatePdfController = async (req, res) => {
       })().catch(() => {});
     };
 
-    const result = await runPythonScript(
-      pythonPath,
-      scriptPath,
-      args,
-      env,
-      serverRoot,
-      PY_GENERATE_TIMEOUT_MS,
-      onJsonLine
-    );
+    const result = await runPythonScript(pythonPath, scriptPath, args, env, serverRoot, PY_GENERATE_TIMEOUT_MS, onJsonLine);
 
     // Cleanup temp files (keep template)
     cleanupFiles(dataPath, mappingPath);

@@ -791,3 +791,273 @@ export const bulkDeleteBuyers = asyncHandler(async (req, res) => {
     });
   }
 });
+
+/**
+ * Update buyer subscription preferences (partial unsubscribe)
+ * @route PUT /api/buyer/unsubscribe/:id
+ * @access Public
+ */
+export const updateSubscriptionPreferences = asyncHandler(async (req, res) => {
+  const { id } = req.params;
+  const { preferredAreas, weeklyUpdates, holidayDeals, specialDiscounts } = req.body;
+
+  if (!id) {
+    return res.status(400).json({ message: "Buyer ID is required" });
+  }
+
+  try {
+    // Find the buyer
+    const existingBuyer = await prisma.buyer.findUnique({
+      where: { id },
+    });
+
+    if (!existingBuyer) {
+      return res.status(404).json({ message: "Buyer not found" });
+    }
+
+    // Update subscription preferences
+    const updatedBuyer = await prisma.buyer.update({
+      where: { id },
+      data: {
+        preferredAreas: preferredAreas || [],
+        weeklyUpdates: weeklyUpdates || "available",
+        holidayDeals: holidayDeals || "available",
+        specialDiscounts: specialDiscounts || "available",
+        updatedAt: new Date(),
+      },
+    });
+
+    // Log the activity
+    await prisma.buyerActivity.create({
+      data: {
+        buyerId: id,
+        eventType: "subscription_update",
+        eventData: {
+          action: "preferences_updated",
+          oldPreferences: {
+            preferredAreas: existingBuyer.preferredAreas,
+            weeklyUpdates: existingBuyer.weeklyUpdates,
+            holidayDeals: existingBuyer.holidayDeals,
+            specialDiscounts: existingBuyer.specialDiscounts,
+          },
+          newPreferences: {
+            preferredAreas,
+            weeklyUpdates,
+            holidayDeals,
+            specialDiscounts,
+          },
+        },
+      },
+    });
+
+    res.status(200).json({
+      message: "Subscription preferences updated successfully",
+      buyer: updatedBuyer,
+    });
+  } catch (err) {
+    console.error("Error updating subscription preferences:", err);
+    res.status(500).json({
+      message: "An error occurred while updating preferences",
+      error: err.message,
+    });
+  }
+});
+
+/**
+ * Resubscribe buyer (in case they want to re-enable emails)
+ * @route PUT /api/buyer/resubscribe/:id
+ * @access Public
+ */
+export const resubscribeBuyer = asyncHandler(async (req, res) => {
+  const { id } = req.params;
+  const { emailTypes = [], areas = [] } = req.body;
+
+  if (!id) {
+    return res.status(400).json({ message: "Buyer ID is required" });
+  }
+
+  try {
+    // Find the buyer
+    const existingBuyer = await prisma.buyer.findUnique({
+      where: { id },
+    });
+
+    if (!existingBuyer) {
+      return res.status(404).json({ message: "Buyer not found" });
+    }
+
+    // Prepare update data
+    const updateData = {
+      emailStatus: "available",
+      emailPermissionStatus: "available",
+      preferredAreas: areas,
+      updatedAt: new Date(),
+    };
+
+    // Set specific email type preferences
+    if (emailTypes.includes("weeklyUpdates")) {
+      updateData.weeklyUpdates = "available";
+    }
+    if (emailTypes.includes("holidayDeals")) {
+      updateData.holidayDeals = "available";
+    }
+    if (emailTypes.includes("specialDiscounts")) {
+      updateData.specialDiscounts = "available";
+    }
+
+    // Update buyer
+    const updatedBuyer = await prisma.buyer.update({
+      where: { id },
+      data: updateData,
+    });
+
+    // Log the resubscribe activity
+    await prisma.buyerActivity.create({
+      data: {
+        buyerId: id,
+        eventType: "subscription_update",
+        eventData: {
+          action: "resubscribe",
+          emailTypes,
+          areas,
+          resubscribeDate: new Date().toISOString(),
+        },
+      },
+    });
+
+    res.status(200).json({
+      message: "Successfully resubscribed to emails",
+      buyer: updatedBuyer,
+    });
+  } catch (err) {
+    console.error("Error resubscribing buyer:", err);
+    res.status(500).json({
+      message: "An error occurred while resubscribing",
+      error: err.message,
+    });
+  }
+});
+
+/**
+ * Complete unsubscribe from all emails
+ * @route PUT /api/buyer/unsubscribe/:id/complete
+ * @access Public
+ */
+export const completeUnsubscribe = asyncHandler(async (req, res) => {
+  const { id } = req.params;
+
+  if (!id) {
+    return res.status(400).json({ message: "Buyer ID is required" });
+  }
+
+  try {
+    // Find the buyer
+    const existingBuyer = await prisma.buyer.findUnique({
+      where: { id },
+    });
+
+    if (!existingBuyer) {
+      return res.status(404).json({ message: "Buyer not found" });
+    }
+
+    // Update buyer to unsubscribe from all emails
+    const updatedBuyer = await prisma.buyer.update({
+      where: { id },
+      data: {
+        emailStatus: "unsubscribe",
+        emailPermissionStatus: "unsubscribe",
+        weeklyUpdates: "unsubscribe",
+        holidayDeals: "unsubscribe",
+        specialDiscounts: "unsubscribe",
+        preferredAreas: [], // Clear preferred areas
+        updatedAt: new Date(),
+      },
+    });
+
+    // Remove from all email lists
+    await prisma.buyerEmailList.deleteMany({
+      where: { buyerId: id },
+    });
+
+    // Log the activity
+    await prisma.buyerActivity.create({
+      data: {
+        buyerId: id,
+        eventType: "subscription_update",
+        eventData: {
+          action: "complete_unsubscribe",
+          previousStatus: existingBuyer.emailStatus,
+          unsubscribeDate: new Date().toISOString(),
+        },
+      },
+    });
+
+    res.status(200).json({
+      message: "Successfully unsubscribed from all emails",
+      buyer: updatedBuyer,
+    });
+  } catch (err) {
+    console.error("Error completing unsubscribe:", err);
+    res.status(500).json({
+      message: "An error occurred while unsubscribing",
+      error: err.message,
+    });
+  }
+});
+
+/**
+ * Get buyer data for unsubscribe page (public endpoint)
+ * @route GET /api/buyer/unsubscribe/:id/data
+ * @access Public
+ */
+export const getBuyerForUnsubscribe = asyncHandler(async (req, res) => {
+  const { id } = req.params;
+
+  if (!id) {
+    return res.status(400).json({ message: "Buyer ID is required" });
+  }
+
+  try {
+    // Find the buyer with only necessary fields for unsubscribe page
+    const buyer = await prisma.buyer.findUnique({
+      where: { id },
+      select: {
+        id: true,
+        firstName: true,
+        lastName: true,
+        email: true,
+        preferredAreas: true,
+        emailStatus: true,
+        emailPermissionStatus: true,
+        weeklyUpdates: true,
+        holidayDeals: true,
+        specialDiscounts: true,
+        createdAt: true,
+      },
+    });
+
+    if (!buyer) {
+      return res.status(404).json({ message: "Buyer not found" });
+    }
+
+    // Log the unsubscribe page visit
+    await prisma.buyerActivity.create({
+      data: {
+        buyerId: id,
+        eventType: "page_view",
+        eventData: {
+          page: "unsubscribe",
+          timestamp: new Date().toISOString(),
+        },
+      },
+    });
+
+    res.status(200).json(buyer);
+  } catch (err) {
+    console.error("Error fetching buyer for unsubscribe:", err);
+    res.status(500).json({
+      message: "An error occurred while fetching buyer information",
+      error: err.message,
+    });
+  }
+});
