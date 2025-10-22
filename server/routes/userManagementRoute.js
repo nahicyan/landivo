@@ -8,6 +8,7 @@ import {
   getAllUsers,
   getUserById,
   updateUser,
+  deleteUser,
   updateUserStatus,
   updateUserProfiles,
   getPublicProfileById,
@@ -66,6 +67,13 @@ router.put("/update/:id",
   extractUserFromToken, 
   checkPermissions(['write:users']), 
   updateUser
+);
+
+router.delete("/delete/:id", 
+  jwtCheck, 
+  extractUserFromToken, 
+  checkPermissions(['write:users']), 
+  deleteUser
 );
 
 // User status management

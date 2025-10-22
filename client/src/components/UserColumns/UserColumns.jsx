@@ -30,7 +30,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "react-toastify";
-import { getAllUsers, getUserById, updateUserProfiles } from "@/utils/api";
+import { getAllUsers, getUserById, deleteUser, updateUserProfiles } from "@/utils/api";
 
 /**
  * Profile Management Dialog Component
@@ -352,11 +352,30 @@ export const columns = [
     header: "Actions",
     cell: ({ row }) => {
       const user = row.original;
+      const [isDeleting, setIsDeleting] = useState(false);
+
+      const handleDelete = async () => {
+        if (!window.confirm(`Are you sure you want to delete ${user.firstName} ${user.lastName}?`)) {
+          return;
+        }
+
+        setIsDeleting(true);
+        try {
+          await deleteUser(user.id);
+          toast.success("User deleted successfully");
+          window.location.reload();
+        } catch (error) {
+          const errorMessage = error.response?.data?.message || "Failed to delete user";
+          toast.error(errorMessage);
+        } finally {
+          setIsDeleting(false);
+        }
+      };
 
       return (
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button variant="ghost" className="h-8 w-8 p-0">
+            <Button variant="ghost" className="h-8 w-8 p-0" disabled={isDeleting}>
               <MoreVertical className="h-5 w-5" />
             </Button>
           </DropdownMenuTrigger>
@@ -371,10 +390,13 @@ export const columns = [
               {row.original.isActive ? "Disable User" : "Enable User"}
             </DropdownMenuItem>
             <DropdownMenuSeparator />
-            {/* Only show delete option for non-admin users */}
             {user.role !== "ADMIN" && (
-              <DropdownMenuItem onClick={() => console.log("Delete", user.id)} className="text-red-600">
-                Delete
+              <DropdownMenuItem 
+                onClick={handleDelete} 
+                className="text-red-600"
+                disabled={isDeleting}
+              >
+                {isDeleting ? "Deleting..." : "Delete"}
               </DropdownMenuItem>
             )}
           </DropdownMenuContent>

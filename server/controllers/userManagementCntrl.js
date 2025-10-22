@@ -593,6 +593,46 @@ export const updateUser = asyncHandler(async (req, res) => {
 });
 
 
+export const deleteUser = asyncHandler(async (req, res) => {
+  const { id } = req.params;
+
+  try {
+    const user = await prisma.user.findUnique({
+      where: { id },
+    });
+
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    if (user.isActive) {
+      return res.status(400).json({ 
+        message: "Cannot delete an active user. Please disable the user first." 
+      });
+    }
+
+    // Delete related records first
+    await prisma.activityLog.deleteMany({
+      where: { userId: id },
+    });
+
+    // Now delete the user
+    await prisma.user.delete({
+      where: { id },
+    });
+
+    res.status(200).json({
+      message: "User deleted successfully",
+    });
+  } catch (error) {
+    console.error("Error deleting user:", error);
+    res.status(500).json({
+      message: "Failed to delete user",
+      error: error.message,
+    });
+  }
+});
+
 /**
  * Get limited user profiles for property assignments
  * Used when creating/editing properties to select a contact profile
