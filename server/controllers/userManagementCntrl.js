@@ -295,8 +295,11 @@ export const getAllUsers = asyncHandler(async (req, res) => {
   }
 });
 
+
 /**
- * Get user by ID (Admin only)
+ * Get user by ID (Admin only) - FINAL corrected version
+ * @route GET /api/user/:id
+ * @access Private (requires read:users permission)
  */
 export const getUserById = asyncHandler(async (req, res) => {
   const { id } = req.params;
@@ -305,6 +308,7 @@ export const getUserById = asyncHandler(async (req, res) => {
     const user = await prisma.user.findUnique({
       where: { id },
       include: {
+        // Properties created by this user
         createdResidencies: {
           select: {
             id: true,
@@ -313,7 +317,140 @@ export const getUserById = asyncHandler(async (req, res) => {
             city: true,
             state: true,
             imageUrls: true,
+            status: true,
+            featured: true,
+            createdAt: true,
+            updatedAt: true,
           },
+          orderBy: {
+            createdAt: "desc"
+          }
+        },
+        // Properties updated by this user (limited to recent 10)
+        updatedResidencies: {
+          select: {
+            id: true,
+            title: true,
+            streetAddress: true,
+            city: true,
+            state: true,
+            updatedAt: true,
+          },
+          orderBy: {
+            updatedAt: "desc"
+          },
+          take: 10
+        },
+        // Buyers created by this user
+        createdBuyers: {
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+            email: true,
+            phone: true,
+            buyerType: true,
+            createdAt: true,
+          },
+          orderBy: {
+            createdAt: "desc"
+          }
+        },
+        // Buyers updated by this user (limited to recent 10)
+        updatedBuyers: {
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+            email: true,
+            updatedAt: true,
+          },
+          orderBy: {
+            updatedAt: "desc"
+          },
+          take: 10
+        },
+        // Deals created by this user - CORRECTED FIELDS
+        createdDeals: {
+          select: {
+            id: true,
+            purchasePrice: true,
+            salePrice: true,
+            status: true,
+            startDate: true,
+            completionDate: true,
+            profitLoss: true,
+            currentRevenue: true,
+            createdAt: true,
+            // Include related property for display
+            property: {
+              select: {
+                id: true,
+                title: true,
+                streetAddress: true,
+                city: true,
+                state: true,
+              }
+            },
+            // Include related buyer for display
+            buyer: {
+              select: {
+                id: true,
+                firstName: true,
+                lastName: true,
+                email: true,
+              }
+            }
+          },
+          orderBy: {
+            createdAt: "desc"
+          }
+        },
+        // Deals updated by this user (limited to recent 10) - CORRECTED FIELDS
+        updatedDeals: {
+          select: {
+            id: true,
+            purchasePrice: true,
+            salePrice: true,
+            status: true,
+            updatedAt: true,
+          },
+          orderBy: {
+            updatedAt: "desc"
+          },
+          take: 10
+        },
+        // Qualifications updated by this user - CORRECTED FIELDS (no status field!)
+        updatedQualifications: {
+          select: {
+            id: true,
+            qualified: true,  // Boolean field instead of status
+            disqualificationReason: true,
+            firstName: true,
+            lastName: true,
+            email: true,
+            propertyPrice: true,
+            updatedAt: true,
+          },
+          orderBy: {
+            updatedAt: "desc"
+          },
+          take: 10
+        },
+        // Activity logs for this user (limited to recent 20)
+        activityLogs: {
+          select: {
+            id: true,
+            entityType: true,
+            entityId: true,
+            actionType: true,
+            details: true,
+            createdAt: true,
+          },
+          orderBy: {
+            createdAt: "desc"
+          },
+          take: 20
         },
       },
     });
@@ -322,7 +459,23 @@ export const getUserById = asyncHandler(async (req, res) => {
       return res.status(404).json({ message: "User not found" });
     }
 
-    res.status(200).json(user);
+    // Add computed statistics
+    const userWithStats = {
+      ...user,
+      stats: {
+        totalPropertiesCreated: user.createdResidencies?.length || 0,
+        totalPropertiesUpdated: user.updatedResidencies?.length || 0,
+        totalBuyersCreated: user.createdBuyers?.length || 0,
+        totalBuyersUpdated: user.updatedBuyers?.length || 0,
+        totalDealsCreated: user.createdDeals?.length || 0,
+        totalDealsUpdated: user.updatedDeals?.length || 0,
+        totalQualificationsUpdated: user.updatedQualifications?.length || 0,
+        totalActivities: user.activityLogs?.length || 0,
+        lastActivity: user.activityLogs?.[0]?.createdAt || null,
+      }
+    };
+
+    res.status(200).json(userWithStats);
   } catch (error) {
     console.error("Error fetching user by ID:", error);
     res.status(500).json({
