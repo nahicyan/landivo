@@ -221,7 +221,7 @@ function App() {
                                   path="users/:userId/edit"
                                   element={
                                     <ProtectedRoute
-                                      requiredPermissions={[PERMISSIONS.EDIT_USERS]}
+                                      requiredPermissions={[PERMISSIONS.WRITE_USERS]}
                                       fallbackToRoles={true}
                                       allowedRoles={['Admin']}
                                     >

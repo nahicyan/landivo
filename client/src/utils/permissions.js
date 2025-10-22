@@ -8,7 +8,6 @@
 export const PERMISSIONS = {
     // User management permissions
     READ_USERS: 'read:users',
-    EDIT_USERS: "edit:users",
     WRITE_USERS: 'write:users',
     DELETE_USERS: 'delete:users',
     
