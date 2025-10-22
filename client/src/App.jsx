@@ -69,6 +69,7 @@ import Offer from './pages/AdminOffer/Offer';
 import JoinVip from "./pages/JoinVip/JoinVip";
 import Discount from "./pages/Discount/Discount";
 import MailMerge from "./pages/MailMerge/MailMerge";
+import EditUserDetail from "./components/EditUserDetail/EditUserDetail";
 
 
 const queryClient = new QueryClient({
@@ -212,6 +213,19 @@ function App() {
                                       allowedRoles={['Admin']}
                                     >
                                       <UserDetail />
+                                    </ProtectedRoute>
+                                  }
+                                />
+
+                                <Route
+                                  path="users/:userId/edit"
+                                  element={
+                                    <ProtectedRoute
+                                      requiredPermissions={[PERMISSIONS.EDIT_USERS]}
+                                      fallbackToRoles={true}
+                                      allowedRoles={['Admin']}
+                                    >
+                                      <EditUserDetail />
                                     </ProtectedRoute>
                                   }
                                 />
