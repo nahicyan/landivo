@@ -539,6 +539,60 @@ export const updateUserProfiles = asyncHandler(async (req, res) => {
   }
 });
 
+
+/**
+ * Update user information (Admin function)
+ * Allows admins to update basic user information: firstName, lastName, phone, profileRole
+ * @route PUT /api/user/update/:id
+ * @access Admin (requires write:users permission)
+ */
+export const updateUser = asyncHandler(async (req, res) => {
+  const { id } = req.params;
+  const { firstName, lastName, phone, profileRole } = req.body;
+
+  // Validation
+  if (!firstName || !lastName) {
+    return res.status(400).json({ 
+      message: "First name and last name are required" 
+    });
+  }
+
+  try {
+    // Check if user exists
+    const existingUser = await prisma.user.findUnique({
+      where: { id },
+    });
+
+    if (!existingUser) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    // Update user with new information
+    const updatedUser = await prisma.user.update({
+      where: { id },
+      data: {
+        firstName: firstName.trim(),
+        lastName: lastName.trim(),
+        phone: phone?.trim() || null,
+        profileRole: profileRole?.trim() || null,
+        updatedAt: new Date(),
+      },
+    });
+
+    res.status(200).json({
+      message: "User updated successfully",
+      user: updatedUser,
+    });
+  } catch (error) {
+    console.error("Error updating user:", error);
+    res.status(500).json({
+      message: "An error occurred while updating the user",
+      error: error.message,
+    });
+  }
+});
+
+
 /**
  * Get limited user profiles for property assignments
  * Used when creating/editing properties to select a contact profile

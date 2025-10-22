@@ -7,6 +7,7 @@ import {
   updateUserProfile,
   getAllUsers,
   getUserById,
+  updateUser,
   updateUserStatus,
   updateUserProfiles,
   getPublicProfileById,
@@ -57,6 +58,14 @@ router.get("/:id",
   extractUserFromToken, 
   checkPermissions(['read:users']), 
   getUserById
+);
+
+// General user update (Admin only)
+router.put("/update/:id", 
+  jwtCheck, 
+  extractUserFromToken, 
+  checkPermissions(['write:users']), 
+  updateUser
 );
 
 // User status management
