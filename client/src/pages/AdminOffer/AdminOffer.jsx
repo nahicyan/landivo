@@ -43,7 +43,7 @@ export default function AdminOffer() {
         setOffers(response.offers || []);
         
         // Calculate stats
-        calculateStats(response.data.offers || []);
+        calculateStats(response.offers || []);
         
         // Get recent activity
         await fetchRecentActivity();
