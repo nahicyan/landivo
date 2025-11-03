@@ -8,6 +8,7 @@ import { Mail, Loader2, AlertTriangle, Smile, History } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import EmojiPicker from "emoji-picker-react";
+import { getSubjectTemplates, getPastCampaignSubjects } from "@/utils/api";
 
 import { getProperty } from "@/utils/api";
 
@@ -72,8 +73,8 @@ export default function DiscountSubjectLineCreator({ propertyId, onSubjectChange
     const fetchTemplates = async () => {
       try {
         const response = await getSubjectTemplates();
-        if (response.data.success) {
-          const enabled = response.data.templates.filter((t) => t.isEnabled);
+        if (response.success) {
+          const enabled = response.templates.filter((t) => t.isEnabled);
           setTemplates(enabled);
         }
       } catch (error) {
@@ -98,8 +99,8 @@ export default function DiscountSubjectLineCreator({ propertyId, onSubjectChange
         setLoadingCampaigns(true);
         const response = await getPastCampaignSubjects(propertyId);
 
-        if (response.data.success && response.data.subjects) {
-          setPastCampaigns(response.data.subjects);
+        if (response.success && response.subjects) {
+          setPastCampaigns(response.subjects);
         }
       } catch (error) {
         console.error("Error loading past campaigns:", error);
