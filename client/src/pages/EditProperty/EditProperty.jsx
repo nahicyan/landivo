@@ -545,7 +545,18 @@ export default function EditProperty() {
           const landTypeValue = formData[field];
           const landTypeArray = Array.isArray(landTypeValue) ? landTypeValue : [];
           form.append(field, JSON.stringify(landTypeArray));
-        } else if (numericFields.includes(field)) {
+        }
+        // ADD THIS SPECIAL CASE FOR closingDate ONLY
+        else if (field === "closingDate") {
+          const dateValue = formData[field];
+          // Only append if it has a real value (not null, "null", or empty)
+          if (dateValue && dateValue !== "null" && dateValue !== "") {
+            form.append(field, dateValue);
+          }
+          // Skip appending if no valid date
+        }
+        // KEEP EVERYTHING ELSE EXACTLY AS IS
+        else if (numericFields.includes(field)) {
           const rawValue = rawValues[field];
           form.append(field, rawValue === undefined || rawValue === "" ? null : rawValue);
         } else if (formData[field] !== undefined) {
