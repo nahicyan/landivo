@@ -189,7 +189,7 @@ const ImageUploadPreview = ({
     accept: {
       'image/*': []
     },
-    maxSize: 5242880, // 5MB
+    maxSize: 20971520, // 20MB
     disabled: existingItems.length + newItems.length >= maxImages
   });
 
