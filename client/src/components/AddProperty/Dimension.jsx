@@ -5,7 +5,7 @@ import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
-export default function Dimension({ formData, handleChange, setFormData, errors }) {
+export default function Dimension({ formData, handleChange, setFormData, setRawValues, errors }) {
   // Add local state to track the current raw input
   const [localAcre, setLocalAcre] = useState(formData.acre || "");
   const [localSqft, setLocalSqft] = useState(formData.sqft || "");
@@ -30,18 +30,37 @@ export default function Dimension({ formData, handleChange, setFormData, errors 
         sqft: "",
         acre: ""
       }));
+      // Update rawValues if provided (for EditProperty)
+      if (setRawValues) {
+        setRawValues(prev => ({
+          ...prev,
+          sqft: null,
+          acre: null
+        }));
+      }
     } else {
       const sqftValue = parseFloat(rawValue);
       if (!isNaN(sqftValue)) {
+        const acreValue = sqftValue / 43560;
+        
         // Format with commas for display
         setFormData(prev => ({
           ...prev,
           sqft: sqftValue.toLocaleString("en-US"),
-          acre: (sqftValue / 43560).toLocaleString("en-US", {
+          acre: acreValue.toLocaleString("en-US", {
             minimumFractionDigits: 2,
             maximumFractionDigits: 2
           })
         }));
+        
+        // Update rawValues if provided (for EditProperty)
+        if (setRawValues) {
+          setRawValues(prev => ({
+            ...prev,
+            sqft: sqftValue.toString(),
+            acre: acreValue.toFixed(2)
+          }));
+        }
       }
     }
   };
@@ -63,6 +82,14 @@ export default function Dimension({ formData, handleChange, setFormData, errors 
         sqft: "",
         acre: ""
       }));
+      // Update rawValues if provided (for EditProperty)
+      if (setRawValues) {
+        setRawValues(prev => ({
+          ...prev,
+          sqft: null,
+          acre: null
+        }));
+      }
     } else {
       const acreValue = parseFloat(rawValue);
       if (!isNaN(acreValue)) {
@@ -78,6 +105,15 @@ export default function Dimension({ formData, handleChange, setFormData, errors 
             maximumFractionDigits: 2
           })
         }));
+        
+        // Update rawValues if provided (for EditProperty)
+        if (setRawValues) {
+          setRawValues(prev => ({
+            ...prev,
+            sqft: sqftValue.toString(),
+            acre: acreValue.toFixed(2)
+          }));
+        }
       }
     }
   };

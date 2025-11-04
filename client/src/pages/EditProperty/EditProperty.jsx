@@ -668,7 +668,7 @@ export default function EditProperty() {
     },
     {
       title: "Dimensions",
-      component: <Dimension formData={formData} handleChange={handleChange} setFormData={setFormData} errors={formErrors} />,
+      component: <Dimension formData={formData} handleChange={handleChange} setFormData={setFormData} setRawValues={setRawValues} errors={formErrors} />,
     },
     {
       title: "Pricing",
