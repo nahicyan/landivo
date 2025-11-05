@@ -5,20 +5,8 @@ import PaymentCalculatorBack from "@/components/PaymentCalculator/PaymentCalcula
 import PaymentCalculatorEntry from "@/components/PaymentCalculator/PaymentCalculatorEntry";
 import { Button } from "@/components/ui/button";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
-} from "@/components/ui/dialog";
-import {
-  Select,
-  SelectTrigger,
-  SelectContent,
-  SelectItem,
-  SelectValue,
-} from "@/components/ui/select";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Select, SelectTrigger, SelectContent, SelectItem, SelectValue } from "@/components/ui/select";
 import { Calculator, CreditCard, Sparkles } from "lucide-react";
 
 export default function Financing({ formData, handleChange, updateFormData, errors }) {
@@ -27,7 +15,7 @@ export default function Financing({ formData, handleChange, updateFormData, erro
   const [planType, setPlanType] = useState(null); // "CALC" or "ENTRY"
   // Temporary state for modal edits
   const [tempData, setTempData] = useState(formData);
-  
+
   // State for number of payment plans - default to "0" (Not Available)
   const [numberOfPlans, setNumberOfPlans] = useState(() => {
     // Initialize based on current formData, default to "0"
@@ -45,10 +33,10 @@ export default function Financing({ formData, handleChange, updateFormData, erro
   // Handle number of plans change
   const handleNumberOfPlansChange = (value) => {
     setNumberOfPlans(value);
-    
+
     // Update the financing fields based on selection
     const updatedData = { ...formData };
-    
+
     switch (value) {
       case "1":
         updatedData.financing = "Available";
@@ -71,7 +59,7 @@ export default function Financing({ formData, handleChange, updateFormData, erro
         updatedData.financingThree = "Not-Available";
         break;
     }
-    
+
     updateFormData(updatedData);
   };
 
@@ -79,33 +67,35 @@ export default function Financing({ formData, handleChange, updateFormData, erro
   const prepareCalculatorData = (data) => {
     // Make a deep copy of formData
     const calculatorData = { ...data };
-    
+
     // Initialize financingPrice if not set - use askingPrice as default
     if (!calculatorData.financingPrice && calculatorData.askingPrice) {
       calculatorData.financingPrice = calculatorData.askingPrice;
     }
-    
-    // Ensure other required fields are initialized
-    if (!calculatorData.term) calculatorData.term = "60"; // Default to 5 years
+
+    // Initialize individual term fields for each plan
+    if (!calculatorData.termOne) calculatorData.termOne = "60";
+    if (!calculatorData.termTwo) calculatorData.termTwo = "60";
+    if (!calculatorData.termThree) calculatorData.termThree = "60";
     if (!calculatorData.interestOne) calculatorData.interestOne = "4.99";
     if (!calculatorData.interestTwo) calculatorData.interestTwo = "5.99";
     if (!calculatorData.interestThree) calculatorData.interestThree = "6.99";
-    
+
     // Initialize down payment percentages if not set
     if (!calculatorData.downPaymentOnePercent) calculatorData.downPaymentOnePercent = "5";
     if (!calculatorData.downPaymentTwoPercent) calculatorData.downPaymentTwoPercent = "10";
     if (!calculatorData.downPaymentThreePercent) calculatorData.downPaymentThreePercent = "15";
-    
+
     // Initialize down payment sliders if not set
     if (!calculatorData.downPaymentOneSlider) calculatorData.downPaymentOneSlider = "5";
     if (!calculatorData.downPaymentTwoSlider) calculatorData.downPaymentTwoSlider = "10";
     if (!calculatorData.downPaymentThreeSlider) calculatorData.downPaymentThreeSlider = "15";
-    
+
     // Initialize source fields if not set
     if (!calculatorData.downPaymentOneSource) calculatorData.downPaymentOneSource = "selector";
     if (!calculatorData.downPaymentTwoSource) calculatorData.downPaymentTwoSource = "selector";
     if (!calculatorData.downPaymentThreeSource) calculatorData.downPaymentThreeSource = "selector";
-    
+
     return calculatorData;
   };
 
@@ -115,7 +105,7 @@ export default function Financing({ formData, handleChange, updateFormData, erro
     if (numberOfPlans === "0") {
       return;
     }
-    
+
     setPlanType(type);
     // Initialize calculator data with proper defaults
     setTempData(prepareCalculatorData(formData));
@@ -153,27 +143,19 @@ export default function Financing({ formData, handleChange, updateFormData, erro
               <CreditCard className="w-6 h-6 text-white" />
             </div>
           </div>
-          <CardTitle className="text-xl font-bold bg-gradient-to-r from-[#3f4f24] to-[#324c48] bg-clip-text text-transparent">
-            Financing & Payment Plans
-          </CardTitle>
+          <CardTitle className="text-xl font-bold bg-gradient-to-r from-[#3f4f24] to-[#324c48] bg-clip-text text-transparent">Financing & Payment Plans</CardTitle>
           <p className="text-gray-600 text-sm mt-1">Configure payment options for this property</p>
         </CardHeader>
-        
+
         <CardContent className="space-y-6">
           {/* Number of Payment Plans Selector - Full Width */}
           <div className="w-full">
-            <label className="block text-base font-bold text-gray-800 mb-3 text-center">
-              Payment Plan Configuration
-            </label>
-            <Select
-              value={numberOfPlans}
-              onValueChange={handleNumberOfPlansChange}
-            >
-              <SelectTrigger className={`w-full h-12 text-base border-2 rounded-lg shadow-lg transition-all duration-300 hover:shadow-xl ${
-                errors?.financing 
-                  ? 'border-red-500 focus:border-red-600' 
-                  : 'border-gray-300 focus:border-[#3f4f24] hover:border-[#3f4f24]'
-              } bg-white`}>
+            <label className="block text-base font-bold text-gray-800 mb-3 text-center">Payment Plan Configuration</label>
+            <Select value={numberOfPlans} onValueChange={handleNumberOfPlansChange}>
+              <SelectTrigger
+                className={`w-full h-12 text-base border-2 rounded-lg shadow-lg transition-all duration-300 hover:shadow-xl ${
+                  errors?.financing ? "border-red-500 focus:border-red-600" : "border-gray-300 focus:border-[#3f4f24] hover:border-[#3f4f24]"
+                } bg-white`}>
                 <SelectValue placeholder="Select payment plan configuration" />
               </SelectTrigger>
               <SelectContent className="w-full">
@@ -203,9 +185,7 @@ export default function Financing({ formData, handleChange, updateFormData, erro
                 </SelectItem>
               </SelectContent>
             </Select>
-            {errors?.financing && (
-              <p className="text-red-500 text-sm mt-2 text-center">Payment plan configuration is required</p>
-            )}
+            {errors?.financing && <p className="text-red-500 text-sm mt-2 text-center">Payment plan configuration is required</p>}
           </div>
 
           {/* Action Buttons */}
@@ -215,22 +195,20 @@ export default function Financing({ formData, handleChange, updateFormData, erro
                 <Button
                   type="button"
                   className="h-10 bg-gradient-to-r from-[#3f4f24] to-[#324c48] hover:from-[#2c3b18] hover:to-[#253838] text-white font-medium text-sm rounded-lg shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105"
-                  onClick={() => openModalWithPlan("CALC")}
-                >
+                  onClick={() => openModalWithPlan("CALC")}>
                   <Calculator className="w-4 h-4 mr-2" />
                   Payment Calculator
                 </Button>
-                
+
                 <Button
                   type="button"
                   className="h-10 bg-gradient-to-r from-[#D4A017] to-[#b88914] hover:from-[#b88914] hover:to-[#8a670f] text-white font-medium text-sm rounded-lg shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105"
-                  onClick={() => openModalWithPlan("ENTRY")}
-                >
+                  onClick={() => openModalWithPlan("ENTRY")}>
                   <Sparkles className="w-4 h-4 mr-2" />
                   Manual Entry
                 </Button>
               </div>
-              
+
               <div className="bg-gradient-to-r from-green-50 to-blue-50 p-4 rounded-lg border border-green-200">
                 <div className="flex items-center justify-center gap-2 text-green-700">
                   <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
@@ -254,36 +232,20 @@ export default function Financing({ formData, handleChange, updateFormData, erro
           <Dialog open={openModal} onOpenChange={setOpenModal}>
             <DialogContent className="max-w-6xl mx-auto bg-[#FDF8F2]">
               <DialogHeader>
-                <DialogTitle className="text-2xl font-bold text-gray-800">
-                  {planType === "CALC"
-                    ? "Payment Calculator - Configure Payment Plans"
-                    : "Manual Payment Plan Entry"}
-                </DialogTitle>
+                <DialogTitle className="text-2xl font-bold text-gray-800">{planType === "CALC" ? "Payment Calculator - Configure Payment Plans" : "Manual Payment Plan Entry"}</DialogTitle>
               </DialogHeader>
 
               {planType === "CALC" ? (
-                <PaymentCalculatorBack
-                  formData={tempData}
-                  handleChange={handleTempChange}
-                />
+                <PaymentCalculatorBack formData={tempData} handleChange={handleTempChange} />
               ) : planType === "ENTRY" ? (
-                <PaymentCalculatorEntry
-                  formData={tempData}
-                  handleChange={handleTempChange}
-                />
+                <PaymentCalculatorEntry formData={tempData} handleChange={handleTempChange} />
               ) : null}
 
               <DialogFooter>
-                <Button
-                  onClick={handleCancel}
-                  className="bg-gray-400 hover:bg-gray-500 text-white px-6 py-2"
-                >
+                <Button onClick={handleCancel} className="bg-gray-400 hover:bg-gray-500 text-white px-6 py-2">
                   Cancel
                 </Button>
-                <Button
-                  onClick={handleApply}
-                  className="bg-gradient-to-r from-[#3f4f24] to-[#324c48] hover:from-[#2c3b18] hover:to-[#253838] text-white px-6 py-2"
-                >
+                <Button onClick={handleApply} className="bg-gradient-to-r from-[#3f4f24] to-[#324c48] hover:from-[#2c3b18] hover:to-[#253838] text-white px-6 py-2">
                   Apply Changes
                 </Button>
               </DialogFooter>

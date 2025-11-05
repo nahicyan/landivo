@@ -18,9 +18,7 @@ export default function PaymentCalculatorEntry({ formData, handleChange, numberO
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           {/* Purchase Price */}
           <div>
-            <Label className="text-sm font-semibold text-gray-700">
-              Purchase Price
-            </Label>
+            <Label className="text-sm font-semibold text-gray-700">Purchase Price</Label>
             <Input
               type="text"
               placeholder="Enter purchase price"
@@ -32,9 +30,7 @@ export default function PaymentCalculatorEntry({ formData, handleChange, numberO
           </div>
           {/* Financed Price */}
           <div>
-            <Label className="text-sm font-semibold text-gray-700">
-              Financed Price
-            </Label>
+            <Label className="text-sm font-semibold text-gray-700">Financed Price</Label>
             <Input
               type="text"
               placeholder="Enter financed price"
@@ -46,9 +42,7 @@ export default function PaymentCalculatorEntry({ formData, handleChange, numberO
           </div>
           {/* Tax */}
           <div>
-            <Label className="text-sm font-semibold text-gray-700">
-              Tax
-            </Label>
+            <Label className="text-sm font-semibold text-gray-700">Tax</Label>
             <Input
               type="text"
               placeholder="Enter tax amount"
@@ -63,9 +57,7 @@ export default function PaymentCalculatorEntry({ formData, handleChange, numberO
         {/* Next Row: HOA Fee, Service Fee, and Term */}
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           <div>
-            <Label className="text-sm font-semibold text-gray-700">
-              HOA Fee
-            </Label>
+            <Label className="text-sm font-semibold text-gray-700">HOA Fee</Label>
             <Input
               type="text"
               placeholder="Enter HOA Fee"
@@ -76,9 +68,7 @@ export default function PaymentCalculatorEntry({ formData, handleChange, numberO
             />
           </div>
           <div>
-            <Label className="text-sm font-semibold text-gray-700">
-              Service Fee
-            </Label>
+            <Label className="text-sm font-semibold text-gray-700">Service Fee</Label>
             <Input
               type="text"
               placeholder="Enter service fee"
@@ -88,7 +78,8 @@ export default function PaymentCalculatorEntry({ formData, handleChange, numberO
               className="w-full border-gray-300 focus:border-[#D4A017] focus:ring-1 focus:ring-[#D4A017] rounded-md"
             />
           </div>
-          <div>
+          EOL - TERMS ARE NOT USED ANYMORE
+          {/* <div>
             <Label className="text-sm font-semibold text-gray-700">
               Term (months)
             </Label>
@@ -100,21 +91,17 @@ export default function PaymentCalculatorEntry({ formData, handleChange, numberO
               onChange={handleChange}
               className="w-full border-gray-300 focus:border-[#D4A017] focus:ring-1 focus:ring-[#D4A017] rounded-md"
             />
-          </div>
+          </div> */}
         </div>
 
         {/* Payment Plans Section */}
         <div className="space-y-6">
           {/* Plan One */}
-          <div className={`border-t pt-4 ${!isPlan1Available ? 'opacity-50' : ''}`}>
-            <h3 className="text-lg font-bold text-gray-800 mb-2">
-              Plan One {!isPlan1Available ? '(Disabled)' : ''}
-            </h3>
+          <div className={`border-t pt-4 ${!isPlan1Available ? "opacity-50" : ""}`}>
+            <h3 className="text-lg font-bold text-gray-800 mb-2">Plan One {!isPlan1Available ? "(Disabled)" : ""}</h3>
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               <div>
-                <Label className="text-sm font-semibold text-gray-700">
-                  Down Payment Option 1
-                </Label>
+                <Label className="text-sm font-semibold text-gray-700">Down Payment Option 1</Label>
                 <Input
                   type="text"
                   placeholder="Enter down payment 1"
@@ -122,15 +109,11 @@ export default function PaymentCalculatorEntry({ formData, handleChange, numberO
                   value={formData.downPaymentOne}
                   onChange={handleChange}
                   disabled={!isPlan1Available}
-                  className={`w-full focus:border-[#D4A017] focus:ring-1 focus:ring-[#D4A017] rounded-md ${
-                    !isPlan1Available ? 'bg-gray-100 border-gray-200' : 'border-gray-300'
-                  }`}
+                  className={`w-full focus:border-[#D4A017] focus:ring-1 focus:ring-[#D4A017] rounded-md ${!isPlan1Available ? "bg-gray-100 border-gray-200" : "border-gray-300"}`}
                 />
               </div>
               <div>
-                <Label className="text-sm font-semibold text-gray-700">
-                  Monthly Payment Option 1
-                </Label>
+                <Label className="text-sm font-semibold text-gray-700">Monthly Payment Option 1</Label>
                 <Input
                   type="text"
                   placeholder="Enter monthly payment 1"
@@ -138,15 +121,11 @@ export default function PaymentCalculatorEntry({ formData, handleChange, numberO
                   value={formData.monthlyPaymentOne}
                   onChange={handleChange}
                   disabled={!isPlan1Available}
-                  className={`w-full focus:border-[#D4A017] focus:ring-1 focus:ring-[#D4A017] rounded-md ${
-                    !isPlan1Available ? 'bg-gray-100 border-gray-200' : 'border-gray-300'
-                  }`}
+                  className={`w-full focus:border-[#D4A017] focus:ring-1 focus:ring-[#D4A017] rounded-md ${!isPlan1Available ? "bg-gray-100 border-gray-200" : "border-gray-300"}`}
                 />
               </div>
               <div>
-                <Label className="text-sm font-semibold text-gray-700">
-                  Interest Rate Option 1 (%)
-                </Label>
+                <Label className="text-sm font-semibold text-gray-700">Interest Rate Option 1 (%)</Label>
                 <Input
                   type="text"
                   placeholder="Enter interest rate option 1"
@@ -154,24 +133,30 @@ export default function PaymentCalculatorEntry({ formData, handleChange, numberO
                   value={formData.interestOne}
                   onChange={handleChange}
                   disabled={!isPlan1Available}
-                  className={`w-full focus:border-[#D4A017] focus:ring-1 focus:ring-[#D4A017] rounded-md ${
-                    !isPlan1Available ? 'bg-gray-100 border-gray-200' : 'border-gray-300'
-                  }`}
+                  className={`w-full focus:border-[#D4A017] focus:ring-1 focus:ring-[#D4A017] rounded-md ${!isPlan1Available ? "bg-gray-100 border-gray-200" : "border-gray-300"}`}
+                />
+              </div>
+              <div>
+                <Label className="text-sm font-semibold text-gray-700">Term Option 1 (months)</Label>
+                <Input
+                  type="text"
+                  placeholder="Enter term 1"
+                  name="termOne"
+                  value={formData.termOne}
+                  onChange={handleChange}
+                  disabled={!isPlan1Available}
+                  className={`w-full focus:border-[#D4A017] focus:ring-1 focus:ring-[#D4A017] rounded-md ${!isPlan1Available ? "bg-gray-100 border-gray-200" : "border-gray-300"}`}
                 />
               </div>
             </div>
           </div>
 
           {/* Plan Two */}
-          <div className={`border-t pt-4 ${!isPlan2Available ? 'opacity-50' : ''}`}>
-            <h3 className="text-lg font-bold text-gray-800 mb-2">
-              Plan Two {!isPlan2Available ? '(Disabled)' : ''}
-            </h3>
+          <div className={`border-t pt-4 ${!isPlan2Available ? "opacity-50" : ""}`}>
+            <h3 className="text-lg font-bold text-gray-800 mb-2">Plan Two {!isPlan2Available ? "(Disabled)" : ""}</h3>
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               <div>
-                <Label className="text-sm font-semibold text-gray-700">
-                  Down Payment Option 2
-                </Label>
+                <Label className="text-sm font-semibold text-gray-700">Down Payment Option 2</Label>
                 <Input
                   type="text"
                   placeholder="Enter down payment 2"
@@ -179,15 +164,11 @@ export default function PaymentCalculatorEntry({ formData, handleChange, numberO
                   value={formData.downPaymentTwo}
                   onChange={handleChange}
                   disabled={!isPlan2Available}
-                  className={`w-full focus:border-[#D4A017] focus:ring-1 focus:ring-[#D4A017] rounded-md ${
-                    !isPlan2Available ? 'bg-gray-100 border-gray-200' : 'border-gray-300'
-                  }`}
+                  className={`w-full focus:border-[#D4A017] focus:ring-1 focus:ring-[#D4A017] rounded-md ${!isPlan2Available ? "bg-gray-100 border-gray-200" : "border-gray-300"}`}
                 />
               </div>
               <div>
-                <Label className="text-sm font-semibold text-gray-700">
-                  Monthly Payment Option 2
-                </Label>
+                <Label className="text-sm font-semibold text-gray-700">Monthly Payment Option 2</Label>
                 <Input
                   type="text"
                   placeholder="Enter monthly payment 2"
@@ -195,15 +176,11 @@ export default function PaymentCalculatorEntry({ formData, handleChange, numberO
                   value={formData.monthlyPaymentTwo}
                   onChange={handleChange}
                   disabled={!isPlan2Available}
-                  className={`w-full focus:border-[#D4A017] focus:ring-1 focus:ring-[#D4A017] rounded-md ${
-                    !isPlan2Available ? 'bg-gray-100 border-gray-200' : 'border-gray-300'
-                  }`}
+                  className={`w-full focus:border-[#D4A017] focus:ring-1 focus:ring-[#D4A017] rounded-md ${!isPlan2Available ? "bg-gray-100 border-gray-200" : "border-gray-300"}`}
                 />
               </div>
               <div>
-                <Label className="text-sm font-semibold text-gray-700">
-                  Interest Rate Option 2 (%)
-                </Label>
+                <Label className="text-sm font-semibold text-gray-700">Interest Rate Option 2 (%)</Label>
                 <Input
                   type="text"
                   placeholder="Enter interest rate option 2"
@@ -211,24 +188,30 @@ export default function PaymentCalculatorEntry({ formData, handleChange, numberO
                   value={formData.interestTwo}
                   onChange={handleChange}
                   disabled={!isPlan2Available}
-                  className={`w-full focus:border-[#D4A017] focus:ring-1 focus:ring-[#D4A017] rounded-md ${
-                    !isPlan2Available ? 'bg-gray-100 border-gray-200' : 'border-gray-300'
-                  }`}
+                  className={`w-full focus:border-[#D4A017] focus:ring-1 focus:ring-[#D4A017] rounded-md ${!isPlan2Available ? "bg-gray-100 border-gray-200" : "border-gray-300"}`}
+                />
+              </div>
+              <div>
+                <Label className="text-sm font-semibold text-gray-700">Term Option 2 (months)</Label>
+                <Input
+                  type="text"
+                  placeholder="Enter term 2"
+                  name="termTwo"
+                  value={formData.termTwo}
+                  onChange={handleChange}
+                  disabled={!isPlan2Available}
+                  className={`w-full focus:border-[#D4A017] focus:ring-1 focus:ring-[#D4A017] rounded-md ${!isPlan2Available ? "bg-gray-100 border-gray-200" : "border-gray-300"}`}
                 />
               </div>
             </div>
           </div>
 
           {/* Plan Three */}
-          <div className={`border-t pt-4 ${!isPlan3Available ? 'opacity-50' : ''}`}>
-            <h3 className="text-lg font-bold text-gray-800 mb-2">
-              Plan Three {!isPlan3Available ? '(Disabled)' : ''}
-            </h3>
+          <div className={`border-t pt-4 ${!isPlan3Available ? "opacity-50" : ""}`}>
+            <h3 className="text-lg font-bold text-gray-800 mb-2">Plan Three {!isPlan3Available ? "(Disabled)" : ""}</h3>
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               <div>
-                <Label className="text-sm font-semibold text-gray-700">
-                  Down Payment Option 3
-                </Label>
+                <Label className="text-sm font-semibold text-gray-700">Down Payment Option 3</Label>
                 <Input
                   type="text"
                   placeholder="Enter down payment 3"
@@ -236,15 +219,11 @@ export default function PaymentCalculatorEntry({ formData, handleChange, numberO
                   value={formData.downPaymentThree}
                   onChange={handleChange}
                   disabled={!isPlan3Available}
-                  className={`w-full focus:border-[#D4A017] focus:ring-1 focus:ring-[#D4A017] rounded-md ${
-                    !isPlan3Available ? 'bg-gray-100 border-gray-200' : 'border-gray-300'
-                  }`}
+                  className={`w-full focus:border-[#D4A017] focus:ring-1 focus:ring-[#D4A017] rounded-md ${!isPlan3Available ? "bg-gray-100 border-gray-200" : "border-gray-300"}`}
                 />
               </div>
               <div>
-                <Label className="text-sm font-semibold text-gray-700">
-                  Monthly Payment Option 3
-                </Label>
+                <Label className="text-sm font-semibold text-gray-700">Monthly Payment Option 3</Label>
                 <Input
                   type="text"
                   placeholder="Enter monthly payment 3"
@@ -252,15 +231,11 @@ export default function PaymentCalculatorEntry({ formData, handleChange, numberO
                   value={formData.monthlyPaymentThree}
                   onChange={handleChange}
                   disabled={!isPlan3Available}
-                  className={`w-full focus:border-[#D4A017] focus:ring-1 focus:ring-[#D4A017] rounded-md ${
-                    !isPlan3Available ? 'bg-gray-100 border-gray-200' : 'border-gray-300'
-                  }`}
+                  className={`w-full focus:border-[#D4A017] focus:ring-1 focus:ring-[#D4A017] rounded-md ${!isPlan3Available ? "bg-gray-100 border-gray-200" : "border-gray-300"}`}
                 />
               </div>
               <div>
-                <Label className="text-sm font-semibold text-gray-700">
-                  Interest Rate Option 3 (%)
-                </Label>
+                <Label className="text-sm font-semibold text-gray-700">Interest Rate Option 3 (%)</Label>
                 <Input
                   type="text"
                   placeholder="Enter interest rate option 3"
@@ -268,9 +243,19 @@ export default function PaymentCalculatorEntry({ formData, handleChange, numberO
                   value={formData.interestThree}
                   onChange={handleChange}
                   disabled={!isPlan3Available}
-                  className={`w-full focus:border-[#D4A017] focus:ring-1 focus:ring-[#D4A017] rounded-md ${
-                    !isPlan3Available ? 'bg-gray-100 border-gray-200' : 'border-gray-300'
-                  }`}
+                  className={`w-full focus:border-[#D4A017] focus:ring-1 focus:ring-[#D4A017] rounded-md ${!isPlan3Available ? "bg-gray-100 border-gray-200" : "border-gray-300"}`}
+                />
+              </div>
+              <div>
+                <Label className="text-sm font-semibold text-gray-700">Term Option 3 (months)</Label>
+                <Input
+                  type="text"
+                  placeholder="Enter term 3"
+                  name="termThree"
+                  value={formData.termThree}
+                  onChange={handleChange}
+                  disabled={!isPlan3Available}
+                  className={`w-full focus:border-[#D4A017] focus:ring-1 focus:ring-[#D4A017] rounded-md ${!isPlan3Available ? "bg-gray-100 border-gray-200" : "border-gray-300"}`}
                 />
               </div>
             </div>

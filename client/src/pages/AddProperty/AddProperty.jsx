@@ -104,10 +104,12 @@ export default function AddProperty() {
     financingTwo: "Not-Available", // Default value
     financingThree: "Not-Available", // Default value
     tax: "",
-    closingDate: "", 
+    closingDate: "",
     hoaMonthly: "",
     serviceFee: "35",
-    term: "",
+    termOne: "60",
+    termTwo: "60",
+    termThree: "60",
     interestOne: "",
     interestTwo: "",
     interestThree: "",

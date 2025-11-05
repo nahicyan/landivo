@@ -147,10 +147,30 @@ export default function PaymentCalculatorBack({ formData, handleChange }) {
     handleChange({ target: { name, value: value[0] } });
   };
 
+  // Handle term slider changes - updates all enabled plans
+  const handleTermSliderChange = (value) => {
+    const newTerm = value[0];
+
+    // Update the main term field
+    handleChange({ target: { name: "term", value: newTerm } });
+
+    // Update all enabled payment plan terms
+    if (isPlan1Available) {
+      handleChange({ target: { name: "termOne", value: newTerm } });
+    }
+    if (isPlan2Available) {
+      handleChange({ target: { name: "termTwo", value: newTerm } });
+    }
+    if (isPlan3Available) {
+      handleChange({ target: { name: "termThree", value: newTerm } });
+    }
+  };
+
   // Recalculation logic per plan ("One", "Two", "Three")
   // This function is both used by effects and can be called manually
   const recalcPlan = (planKey) => {
-    const { term } = formData;
+    const termField = `term${planKey}`;
+    const term = formData[termField] || 60; // Use plan-specific term with default
 
     // Parse financing price removing commas
     const financeVal = parseCurrencyToNumber(formData.financingPrice) || 0;
@@ -368,15 +388,15 @@ export default function PaymentCalculatorBack({ formData, handleChange }) {
   // Recalculate each plan when relevant fields change:
   useEffect(() => {
     if (isPlan1Available) recalcPlan("One");
-  }, [formData.financingPrice, formData.downPaymentOnePercent, formData.downPaymentOneSlider, formData.interestOne, formData.term, formData.downPaymentOneSource]);
+  }, [formData.financingPrice, formData.downPaymentOnePercent, formData.downPaymentOneSlider, formData.interestOne, formData.termOne, formData.downPaymentOneSource]);
 
   useEffect(() => {
     if (isPlan2Available) recalcPlan("Two");
-  }, [formData.financingPrice, formData.downPaymentTwoPercent, formData.downPaymentTwoSlider, formData.interestTwo, formData.term, formData.downPaymentTwoSource]);
+  }, [formData.financingPrice, formData.downPaymentTwoPercent, formData.downPaymentTwoSlider, formData.interestTwo, formData.termTwo, formData.downPaymentTwoSource]);
 
   useEffect(() => {
     if (isPlan3Available) recalcPlan("Three");
-  }, [formData.financingPrice, formData.downPaymentThreePercent, formData.downPaymentThreeSlider, formData.interestThree, formData.term, formData.downPaymentThreeSource]);
+  }, [formData.financingPrice, formData.downPaymentThreePercent, formData.downPaymentThreeSlider, formData.interestThree, formData.termThree, formData.downPaymentThreeSource]);
 
   return (
     <Card className="border border-gray-200 shadow-sm rounded-lg w-full">
@@ -483,16 +503,7 @@ export default function PaymentCalculatorBack({ formData, handleChange }) {
           <div className="grid grid-cols-1 gap-2 mt-2">
             <div>
               <Label className="block text-sm font-semibold text-[#4a4a48] mb-2">Term Slider (Months)</Label>
-              <Slider
-                value={[Number(formData.term) || 1]}
-                min={1}
-                max={360}
-                step={1}
-                onValueChange={(val) => {
-                  handleSliderChange("term", val);
-                }}
-                className="bg-[#d2d2d0]"
-              />
+              <Slider value={[Number(formData.term) || 60]} min={1} max={360} step={1} onValueChange={handleTermSliderChange} className="bg-[#d2d2d0]" />
               <p className="text-xs text-[#4a4a48] mt-2">
                 Currently: {formData.term} month{Number(formData.term) > 1 ? "s" : ""}
               </p>
@@ -627,21 +638,22 @@ export default function PaymentCalculatorBack({ formData, handleChange }) {
               {/* Plan 1 Slider & Monthly Payment */}
               <div className="grid grid-cols-4 gap-3 mt-4">
                 {/* Slider (3/4 width) */}
-                <div className="col-span-3">
-                  <Label className="block text-sm font-semibold text-[#c97745] mb-3">Down Payment vs. Loan Amount</Label>
+                <div className="col-span-3 mt-4">
+                  <Label className="block text-sm font-semibold text-[#c97745] mb-3">Term (Months)</Label>
                   <Slider
-                    value={[Number(formData.downPaymentOneSlider) || 0]}
-                    min={0}
-                    max={100}
-                    step={0.5}
+                    value={[Number(formData.termOne) || 60]}
+                    min={1}
+                    max={360}
+                    step={1}
                     onValueChange={(val) => {
-                      handleSliderChange("downPaymentOneSlider", val);
-                      handleSelectChange("downPaymentOneSource", "slider");
+                      handleSliderChange("termOne", val);
                     }}
                     className="bg-gradient-to-r from-[#EF9C66] to-[#F4B07A]"
                     disabled={!isPlan1Available}
                   />
-                  <p className="text-xs text-[#c97745] mt-2 font-medium">Currently: {formData.downPaymentOneSlider || 0}%</p>
+                  <p className="text-xs text-[#c97745] mt-2 font-medium">
+                    Currently: {formData.termOne || 60} month{Number(formData.termOne || 60) > 1 ? "s" : ""} ({formatTerm(formData.termOne || 60)})
+                  </p>
                 </div>
                 {/* Monthly Payment (1/4 width) */}
                 <div className="col-span-1">
@@ -783,21 +795,22 @@ export default function PaymentCalculatorBack({ formData, handleChange }) {
               {/* Plan 2 Slider & Monthly Payment */}
               <div className="grid grid-cols-4 gap-3 mt-4">
                 {/* Slider (3/4 width) */}
-                <div className="col-span-3">
-                  <Label className="block text-sm font-semibold text-[#7a8062] mb-3">Down Payment vs. Loan Amount</Label>
+                <div className="col-span-3 mt-4">
+                  <Label className="block text-sm font-semibold text-[#7a8062] mb-3">Term (Months)</Label>
                   <Slider
-                    value={[Number(formData.downPaymentTwoSlider) || 0]}
-                    min={0}
-                    max={100}
-                    step={0.5}
+                    value={[Number(formData.termTwo) || 60]}
+                    min={1}
+                    max={360}
+                    step={1}
                     onValueChange={(val) => {
-                      handleSliderChange("downPaymentTwoSlider", val);
-                      handleSelectChange("downPaymentTwoSource", "slider");
+                      handleSliderChange("termTwo", val);
                     }}
                     className="bg-gradient-to-r from-[#C8CFA0] to-[#D4DBA8]"
                     disabled={!isPlan2Available}
                   />
-                  <p className="text-xs text-[#7a8062] mt-2 font-medium">Currently: {formData.downPaymentTwoSlider || 0}%</p>
+                  <p className="text-xs text-[#7a8062] mt-2 font-medium">
+                    Currently: {formData.termTwo || 60} month{Number(formData.termTwo || 60) > 1 ? "s" : ""} ({formatTerm(formData.termTwo || 60)})
+                  </p>
                 </div>
                 {/* Monthly Payment (1/4 width) */}
                 <div className="col-span-1">
@@ -939,21 +952,22 @@ export default function PaymentCalculatorBack({ formData, handleChange }) {
               {/* Plan 3 Slider & Monthly Payment */}
               <div className="grid grid-cols-4 gap-4 mt-6">
                 {/* Slider (3/4 width) */}
-                <div className="col-span-3">
-                  <Label className="block text-sm font-semibold text-[#b39032] mb-3">Down Payment vs. Loan Amount</Label>
+                <div className="col-span-3 mt-4">
+                  <Label className="block text-sm font-semibold text-[#b39032] mb-3">Term (Months)</Label>
                   <Slider
-                    value={[Number(formData.downPaymentThreeSlider) || 0]}
-                    min={0}
-                    max={100}
-                    step={0.5}
+                    value={[Number(formData.termThree) || 60]}
+                    min={1}
+                    max={360}
+                    step={1}
                     onValueChange={(val) => {
-                      handleSliderChange("downPaymentThreeSlider", val);
-                      handleSelectChange("downPaymentThreeSource", "slider");
+                      handleSliderChange("termThree", val);
                     }}
                     className="bg-gradient-to-r from-[#E7C05F] to-[#F0CE6F]"
                     disabled={!isPlan3Available}
                   />
-                  <p className="text-xs text-[#b39032] mt-2 font-medium">Currently: {formData.downPaymentThreeSlider || 0}%</p>
+                  <p className="text-xs text-[#b39032] mt-2 font-medium">
+                    Currently: {formData.termThree || 60} month{Number(formData.termThree || 60) > 1 ? "s" : ""} ({formatTerm(formData.termThree || 60)})
+                  </p>
                 </div>
                 {/* Monthly Payment (1/4 width) */}
                 <div className="col-span-1">
