@@ -242,7 +242,9 @@ export const updateResidency = asyncHandler(async (req, res) => {
     if (restOfData.tax) restOfData.tax = parseFloat(restOfData.tax);
     if (restOfData.hoaMonthly) restOfData.hoaMonthly = parseFloat(restOfData.hoaMonthly);
     if (restOfData.serviceFee) restOfData.serviceFee = parseFloat(restOfData.serviceFee);
-    if (restOfData.term) restOfData.term = parseInt(restOfData.term, 10);
+    if (restOfData.termOne) restOfData.termOne = parseInt(restOfData.termOne, 10);
+    if (restOfData.termTwo) restOfData.termTwo = parseInt(restOfData.termTwo, 10);
+    if (restOfData.termThree) restOfData.termThree = parseInt(restOfData.termThree, 10);
     if (restOfData.interestOne) restOfData.interestOne = parseFloat(restOfData.interestOne);
     if (restOfData.interestTwo) restOfData.interestTwo = parseFloat(restOfData.interestTwo);
     if (restOfData.interestThree) restOfData.interestThree = parseFloat(restOfData.interestThree);
@@ -663,7 +665,9 @@ export const createResidencyWithMultipleFiles = asyncHandler(async (req, res) =>
       closingDate, 
       hoaMonthly,
       serviceFee,
-      term,
+      termOne,
+      termTwo,
+      termThree,
       interestOne,
       interestTwo,
       interestThree,
@@ -785,7 +789,9 @@ export const createResidencyWithMultipleFiles = asyncHandler(async (req, res) =>
         closingDate: closingDate ? new Date(closingDate) : null,
         hoaMonthly: hoaMonthly ? parseFloat(hoaMonthly) : null,
         serviceFee: serviceFee ? parseFloat(serviceFee) : null,
-        term: term ? parseInt(term, 10) : null,
+        termOne: termOne ? parseInt(termOne, 10) : null,
+        termTwo: termTwo ? parseInt(termTwo, 10) : null,
+        termThree: termThree ? parseInt(termThree, 10) : null,
         interestOne: interestOne ? parseFloat(interestOne) : null,
         interestTwo: interestTwo ? parseFloat(interestTwo) : null,
         interestThree: interestThree ? parseFloat(interestThree) : null,

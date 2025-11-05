@@ -138,7 +138,9 @@ model Residency {
   financingTwo        String?
   financingThree      String?
   serviceFee          Float?
-  term                Int?
+  termOne             Int?
+  termTwo             Int?
+  termThree             Int?
   hoaMonthly          Float?
   interestOne         Float?
   interestTwo         Float?
