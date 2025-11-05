@@ -42,7 +42,7 @@ const formatTerm = (term) => {
   return result || "";
 };
 
-// Utility: Calculate total interest and total cost
+// Utility: Calculate total interest and total paid
 const calculateTotals = (monthlyPayment, loanAmount, downPayment, term) => {
   const payment = parseCurrencyToNumber(monthlyPayment);
   const loan = parseCurrencyToNumber(loanAmount);
@@ -233,7 +233,7 @@ export default function PaymentCalculatorBack({ formData, handleChange }) {
       },
     });
 
-    // Update total interest and total cost
+    // Update total interest and total paid
     handleChange({
       target: {
         name: totalInterestField,
@@ -531,7 +531,9 @@ export default function PaymentCalculatorBack({ formData, handleChange }) {
                 </div>
                 <div className="text-right">
                   <div className="text-xl font-bold text-white">${formData.monthlyPaymentOne || "0"}/month</div>
-                  <div className="text-base text-white">{formData.interestOne}% APR</div>
+                  <div className="text-base text-white">
+                    {formData.interestOne}% APR | Term: {formData.termOne || "0"} Months
+                  </div>
                 </div>
               </div>
             </AccordionTrigger>
@@ -611,7 +613,7 @@ export default function PaymentCalculatorBack({ formData, handleChange }) {
                 </div>
               </div>
 
-              {/* Plan 1 Total Interest and Total Cost Row */}
+              {/* Plan 1 Total Interest and Total Paid Row */}
               <div className="grid grid-cols-1 gap-3 md:grid-cols-2 mt-3">
                 {/* Total Interest (Plan 1) */}
                 <div>
@@ -623,9 +625,9 @@ export default function PaymentCalculatorBack({ formData, handleChange }) {
                     className="w-full bg-gradient-to-r from-[#fceae0] to-[#fae4d7] text-[#c97745] font-semibold shadow-sm border-[#EF9C66] border-2"
                   />
                 </div>
-                {/* Total Cost (Plan 1) */}
+                {/* Total Paid (Plan 1) */}
                 <div>
-                  <Label className="block text-sm font-semibold text-[#c97745] mb-2">Total Cost</Label>
+                  <Label className="block text-sm font-semibold text-[#c97745] mb-2">Total Paid</Label>
                   <Input
                     type="text"
                     readOnly
@@ -688,7 +690,9 @@ export default function PaymentCalculatorBack({ formData, handleChange }) {
                 </div>
                 <div className="text-right">
                   <div className="text-xl font-bold text-[#4a5235]">${formData.monthlyPaymentTwo || "0"}/month</div>
-                  <div className="text-base text-[#4a5235]">{formData.interestTwo}% APR</div>
+                  <div className="text-base text-[#4a5235]">
+                    {formData.interestTwo}% APR | Term: {formData.termTwo || "0"} Months
+                  </div>
                 </div>
               </div>
             </AccordionTrigger>
@@ -768,7 +772,7 @@ export default function PaymentCalculatorBack({ formData, handleChange }) {
                 </div>
               </div>
 
-              {/* Plan 2 Total Interest and Total Cost Row */}
+              {/* Plan 2 Total Interest and Total Paid Row */}
               <div className="grid grid-cols-1 gap-3 md:grid-cols-2 mt-3">
                 {/* Total Interest (Plan 2) */}
                 <div>
@@ -780,9 +784,9 @@ export default function PaymentCalculatorBack({ formData, handleChange }) {
                     className="w-full bg-gradient-to-r from-[#f4f5ee] to-[#f2f3ec] text-[#7a8062] font-semibold shadow-sm border-[#C8CFA0] border-2"
                   />
                 </div>
-                {/* Total Cost (Plan 2) */}
+                {/* Total Paid (Plan 2) */}
                 <div>
-                  <Label className="block text-sm font-semibold text-[#7a8062] mb-2">Total Cost</Label>
+                  <Label className="block text-sm font-semibold text-[#7a8062] mb-2">Total Paid</Label>
                   <Input
                     type="text"
                     readOnly
@@ -845,7 +849,9 @@ export default function PaymentCalculatorBack({ formData, handleChange }) {
                 </div>
                 <div className="text-right">
                   <div className="text-xl font-bold text-[#5d4a1a]">${formData.monthlyPaymentThree || "0"}/month</div>
-                  <div className="text-base text-[#5d4a1a]">{formData.interestThree}% APR</div>
+                  <div className="text-base text-[#5d4a1a]">
+                    {formData.interestThree}% APR | Term: {formData.termThree || "0"} Months
+                  </div>
                 </div>
               </div>
             </AccordionTrigger>
@@ -925,7 +931,7 @@ export default function PaymentCalculatorBack({ formData, handleChange }) {
                 </div>
               </div>
 
-              {/* Plan 3 Total Interest and Total Cost Row */}
+              {/* Plan 3 Total Interest and Total Paid Row */}
               <div className="grid grid-cols-1 gap-3 md:grid-cols-2 mt-3">
                 {/* Total Interest (Plan 3) */}
                 <div>
@@ -937,9 +943,9 @@ export default function PaymentCalculatorBack({ formData, handleChange }) {
                     className="w-full bg-gradient-to-r from-[#fdf0d1] to-[#fbecc9] text-[#b39032] font-semibold shadow-sm border-[#E7C05F] border-2"
                   />
                 </div>
-                {/* Total Cost (Plan 3) */}
+                {/* Total Paid (Plan 3) */}
                 <div>
-                  <Label className="block text-sm font-semibold text-[#b39032] mb-2">Total Cost</Label>
+                  <Label className="block text-sm font-semibold text-[#b39032] mb-2">Total Paid</Label>
                   <Input
                     type="text"
                     readOnly
