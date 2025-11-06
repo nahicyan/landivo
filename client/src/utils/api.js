@@ -38,6 +38,8 @@ export {
   deleteProperty,
   requestPropertyDeletion,
   deletePropertyDirect,
+  requestPropertyBulkDeletion,
+  deletePropertiesBulk,
   approvePropertyDeletion,
   getPropertyFinanceApplications,
   getPropertyOffersData,      // NEW

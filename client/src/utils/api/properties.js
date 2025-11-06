@@ -189,3 +189,39 @@ export const getPropertyActivities = async (propertyId) => {
     return [];
   }
 };
+
+/**
+ * Request bulk property deletion (for users without delete permissions)
+ * @param {string[]} propertyIds - Array of Property IDs
+ * @param {string} reason - Reason for deletion
+ * @returns {Promise<Object>} Response data
+ */
+export const requestPropertyBulkDeletion = async (propertyIds, reason) => {
+  try {
+    const response = await api.post(`/residency/request-bulk-deletion`, {
+      propertyIds,
+      reason
+    });
+    return response.data;
+  } catch (error) {
+    handleRequestError(error, "Failed to request bulk property deletion");
+  }
+};
+
+/**
+ * Direct bulk property deletion (for users with delete permissions)
+ * @param {string[]} propertyIds - Array of Property IDs
+ * @param {string} reason - Reason for deletion
+ * @returns {Promise<Object>} Response data
+ */
+export const deletePropertiesBulk = async (propertyIds, reason) => {
+  try {
+    const response = await api.post(`/residency/delete-bulk`, {
+      propertyIds,
+      reason
+    });
+    return response.data;
+  } catch (error) {
+    handleRequestError(error, "Failed to delete properties");
+  }
+};

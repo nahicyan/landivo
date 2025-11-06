@@ -8,18 +8,43 @@ import { DataTable } from "../DataTable/DataTable";
 import PropertiesTableFilter from "../PropertiesTableFilter/PropertiesTableFilter";
 import { QuickEditModal } from "@/components/PropertyManagement/QuickEditModal";
 import { usePropertyDeletion } from "@/hooks/usePropertyDeletion";
+import { usePropertyBulkDeletion } from "@/hooks/usePropertyBulkDeletion";
 import { PropertyDeletionModal } from "@/components/PropertyManagement/PropertyDeletionModal";
-import { MoreHorizontal, PencilIcon, TrashIcon, TrendingDown, Eye, ChevronDown, ChevronUp, Trash2, PencilLine } from "lucide-react";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { PropertyBulkDeletionModal } from "@/components/PropertyManagement/PropertyBulkDeletionModal";
+import { 
+  MoreHorizontal, 
+  PencilIcon, 
+  TrashIcon, 
+  TrendingDown, 
+  Eye, 
+  ChevronDown, 
+  ChevronUp, 
+  Trash2, 
+  PencilLine,
+  X,
+  Trash
+} from "lucide-react";
+import { 
+  DropdownMenu, 
+  DropdownMenuContent, 
+  DropdownMenuItem, 
+  DropdownMenuLabel, 
+  DropdownMenuSeparator, 
+  DropdownMenuTrigger 
+} from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 
 export default function PropertiesTable({ propertyData }) {
   const { data, isError, isLoading, refetch } = useProperties();
+  
   // Generic search query
   const [searchQuery, setSearchQuery] = useState("");
   const [activeFilters, setActiveFilters] = useState([]);
+  
   // Track expanded cells for rich text content
   const [expandedCells, setExpandedCells] = useState({});
 
@@ -27,7 +52,11 @@ export default function PropertiesTable({ propertyData }) {
   const [selectedProperty, setSelectedProperty] = useState(null);
   const [isQuickEditOpen, setIsQuickEditOpen] = useState(false);
 
-  // Add property deletion hook
+  // For checkbox selection
+  const [selectedRows, setSelectedRows] = useState(new Set());
+  const [isSelectAllChecked, setIsSelectAllChecked] = useState(false);
+
+  // Single property deletion hook
   const {
     isConfirmOpen,
     selectedProperty: selectedPropertyForDeletion,
@@ -44,6 +73,24 @@ export default function PropertiesTable({ propertyData }) {
     executePropertyDeletion,
     DELETION_STEPS,
   } = usePropertyDeletion();
+
+  // Bulk property deletion hook
+  const {
+    isConfirmOpen: isBulkConfirmOpen,
+    selectedProperties: selectedPropertiesForDeletion,
+    currentStep: bulkCurrentStep,
+    isPermissionLoading: isBulkPermissionLoading,
+    isLoading: isBulkDeletionLoading,
+    hasDeletePermission: hasBulkDeletePermission,
+    requiresStatusConfirmation: bulkRequiresStatusConfirmation,
+    canDirectDelete: bulkCanDirectDelete,
+    statusAnalysis,
+    openBulkDeletionConfirm,
+    closeBulkDeletionConfirm,
+    handleInitialConfirm: handleBulkInitialConfirm,
+    executeBulkPropertyDeletion,
+    BULK_DELETION_STEPS,
+  } = usePropertyBulkDeletion();
 
   // All available columns from schema
   const allAvailableColumns = [
@@ -96,17 +143,24 @@ export default function PropertiesTable({ propertyData }) {
   ];
 
   // Default visible columns
-  const [visibleColumns, setVisibleColumns] = useState(["streetAddress", "location", "askingPrice", "status", "area", "featured"]);
+  const [visibleColumns, setVisibleColumns] = useState([
+    "streetAddress",
+    "location",
+    "askingPrice",
+    "status",
+    "area",
+    "featured",
+  ]);
 
   // Filter states
   const [filters, setFilters] = useState({
     status: "all",
     area: "all",
-    priceRange: [0, 5000000], // Default price range from 0 to 5,000,000
-    minPriceDisplay: "0", // For display purposes
-    maxPriceDisplay: "5,000,000", // For display purposes
+    priceRange: [0, 5000000],
+    minPriceDisplay: "0",
+    maxPriceDisplay: "5,000,000",
     ownerId: "",
-    squareFeet: [0, 500000], // Default square feet range
+    squareFeet: [0, 500000],
     minSqftDisplay: "0",
     maxSqftDisplay: "500,000",
     ownershipType: "",
@@ -118,6 +172,44 @@ export default function PropertiesTable({ propertyData }) {
     return num.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
   };
 
+  // Handle checkbox selection
+  const handleRowSelection = (rowId, checked) => {
+    setSelectedRows((prev) => {
+      const newSet = new Set(prev);
+      if (checked) {
+        newSet.add(rowId);
+      } else {
+        newSet.delete(rowId);
+      }
+      return newSet;
+    });
+  };
+
+  // Handle select all
+  const handleSelectAll = (checked) => {
+    setIsSelectAllChecked(checked);
+    if (checked) {
+      const allIds = new Set(filteredData.map((row) => row.id));
+      setSelectedRows(allIds);
+    } else {
+      setSelectedRows(new Set());
+    }
+  };
+
+  // Clear all selections
+  const clearAllSelections = () => {
+    setSelectedRows(new Set());
+    setIsSelectAllChecked(false);
+  };
+
+  // Handle bulk delete
+  const handleBulkDelete = () => {
+    const selectedProperties = filteredData.filter((property) =>
+      selectedRows.has(property.id)
+    );
+    openBulkDeletionConfirm(selectedProperties);
+  };
+
   // Handle quick edit
   const handleQuickEdit = (property) => {
     setSelectedProperty(property);
@@ -127,15 +219,9 @@ export default function PropertiesTable({ propertyData }) {
   // Handle quick edit save
   const handleQuickEditSave = (editedData) => {
     setIsQuickEditOpen(false);
-    // Refresh the data after edit
     setTimeout(() => {
       refetch();
     }, 500);
-  };
-
-  // Handle view property
-  const handleViewProperty = (property) => {
-    window.open(`/properties/${property.id}`, "_blank");
   };
 
   // Helper function to toggle cell expansion
@@ -158,18 +244,23 @@ export default function PropertiesTable({ propertyData }) {
     if (!content) return <span className="text-gray-400">N/A</span>;
 
     const isExpanded = isCellExpanded(rowId, columnId);
-    const cellKey = `${rowId}-${columnId}`;
 
-    // Strip HTML to get approximate text length for truncation decision
     const textContent = content.replace(/<[^>]*>/g, "");
     const needsTruncation = textContent.length > maxLength;
 
-    // Create a safe version of the content for display
-    const displayContent = isExpanded || !needsTruncation ? content : content.substring(0, maxLength) + "...";
+    const displayContent =
+      isExpanded || !needsTruncation
+        ? content
+        : content.substring(0, maxLength) + "...";
 
     return (
       <div className="relative">
-        <div className={`rich-text-cell ${isExpanded ? "max-h-none" : "max-h-24 overflow-hidden"}`} dangerouslySetInnerHTML={{ __html: displayContent }} />
+        <div
+          className={`rich-text-cell ${
+            isExpanded ? "max-h-none" : "max-h-24 overflow-hidden"
+          }`}
+          dangerouslySetInnerHTML={{ __html: displayContent }}
+        />
 
         {needsTruncation && (
           <Button
@@ -179,7 +270,8 @@ export default function PropertiesTable({ propertyData }) {
               e.stopPropagation();
               toggleCellExpansion(rowId, columnId);
             }}
-            className="mt-1 text-xs text-blue-600 hover:text-blue-800 p-0 h-6">
+            className="mt-1 text-xs text-blue-600 hover:text-blue-800 p-0 h-6"
+          >
             {isExpanded ? (
               <span className="flex items-center">
                 Show less <ChevronUp className="ml-1 h-3 w-3" />
@@ -197,8 +289,30 @@ export default function PropertiesTable({ propertyData }) {
 
   // Generate dynamic columns based on visibleColumns
   const dynamicColumns = useMemo(() => {
-    // Always include actions column
     const columns = [
+      // Checkbox column (leftmost)
+      {
+        id: "select",
+        header: ({ table }) => (
+          <Checkbox
+            checked={isSelectAllChecked}
+            onCheckedChange={handleSelectAll}
+            aria-label="Select all"
+          />
+        ),
+        cell: ({ row }) => (
+          <Checkbox
+            checked={selectedRows.has(row.original.id)}
+            onCheckedChange={(checked) =>
+              handleRowSelection(row.original.id, checked)
+            }
+            aria-label="Select row"
+          />
+        ),
+        enableSorting: false,
+        enableHiding: false,
+      },
+      // Dynamic data columns
       ...visibleColumns
         .map((colId) => {
           const columnDef = allAvailableColumns.find((col) => col.id === colId);
@@ -208,7 +322,10 @@ export default function PropertiesTable({ propertyData }) {
             accessorKey: columnDef.id,
             header: columnDef.name,
             cell: ({ row }) => {
-              const value = typeof columnDef.accessor === "function" ? columnDef.accessor(row.original) : row.original[columnDef.accessor];
+              const value =
+                typeof columnDef.accessor === "function"
+                  ? columnDef.accessor(row.original)
+                  : row.original[columnDef.accessor];
 
               // Handle rich text fields specially
               if (columnDef.isRichText) {
@@ -216,7 +333,11 @@ export default function PropertiesTable({ propertyData }) {
               }
 
               // Format different types of data
-              if (colId === "askingPrice" || colId === "minPrice" || colId === "hoaFee") {
+              if (
+                colId === "askingPrice" ||
+                colId === "minPrice" ||
+                colId === "hoaFee"
+              ) {
                 return value ? `$${Number(value).toLocaleString()}` : "N/A";
               } else if (colId === "sqft") {
                 return value ? `${Number(value).toLocaleString()} sqft` : "N/A";
@@ -233,12 +354,17 @@ export default function PropertiesTable({ propertyData }) {
                         : value === "Sold"
                         ? "bg-blue-100 text-blue-800"
                         : "bg-gray-100 text-gray-800"
-                    }>
+                    }
+                  >
                     {value || "Unknown"}
                   </Badge>
                 );
               } else if (colId === "featured") {
-                return value === "Featured" ? <Badge className="bg-yellow-100 text-yellow-800">Featured</Badge> : "No";
+                return value === "Featured" ? (
+                  <Badge className="bg-yellow-100 text-yellow-800">Featured</Badge>
+                ) : (
+                  "No"
+                );
               } else if (colId === "createdAt" || colId === "updatedAt") {
                 return value ? new Date(value).toLocaleDateString() : "N/A";
               } else if (typeof value === "boolean") {
@@ -250,6 +376,7 @@ export default function PropertiesTable({ propertyData }) {
           };
         })
         .filter(Boolean),
+      // Actions column (rightmost)
       {
         id: "actions",
         header: "Actions",
@@ -270,26 +397,46 @@ export default function PropertiesTable({ propertyData }) {
                     setSelectedProperty(property);
                     setIsQuickEditOpen(true);
                   }}
-                  className="cursor-pointer text-blue-600 hover:text-blue-700 hover:bg-blue-50">
+                  className="cursor-pointer text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+                >
                   <PencilLine className="mr-2 h-4 w-4" />
                   Quick Edit
                 </DropdownMenuItem>
                 <DropdownMenuItem
-                  onClick={() => window.open(`/admin/edit-property/${property.id}`, "_blank")}
-                  className="cursor-pointer text-purple-600 hover:text-purple-700 hover:bg-purple-50">
+                  onClick={() =>
+                    window.open(`/admin/edit-property/${property.id}`, "_blank")
+                  }
+                  className="cursor-pointer text-purple-600 hover:text-purple-700 hover:bg-purple-50"
+                >
                   <PencilIcon className="mr-2 h-4 w-4" />
                   Edit Property
                 </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => window.open(`/properties/${property.id}`, "_blank")} className="cursor-pointer text-green-600 hover:text-green-700 hover:bg-green-50">
+                <DropdownMenuItem
+                  onClick={() =>
+                    window.open(`/properties/${property.id}`, "_blank")
+                  }
+                  className="cursor-pointer text-green-600 hover:text-green-700 hover:bg-green-50"
+                >
                   <Eye className="mr-2 h-4 w-4" />
                   View Details
                 </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => window.open(`/admin/edit-property/${property.id}/discount`, "_blank")} className="cursor-pointer text-orange-600 hover:text-orange-700 hover:bg-orange-50">
+                <DropdownMenuItem
+                  onClick={() =>
+                    window.open(
+                      `/admin/edit-property/${property.id}/discount`,
+                      "_blank"
+                    )
+                  }
+                  className="cursor-pointer text-orange-600 hover:text-orange-700 hover:bg-orange-50"
+                >
                   <TrendingDown className="mr-2 h-4 w-4" />
                   Discount Property
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={() => openDeletionConfirm(property)} className="cursor-pointer text-red-600 hover:text-red-700 hover:bg-red-50">
+                <DropdownMenuItem
+                  onClick={() => openDeletionConfirm(property)}
+                  className="cursor-pointer text-red-600 hover:text-red-700 hover:bg-red-50"
+                >
                   <Trash2 className="mr-2 h-4 w-4" />
                   Delete Property
                 </DropdownMenuItem>
@@ -301,7 +448,14 @@ export default function PropertiesTable({ propertyData }) {
     ];
 
     return columns;
-  }, [visibleColumns, expandedCells, canDeleteProperty, openDeletionConfirm]);
+  }, [
+    visibleColumns,
+    expandedCells,
+    canDeleteProperty,
+    openDeletionConfirm,
+    selectedRows,
+    isSelectAllChecked,
+  ]);
 
   // Parse filtered data
   const filteredData = useMemo(() => {
@@ -325,7 +479,6 @@ export default function PropertiesTable({ propertyData }) {
       const matchesSearchQuery =
         !searchQuery ||
         searchFields.some((field) => {
-          // Strip HTML for text search if field is rich text
           if (field && typeof field === "string" && field.includes("<")) {
             const textContent = field.replace(/<[^>]*>/g, "");
             return textContent.toLowerCase().includes(searchQuery.toLowerCase());
@@ -334,20 +487,36 @@ export default function PropertiesTable({ propertyData }) {
         });
 
       // Advanced filters
-      const matchesStatus = filters.status === "all" || property.status === filters.status;
-      const matchesArea = filters.area === "all" || property.area === filters.area;
-      const matchesOwner = !filters.ownerId || property.ownerId?.toString() === filters.ownerId;
-      const matchesFinancing = filters.financing === "all" || property.financing === filters.financing;
+      const matchesStatus =
+        filters.status === "all" || property.status === filters.status;
+      const matchesArea =
+        filters.area === "all" || property.area === filters.area;
+      const matchesOwner =
+        !filters.ownerId || property.ownerId?.toString() === filters.ownerId;
+      const matchesFinancing =
+        filters.financing === "all" || property.financing === filters.financing;
 
       // Price range filtering
       const propertyPrice = parseFloat(property.askingPrice || 0);
-      const withinPriceRange = propertyPrice >= filters.priceRange[0] && propertyPrice <= filters.priceRange[1];
+      const withinPriceRange =
+        propertyPrice >= filters.priceRange[0] &&
+        propertyPrice <= filters.priceRange[1];
 
       // Square footage filtering
       const propertySqft = parseFloat(property.sqft || 0);
-      const withinSqftRange = propertySqft >= filters.squareFeet[0] && propertySqft <= filters.squareFeet[1];
+      const withinSqftRange =
+        propertySqft >= filters.squareFeet[0] &&
+        propertySqft <= filters.squareFeet[1];
 
-      return matchesSearchQuery && matchesStatus && matchesArea && withinPriceRange && matchesOwner && withinSqftRange && matchesFinancing;
+      return (
+        matchesSearchQuery &&
+        matchesStatus &&
+        matchesArea &&
+        withinPriceRange &&
+        matchesOwner &&
+        withinSqftRange &&
+        matchesFinancing
+      );
     });
   }, [data, searchQuery, filters]);
 
@@ -375,7 +544,9 @@ export default function PropertiesTable({ propertyData }) {
       newActiveFilters.push({
         type: "priceRange",
         value: filters.priceRange,
-        label: `Price: ${formatNumber(filters.priceRange[0])} - ${formatNumber(filters.priceRange[1])}`,
+        label: `Price: ${formatNumber(filters.priceRange[0])} - ${formatNumber(
+          filters.priceRange[1]
+        )}`,
       });
     }
 
@@ -391,7 +562,9 @@ export default function PropertiesTable({ propertyData }) {
       newActiveFilters.push({
         type: "squareFeet",
         value: filters.squareFeet,
-        label: `Size: ${formatNumber(filters.squareFeet[0])} - ${formatNumber(filters.squareFeet[1])} sqft`,
+        label: `Size: ${formatNumber(filters.squareFeet[0])} - ${formatNumber(
+          filters.squareFeet[1]
+        )} sqft`,
       });
     }
 
@@ -480,7 +653,9 @@ export default function PropertiesTable({ propertyData }) {
   if (isError) {
     return (
       <div className="flex items-center justify-center h-[60vh]">
-        <h2 className="text-red-600 text-xl font-semibold">Error fetching data.</h2>
+        <h2 className="text-red-600 text-xl font-semibold">
+          Error fetching data.
+        </h2>
       </div>
     );
   }
@@ -514,12 +689,46 @@ export default function PropertiesTable({ propertyData }) {
           availableColumns={allAvailableColumns}
         />
 
+        {/* Bulk Actions Bar */}
+        {selectedRows.size > 0 && (
+          <Alert className="bg-blue-50 border-blue-200">
+            <AlertDescription className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Badge variant="secondary" className="bg-blue-100 text-blue-800">
+                  {selectedRows.size} {selectedRows.size === 1 ? "property" : "properties"} selected
+                </Badge>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={clearAllSelections}
+                  className="h-7 text-xs"
+                >
+                  <X className="w-3 h-3 mr-1" />
+                  Clear Selection
+                </Button>
+              </div>
+              <Button
+                variant="destructive"
+                size="sm"
+                onClick={handleBulkDelete}
+                className="h-8"
+              >
+                <Trash className="w-4 h-4 mr-2" />
+                Delete Selected ({selectedRows.size})
+              </Button>
+            </AlertDescription>
+          </Alert>
+        )}
+
         {/* Results Count */}
         <div className="flex justify-between items-center">
           <p className="text-sm text-gray-600">
-            {filteredData.length} {filteredData.length === 1 ? "result" : "results"} found
+            {filteredData.length}{" "}
+            {filteredData.length === 1 ? "result" : "results"} found
           </p>
-          <div className="text-sm text-gray-600">{visibleColumns.length} columns visible</div>
+          <div className="text-sm text-gray-600">
+            {visibleColumns.length} columns visible
+          </div>
         </div>
 
         {/* Data Table */}
@@ -529,9 +738,16 @@ export default function PropertiesTable({ propertyData }) {
       </div>
 
       {/* Quick Edit Modal */}
-      {selectedProperty && <QuickEditModal property={selectedProperty} isOpen={isQuickEditOpen} onClose={() => setIsQuickEditOpen(false)} onSave={handleQuickEditSave} />}
+      {selectedProperty && (
+        <QuickEditModal
+          property={selectedProperty}
+          isOpen={isQuickEditOpen}
+          onClose={() => setIsQuickEditOpen(false)}
+          onSave={handleQuickEditSave}
+        />
+      )}
 
-      {/* Property Deletion Modal */}
+      {/* Single Property Deletion Modal */}
       <PropertyDeletionModal
         isOpen={isConfirmOpen}
         onClose={closeDeletionConfirm}
@@ -545,6 +761,23 @@ export default function PropertiesTable({ propertyData }) {
         canDirectDelete={canDirectDelete}
         onInitialConfirm={handleInitialConfirm}
         DELETION_STEPS={DELETION_STEPS}
+      />
+
+      {/* Bulk Property Deletion Modal */}
+      <PropertyBulkDeletionModal
+        isOpen={isBulkConfirmOpen}
+        onClose={closeBulkDeletionConfirm}
+        properties={selectedPropertiesForDeletion}
+        onConfirm={executeBulkPropertyDeletion}
+        isLoading={isBulkDeletionLoading}
+        currentStep={bulkCurrentStep}
+        isPermissionLoading={isBulkPermissionLoading}
+        hasDeletePermission={hasBulkDeletePermission}
+        requiresStatusConfirmation={bulkRequiresStatusConfirmation}
+        canDirectDelete={bulkCanDirectDelete}
+        onInitialConfirm={handleBulkInitialConfirm}
+        statusAnalysis={statusAnalysis}
+        BULK_DELETION_STEPS={BULK_DELETION_STEPS}
       />
     </div>
   );
