@@ -8,7 +8,7 @@ const SearchWithTracking = (props) => {
   const { trackSearch, trackEvent } = useActivityTrackingContext();
   const { isVipBuyer } = useVipBuyer();
   
-  // Track when search query changes
+  // Track when search query or filters change
   useEffect(() => {
     // Only track for VIP buyers
     if (!isVipBuyer || !props.query) return;
@@ -29,9 +29,7 @@ const SearchWithTracking = (props) => {
           query: props.query,
           resultsCount: props.filteredData?.length || 0,
           timestamp: new Date().toISOString(),
-          // Track context information if available
           context: props.context || 'properties',
-          // Track filters if available
           filters: props.filters || {}
         });
       }
@@ -39,6 +37,22 @@ const SearchWithTracking = (props) => {
     
     return () => clearTimeout(debounceTimer);
   }, [isVipBuyer, props.query, props.filteredData, props.filters, props.context, trackSearch, trackEvent]);
+
+  // Track filter changes separately
+  useEffect(() => {
+    if (!isVipBuyer || !props.filters) return;
+    
+    const debounceTimer = setTimeout(() => {
+      trackEvent('filter_change', {
+        filters: props.filters,
+        resultsCount: props.filteredData?.length || 0,
+        timestamp: new Date().toISOString(),
+        context: props.context || 'properties'
+      });
+    }, 1000);
+    
+    return () => clearTimeout(debounceTimer);
+  }, [isVipBuyer, props.filters, props.filteredData, props.context, trackEvent]);
 
   // Render the original Search component with all props
   return <Search {...props} />;

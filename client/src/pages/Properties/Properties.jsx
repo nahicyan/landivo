@@ -1,17 +1,25 @@
+// client/src/pages/Properties/Properties.jsx
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { PuffLoader } from "react-spinners";
 import { useSearchParams, Link } from "react-router-dom";
 import useProperties from "../../components/hooks/useProperties.js";
 import SearchWithTracking from "@/components/Search/SearchWithTracking";
 import DisplayGrid, { createGridFilter } from "@/components/DisplayGrid/DisplayGrid";
+import { PropertyFilterPanel } from "@/components/PropertyFilters/PropertyFilterPanel";
 import { Button } from "@/components/ui/button";
+import { 
+  applyPropertyFilters, 
+  getDefaultFilters, 
+  resetAllFilters 
+} from "@/utils/propertyFilterUtils";
 
 export default function Properties() {
   const { data, isError, isLoading } = useProperties();
   const [searchQuery, setSearchQuery] = useState("");
   const [searchParams] = useSearchParams();
+  const [filters, setFilters] = useState(getDefaultFilters());
 
   // Track how many properties to show for each area (initially 9)
   const [visibleCounts, setVisibleCounts] = useState({
@@ -35,6 +43,17 @@ export default function Properties() {
     }));
   };
 
+  // Apply filters to data
+  const filteredData = useMemo(() => {
+    if (!data) return [];
+    return applyPropertyFilters(data, filters, searchQuery);
+  }, [data, filters, searchQuery]);
+
+  // Clear all filters
+  const handleClearAllFilters = () => {
+    resetAllFilters(setFilters, setSearchQuery);
+  };
+
   if (isError) {
     return (
       <div className="flex items-center justify-center h-[60vh]">
@@ -50,23 +69,6 @@ export default function Properties() {
       </div>
     );
   }
-
-  // Filter properties using OR logic across multiple fields
-  const filteredData = data.filter((property) => {
-    const query = searchQuery.toLowerCase();
-    return (
-      property.title?.toLowerCase().includes(query) ||
-      property.streetAddress?.toLowerCase().includes(query) ||
-      property.state?.toLowerCase().includes(query) ||
-      property.zip?.toLowerCase().includes(query) ||
-      property.area?.toLowerCase().includes(query) ||
-      property.apnOrPin?.toLowerCase().includes(query) ||
-      property.ltag?.toLowerCase().includes(query) ||
-      property.rtag?.toLowerCase().includes(query) ||
-      property.city?.toLowerCase().includes(query) ||
-      property.county?.toLowerCase().includes(query)
-    );
-  });
 
   // Define the areas and their corresponding routes
   const areas = [
@@ -86,11 +88,36 @@ export default function Properties() {
     <div className="bg-[#FDF8F2] min-h-screen py-12 text-[#4b5b4d]">
       {/* Hero Section */}
       <div className="max-w-screen-xl mx-auto px-4">
-        {/* Title, Subtitle & Search */}
-        <div className="mb-10 text-center">
-          <h1 className="text-3xl sm:text-4xl font-bold mb-4">Find Your Dream Property</h1>
-          <p className="text-lg mb-6">Browse through a wide selection of properties with detailed filters to help you find the perfect fit.</p>
-          <SearchWithTracking query={searchQuery} setQuery={setSearchQuery} context="properties" />
+        {/* Title & Subtitle */}
+        <div className="mb-8 text-center">
+          <h1 className="text-3xl sm:text-4xl font-bold mb-4 text-[#324c48]">
+            Find Your Dream Property
+          </h1>
+          <p className="text-lg mb-6 text-[#4b5b4d]">
+            Browse through a wide selection of properties with detailed filters to help you find the perfect fit.
+          </p>
+        </div>
+
+        {/* Search Bar */}
+        <div className="mb-6">
+          <SearchWithTracking 
+            query={searchQuery} 
+            setQuery={setSearchQuery} 
+            context="properties"
+            filteredData={filteredData}
+            filters={filters}
+          />
+        </div>
+
+        {/* Filter Panel */}
+        <div className="mb-8">
+          <PropertyFilterPanel
+            filters={filters}
+            setFilters={setFilters}
+            onClearAll={handleClearAllFilters}
+            propertiesData={data}
+            resultsCount={filteredData.length}
+          />
         </div>
 
         {/* Small Separating Line */}
@@ -125,7 +152,8 @@ export default function Properties() {
                 {hasMore && (
                   <Button
                     onClick={() => loadMore(area.name)}
-                    className="bg-[#324c48] hover:bg-[#3f4f24] text-white px-6 py-2 rounded-lg shadow transition transform active:scale-95 focus:outline-none focus:ring-2 focus:ring-[#3f4f24] focus:ring-offset-2">
+                    className="bg-[#324c48] hover:bg-[#3f4f24] text-white px-6 py-2 rounded-lg shadow transition transform active:scale-95 focus:outline-none focus:ring-2 focus:ring-[#3f4f24] focus:ring-offset-2"
+                  >
                     Load More
                   </Button>
                 )}
@@ -145,7 +173,17 @@ export default function Properties() {
         })}
 
         {/* No matching properties */}
-        {filteredData.length === 0 && <p className="text-center text-gray-600 py-4">No properties found.</p>}
+        {filteredData.length === 0 && (
+          <div className="text-center py-12">
+            <p className="text-gray-600 text-lg mb-4">No properties found matching your criteria.</p>
+            <Button
+              onClick={handleClearAllFilters}
+              className="bg-[#324c48] hover:bg-[#3f4f24] text-white"
+            >
+              Clear All Filters
+            </Button>
+          </div>
+        )}
       </div>
     </div>
   );
