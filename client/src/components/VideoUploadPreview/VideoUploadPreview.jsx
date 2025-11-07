@@ -19,7 +19,7 @@ import {
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 
-import { Trash2, VideoIcon, Move, X, Play } from "lucide-react";
+import { Trash2, VideoIcon, Move, X, Play, AlertCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
@@ -120,6 +120,9 @@ const VideoUploadPreview = ({
   // Local state for existing videos with IDs
   const [existingItems, setExistingItems] = useState([]);
   
+  // State for upload errors
+  const [uploadError, setUploadError] = useState(null);
+  
   // Initialize existing videos with IDs when component mounts or existingVideos changes
   useEffect(() => {
     setExistingItems(
@@ -179,23 +182,55 @@ const VideoUploadPreview = ({
     })
   );
 
-  // Dropzone configuration
-  const onDrop = useCallback(acceptedFiles => {
+  // Allowed file extensions
+  const ALLOWED_EXTENSIONS = ['mp4', 'mov', 'avi', 'webm', 'mkv'];
+  
+  // Validate file extension
+  const isValidFileType = (file) => {
+    const extension = file.name.split('.').pop().toLowerCase();
+    return ALLOWED_EXTENSIONS.includes(extension);
+  };
+
+  // Dropzone configuration - UPDATED to only accept specific formats
+  const onDrop = useCallback((acceptedFiles, rejectedFiles) => {
+    // Clear previous errors
+    setUploadError(null);
+    
+    // Filter files by extension as an extra layer of validation
+    const validFiles = acceptedFiles.filter(file => {
+      if (!isValidFileType(file)) {
+        return false;
+      }
+      return true;
+    });
+    
+    const invalidFiles = acceptedFiles.filter(file => !isValidFileType(file));
+    
+    // Handle rejected or invalid files
+    if (rejectedFiles.length > 0 || invalidFiles.length > 0) {
+      setUploadError(`Only MP4, MOV, AVI, WEBM, and MKV videos are allowed.`);
+      return;
+    }
+    
     // Check if adding these files would exceed maxVideos
-    if (existingItems.length + newItems.length + acceptedFiles.length > maxVideos) {
-      alert(`You can only upload a maximum of ${maxVideos} videos`);
+    if (existingItems.length + newItems.length + validFiles.length > maxVideos) {
+      setUploadError(`You can only upload a maximum of ${maxVideos} videos`);
       return;
     }
     
     // Process and add new files
-    const updatedNewVideos = [...newVideos, ...acceptedFiles];
+    const updatedNewVideos = [...newVideos, ...validFiles];
     onNewChange(updatedNewVideos);
   }, [existingItems.length, newItems.length, newVideos, onNewChange, maxVideos]);
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
     onDrop,
     accept: {
-      'video/*': []
+      'video/mp4': ['.mp4'],
+      'video/quicktime': ['.mov'],
+      'video/x-msvideo': ['.avi'],
+      'video/webm': ['.webm'],
+      'video/x-matroska': ['.mkv']
     },
     maxSize: 500 * 1024 * 1024, // 500MB
     disabled: existingItems.length + newItems.length >= maxVideos
@@ -327,6 +362,23 @@ const VideoUploadPreview = ({
         </div>
       </div>
 
+      {/* Error message */}
+      {uploadError && (
+        <div className="flex items-start gap-2 p-3 bg-red-50 border border-red-200 rounded-md">
+          <AlertCircle className="h-5 w-5 text-red-500 flex-shrink-0 mt-0.5" />
+          <div className="flex-1">
+            <p className="text-sm text-red-600 font-medium">{uploadError}</p>
+            <button
+              type="button"
+              onClick={() => setUploadError(null)}
+              className="text-xs text-red-500 hover:text-red-700 underline mt-1"
+            >
+              Dismiss
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Dropzone */}
       <div
         {...getRootProps()}
@@ -355,8 +407,8 @@ const VideoUploadPreview = ({
                     }`
                   : "Maximum number of videos reached"}
               </p>
-              <p className="text-xs text-gray-500 mt-2">
-                Supports MP4, WebM, MOV, AVI. Max 500MB per file.
+              <p className="text-xs text-gray-400 mt-2">
+                Supported formats: MP4, MOV, AVI, WEBM, MKV (Max 500MB each)
               </p>
             </>
           )}

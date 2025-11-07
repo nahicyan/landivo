@@ -1,3 +1,4 @@
+// client/src/components/ImageUploadPreview/ImageUploadPreview.jsx
 import React, { useState, useCallback, useEffect } from "react";
 import { useDropzone } from "react-dropzone";
 import { 
@@ -18,7 +19,7 @@ import {
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 
-import { Trash2, ImageIcon, Move, X } from "lucide-react";
+import { Trash2, ImageIcon, Move, X, AlertCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
@@ -112,6 +113,9 @@ const ImageUploadPreview = ({
   // Local state for existing images with IDs
   const [existingItems, setExistingItems] = useState([]);
   
+  // State for upload errors
+  const [uploadError, setUploadError] = useState(null);
+  
   // Initialize existing images with IDs when component mounts or existingImages changes
   useEffect(() => {
     setExistingItems(
@@ -171,23 +175,54 @@ const ImageUploadPreview = ({
     })
   );
 
-  // Dropzone configuration
-  const onDrop = useCallback(acceptedFiles => {
+  // Allowed file extensions
+  const ALLOWED_EXTENSIONS = ['jpeg', 'jpg', 'png', 'webp', 'gif'];
+  
+  // Validate file extension
+  const isValidFileType = (file) => {
+    const extension = file.name.split('.').pop().toLowerCase();
+    return ALLOWED_EXTENSIONS.includes(extension);
+  };
+
+  // Dropzone configuration - UPDATED to only accept specific formats
+  const onDrop = useCallback((acceptedFiles, rejectedFiles) => {
+    // Clear previous errors
+    setUploadError(null);
+    
+    // Filter files by extension as an extra layer of validation
+    const validFiles = acceptedFiles.filter(file => {
+      if (!isValidFileType(file)) {
+        return false;
+      }
+      return true;
+    });
+    
+    const invalidFiles = acceptedFiles.filter(file => !isValidFileType(file));
+    
+    // Handle rejected or invalid files
+    if (rejectedFiles.length > 0 || invalidFiles.length > 0) {
+      setUploadError(`Only JPEG, JPG, PNG, WEBP, and GIF images are allowed.`);
+      return;
+    }
+    
     // Check if adding these files would exceed maxImages
-    if (existingItems.length + newItems.length + acceptedFiles.length > maxImages) {
-      alert(`You can only upload a maximum of ${maxImages} images`);
+    if (existingItems.length + newItems.length + validFiles.length > maxImages) {
+      setUploadError(`You can only upload a maximum of ${maxImages} images`);
       return;
     }
     
     // Process and add new files
-    const updatedNewImages = [...newImages, ...acceptedFiles];
+    const updatedNewImages = [...newImages, ...validFiles];
     onNewChange(updatedNewImages);
   }, [existingItems.length, newItems.length, newImages, onNewChange, maxImages]);
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
     onDrop,
     accept: {
-      'image/*': []
+      'image/jpeg': ['.jpeg', '.jpg'],
+      'image/png': ['.png'],
+      'image/webp': ['.webp'],
+      'image/gif': ['.gif']
     },
     maxSize: 20971520, // 20MB
     disabled: existingItems.length + newItems.length >= maxImages
@@ -319,6 +354,23 @@ const ImageUploadPreview = ({
         </div>
       </div>
 
+      {/* Error message */}
+      {uploadError && (
+        <div className="flex items-start gap-2 p-3 bg-red-50 border border-red-200 rounded-md">
+          <AlertCircle className="h-5 w-5 text-red-500 flex-shrink-0 mt-0.5" />
+          <div className="flex-1">
+            <p className="text-sm text-red-600 font-medium">{uploadError}</p>
+            <button
+              type="button"
+              onClick={() => setUploadError(null)}
+              className="text-xs text-red-500 hover:text-red-700 underline mt-1"
+            >
+              Dismiss
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Dropzone */}
       <div
         {...getRootProps()}
@@ -346,6 +398,9 @@ const ImageUploadPreview = ({
                       maxImages - totalImages !== 1 ? "s" : ""
                     }`
                   : "Maximum number of images reached"}
+              </p>
+              <p className="text-xs text-gray-400 mt-2">
+                Supported formats: JPEG, JPG, PNG, WEBP, GIF (Max 20MB each)
               </p>
             </>
           )}
