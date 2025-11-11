@@ -38,7 +38,7 @@ export default function MultiPropertyMap({ properties = [] }) {
         return;
       }
 
-      // Calculate center point (average of all coordinates)
+      // Calculate center point
       const centerLat =
         validProperties.reduce((sum, p) => sum + parseFloat(p.latitude), 0) /
         validProperties.length;
@@ -55,26 +55,37 @@ export default function MultiPropertyMap({ properties = [] }) {
         fullscreenControl: true,
       });
 
-      // Create bounds to fit all markers
+      // Create bounds
       const bounds = new window.google.maps.LatLngBounds();
 
-      // Add markers for each property
+      // Add markers with price labels
       validProperties.forEach((property) => {
         const position = {
           lat: parseFloat(property.latitude),
           lng: parseFloat(property.longitude),
         };
 
+        // Format price for label
+        const price = property.askingPrice 
+          ? `$${(parseFloat(property.askingPrice) / 1000).toFixed(0)}k`
+          : "N/A";
+
+        // Create marker with default icon
         const marker = new window.google.maps.Marker({
           position,
           map,
           title: property.title || property.streetAddress,
-          icon: {
-            url: "http://maps.google.com/mapfiles/ms/icons/red-dot.png",
+          label: {
+            text: price,
+            color: "#ffffff",
+            fontSize: "12px",
+            fontWeight: "bold",
+            className: "marker-label",
           },
+          // Default professional pin icon (no custom icon specified)
         });
 
-        // Create info window with property details
+        // Create info window
         const infoWindow = new window.google.maps.InfoWindow({
           content: `
             <div style="max-width: 200px; font-family: system-ui, -apple-system, sans-serif;">
@@ -117,34 +128,26 @@ export default function MultiPropertyMap({ properties = [] }) {
     };
 
     loadGoogleMapsScript();
+
+    // Add custom CSS for marker labels
+    const style = document.createElement('style');
+    style.textContent = `
+      .marker-label {
+        background: #324c48 !important;
+        padding: 4px 8px !important;
+        border-radius: 4px !important;
+        border: 2px solid white !important;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.3) !important;
+        transform: translateY(-45px) !important;
+        font-family: system-ui, -apple-system, sans-serif !important;
+      }
+    `;
+    document.head.appendChild(style);
+
+    return () => {
+      style.remove();
+    };
   }, [properties]);
-
-  // Fallback to iframe map if Google Maps API is not available
-  const renderFallbackMap = () => {
-    if (properties.length === 0) return null;
-
-    // Get first property with coordinates for center point
-    const centerProperty = properties.find((p) => p.latitude && p.longitude);
-
-    if (!centerProperty) {
-      return (
-        <div className="flex items-center justify-center h-full bg-gray-100 rounded-lg">
-          <p className="text-gray-500">No location data available</p>
-        </div>
-      );
-    }
-
-    const googleMapsUrl = `https://www.google.com/maps?q=${centerProperty.latitude},${centerProperty.longitude}&output=embed&zoom=10`;
-
-    return (
-      <iframe
-        loading="lazy"
-        src={googleMapsUrl}
-        className="w-full h-full border-none rounded-lg"
-        title="Property Map"
-      />
-    );
-  };
 
   return (
     <Card className="border-none shadow-lg bg-white h-full">

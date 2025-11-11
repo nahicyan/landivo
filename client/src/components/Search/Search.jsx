@@ -16,7 +16,7 @@ export default function Search({ query, setQuery }) {
       action="#" 
       method="POST" 
       onSubmit={handleSubmit} 
-      className="mt-6 sm:mt-8"
+      className="mt-2 sm:mt-2"
     >
       <div className="relative p-2 sm:border sm:border-[#324c48] group sm:rounded-xl sm:focus-within:ring-1 sm:focus-within:ring-[#D4A017] sm:focus-within:border-[#D4A017]">
         <Input

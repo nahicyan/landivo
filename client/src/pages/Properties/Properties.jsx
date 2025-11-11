@@ -6,17 +6,23 @@ import { PuffLoader } from "react-spinners";
 import { useSearchParams, useNavigate } from "react-router-dom";
 import useProperties from "../../components/hooks/useProperties.js";
 import SearchWithTracking from "@/components/Search/SearchWithTracking";
-import DisplayGridHorizontal from "@/components/DisplayGrid/DisplayGridHorizontal";
 import MultiPropertyMap from "@/components/MultiPropertyMap/MultiPropertyMap";
-import { PropertyFilterPanel } from "@/components/PropertyFilters/PropertyFilterPanel";
+import { PropertyFilterBar } from "@/components/PropertyFilters/PropertyFilterBar";
 import { Button } from "@/components/ui/button";
 import PropertyCard from "@/components/PropertyCard/PropertyCard";
-import { 
-  applyPropertyFilters, 
-  getDefaultFilters, 
-  resetAllFilters 
+import {
+  applyPropertyFilters,
+  getDefaultFilters,
+  resetAllFilters,
 } from "@/utils/propertyFilterUtils";
-import { MapIcon, Grid3x3 } from "lucide-react";
+import { MapIcon, Grid3x3, ArrowUpDown } from "lucide-react";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 export default function Properties() {
   const { data, isError, isLoading } = useProperties();
@@ -24,7 +30,8 @@ export default function Properties() {
   const [searchQuery, setSearchQuery] = useState("");
   const [searchParams] = useSearchParams();
   const [filters, setFilters] = useState(getDefaultFilters());
-  const [viewMode, setViewMode] = useState("map"); // "map" or "grid"
+  const [viewMode, setViewMode] = useState("map");
+  const [sortBy, setSortBy] = useState("price-desc");
 
   useEffect(() => {
     const searchFromUrl = searchParams.get("search") || "";
@@ -36,6 +43,51 @@ export default function Properties() {
     if (!data) return [];
     return applyPropertyFilters(data, filters, searchQuery);
   }, [data, filters, searchQuery]);
+
+  // Sort filtered data
+  const sortedData = useMemo(() => {
+    const sorted = [...filteredData];
+    
+    switch (sortBy) {
+      case "price-desc":
+        return sorted.sort((a, b) => (b.askingPrice || 0) - (a.askingPrice || 0));
+      case "price-asc":
+        return sorted.sort((a, b) => (a.askingPrice || 0) - (b.askingPrice || 0));
+      case "size-desc":
+        return sorted.sort((a, b) => (b.sqft || 0) - (a.sqft || 0));
+      case "size-asc":
+        return sorted.sort((a, b) => (a.sqft || 0) - (b.sqft || 0));
+      case "newest":
+        return sorted.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+      default:
+        return sorted;
+    }
+  }, [filteredData, sortBy]);
+
+  // Count active filters
+  const countActiveFilters = () => {
+    let count = 0;
+    if (filters.area !== "all") count++;
+    if (filters.status !== "all") count++;
+    if (filters.state !== "all") count++;
+    if (filters.priceRange[0] > 0 || filters.priceRange[1] < 10000000) count++;
+    if (filters.acreRange[0] > 0 || filters.acreRange[1] < 1000) count++;
+    if (filters.sqftRange[0] > 0 || filters.sqftRange[1] < 500000) count++;
+    if (filters.city !== "all") count++;
+    if (filters.county !== "all") count++;
+    if (filters.zoning !== "all") count++;
+    if (filters.financing !== "all") count++;
+    if (filters.restrictions !== "all") count++;
+    if (filters.water !== "all") count++;
+    if (filters.sewer !== "all") count++;
+    if (filters.electric !== "all") count++;
+    if (filters.roadCondition !== "all") count++;
+    if (filters.floodplain !== "all") count++;
+    if (filters.hoaPoa !== "all") count++;
+    if (filters.mobileHomeFriendly !== "all") count++;
+    if (filters.featuredOnly) count++;
+    return count;
+  };
 
   // Clear all filters
   const handleClearAllFilters = () => {
@@ -63,125 +115,116 @@ export default function Properties() {
     );
   }
 
-  // Define the areas
-  const areas = [
-    { name: "DFW", displayName: "Dallas Fort Worth" },
-    { name: "Austin", displayName: "Austin" },
-    { name: "Houston", displayName: "Houston" },
-    { name: "San Antonio", displayName: "San Antonio" },
-    { name: "Other Areas", displayName: "Other Areas" },
-  ];
-
-  // Helper function to get properties for an area
-  const getAreaProperties = (areaName) => {
-    return filteredData.filter((property) => property.area === areaName);
-  };
-
-  // Map View - Split Layout (50-50)
+  // Map View - Split Layout (50-50) - OPTIMIZED
   if (viewMode === "map") {
     return (
       <div className="flex h-screen bg-[#FDF8F2] overflow-hidden">
         {/* LEFT HALF - Fixed Map */}
-        <div className="w-1/2 h-full p-2 flex items-top">
+        <div className="w-1/2 h-full p-3 flex items-top">
           <div className="w-full h-[90vh] rounded-lg overflow-hidden shadow-xl border border-gray-200">
-            <MultiPropertyMap properties={filteredData} />
+            <MultiPropertyMap properties={sortedData} />
           </div>
         </div>
 
-        {/* RIGHT HALF - Scrollable Content */}
+        {/* RIGHT HALF - Scrollable Content - OPTIMIZED */}
         <div className="w-1/2 h-full overflow-y-auto">
-          <div className="p-6 space-y-6">
-            {/* Header Section */}
-            <div className="space-y-4">
-              {/* Title & Subtitle */}
-              <div className="text-center">
-                <h1 className="text-3xl sm:text-4xl font-bold mb-2 text-[#324c48]">
-                  Find Your Dream Property
-                </h1>
-                <p className="text-base text-[#4b5b4d]">
-                  Browse through {filteredData.length} properties with detailed filters
-                </p>
-              </div>
+          <div className="p-4 space-y-3">
+            {/* Compact Header */}
+            <div className="space-y-2">
+              {/* Title - Left aligned, smaller */}
+              <h1 className="text-xl font-bold text-[#324c48]">
+                Find Your Dream Property
+              </h1>
 
-              {/* Search Bar */}
-              <div>
-                <SearchWithTracking 
-                  query={searchQuery} 
-                  setQuery={setSearchQuery} 
+              {/* Search - Reduced height */}
+              <div className="[&_input]:h-9 [&_button]:h-9">
+                <SearchWithTracking
+                  query={searchQuery}
+                  setQuery={setSearchQuery}
                   context="properties"
-                  filteredData={filteredData}
+                  filteredData={sortedData}
                   filters={filters}
                 />
               </div>
 
-              {/* Filter Panel */}
-              <div>
-                <PropertyFilterPanel
+              {/* Filter Bar - Compact */}
+              <div className="[&>div]:p-2">
+                <PropertyFilterBar
                   filters={filters}
                   setFilters={setFilters}
                   onClearAll={handleClearAllFilters}
+                  resultsCount={sortedData.length}
+                  activeFilterCount={countActiveFilters()}
                   propertiesData={data}
-                  resultsCount={filteredData.length}
                 />
               </div>
 
-              {/* View Toggle */}
-              <div className="flex justify-end gap-2">
-                <Button
-                  onClick={() => setViewMode("map")}
-                  variant="default"
-                  size="sm"
-                  className="bg-[#324c48] hover:bg-[#3f4f24]"
-                >
-                  <MapIcon className="w-4 h-4 mr-2" />
-                  Map View
-                </Button>
-                <Button
-                  onClick={() => setViewMode("grid")}
-                  variant="outline"
-                  size="sm"
-                >
-                  <Grid3x3 className="w-4 h-4 mr-2" />
-                  Grid View
-                </Button>
+              {/* View Toggle & Sort - Compact */}
+              <div className="flex items-center justify-between gap-2">
+                <div className="flex gap-2">
+                  <Button
+                    onClick={() => setViewMode("map")}
+                    variant="default"
+                    size="sm"
+                    className="bg-[#324c48] hover:bg-[#3f4f24] h-8 text-xs"
+                  >
+                    <MapIcon className="w-3 h-3 mr-1" />
+                    Map
+                  </Button>
+                  <Button 
+                    onClick={() => setViewMode("grid")} 
+                    variant="outline" 
+                    size="sm"
+                    className="h-8 text-xs"
+                  >
+                    <Grid3x3 className="w-3 h-3 mr-1" />
+                    Grid
+                  </Button>
+                </div>
+
+                {/* Sort Dropdown - Compact */}
+                <Select value={sortBy} onValueChange={setSortBy}>
+                  <SelectTrigger className="w-[160px] h-8 text-xs">
+                    <ArrowUpDown className="w-3 h-3 mr-1" />
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="price-desc">Price: High to Low</SelectItem>
+                    <SelectItem value="price-asc">Price: Low to High</SelectItem>
+                    <SelectItem value="size-desc">Size: Large to Small</SelectItem>
+                    <SelectItem value="size-asc">Size: Small to Large</SelectItem>
+                    <SelectItem value="newest">Newest First</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
             </div>
 
-            {/* Divider */}
-            <hr className="border-t border-[#4b5b4d]/20" />
+            <hr className="border-t border-[#4b5b4d]/20 my-2" />
 
-            {/* Properties by Area */}
-            {filteredData.length === 0 ? (
-              <div className="text-center py-16">
-                <p className="text-gray-600 text-lg mb-4">
+            {/* Properties Grid - Optimized spacing */}
+            {sortedData.length === 0 ? (
+              <div className="text-center py-12">
+                <p className="text-gray-600 text-base mb-3">
                   No properties found matching your criteria.
                 </p>
                 <Button
                   onClick={handleClearAllFilters}
-                  className="bg-[#324c48] hover:bg-[#3f4f24] text-white"
+                  className="bg-[#324c48] hover:bg-[#3f4f24] text-white h-9 text-sm"
                 >
                   Clear All Filters
                 </Button>
               </div>
             ) : (
-              <div className="space-y-8">
-                {areas.map((area) => {
-                  const areaProperties = getAreaProperties(area.name);
-                  if (areaProperties.length === 0) return null;
-
-                  return (
-                    <div key={area.name} className="space-y-4">
-                      <DisplayGridHorizontal
-                        properties={areaProperties}
-                        title={area.displayName}
-                        subtitle={`${areaProperties.length} properties available`}
-                        onPropertyClick={handlePropertyClick}
-                        showCount={false}
-                      />
-                      <hr className="border-t border-[#4b5b4d]/20" />
-                    </div>
-                  );
-                })}
+              <div className="grid grid-cols-1 xl:grid-cols-2 gap-3 pb-4">
+                {sortedData.map((property) => (
+                  <div
+                    key={property.id}
+                    className="transition hover:scale-[1.02] cursor-pointer"
+                    onClick={() => handlePropertyClick(property)}
+                  >
+                    <PropertyCard card={property} />
+                  </div>
+                ))}
               </div>
             )}
           </div>
@@ -190,114 +233,107 @@ export default function Properties() {
     );
   }
 
-  // Grid View - Full Width (Original Layout)
+  // Grid View - Full Width - OPTIMIZED
   return (
     <div className="bg-[#FDF8F2] min-h-screen text-[#4b5b4d]">
-      {/* Header Section */}
+      {/* Header - Compact */}
       <div className="sticky top-0 z-20 bg-[#FDF8F2] shadow-sm">
-        <div className="max-w-screen-2xl mx-auto px-4 py-6">
-          {/* Title & Subtitle */}
-          <div className="mb-4 text-center">
-            <h1 className="text-3xl sm:text-4xl font-bold mb-2 text-[#324c48]">
+        <div className="max-w-screen-2xl mx-auto px-4 py-3">
+          <div className="space-y-2">
+            {/* Title - Left aligned, smaller */}
+            <h1 className="text-xl font-bold text-[#324c48]">
               Find Your Dream Property
             </h1>
-            <p className="text-base text-[#4b5b4d]">
-              Browse through {filteredData.length} properties with detailed filters
-            </p>
-          </div>
 
-          {/* Search Bar */}
-          <div className="mb-4">
-            <SearchWithTracking 
-              query={searchQuery} 
-              setQuery={setSearchQuery} 
-              context="properties"
-              filteredData={filteredData}
-              filters={filters}
-            />
-          </div>
+            {/* Search - Compact */}
+            <div className="[&_input]:h-9 [&_button]:h-9">
+              <SearchWithTracking
+                query={searchQuery}
+                setQuery={setSearchQuery}
+                context="properties"
+                filteredData={sortedData}
+                filters={filters}
+              />
+            </div>
 
-          {/* Filter Panel */}
-          <div className="mb-4">
-            <PropertyFilterPanel
-              filters={filters}
-              setFilters={setFilters}
-              onClearAll={handleClearAllFilters}
-              propertiesData={data}
-              resultsCount={filteredData.length}
-            />
-          </div>
+            {/* Filter Bar - Compact */}
+            <div className="[&>div]:p-2">
+              <PropertyFilterBar
+                filters={filters}
+                setFilters={setFilters}
+                onClearAll={handleClearAllFilters}
+                resultsCount={sortedData.length}
+                activeFilterCount={countActiveFilters()}
+                propertiesData={data}
+              />
+            </div>
 
-          {/* View Toggle */}
-          <div className="flex justify-end gap-2">
-            <Button
-              onClick={() => setViewMode("map")}
-              variant="outline"
-              size="sm"
-            >
-              <MapIcon className="w-4 h-4 mr-2" />
-              Map View
-            </Button>
-            <Button
-              onClick={() => setViewMode("grid")}
-              variant="default"
-              size="sm"
-              className="bg-[#324c48] hover:bg-[#3f4f24]"
-            >
-              <Grid3x3 className="w-4 h-4 mr-2" />
-              Grid View
-            </Button>
+            {/* View Toggle & Sort - Compact */}
+            <div className="flex items-center justify-between gap-2">
+              <div className="flex gap-2">
+                <Button 
+                  onClick={() => setViewMode("map")} 
+                  variant="outline" 
+                  size="sm"
+                  className="h-8 text-xs"
+                >
+                  <MapIcon className="w-3 h-3 mr-1" />
+                  Map
+                </Button>
+                <Button
+                  onClick={() => setViewMode("grid")}
+                  variant="default"
+                  size="sm"
+                  className="bg-[#324c48] hover:bg-[#3f4f24] h-8 text-xs"
+                >
+                  <Grid3x3 className="w-3 h-3 mr-1" />
+                  Grid
+                </Button>
+              </div>
+
+              <Select value={sortBy} onValueChange={setSortBy}>
+                <SelectTrigger className="w-[160px] h-8 text-xs">
+                  <ArrowUpDown className="w-3 h-3 mr-1" />
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="price-desc">Price: High to Low</SelectItem>
+                  <SelectItem value="price-asc">Price: Low to High</SelectItem>
+                  <SelectItem value="size-desc">Size: Large to Small</SelectItem>
+                  <SelectItem value="size-asc">Size: Small to Large</SelectItem>
+                  <SelectItem value="newest">Newest First</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
           </div>
         </div>
       </div>
 
-      {/* Main Content */}
-      <div className="max-w-screen-2xl mx-auto px-4">
-        {filteredData.length === 0 ? (
-          <div className="text-center py-16">
-            <p className="text-gray-600 text-lg mb-4">
+      {/* Main Content - Reduced spacing */}
+      <div className="max-w-screen-2xl mx-auto px-4 py-4">
+        {sortedData.length === 0 ? (
+          <div className="text-center py-12">
+            <p className="text-gray-600 text-base mb-3">
               No properties found matching your criteria.
             </p>
             <Button
               onClick={handleClearAllFilters}
-              className="bg-[#324c48] hover:bg-[#3f4f24] text-white"
+              className="bg-[#324c48] hover:bg-[#3f4f24] text-white h-9 text-sm"
             >
               Clear All Filters
             </Button>
           </div>
         ) : (
-          <div className="py-8">
-            {areas.map((area, index) => {
-              const areaProperties = getAreaProperties(area.name);
-              if (areaProperties.length === 0) return null;
-
-              return (
-                <div key={area.name} className="my-12">
-                  {index > 0 && <hr className="my-8 border-t border-[#4b5b4d]/20" />}
-                  
-                  <div className="mb-6">
-                    <h2 className="text-2xl sm:text-3xl font-bold mb-2 text-[#324c48]">
-                      Properties in {area.displayName}
-                    </h2>
-                    <p className="text-[#324c48]/80">
-                      {areaProperties.length} properties available
-                    </p>
-                  </div>
-
-                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-10">
-                    {areaProperties.map((property) => (
-                      <div
-                        key={property.id}
-                        className="transition hover:scale-105 cursor-pointer"
-                        onClick={() => handlePropertyClick(property)}
-                      >
-                        <PropertyCard card={property} />
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              );
-            })}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+            {sortedData.map((property) => (
+              <div
+                key={property.id}
+                className="transition hover:scale-[1.02] cursor-pointer"
+                onClick={() => handlePropertyClick(property)}
+              >
+                <PropertyCard card={property} />
+              </div>
+            ))}
           </div>
         )}
       </div>
