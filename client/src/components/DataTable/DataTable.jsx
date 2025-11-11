@@ -1,4 +1,4 @@
-// data-table.jsx
+// client/src/components/DataTable/DataTable.jsx
 "use client";
 
 import React from "react";
@@ -19,7 +19,10 @@ export function DataTable({ columns, data }) {
           <TableRow>
             {columns.map((column) => (
               <TableHead key={column.accessorKey || column.id}>
-                {column.header}
+                {/* Check if header is a function and call it, otherwise render as text */}
+                {typeof column.header === "function"
+                  ? column.header({ table: {} }) // Call the function to get the JSX
+                  : column.header}
               </TableHead>
             ))}
           </TableRow>
@@ -30,7 +33,7 @@ export function DataTable({ columns, data }) {
               {columns.map((column) => (
                 <TableCell key={column.accessorKey || column.id}>
                   {column.cell
-                    ? column.cell({ row: { original: row } })
+                    ? column.cell({ row: { original: row, id: index } })
                     : row[column.accessorKey]}
                 </TableCell>
               ))}
