@@ -27,7 +27,7 @@ const getDisplayAddress = (
   return formatCountyName(county);
 };
 
-export default function PropertyCard({ card, isMobileGrid = false }) {
+export default function GridPropertyCard({ card, isMobileGrid = false }) {
   const navigate = useNavigate();
   const showAddress = useShowAddress(card.toggleObscure);
 
@@ -80,13 +80,7 @@ export default function PropertyCard({ card, isMobileGrid = false }) {
   return (
     <Card
       onClick={() => navigate(`/properties/${card.id}`)}
-      className={`
-        ${isMobileGrid 
-          ? 'w-full' // Full width in grid cell for mobile
-          : 'w-full max-w-sm sm:max-w-md lg:w-96 mx-auto' // Original sizing for desktop
-        }
-        rounded-xl overflow-hidden shadow-lg hover:shadow-xl transition-shadow cursor-pointer bg-white relative
-      `}
+      className="w-full rounded-xl overflow-hidden shadow-lg hover:shadow-xl transition-shadow cursor-pointer bg-white relative"
     >
       {/* Left Tag - Only show if not sold */}
       {!isSold && card.ltag && (
@@ -109,8 +103,8 @@ export default function PropertyCard({ card, isMobileGrid = false }) {
         </div>
       )}
 
-      {/* Image Section */}
-      <div className={`relative w-full ${isMobileGrid ? 'h-40 sm:h-48' : 'h-48 sm:h-56 lg:h-64'}`}>
+      {/* Image Section - Increased height for better aspect ratio */}
+      <div className="relative w-full h-52 sm:h-60 lg:h-64">
         <img
           src={firstImage}
           alt="Property"
@@ -119,31 +113,31 @@ export default function PropertyCard({ card, isMobileGrid = false }) {
       </div>
 
       {/* Content Section */}
-      <div className="px-2.5 sm:px-3 lg:px-4 pt-2 pb-2.5 sm:pt-2.5 sm:pb-3.5 space-y-0.5 sm:space-y-1">
+      <div className="px-3 sm:px-4 pt-2.5 pb-3 space-y-1">
         {/* Acres and Price Row */}
-        <div className="flex justify-between items-center gap-1">
-          <span className={`text-gray-600 font-normal truncate ${isMobileGrid ? 'text-sm sm:text-base' : 'text-base sm:text-lg'}`}>
+        <div className="flex justify-between items-center gap-2">
+          <span className="text-gray-600 font-normal truncate text-sm sm:text-base">
             {card.acre || "0"} Acres
           </span>
           <span
-            className={`text-[#517b75] font-semibold whitespace-nowrap leading-tight tracking-tight ${
+            className={`text-[#517b75] font-semibold whitespace-nowrap leading-tight tracking-tight text-lg sm:text-xl ${
               isSold ? "filter blur-sm" : ""
-            } ${isMobileGrid ? 'text-base sm:text-lg' : 'text-lg sm:text-xl'}`}
+            }`}
           >
             ${formattedPrice}
           </span>
         </div>
 
         {/* Address and Monthly Payment Row */}
-        <div className="flex justify-between items-center gap-1 sm:gap-2">
-          <h3 className={`text-gray-800 font-semibold truncate flex-1 ${isMobileGrid ? 'text-xs sm:text-sm' : 'text-sm sm:text-base'}`}>
+        <div className="flex justify-between items-center gap-2">
+          <h3 className="text-gray-800 font-semibold truncate flex-1 text-sm sm:text-base">
             {displayAddress}
           </h3>
           {monthlyPayment && (
             <span
-              className={`text-[#D4A017] font-medium tracking-tight whitespace-nowrap ${
+              className={`text-[#D4A017] font-medium tracking-tight whitespace-nowrap text-xs sm:text-sm ${
                 isSold ? "filter blur-sm" : ""
-              } ${isMobileGrid ? 'text-xs sm:text-sm' : 'text-sm sm:text-base'}`}
+              }`}
             >
               ${monthlyPayment}/mo
             </span>
@@ -151,7 +145,7 @@ export default function PropertyCard({ card, isMobileGrid = false }) {
         </div>
 
         {/* City, State, Zip */}
-        <p className={`text-gray-500 font-medium truncate ${isMobileGrid ? 'text-xs sm:text-sm' : 'text-sm sm:text-base'}`}>
+        <p className="text-gray-500 font-medium truncate text-xs sm:text-sm">
           {(() => {
             const parts = [];
             if (card.city) parts.push(card.city);

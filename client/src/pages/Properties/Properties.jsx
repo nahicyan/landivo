@@ -9,7 +9,7 @@ import SearchWithTracking from "@/components/Search/SearchWithTracking";
 import MultiPropertyMap from "@/components/MultiPropertyMap/MultiPropertyMap";
 import { PropertyFilterBar } from "@/components/PropertyFilters/PropertyFilterBar";
 import { Button } from "@/components/ui/button";
-import PropertyCard from "@/components/PropertyCard/PropertyCard";
+import GridPropertyCard from "@/components/PropertyCard/GridPropertyCard";
 import {
   applyPropertyFilters,
   getDefaultFilters,
@@ -222,7 +222,7 @@ export default function Properties() {
                     className="transition hover:scale-[1.02] cursor-pointer"
                     onClick={() => handlePropertyClick(property)}
                   >
-                    <PropertyCard card={property} />
+                    <GridPropertyCard card={property} />
                   </div>
                 ))}
               </div>
@@ -331,7 +331,7 @@ export default function Properties() {
                 className="transition hover:scale-[1.02] cursor-pointer"
                 onClick={() => handlePropertyClick(property)}
               >
-                <PropertyCard card={property} />
+                <GridPropertyCard card={property} />
               </div>
             ))}
           </div>
