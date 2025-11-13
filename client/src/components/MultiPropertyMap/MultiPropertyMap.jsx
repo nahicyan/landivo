@@ -5,10 +5,44 @@ import { Loader2 } from "lucide-react";
 
 export default function MultiPropertyMap({ properties = [] }) {
   const mapRef = useRef(null);
+  const mapInstanceRef = useRef(null); // Store map instance
+  const markersRef = useRef([]); // Store markers to clear them later
   const [isLoading, setIsLoading] = useState(true);
 
+  // Add CSS once on mount and keep it
   useEffect(() => {
-    if (!properties || properties.length === 0) return;
+    const style = document.createElement('style');
+    style.id = 'marker-label-styles';
+    style.textContent = `
+      .marker-label {
+        background: #324c48 !important;
+        padding: 4px 8px !important;
+        border-radius: 4px !important;
+        border: 2px solid white !important;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.3) !important;
+        transform: translateY(-45px) !important;
+        font-family: system-ui, -apple-system, sans-serif !important;
+      }
+    `;
+    
+    if (!document.getElementById('marker-label-styles')) {
+      document.head.appendChild(style);
+    }
+
+    return () => {
+      style.remove();
+    };
+  }, []);
+
+  useEffect(() => {
+    // Clear existing markers first
+    markersRef.current.forEach(marker => marker.setMap(null));
+    markersRef.current = [];
+
+    if (!properties || properties.length === 0) {
+      setIsLoading(false);
+      return;
+    }
 
     // Load Google Maps script if not already loaded
     const loadGoogleMapsScript = () => {
@@ -33,7 +67,11 @@ export default function MultiPropertyMap({ properties = [] }) {
         (p) => p.latitude && p.longitude
       );
 
+      // If no valid properties, clear markers and stop
       if (validProperties.length === 0) {
+        // Clear any remaining markers
+        markersRef.current.forEach(marker => marker.setMap(null));
+        markersRef.current = [];
         setIsLoading(false);
         return;
       }
@@ -46,14 +84,18 @@ export default function MultiPropertyMap({ properties = [] }) {
         validProperties.reduce((sum, p) => sum + parseFloat(p.longitude), 0) /
         validProperties.length;
 
-      // Create map
-      const map = new window.google.maps.Map(mapRef.current, {
-        center: { lat: centerLat, lng: centerLng },
-        zoom: 10,
-        mapTypeControl: true,
-        streetViewControl: false,
-        fullscreenControl: true,
-      });
+      // Create or reuse map
+      if (!mapInstanceRef.current) {
+        mapInstanceRef.current = new window.google.maps.Map(mapRef.current, {
+          center: { lat: centerLat, lng: centerLng },
+          zoom: 10,
+          mapTypeControl: true,
+          streetViewControl: false,
+          fullscreenControl: true,
+        });
+      }
+
+      const map = mapInstanceRef.current;
 
       // Create bounds
       const bounds = new window.google.maps.LatLngBounds();
@@ -82,8 +124,10 @@ export default function MultiPropertyMap({ properties = [] }) {
             fontWeight: "bold",
             className: "marker-label",
           },
-          // Default professional pin icon (no custom icon specified)
         });
+
+        // Store marker reference for cleanup
+        markersRef.current.push(marker);
 
         // Create info window
         const infoWindow = new window.google.maps.InfoWindow({
@@ -122,31 +166,19 @@ export default function MultiPropertyMap({ properties = [] }) {
       // Fit map to show all markers
       if (validProperties.length > 1) {
         map.fitBounds(bounds);
+      } else if (validProperties.length === 1) {
+        // Center on single property
+        map.setCenter({
+          lat: parseFloat(validProperties[0].latitude),
+          lng: parseFloat(validProperties[0].longitude),
+        });
+        map.setZoom(15);
       }
 
       setIsLoading(false);
     };
 
     loadGoogleMapsScript();
-
-    // Add custom CSS for marker labels
-    const style = document.createElement('style');
-    style.textContent = `
-      .marker-label {
-        background: #324c48 !important;
-        padding: 4px 8px !important;
-        border-radius: 4px !important;
-        border: 2px solid white !important;
-        box-shadow: 0 2px 4px rgba(0,0,0,0.3) !important;
-        transform: translateY(-45px) !important;
-        font-family: system-ui, -apple-system, sans-serif !important;
-      }
-    `;
-    document.head.appendChild(style);
-
-    return () => {
-      style.remove();
-    };
   }, [properties]);
 
   return (
