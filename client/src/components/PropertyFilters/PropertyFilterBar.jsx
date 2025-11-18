@@ -89,10 +89,10 @@ export const PropertyFilterBar = ({
   };
 
   return (
-    <div className="flex items-center justify-between gap-4 p-4 bg-white rounded-lg border border-[#324c48]/20 shadow-sm">
+    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 sm:gap-4 p-3 sm:p-4 bg-white rounded-lg border border-[#324c48]/20 shadow-sm">
       {/* Left Side - Filters */}
-      <div className="flex items-center gap-3">
-        <Filter className="w-5 h-5 text-[#324c48]" />
+      <div className="flex items-center gap-2 flex-wrap">
+        <Filter className="w-4 h-4 sm:w-5 sm:h-5 text-[#324c48] flex-shrink-0" />
 
         {/* Price Filter */}
         <Popover open={priceOpen} onOpenChange={setPriceOpen}>
@@ -100,20 +100,20 @@ export const PropertyFilterBar = ({
             <Button
               variant="outline"
               size="sm"
-              className={`h-9 text-sm ${
+              className={`h-8 sm:h-9 text-xs sm:text-sm flex-shrink-0 ${
                 isPriceActive
                   ? "border-[#3f4f24] text-[#3f4f24] bg-[#3f4f24]/5"
                   : "border-[#324c48]/30 text-[#324c48]"
               } hover:bg-[#f6ece0]`}
             >
-              <DollarSign className="w-4 h-4 mr-1.5" />
-              Price
+              <DollarSign className="w-3 h-3 sm:w-4 sm:h-4 mr-1" />
+              <span className="hidden xs:inline">Price</span>
               {isPriceActive && (
-                <Badge variant="secondary" className="ml-2 bg-[#3f4f24] text-white text-xs h-4 px-1">
+                <Badge variant="secondary" className="ml-1.5 bg-[#3f4f24] text-white text-xs h-4 px-1">
                   ✓
                 </Badge>
               )}
-              <ChevronDown className="w-3 h-3 ml-1" />
+              <ChevronDown className="w-3 h-3 ml-0.5 sm:ml-1" />
             </Button>
           </PopoverTrigger>
           <PopoverContent className="w-[280px] p-0 bg-[#ebebeb]" align="start">
@@ -172,20 +172,20 @@ export const PropertyFilterBar = ({
             <Button
               variant="outline"
               size="sm"
-              className={`h-9 text-sm ${
+              className={`h-8 sm:h-9 text-xs sm:text-sm flex-shrink-0 ${
                 isSizeActive
                   ? "border-[#3f4f24] text-[#3f4f24] bg-[#3f4f24]/5"
                   : "border-[#324c48]/30 text-[#324c48]"
               } hover:bg-[#f6ece0]`}
             >
-              <Maximize2 className="w-4 h-4 mr-1.5" />
-              Size
+              <Maximize2 className="w-3 h-3 sm:w-4 sm:h-4 mr-1" />
+              <span className="hidden xs:inline">Size</span>
               {isSizeActive && (
-                <Badge variant="secondary" className="ml-2 bg-[#3f4f24] text-white text-xs h-4 px-1">
+                <Badge variant="secondary" className="ml-1.5 bg-[#3f4f24] text-white text-xs h-4 px-1">
                   ✓
                 </Badge>
               )}
-              <ChevronDown className="w-3 h-3 ml-1" />
+              <ChevronDown className="w-3 h-3 ml-0.5 sm:ml-1" />
             </Button>
           </PopoverTrigger>
           <PopoverContent className="w-[280px] p-0 bg-[#ebebeb]" align="start">
@@ -302,20 +302,22 @@ export const PropertyFilterBar = ({
       </div>
 
       {/* Right Side - Results & Clear */}
-      <div className="flex items-center gap-3">
-        <span className="text-sm text-[#324c48]">
-          <span className="font-bold text-[#3f4f24] text-lg">{resultsCount}</span>{" "}
-          {resultsCount === 1 ? "property" : "properties"} found
+      <div className="flex items-center justify-between sm:justify-end gap-2 sm:gap-3 flex-shrink-0">
+        <span className="text-xs sm:text-sm text-[#324c48]">
+          <span className="font-bold text-[#3f4f24] text-base sm:text-lg">{resultsCount}</span>{" "}
+          <span className="hidden xs:inline">{resultsCount === 1 ? "property" : "properties"}</span>
+          <span className="xs:hidden">props</span>
         </span>
         {activeFilterCount > 0 && (
           <Button
             variant="ghost"
             size="sm"
             onClick={onClearAll}
-            className="text-red-600 hover:text-red-700 hover:bg-red-50 h-8 text-xs"
+            className="text-red-600 hover:text-red-700 hover:bg-red-50 h-7 sm:h-8 text-xs flex-shrink-0"
           >
-            <RotateCcw className="w-4 h-4 mr-1" />
-            Clear All
+            <RotateCcw className="w-3 h-3 sm:w-4 sm:h-4 mr-1" />
+            <span className="hidden xs:inline">Clear All</span>
+            <span className="xs:hidden">Clear</span>
           </Button>
         )}
       </div>

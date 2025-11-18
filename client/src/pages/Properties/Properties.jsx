@@ -1,4 +1,3 @@
-// client/src/pages/Properties/Properties.jsx
 "use client";
 
 import React, { useState, useEffect, useMemo } from "react";
@@ -32,6 +31,22 @@ export default function Properties() {
   const [filters, setFilters] = useState(getDefaultFilters());
   const [viewMode, setViewMode] = useState("map");
   const [sortBy, setSortBy] = useState("price-desc");
+  const [isMobile, setIsMobile] = useState(false);
+
+  // Detect mobile screen
+  useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth < 768);
+      // Force grid view on mobile
+      if (window.innerWidth < 768) {
+        setViewMode("grid");
+      }
+    };
+    
+    checkMobile();
+    window.addEventListener("resize", checkMobile);
+    return () => window.removeEventListener("resize", checkMobile);
+  }, []);
 
   useEffect(() => {
     const searchFromUrl = searchParams.get("search") || "";
@@ -115,137 +130,139 @@ export default function Properties() {
     );
   }
 
-  // Map View - Split Layout (50-50) - OPTIMIZED
-  if (viewMode === "map") {
+  // Map View - Split Layout (50-50) - Desktop only with unified scroll
+  if (viewMode === "map" && !isMobile) {
     return (
-      <div className="flex h-screen bg-[#FDF8F2] overflow-hidden">
-        {/* LEFT HALF - Fixed Map */}
-        <div className="w-1/2 h-full p-3 flex items-top">
-          <div className="w-full h-[90vh] rounded-lg overflow-hidden shadow-xl border border-gray-200">
-            <MultiPropertyMap properties={sortedData} />
+      <div className="bg-[#FDF8F2] min-h-screen">
+        <div className="flex">
+          {/* LEFT HALF - Sticky Map */}
+          <div className="w-1/2 h-screen sticky top-0 p-3 flex items-top">
+            <div className="w-full h-[90vh] rounded-lg overflow-hidden shadow-xl border border-gray-200">
+              <MultiPropertyMap properties={sortedData} />
+            </div>
           </div>
-        </div>
 
-        {/* RIGHT HALF - Scrollable Content - OPTIMIZED */}
-        <div className="w-1/2 h-full overflow-y-auto">
-          <div className="p-4 space-y-3">
-            {/* Compact Header */}
-            <div className="space-y-2">
-              {/* Title - Left aligned, smaller */}
-              <h1 className="text-xl font-bold text-[#324c48]">
-                Find Your Dream Property
-              </h1>
+          {/* RIGHT HALF - Natural scrolling content */}
+          <div className="w-1/2 min-h-screen">
+            <div className="p-4 space-y-3">
+              {/* Compact Header */}
+              <div className="space-y-2">
+                {/* Title */}
+                <h1 className="text-xl font-bold text-[#324c48]">
+                  Find Your Dream Property
+                </h1>
 
-              {/* Search - Reduced height */}
-              <div className="[&_input]:h-9 [&_button]:h-9">
-                <SearchWithTracking
-                  query={searchQuery}
-                  setQuery={setSearchQuery}
-                  context="properties"
-                  filteredData={sortedData}
-                  filters={filters}
-                />
-              </div>
-
-              {/* Filter Bar - Compact */}
-              <div className="[&>div]:p-2">
-                <PropertyFilterBar
-                  filters={filters}
-                  setFilters={setFilters}
-                  onClearAll={handleClearAllFilters}
-                  resultsCount={sortedData.length}
-                  activeFilterCount={countActiveFilters()}
-                  propertiesData={data}
-                />
-              </div>
-
-              {/* View Toggle & Sort - Compact */}
-              <div className="flex items-center justify-between gap-2">
-                <div className="flex gap-2">
-                  <Button
-                    onClick={() => setViewMode("map")}
-                    variant="default"
-                    size="sm"
-                    className="bg-[#324c48] hover:bg-[#3f4f24] h-8 text-xs"
-                  >
-                    <MapIcon className="w-3 h-3 mr-1" />
-                    Map
-                  </Button>
-                  <Button 
-                    onClick={() => setViewMode("grid")} 
-                    variant="outline" 
-                    size="sm"
-                    className="h-8 text-xs"
-                  >
-                    <Grid3x3 className="w-3 h-3 mr-1" />
-                    Grid
-                  </Button>
+                {/* Search */}
+                <div className="[&_input]:h-9 [&_button]:h-9">
+                  <SearchWithTracking
+                    query={searchQuery}
+                    setQuery={setSearchQuery}
+                    context="properties"
+                    filteredData={sortedData}
+                    filters={filters}
+                  />
                 </div>
 
-                {/* Sort Dropdown - Compact */}
-                <Select value={sortBy} onValueChange={setSortBy}>
-                  <SelectTrigger className="w-[160px] h-8 text-xs">
-                    <ArrowUpDown className="w-3 h-3 mr-1" />
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="price-desc">Price: High to Low</SelectItem>
-                    <SelectItem value="price-asc">Price: Low to High</SelectItem>
-                    <SelectItem value="size-desc">Size: Large to Small</SelectItem>
-                    <SelectItem value="size-asc">Size: Small to Large</SelectItem>
-                    <SelectItem value="newest">Newest First</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
+                {/* Filter Bar */}
+                <div className="[&>div]:p-2">
+                  <PropertyFilterBar
+                    filters={filters}
+                    setFilters={setFilters}
+                    onClearAll={handleClearAllFilters}
+                    resultsCount={sortedData.length}
+                    activeFilterCount={countActiveFilters()}
+                    propertiesData={data}
+                  />
+                </div>
 
-            <hr className="border-t border-[#4b5b4d]/20 my-2" />
-
-            {/* Properties Grid - Optimized spacing */}
-            {sortedData.length === 0 ? (
-              <div className="text-center py-12">
-                <p className="text-gray-600 text-base mb-3">
-                  No properties found matching your criteria.
-                </p>
-                <Button
-                  onClick={handleClearAllFilters}
-                  className="bg-[#324c48] hover:bg-[#3f4f24] text-white h-9 text-sm"
-                >
-                  Clear All Filters
-                </Button>
-              </div>
-            ) : (
-              <div className="grid grid-cols-1 xl:grid-cols-2 gap-3 pb-4">
-                {sortedData.map((property) => (
-                  <div
-                    key={property.id}
-                    className="transition hover:scale-[1.02] cursor-pointer"
-                    onClick={() => handlePropertyClick(property)}
-                  >
-                    <GridPropertyCard card={property} />
+                {/* View Toggle & Sort */}
+                <div className="flex items-center justify-between gap-2">
+                  <div className="flex gap-2">
+                    <Button
+                      onClick={() => setViewMode("map")}
+                      variant="default"
+                      size="sm"
+                      className="bg-[#324c48] hover:bg-[#3f4f24] h-8 text-xs"
+                    >
+                      <MapIcon className="w-3 h-3 mr-1" />
+                      Map
+                    </Button>
+                    <Button 
+                      onClick={() => setViewMode("grid")} 
+                      variant="outline" 
+                      size="sm"
+                      className="h-8 text-xs"
+                    >
+                      <Grid3x3 className="w-3 h-3 mr-1" />
+                      Grid
+                    </Button>
                   </div>
-                ))}
+
+                  {/* Sort Dropdown */}
+                  <Select value={sortBy} onValueChange={setSortBy}>
+                    <SelectTrigger className="w-[160px] h-8 text-xs">
+                      <ArrowUpDown className="w-3 h-3 mr-1" />
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="price-desc">Price: High to Low</SelectItem>
+                      <SelectItem value="price-asc">Price: Low to High</SelectItem>
+                      <SelectItem value="size-desc">Size: Large to Small</SelectItem>
+                      <SelectItem value="size-asc">Size: Small to Large</SelectItem>
+                      <SelectItem value="newest">Newest First</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
               </div>
-            )}
+
+              <hr className="border-t border-[#4b5b4d]/20 my-2" />
+
+              {/* Properties Grid */}
+              {sortedData.length === 0 ? (
+                <div className="text-center py-12">
+                  <p className="text-gray-600 text-base mb-3">
+                    No properties found matching your criteria.
+                  </p>
+                  <Button
+                    onClick={handleClearAllFilters}
+                    className="bg-[#324c48] hover:bg-[#3f4f24] text-white h-9 text-sm"
+                  >
+                    Clear All Filters
+                  </Button>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 xl:grid-cols-2 gap-3 pb-4">
+                  {sortedData.map((property) => (
+                    <div
+                      key={property.id}
+                      className="transition hover:scale-[1.02] cursor-pointer"
+                      onClick={() => handlePropertyClick(property)}
+                    >
+                      <GridPropertyCard card={property} />
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
           </div>
         </div>
       </div>
     );
   }
 
-  // Grid View - Full Width - OPTIMIZED
+  // Grid View - Full Width (also used on mobile)
   return (
     <div className="bg-[#FDF8F2] min-h-screen text-[#4b5b4d]">
       {/* Header - Compact */}
       <div className="sticky top-0 z-20 bg-[#FDF8F2] shadow-sm">
         <div className="max-w-screen-2xl mx-auto px-4 py-3">
           <div className="space-y-2">
-            {/* Title - Left aligned, smaller */}
+            {/* Title */}
             <h1 className="text-xl font-bold text-[#324c48]">
               Find Your Dream Property
             </h1>
 
-            {/* Search - Compact */}
+            {/* Search */}
             <div className="[&_input]:h-9 [&_button]:h-9">
               <SearchWithTracking
                 query={searchQuery}
@@ -256,7 +273,7 @@ export default function Properties() {
               />
             </div>
 
-            {/* Filter Bar - Compact */}
+            {/* Filter Bar */}
             <div className="[&>div]:p-2">
               <PropertyFilterBar
                 filters={filters}
@@ -268,18 +285,20 @@ export default function Properties() {
               />
             </div>
 
-            {/* View Toggle & Sort - Compact */}
+            {/* View Toggle & Sort - Hide map button on mobile */}
             <div className="flex items-center justify-between gap-2">
               <div className="flex gap-2">
-                <Button 
-                  onClick={() => setViewMode("map")} 
-                  variant="outline" 
-                  size="sm"
-                  className="h-8 text-xs"
-                >
-                  <MapIcon className="w-3 h-3 mr-1" />
-                  Map
-                </Button>
+                {!isMobile && (
+                  <Button 
+                    onClick={() => setViewMode("map")} 
+                    variant="outline" 
+                    size="sm"
+                    className="h-8 text-xs"
+                  >
+                    <MapIcon className="w-3 h-3 mr-1" />
+                    Map
+                  </Button>
+                )}
                 <Button
                   onClick={() => setViewMode("grid")}
                   variant="default"
@@ -309,7 +328,7 @@ export default function Properties() {
         </div>
       </div>
 
-      {/* Main Content - Reduced spacing */}
+      {/* Main Content */}
       <div className="max-w-screen-2xl mx-auto px-4 py-4">
         {sortedData.length === 0 ? (
           <div className="text-center py-12">
