@@ -306,7 +306,7 @@ export const PropertyFilterBar = ({
         <span className="text-xs sm:text-sm text-[#324c48]">
           <span className="font-bold text-[#3f4f24] text-base sm:text-lg">{resultsCount}</span>{" "}
           <span className="hidden xs:inline">{resultsCount === 1 ? "property" : "properties"}</span>
-          <span className="xs:hidden">props</span>
+          <span className="xs:hidden">Properties</span>
         </span>
         {activeFilterCount > 0 && (
           <Button
