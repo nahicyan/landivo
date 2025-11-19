@@ -71,6 +71,7 @@ import Discount from "./pages/Discount/Discount";
 import Unsubscribe from "./pages/Subscription/Unsubscribe";
 import MailMerge from "./pages/MailMerge/MailMerge";
 import EditUserDetail from "./components/EditUserDetail/EditUserDetail";
+import EmailVerificationHandler from './pages/Subscription/EmailVerificationHandler';
 
 
 const queryClient = new QueryClient({
@@ -113,6 +114,7 @@ function App() {
       <QueryClientProvider client={queryClient}>
         <ThemeProvider theme={theme}>
           <BrowserRouter>
+          <EmailVerificationHandler />
             <Auth0ProviderWithNavigate>
               <AuthErrorBoundary>
                 <TokenValidationProvider>

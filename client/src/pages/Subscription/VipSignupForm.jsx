@@ -117,7 +117,7 @@ export default function VipSignupForm() {
       loginWithRedirect({
         authorizationParams: {
           screen_hint: 'signup',
-          // redirect_uri: `${window.location.origin}/vip-signup`
+          // redirect_uri: `${window.location.origin}/vip-signup` // THIS MUST NOT BE ACTIVATED CAUSES MASSIVE ERRORS
         },
         appState: { returnTo: '/vip-signup' }
       });
