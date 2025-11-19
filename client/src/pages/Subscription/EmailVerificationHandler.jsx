@@ -56,9 +56,7 @@ export default function EmailVerificationHandler() {
         
         <CardContent className="pt-2 pb-6">
           <Button 
-            onClick={() => loginWithRedirect({
-              appState: { returnTo: '/vip-signup' }
-            })}
+            onClick={() => navigate('/vip-signup')}
             className="w-full bg-gradient-to-r from-[#3f4f24] to-[#324c48] hover:from-[#324c48] hover:to-[#2a3f3c] text-white py-3 text-lg font-semibold shadow-lg transform hover:-translate-y-0.5 transition-all duration-300"
           >
             Continue to VIP Signup
