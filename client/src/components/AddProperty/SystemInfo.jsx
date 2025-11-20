@@ -442,6 +442,7 @@ export default function SystemInfoCard({ formData, handleChange, errors }) {
               <SelectValue placeholder="Select Status" />
             </SelectTrigger>
             <SelectContent>
+              <SelectItem value="Incomplete">Incomplete</SelectItem>
               <SelectItem value="Available">Available</SelectItem>
               <SelectItem value="Pending">Pending</SelectItem>
               <SelectItem value="Sold">Sold</SelectItem>

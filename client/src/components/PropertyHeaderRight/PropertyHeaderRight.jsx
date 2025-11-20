@@ -12,6 +12,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 // Function to assign status colors
 function getStatusClasses(status) {
   switch (status) {
+    case "Incomplete":
+      return { circle: "bg-purple-500", text: "text-purple-500" };
     case "Available":
       return { circle: "bg-green-500", text: "text-green-500" };
     case "Pending":
