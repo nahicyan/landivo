@@ -292,6 +292,9 @@ export default function MultiPropertyMap({ properties = [] }) {
       const map = mapInstanceRef.current;
       const bounds = new window.google.maps.LatLngBounds();
 
+      // Create a single shared info window
+      const infoWindow = new window.google.maps.InfoWindow();
+
       // Add markers with custom price overlays
       validProperties.forEach((property) => {
         const position = new google.maps.LatLng(parseFloat(property.latitude), parseFloat(property.longitude));
@@ -306,13 +309,9 @@ export default function MultiPropertyMap({ properties = [] }) {
           title: property.title || property.streetAddress,
         });
 
-        // Create info window with DOM element
-        const infoWindow = new window.google.maps.InfoWindow({
-          content: createInfoWindowContent(property),
-        });
-
         // Create custom price overlay with click handler
         const priceLabel = new PriceLabel(position, price, map, () => {
+          infoWindow.setContent(createInfoWindowContent(property));
           infoWindow.open(map, marker);
         });
 
@@ -322,6 +321,7 @@ export default function MultiPropertyMap({ properties = [] }) {
 
         // Open info window on marker click
         marker.addListener("click", () => {
+          infoWindow.setContent(createInfoWindowContent(property));
           infoWindow.open(map, marker);
         });
 
