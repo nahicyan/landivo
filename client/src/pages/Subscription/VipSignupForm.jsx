@@ -480,7 +480,7 @@ export default function VipSignupForm() {
                 
                 <div className="relative z-10">
                   <div className="text-center mb-6">
-                    <div className="inline-block bg-red-500 text-white text-xs px-2 py-1 rounded mb-2 font-medium">
+                    <div className="inline-block bg-red-500 text-white text-xs px-2 py-1 rounded mb-2 font-medium line-through">
                       Listed Price
                     </div>
                     <h2 className="text-4xl font-bold text-[#D4A017] mb-4">
