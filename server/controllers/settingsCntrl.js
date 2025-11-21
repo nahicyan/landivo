@@ -24,6 +24,10 @@ export const getSettings = asyncHandler(async (req, res) => {
           offerEmailRecipients: [],
           enableFinancingEmails: false,
           financingEmailRecipients: [],
+          displayIncomplete: false,
+          displaySold: false,
+          displayNotAvailable: false,
+          displayNotTesting: false,
         },
       });
     }
@@ -45,7 +49,21 @@ export const getSettings = asyncHandler(async (req, res) => {
  * Update settings
  */
 export const updateSettings = asyncHandler(async (req, res) => {
-  const { overrideContactPhone, smtpServer, smtpPort, smtpUser, smtpPassword, enableOfferEmails, offerEmailRecipients, enableFinancingEmails, financingEmailRecipients } = req.body;
+  const {
+    overrideContactPhone,
+    smtpServer,
+    smtpPort,
+    smtpUser,
+    smtpPassword,
+    enableOfferEmails,
+    offerEmailRecipients,
+    enableFinancingEmails,
+    financingEmailRecipients,
+    displayIncomplete,
+    displaySold,
+    displayNotAvailable,
+    displayNotTesting,
+  } = req.body;
 
   try {
     // Get existing settings or create if none exist
@@ -61,6 +79,10 @@ export const updateSettings = asyncHandler(async (req, res) => {
       offerEmailRecipients: offerEmailRecipients || [],
       enableFinancingEmails: enableFinancingEmails || false,
       financingEmailRecipients: financingEmailRecipients || [],
+      displayIncomplete: displayIncomplete || false,
+      displaySold: displaySold || false,
+      displayNotAvailable: displayNotAvailable || false,
+      displayNotTesting: displayNotTesting || false,
       updatedAt: new Date(),
     };
 

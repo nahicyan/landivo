@@ -140,7 +140,7 @@ model Residency {
   serviceFee          Float?
   termOne             Int?
   termTwo             Int?
-  termThree             Int?
+  termThree           Int?
   hoaMonthly          Float?
   interestOne         Float?
   interestTwo         Float?
@@ -265,9 +265,9 @@ model Buyer {
   // Email List fields
   emailStatus           String? // "available" or "unsubscribe"
   emailPermissionStatus String?
-  weeklyUpdates String? // "available" or "unsubscribe"
-  holidayDeals String? // "available" or "unsubscribe"
-  specialDiscounts String? // "available" or "unsubscribe"
+  weeklyUpdates         String? // "available" or "unsubscribe"
+  holidayDeals          String? // "available" or "unsubscribe"
+  specialDiscounts      String? // "available" or "unsubscribe"
   emailListMemberships  BuyerEmailList[] @relation("BuyerEmailLists")
 
   // Audit fields
@@ -548,11 +548,11 @@ model Settings {
   smtpPassword String?
 
   // Property Status
-  displayIncomplete    Boolean  @default(false)
-  displaySold   Boolean  @default(false)
-  displayNotAvaialble   Boolean  @default(false)
-  displayNotTesting   Boolean  @default(false)
-  
+  displayIncomplete   Boolean @default(false)
+  displaySold         Boolean @default(false)
+  displayNotAvailable Boolean @default(false)
+  displayNotTesting   Boolean @default(false)
+
   // Offer Email Notification Settings
   enableOfferEmails    Boolean  @default(false)
   offerEmailRecipients String[] @default([])
