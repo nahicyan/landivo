@@ -71,6 +71,7 @@ import Discount from "./pages/Discount/Discount";
 import Unsubscribe from "./pages/Subscription/Unsubscribe";
 import MailMerge from "./pages/MailMerge/MailMerge";
 import EditUserDetail from "./components/EditUserDetail/EditUserDetail";
+import VerifyEmail from "./pages/VerifyEmail/VerifyEmail";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -147,6 +148,7 @@ function App() {
                                 <Route path="/unauthorized" element={<Unauthorized />} />
                                 <Route path="/property-deletion/:token" element={<ApprovePropertyDeletion />} />
                                 <Route path="/join-vip" element={<JoinVip />} />
+                                <Route path="/verify-email" element={<VerifyEmail />} />
                                 {/* Unsubscribe route - standalone without main layout */}
                                 <Route path="/unsubscribe/:id" element={<Unsubscribe />} />
 
