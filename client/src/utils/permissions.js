@@ -14,6 +14,7 @@ export const PERMISSIONS = {
     // Property management permissions
     READ_PROPERTIES: 'read:properties',
     WRITE_PROPERTIES: 'write:properties',
+    STATUS_PROPERTIES: 'status:properties',
     DELETE_PROPERTIES: 'delete:properties',
     
     // Buyer management permissions
