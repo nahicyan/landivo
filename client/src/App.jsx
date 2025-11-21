@@ -71,8 +71,6 @@ import Discount from "./pages/Discount/Discount";
 import Unsubscribe from "./pages/Subscription/Unsubscribe";
 import MailMerge from "./pages/MailMerge/MailMerge";
 import EditUserDetail from "./components/EditUserDetail/EditUserDetail";
-import EmailVerificationHandler from './pages/Subscription/EmailVerificationHandler';
-
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -114,7 +112,6 @@ function App() {
       <QueryClientProvider client={queryClient}>
         <ThemeProvider theme={theme}>
           <BrowserRouter>
-          <EmailVerificationHandler />
             <Auth0ProviderWithNavigate>
               <AuthErrorBoundary>
                 <TokenValidationProvider>
@@ -152,7 +149,7 @@ function App() {
                                 <Route path="/join-vip" element={<JoinVip />} />
                                 {/* Unsubscribe route - standalone without main layout */}
                                 <Route path="/unsubscribe/:id" element={<Unsubscribe />} />
-                                
+
                                 {/* Protected route for profile */}
                                 <Route
                                   path="/profile"
@@ -212,11 +209,7 @@ function App() {
                                 <Route
                                   path="users/:userId/edit"
                                   element={
-                                    <ProtectedRoute
-                                      requiredPermissions={[PERMISSIONS.WRITE_USERS]}
-                                      fallbackToRoles={true}
-                                      allowedRoles={['Admin']}
-                                    >
+                                    <ProtectedRoute requiredPermissions={[PERMISSIONS.WRITE_USERS]} fallbackToRoles={true} allowedRoles={["Admin"]}>
                                       <EditUserDetail />
                                     </ProtectedRoute>
                                   }
