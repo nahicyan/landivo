@@ -547,6 +547,12 @@ model Settings {
   smtpUser     String?
   smtpPassword String?
 
+  // Property Status
+  displayIncomplete    Boolean  @default(false)
+  displaySold   Boolean  @default(false)
+  displayNotAvaialble   Boolean  @default(false)
+  displayNotTesting   Boolean  @default(false)
+  
   // Offer Email Notification Settings
   enableOfferEmails    Boolean  @default(false)
   offerEmailRecipients String[] @default([])
