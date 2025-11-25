@@ -4,6 +4,7 @@ import { getAllProperties } from "../../utils/api";
 import { usePermissions } from "@/components/Auth0/PermissionsContext";
 import { useSystemSettings } from "@/hooks/useSystemSettings";
 import { shouldFilterByStatus, filterPropertiesByStatus } from "@/utils/propertyFilters";
+import { sortPropertiesWithPendingLast } from "@/utils/propertySorting";
 
 const useProperties = () => {
   const { data: rawData, isLoading, isError, refetch } = useQuery(
@@ -18,9 +19,10 @@ const useProperties = () => {
   // Apply status-based filtering
   const data = useMemo(() => {
     if (!rawData || !Array.isArray(rawData)) return rawData;
-    
+
     const filterFlags = shouldFilterByStatus(permissions, settings);
-    return filterPropertiesByStatus(rawData, filterFlags);
+    const filteredData = filterPropertiesByStatus(rawData, filterFlags);
+    return sortPropertiesWithPendingLast(filteredData);
   }, [rawData, settings, permissions]);
 
   return {
