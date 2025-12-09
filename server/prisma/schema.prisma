@@ -628,3 +628,37 @@ model PdfTemplate {
 
   @@map("pdf_templates")
 }
+
+model PropertyExtraction {
+  id                      String   @id @default(auto()) @map("_id") @db.ObjectId
+  
+  // Address fields
+  property_address        String
+  raw_property_address    String?
+  refined_address         String?
+  candidate_address       String?
+  
+  // Property details
+  asking_price            Int?
+  confidence              Float?
+  classification_reasons  String[]
+  
+  // Email metadata
+  email_uid               String
+  email_file              String?
+  email_date              String?    // Changed to String
+  subject                 String
+  from                    String
+  sender_email            String?
+  sender_company          String?
+  
+  // Timestamps
+  createdAt               DateTime? @default(now())
+  updatedAt               DateTime? @updatedAt
+  
+  @@index([email_uid])
+  @@index([property_address])
+  @@index([sender_email])
+  @@index([createdAt])
+  @@map("practor")
+}

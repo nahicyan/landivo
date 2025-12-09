@@ -115,7 +115,7 @@ const manageFeaturedDisplayOrder = async (propertyId, isFeatured, displayPositio
     }
 
     // Validate the desired position
-    const desiredPosition = displayPosition !== undefined ? Math.min(Math.max(0, displayPosition), currentOrder.length) : currentOrder.length; // Default to the end of the list
+    const desiredPosition = displayPosition !== undefined ? Math.min(Math.max(0, displayPosition), currentOrder.length) : currentOrder.length;
 
     // Insert at the desired position
     currentOrder.splice(desiredPosition, 0, propertyId);
@@ -259,7 +259,7 @@ export const updateResidency = asyncHandler(async (req, res) => {
     if (restOfData.loanAmountThree) restOfData.loanAmountThree = parseFloat(restOfData.loanAmountThree);
     if (restOfData.purchasePrice) restOfData.purchasePrice = parseFloat(restOfData.purchasePrice);
     if (restOfData.financedPrice) restOfData.financedPrice = parseFloat(restOfData.financedPrice);
-
+    
     // Handle landType as an array
     if (restOfData.landType) {
       restOfData.landType = Array.isArray(restOfData.landType) ? restOfData.landType : [restOfData.landType];

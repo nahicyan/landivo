@@ -225,3 +225,13 @@ export {
   getSubjectTemplates,
   getPastCampaignSubjects
 } from './api/campaigns';
+
+// ============================================================================
+// PROPERTY EXTRACTION API
+// ============================================================================
+
+export {
+  getAllPropertyExtractions,
+  getPropertyExtractionById,
+  deletePropertyExtraction
+} from './api/propertyExtractions';

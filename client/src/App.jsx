@@ -72,6 +72,7 @@ import Unsubscribe from "./pages/Subscription/Unsubscribe";
 import MailMerge from "./pages/MailMerge/MailMerge";
 import EditUserDetail from "./components/EditUserDetail/EditUserDetail";
 import VerifyEmail from "./pages/VerifyEmail/VerifyEmail";
+import PropertyExtractions from "./pages/PropertyExtraction/PropertyExtraction";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -189,6 +190,7 @@ function App() {
                                 <Route path="deals/:id/payments" element={<PaymentList />} />
                                 <Route path="deals/:id/summary" element={<DealFinancialSummary />} />
                                 <Route path="mailmerge" element={<MailMerge />} />
+                                <Route path="property-extractions" element={<PropertyExtractions />} />
 
                                 {/* Users */}
                                 <Route

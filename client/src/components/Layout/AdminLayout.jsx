@@ -7,7 +7,7 @@ import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { ChevronLeft, Home, Building, Users, User, BarChart, ListChecks, DollarSign, Settings, ChevronRight, HelpCircle, Mails  } from "lucide-react";
+import { ChevronLeft, Home, Building, Users, User, BarChart, ListChecks, DollarSign, Settings, ChevronRight, HelpCircle, Mails, MailSearch, } from "lucide-react";
 
 export default function AdminLayout() {
   const [collapsed, setCollapsed] = useState(false);
@@ -45,7 +45,9 @@ export default function AdminLayout() {
     },
     {
       name: "Applications",
-      items: [{ text: "Mail Merge", icon: <Mails className="h-5 w-5" />, path: "/admin/mailmerge" }],
+      items:[
+        { text: "Mail Merge", icon: <Mails className="h-5 w-5" />, path: "/admin/mailmerge" },
+        { text: "Property Extractor", icon: <MailSearch className="h-5 w-5" />, path: "/admin/property-extractions" }],
     },
     {
       name: "System",

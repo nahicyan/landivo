@@ -21,6 +21,7 @@ import { mailivoAutomationRoute } from "./routes/mailivoAutomationRoute.js";
 import { automationClosingDateRoute } from "./routes/automationClosingDateRoute.js";
 import { pdfMergeRoute } from "./routes/pdfMergeRoute.js";
 import { ensureUploadDirectories } from "./middlewares/uploadMiddleware.js";
+import { propertyExtractionRoute } from "./routes/propertyExtractionRoute.js";
 
 const app = express();
 const PORT = process.env.PORT || 8200;
@@ -103,6 +104,7 @@ app.use("/visitors", visitorRoute);
 app.use("/mailivo/automation", mailivoAutomationRoute);
 app.use("/automation/closingDates", automationClosingDateRoute);
 app.use("/pdf-merge", pdfMergeRoute);
+app.use("/propertyExtracted", propertyExtractionRoute);
 app.use(trackActivity);
 
 // ===========================
