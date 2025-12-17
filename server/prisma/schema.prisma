@@ -539,6 +539,7 @@ model PropertyRow {
 
 model Settings {
   id                   String  @id @default(auto()) @map("_id") @db.ObjectId
+  systemContactPhone String?
   overrideContactPhone String?
 
   // SMTP Configuration

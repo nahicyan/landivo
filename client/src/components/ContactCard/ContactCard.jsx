@@ -36,7 +36,7 @@ export default function ContactCard({ profileId }) {
   }, [profileId]);
 
   // Determine which phone number to display (override or profile)
-  const displayPhone = systemSettings?.overrideContactPhone || profileData?.phone || "+18172471312"; // Fallback
+const displayPhone = systemSettings?.overrideContactPhone || profileData?.phone || systemSettings?.systemContactPhone;
 
   if (loading) {
     return (
