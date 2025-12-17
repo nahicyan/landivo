@@ -3,7 +3,6 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
 import { CheckCircle2, Phone, Upload, Home, Download } from "lucide-react";
-import React, { useEffect, useState } from "react";
 
 export default function SurveyCompletion({ surveyData }) {
   const navigate = useNavigate();
