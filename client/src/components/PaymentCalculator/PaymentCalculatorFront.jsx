@@ -125,7 +125,7 @@ export default function PaymentCalculatorFront({ propertyData }) {
     <Card className="border border-gray-200 shadow-sm rounded-lg w-full max-w-none">
       <CardHeader>
         <CardTitle className="text-2xl font-bold" style={{ color: "#030001" }}>
-          Payment Calculator
+          Payment Plans
         </CardTitle>
         <CardDescription className="text-sm" style={{ color: "#576756" }}>
           <span>{showPlanSelection ? "Compare Payment Plans For This Property" : "View Payment Details For This Property"}</span>
