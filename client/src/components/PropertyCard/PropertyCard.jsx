@@ -1,5 +1,5 @@
 import React from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 import { Card } from "@/components/ui/card";
 import { formatPrice } from "../../utils/format";
 import { useShowAddress } from "../../utils/addressUtils";
@@ -15,12 +15,7 @@ const formatCountyName = (county) => {
 };
 
 // Updated function to get display address with county fallback
-const getDisplayAddress = (
-  streetAddress,
-  toggleObscure,
-  showAddress,
-  county
-) => {
+const getDisplayAddress = (streetAddress, toggleObscure, showAddress, county) => {
   if (!toggleObscure || showAddress) {
     return streetAddress || "Address unavailable";
   }
@@ -34,22 +29,20 @@ export default function PropertyCard({ card, isMobileGrid = false }) {
   if (!card) return null;
 
   const isSold = card.status === "Sold";
+  const isPending = card.status?.toLowerCase() === "pending";
 
   // Parse images safely
   const images = (() => {
     try {
       if (!card.imageUrls) return [];
-      return Array.isArray(card.imageUrls)
-        ? card.imageUrls
-        : JSON.parse(card.imageUrls);
+      return Array.isArray(card.imageUrls) ? card.imageUrls : JSON.parse(card.imageUrls);
     } catch (error) {
       console.error("Error parsing imageUrls:", error);
       return [];
     }
   })();
 
-  const firstImage =
-    images.length > 0 ? `${serverURL}/${images[0]}` : "/default-image.jpg";
+  const firstImage = images.length > 0 ? `${serverURL}/${images[0]}` : "/default-image.jpg";
 
   const formattedPrice = card.askingPrice ? formatPrice(card.askingPrice) : "0";
 
@@ -57,11 +50,7 @@ export default function PropertyCard({ card, isMobileGrid = false }) {
   const getMonthlyPayment = () => {
     if (!card.financing || card.financing !== "Available") return null;
 
-    const payments = [
-      card.monthlyPaymentOne,
-      card.monthlyPaymentTwo,
-      card.monthlyPaymentThree,
-    ].filter((payment) => payment && !isNaN(payment));
+    const payments = [card.monthlyPaymentOne, card.monthlyPaymentTwo, card.monthlyPaymentThree].filter((payment) => payment && !isNaN(payment));
 
     if (payments.length === 0) return null;
     const minPayment = Math.min(...payments);
@@ -70,33 +59,29 @@ export default function PropertyCard({ card, isMobileGrid = false }) {
 
   const monthlyPayment = getMonthlyPayment();
 
-  const displayAddress = getDisplayAddress(
-    card.streetAddress,
-    card.toggleObscure,
-    showAddress,
-    card.county
-  );
+  const displayAddress = getDisplayAddress(card.streetAddress, card.toggleObscure, showAddress, card.county);
 
   return (
     <Card
-      onClick={() => navigate(`/properties/${card.id}`)}
       className={`
-        ${isMobileGrid 
-          ? 'w-full' // Full width in grid cell for mobile
-          : 'w-full max-w-sm sm:max-w-md lg:w-96 mx-auto' // Original sizing for desktop
+        ${
+          isMobileGrid
+            ? "w-full" // Full width in grid cell for mobile
+            : "w-full max-w-sm sm:max-w-md lg:w-96 mx-auto" // Original sizing for desktop
         }
         rounded-xl overflow-hidden shadow-lg hover:shadow-xl transition-shadow cursor-pointer bg-white relative
       `}
     >
-      {/* Left Tag - Only show if not sold */}
-      {!isSold && card.ltag && (
+      <Link to={`/properties/${card.id}`} className="absolute inset-0 z-10" aria-label={displayAddress} />
+      {/* Left Tag - Only show if not sold & Pending */}
+      {!isSold && !isPending && card.ltag && (
         <div className="absolute top-2 left-2 sm:top-3 sm:left-3 z-10 bg-gradient-to-r from-blue-500 to-blue-600 text-white text-xs sm:text-sm font-semibold px-2 py-1 sm:px-3 sm:py-1.5 rounded-lg shadow-lg">
           {card.ltag}
         </div>
       )}
 
-      {/* Right Tag - Only show if not sold */}
-      {!isSold && card.rtag && (
+      {/* Right Tag - Only show if not sold & pending */}
+      {!isSold && !isPending && card.rtag && (
         <div className="absolute top-2 right-2 sm:top-3 sm:right-3 z-10 bg-gradient-to-r from-green-600 to-green-700 text-white text-xs sm:text-sm font-semibold px-2 py-1 sm:px-3 sm:py-1.5 rounded-lg shadow-lg">
           {card.rtag}
         </div>
@@ -108,27 +93,27 @@ export default function PropertyCard({ card, isMobileGrid = false }) {
           SOLD
         </div>
       )}
+      {/* PENDING Badge - Show when property is pending */}
+      {isPending && (
+        <div className="absolute top-2 right-2 sm:top-3 sm:right-3 z-10 bg-gradient-to-r from-amber-500 to-amber-600 text-white text-xs sm:text-sm font-semibold px-2 py-1 sm:px-3 sm:py-1.5 rounded-lg shadow-lg">
+          PENDING
+        </div>
+      )}
 
       {/* Image Section */}
-      <div className={`relative w-full ${isMobileGrid ? 'h-40 sm:h-48' : 'h-48 sm:h-56 lg:h-64'}`}>
-        <img
-          src={firstImage}
-          alt="Property"
-          className="w-full h-full object-cover"
-        />
+      <div className={`relative w-full ${isMobileGrid ? "h-40 sm:h-48" : "h-48 sm:h-56 lg:h-64"}`}>
+        <img src={firstImage} alt="Property" className="w-full h-full object-cover" />
       </div>
 
       {/* Content Section */}
       <div className="px-2.5 sm:px-3 lg:px-4 pt-2 pb-2.5 sm:pt-2.5 sm:pb-3.5 space-y-0.5 sm:space-y-1">
         {/* Acres and Price Row */}
         <div className="flex justify-between items-center gap-1">
-          <span className={`text-gray-600 font-normal truncate ${isMobileGrid ? 'text-sm sm:text-base' : 'text-base sm:text-lg'}`}>
-            {card.acre || "0"} Acres
-          </span>
+          <span className={`text-gray-600 font-normal truncate ${isMobileGrid ? "text-sm sm:text-base" : "text-base sm:text-lg"}`}>{card.acre || "0"} Acres</span>
           <span
-            className={`text-[#517b75] font-semibold whitespace-nowrap leading-tight tracking-tight ${
-              isSold ? "filter blur-sm" : ""
-            } ${isMobileGrid ? 'text-base sm:text-lg' : 'text-lg sm:text-xl'}`}
+            className={`text-[#517b75] font-semibold whitespace-nowrap leading-tight tracking-tight ${isSold ? "filter blur-sm" : ""} ${
+              isMobileGrid ? "text-base sm:text-lg" : "text-lg sm:text-xl"
+            }`}
           >
             ${formattedPrice}
           </span>
@@ -136,22 +121,16 @@ export default function PropertyCard({ card, isMobileGrid = false }) {
 
         {/* Address and Monthly Payment Row */}
         <div className="flex justify-between items-center gap-1 sm:gap-2">
-          <h3 className={`text-gray-800 font-semibold truncate flex-1 ${isMobileGrid ? 'text-xs sm:text-sm' : 'text-sm sm:text-base'}`}>
-            {displayAddress}
-          </h3>
+          <h3 className={`text-gray-800 font-semibold truncate flex-1 ${isMobileGrid ? "text-xs sm:text-sm" : "text-sm sm:text-base"}`}>{displayAddress}</h3>
           {monthlyPayment && (
-            <span
-              className={`text-[#D4A017] font-medium tracking-tight whitespace-nowrap ${
-                isSold ? "filter blur-sm" : ""
-              } ${isMobileGrid ? 'text-xs sm:text-sm' : 'text-sm sm:text-base'}`}
-            >
+            <span className={`text-[#D4A017] font-medium tracking-tight whitespace-nowrap ${isSold ? "filter blur-sm" : ""} ${isMobileGrid ? "text-xs sm:text-sm" : "text-sm sm:text-base"}`}>
               ${monthlyPayment}/mo
             </span>
           )}
         </div>
 
         {/* City, State, Zip */}
-        <p className={`text-gray-500 font-medium truncate ${isMobileGrid ? 'text-xs sm:text-sm' : 'text-sm sm:text-base'}`}>
+        <p className={`text-gray-500 font-medium truncate ${isMobileGrid ? "text-xs sm:text-sm" : "text-sm sm:text-base"}`}>
           {(() => {
             const parts = [];
             if (card.city) parts.push(card.city);

@@ -96,7 +96,8 @@ export default function DFWProperty() {
 
   // Fallback to all properties if no DFW properties match search
   const fallbackProperties = data.filter((property) => {
-    if (featuredPropertyIds.includes(property.id)) return false;
+    // Exclude DFW properties - they're shown in sections above
+    if (property.area === "DFW") return false;
 
     const query = areaQuery.toLowerCase();
     if (!query) return true;
@@ -117,7 +118,7 @@ export default function DFWProperty() {
 
   const hasFeaturedProperties = featuredPropertyIds.length > 0;
   const hasDFWProperties = filteredDFWProperties.length > 0;
-  const showFallback = !hasDFWProperties && fallbackProperties.length > 0;
+  const showFallback = fallbackProperties.length > 0;
 
   return (
     <div className="bg-[#FDF8F2] min-h-screen py-12 text-[#4b5b4d]">
@@ -166,7 +167,7 @@ export default function DFWProperty() {
         )}
 
         {/* 3. All Properties Fallback - DisplayGrid */}
-        {showFallback && <DisplayGrid properties={fallbackProperties} filter={{ type: "all" }} showDivider={true} emptyMessage="No properties found matching your search." />}
+        {showFallback && <DisplayGrid properties={fallbackProperties} filter={{ type: "all" }} showDivider={!hasFeaturedProperties} title="Other Properties" emptyMessage="No properties found matching your search." />}
 
         {/* No Properties At All */}
         {!hasFeaturedProperties && !hasDFWProperties && !showFallback && (

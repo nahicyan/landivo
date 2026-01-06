@@ -17,6 +17,7 @@ export default function SystemSettings() {
   const systemForm = useForm({
     defaultValues: {
       overrideContactPhone: "",
+      systemContactPhone: "",
       displayIncomplete: false,
       displaySold: false,
       displayNotAvailable: false,
@@ -32,6 +33,7 @@ export default function SystemSettings() {
         if (settings) {
           systemForm.reset({
             overrideContactPhone: settings.overrideContactPhone || "",
+            systemContactPhone: settings.systemContactPhone || "",
             displayIncomplete: settings.displayIncomplete || false,
             displaySold: settings.displaySold || false,
             displayNotAvailable: settings.displayNotAvailable || false,
@@ -125,7 +127,36 @@ export default function SystemSettings() {
           <form onSubmit={systemForm.handleSubmit(onSystemSubmit)} className="space-y-6">
             {/* Contact Settings Section */}
             <div className="space-y-4">
-              <h3 className="text-lg font-medium text-[#324c48]">Contact Display Settings</h3>
+              <h3 className="text-lg font-medium text-[#324c48]">System Number Settings</h3>
+              <FormField
+                control={systemForm.control}
+                name="systemContactPhone"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="flex items-center gap-2">
+                      <PhoneIcon className="w-4 h-4 text-[#D4A017]" />
+                      System Contact Phone Number
+                    </FormLabel>
+                    <FormControl>
+                      <Input
+                        placeholder="(817) 247-1312"
+                        {...field}
+                        onChange={(e) => {
+                          const formatted = formatPhoneNumber(e.target.value);
+                          systemForm.setValue("systemContactPhone", formatted);
+                        }}
+                      />
+                    </FormControl>
+                    <FormDescription>
+                      This phone number will be used globally across the site (footer, support, contact cards, etc). This is separate from the contact profile phone.
+                    </FormDescription>
+                  </FormItem>
+                )}
+              />
+            </div>
+            {/* Contact Settings Section */}
+            <div className="space-y-4">
+              <h3 className="text-lg font-medium text-[#324c48]">Contact Number Settings</h3>
               <FormField
                 control={systemForm.control}
                 name="overrideContactPhone"

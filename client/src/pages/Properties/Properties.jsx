@@ -4,6 +4,7 @@ import React, { useState, useEffect, useMemo } from "react";
 import { PuffLoader } from "react-spinners";
 import { useSearchParams, useNavigate } from "react-router-dom";
 import useProperties from "../../components/hooks/useProperties.js";
+import { sortPropertiesWithPendingLast } from "@/utils/propertySorting";
 import SearchWithTracking from "@/components/Search/SearchWithTracking";
 import MultiPropertyMap from "@/components/MultiPropertyMap/MultiPropertyMap";
 import { PropertyFilterBar } from "@/components/PropertyFilters/PropertyFilterBar";
@@ -42,7 +43,7 @@ export default function Properties() {
         setViewMode("grid");
       }
     };
-    
+
     checkMobile();
     window.addEventListener("resize", checkMobile);
     return () => window.removeEventListener("resize", checkMobile);
@@ -62,21 +63,30 @@ export default function Properties() {
   // Sort filtered data
   const sortedData = useMemo(() => {
     const sorted = [...filteredData];
-    
+
+    let result;
     switch (sortBy) {
       case "price-desc":
-        return sorted.sort((a, b) => (b.askingPrice || 0) - (a.askingPrice || 0));
+        result = sorted.sort((a, b) => (b.askingPrice || 0) - (a.askingPrice || 0));
+        break;
       case "price-asc":
-        return sorted.sort((a, b) => (a.askingPrice || 0) - (b.askingPrice || 0));
+        result = sorted.sort((a, b) => (a.askingPrice || 0) - (b.askingPrice || 0));
+        break;
       case "size-desc":
-        return sorted.sort((a, b) => (b.sqft || 0) - (a.sqft || 0));
+        result = sorted.sort((a, b) => (b.sqft || 0) - (a.sqft || 0));
+        break;
       case "size-asc":
-        return sorted.sort((a, b) => (a.sqft || 0) - (b.sqft || 0));
+        result = sorted.sort((a, b) => (a.sqft || 0) - (b.sqft || 0));
+        break;
       case "newest":
-        return sorted.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+        result = sorted.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+        break;
       default:
-        return sorted;
+        result = sorted;
     }
+
+    // Always move Pending properties to the end
+    return sortPropertiesWithPendingLast(result);
   }, [filteredData, sortBy]);
 
   // Count active filters
@@ -187,9 +197,9 @@ export default function Properties() {
                       <MapIcon className="w-3 h-3 mr-1" />
                       Map
                     </Button>
-                    <Button 
-                      onClick={() => setViewMode("grid")} 
-                      variant="outline" 
+                    <Button
+                      onClick={() => setViewMode("grid")}
+                      variant="outline"
                       size="sm"
                       className="h-8 text-xs"
                     >
@@ -289,9 +299,9 @@ export default function Properties() {
             <div className="flex items-center justify-between gap-2">
               <div className="flex gap-2">
                 {!isMobile && (
-                  <Button 
-                    onClick={() => setViewMode("map")} 
-                    variant="outline" 
+                  <Button
+                    onClick={() => setViewMode("map")}
+                    variant="outline"
                     size="sm"
                     className="h-8 text-xs"
                   >

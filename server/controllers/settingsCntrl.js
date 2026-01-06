@@ -16,6 +16,7 @@ export const getSettings = asyncHandler(async (req, res) => {
       settings = await prisma.settings.create({
         data: {
           overrideContactPhone: null,
+          systemContactPhone: null,
           smtpServer: null,
           smtpPort: null,
           smtpUser: null,
@@ -51,6 +52,7 @@ export const getSettings = asyncHandler(async (req, res) => {
 export const updateSettings = asyncHandler(async (req, res) => {
   const {
     overrideContactPhone,
+    systemContactPhone,
     smtpServer,
     smtpPort,
     smtpUser,
@@ -72,6 +74,7 @@ export const updateSettings = asyncHandler(async (req, res) => {
     // Prepare update data
     const updateData = {
       overrideContactPhone,
+      systemContactPhone,
       smtpServer,
       smtpPort,
       smtpUser,

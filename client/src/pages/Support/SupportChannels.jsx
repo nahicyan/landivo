@@ -1,10 +1,29 @@
 // SupportChannels.jsx
-import React from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { MessageCircle, Phone, Mail, Clock } from "lucide-react";
+import React, { useState, useEffect } from "react";
+import { getSystemSettings } from "@/utils/api";
 
 export default function SupportChannels() {
+  const [systemPhone, setSystemPhone] = useState("");
+  
+  useEffect(() => {
+    const loadPhone = async () => {
+      try {
+        const settings = await getSystemSettings();
+        if (settings?.systemContactPhone) {
+          setSystemPhone(settings.systemContactPhone);
+        }
+      } catch (error) {
+        console.error("Error loading system phone:", error);
+      }
+    };
+    loadPhone();
+  }, []);
+  
+  const cleanPhone = (phone) => phone.replace(/\D/g, "");
+
   const supportChannels = [
     {
       icon: MessageCircle,
@@ -22,7 +41,7 @@ export default function SupportChannels() {
       description: "Speak directly with our land experts for personalized help and guidance.",
       availability: "Mon-Fri, 9AM-6PM EST",
       cta: "Call Us",
-      link: "tel:+18172471312",
+      link: systemPhone ? `tel:+1${cleanPhone(systemPhone)}` : "#",
       color: "bg-[#3f4f24]",
       hoverColor: "hover:bg-[#2c3b18]",
     },

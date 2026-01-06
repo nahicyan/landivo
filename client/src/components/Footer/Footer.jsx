@@ -1,14 +1,33 @@
 import { ArrowRight, Mail, MessageCircle, Phone, Instagram, Facebook, Twitter, Linkedin } from 'lucide-react';
+import React, { useState, useEffect } from "react";
+import { getSystemSettings } from "@/utils/api";
 
 export default function Footer() {
+  const [systemPhone, setSystemPhone] = useState("");
+
+  useEffect(() => {
+    const loadPhone = async () => {
+      try {
+        const settings = await getSystemSettings();
+        if (settings?.systemContactPhone) {
+          setSystemPhone(settings.systemContactPhone);
+        }
+      } catch (error) {
+        console.error("Error loading system phone:", error);
+      }
+    };
+    loadPhone();
+  }, []);
+
+  const cleanPhone = (phone) => phone.replace(/\D/g, "");
   const linkStyle = "relative transition duration-300 ease-in-out hover:text-[#D4A017]";
-  
+
   return (
     <footer className="bg-[#FDF8F2] text-[#324c48] py-20 px-4 md:px-8 relative overflow-hidden">
       {/* Background decorative elements */}
       <div className="absolute top-10 left-10 w-72 h-72 rounded-full bg-[#3f4f24] opacity-5 blur-3xl"></div>
       <div className="absolute bottom-10 right-10 w-80 h-80 rounded-full bg-[#D4A017] opacity-5 blur-3xl"></div>
-      
+
       <div className="max-w-7xl mx-auto grid md:grid-cols-2 gap-14 relative z-10">
         {/* Left Column with Logo and Contact */}
         <div className="space-y-10">
@@ -18,31 +37,33 @@ export default function Footer() {
               <span className="text-2xl font-bold text-[#324c48]">LANDIVO</span>
               <span className="ml-2 px-2 py-1 bg-[#D4A017]/10 rounded text-[#D4A017] text-xs uppercase tracking-wider font-semibold">Land Wholesaling</span>
             </div>
-            
+
             <p className="text-[#324c48]/80 max-w-md">
               Connecting you with exclusive land opportunities through flexible, buyer-friendly solutions.
             </p>
           </div>
-          
+
           <div className="space-y-6">
             <h3 className="text-lg font-semibold text-[#324c48] uppercase tracking-wider">CONTACT US</h3>
-            
+
             <div className="space-y-6">
-              <a 
-                href="tel:+18172471312" 
-                className="flex items-center space-x-3 group"
-              >
-                <div className="w-12 h-12 rounded-full flex items-center justify-center bg-white shadow-md group-hover:bg-[#D4A017] transition-all duration-300">
-                  <Phone className="w-5 h-5 text-[#324c48] group-hover:text-white" />
-                </div>
-                <div>
-                  <p className="text-sm font-medium text-[#324c48]/60">Send Us A Text</p>
-                  <p className="text-[#324c48] font-medium">+1 (817) 247-1312</p>
-                </div>
-              </a>
-              
-              <a 
-                href="mailto:info@landivo.com" 
+              {systemPhone && (
+                <a
+                  href={`tel:+1${cleanPhone(systemPhone)}`}
+                  className="flex items-center space-x-3 group"
+                >
+                  <div className="w-12 h-12 rounded-full flex items-center justify-center bg-white shadow-md group-hover:bg-[#D4A017] transition-all duration-300">
+                    <Phone className="w-5 h-5 text-[#324c48] group-hover:text-white" />
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium text-[#324c48]/60">Call Us or Send Us A Text</p>
+                    <p className="text-[#324c48] font-medium">{systemPhone}</p>
+                  </div>
+                </a>
+              )}
+
+              <a
+                href="mailto:info@landivo.com"
                 className="flex items-center space-x-3 group"
               >
                 <div className="w-12 h-12 rounded-full flex items-center justify-center bg-white shadow-md group-hover:bg-[#D4A017] transition-all duration-300">
@@ -53,9 +74,9 @@ export default function Footer() {
                   <p className="text-[#324c48] font-medium">info@landivo.com</p>
                 </div>
               </a>
-              
-              <a 
-                href="#" 
+
+              <a
+                href="#"
                 className="flex items-center space-x-3 group"
               >
                 <div className="w-12 h-12 rounded-full flex items-center justify-center bg-white shadow-md group-hover:bg-[#D4A017] transition-all duration-300">
@@ -69,7 +90,7 @@ export default function Footer() {
             </div>
           </div>
         </div>
-        
+
         {/* Right Column with Links and CTA */}
         <div className="flex flex-col justify-between space-y-10">
           <div className="grid grid-cols-2 gap-8">
@@ -98,7 +119,7 @@ export default function Footer() {
                 </li>
               </ul>
             </div>
-            
+
             <div className="space-y-6">
               <h3 className="text-lg font-semibold text-[#324c48] uppercase tracking-wider">Areas</h3>
               <ul className="space-y-4">
@@ -125,7 +146,7 @@ export default function Footer() {
               </ul>
             </div>
           </div>
-          
+
           <div className="mt-auto">
             <div className="flex space-x-4 mb-8">
               <a href="#" className="w-10 h-10 rounded-full bg-white shadow-md flex items-center justify-center hover:bg-[#3f4f24] hover:text-white transition-all duration-300">
@@ -141,9 +162,9 @@ export default function Footer() {
                 <Linkedin className="w-5 h-5" />
               </a>
             </div>
-            
-            <a 
-              href="/schedule-call" 
+
+            <a
+              href="/schedule-call"
               className="group flex items-center gap-2 bg-white shadow-md text-[#324c48] py-3 px-8 font-medium rounded-full transition-all duration-300 hover:bg-[#D4A017] hover:text-white"
             >
               <span>Schedule a call now</span>
@@ -152,7 +173,7 @@ export default function Footer() {
           </div>
         </div>
       </div>
-      
+
       <div className="max-w-7xl mx-auto mt-20 pt-8 border-t border-[#324c48]/10 text-sm text-[#324c48]/60 flex flex-col md:flex-row justify-between items-center gap-4">
         <p className="font-medium">© LANDIVO {new Date().getFullYear()}. ALL RIGHTS RESERVED.</p>
         <div className="flex gap-6">
