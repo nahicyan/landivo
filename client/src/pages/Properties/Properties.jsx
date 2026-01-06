@@ -146,7 +146,7 @@ export default function Properties() {
       <div className="bg-[#FDF8F2] min-h-screen">
         <div className="flex">
           {/* LEFT HALF - Sticky Map */}
-          <div className="w-1/2 h-screen sticky top-0 p-3 flex items-start box-border">
+          <div className="w-1/2 h-[calc(100vh-48px)] sticky top-0 p-3 flex items-start box-border">
             <div className="w-full h-full rounded-lg overflow-hidden shadow-xl border border-gray-200">
               <MultiPropertyMap properties={sortedData} />
             </div>
