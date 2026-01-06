@@ -146,15 +146,16 @@ export default function Properties() {
       <div className="bg-[#FDF8F2] min-h-screen">
         <div className="flex">
           {/* LEFT HALF - Sticky Map */}
-          <div className="w-1/2 h-screen sticky top-0 p-3 flex items-top">
-            <div className="w-full h-[90vh] rounded-lg overflow-hidden shadow-xl border border-gray-200">
+          <div className="w-1/2 h-[calc(100vh-48px)] sticky top-0 p-3 flex items-start box-border">
+            <div className="w-full h-full rounded-lg overflow-hidden shadow-xl border border-gray-200">
               <MultiPropertyMap properties={sortedData} />
             </div>
           </div>
 
           {/* RIGHT HALF - Natural scrolling content */}
           <div className="w-1/2 min-h-screen">
-            <div className="p-4 space-y-3">
+            <div className="sticky top-0 z-20 bg-[#FDF8F2] shadow-sm">
+              <div className="p-4 pb-3 space-y-3">
               {/* Compact Header */}
               <div className="space-y-2">
                 {/* Title */}
@@ -225,8 +226,11 @@ export default function Properties() {
                 </div>
               </div>
 
-              <hr className="border-t border-[#4b5b4d]/20 my-2" />
+              </div>
+              <hr className="border-t border-[#4b5b4d]/20" />
+            </div>
 
+            <div className="p-4 pt-3">
               {/* Properties Grid */}
               {sortedData.length === 0 ? (
                 <div className="text-center py-12">
