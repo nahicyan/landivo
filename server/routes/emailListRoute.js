@@ -4,6 +4,8 @@ import {
   getAllEmailLists,
   getEmailList,
   createEmailList,
+  previewEmailListRecipients,
+  createGeneratedEmailList,
   updateEmailList,
   deleteEmailList,
   addBuyersToList,
@@ -17,6 +19,12 @@ const router = express.Router();
 
 // Read all email lists
 router.get("/", getAllEmailLists);
+
+// Preview recipients for filters (must come before "/:id")
+router.post("/preview", previewEmailListRecipients);
+
+// Create generated email list (must come before "/:id")
+router.post("/generated", createGeneratedEmailList);
 
 // Read a single email list by ID
 router.get("/:id", getEmailList);

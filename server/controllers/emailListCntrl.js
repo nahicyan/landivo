@@ -713,3 +713,348 @@ export const sendEmailToList = asyncHandler(async (req, res) => {
     });
   }
 });
+
+const GENERATED_LIST_PREFIX = "[generated]";
+const GENERATED_LIST_SOURCE = "generated";
+
+function normalizeWhitespace(value) {
+  return String(value || "")
+    .trim()
+    .replace(/\s+/g, " ");
+}
+
+function normalizeAreaValue(value) {
+  return normalizeWhitespace(value).toLowerCase();
+}
+
+function normalizeRuleValues(values) {
+  if (!Array.isArray(values)) return [];
+  return values.map((value) => normalizeWhitespace(value)).filter(Boolean);
+}
+
+function isValidEmail(email) {
+  if (!email) return false;
+  const trimmed = String(email).trim();
+  if (!trimmed) return false;
+  const atIndex = trimmed.indexOf("@");
+  if (atIndex <= 0) return false;
+  const dotIndex = trimmed.indexOf(".", atIndex + 1);
+  if (dotIndex <= atIndex + 1 || dotIndex === trimmed.length - 1) return false;
+  return true;
+}
+
+function isUnsubscribed(buyer) {
+  const emailStatus = String(buyer?.emailStatus || "").toLowerCase();
+  const permissionStatus = String(buyer?.emailPermissionStatus || "").toLowerCase();
+  return emailStatus === "unsubscribed" || permissionStatus === "unsubscribed";
+}
+
+function dedupeBuyers(buyers) {
+  const seen = new Set();
+  const deduped = [];
+
+  buyers.forEach((buyer) => {
+    const key =
+      buyer?.id ||
+      (buyer?.email ? String(buyer.email).toLowerCase() : null);
+    if (!key || seen.has(key)) return;
+    seen.add(key);
+    deduped.push(buyer);
+  });
+
+  return deduped;
+}
+
+function evaluateBuyerRule(buyer, rule) {
+  if (!rule || !rule.field) return true;
+
+  const values = normalizeRuleValues(rule.value);
+  if (values.length === 0) return true;
+
+  if (rule.field === "buyerType") {
+    const buyerType = buyer?.buyerType ? String(buyer.buyerType) : "";
+    if (!buyerType) return false;
+    if (rule.op === "equals") return values.includes(buyerType);
+    return values.includes(buyerType);
+  }
+
+  if (rule.field === "preferredAreas") {
+    const buyerAreas = Array.isArray(buyer?.preferredAreas)
+      ? buyer.preferredAreas.map(normalizeAreaValue)
+      : [];
+    if (buyerAreas.length === 0) return false;
+
+    const normalizedValues = values.map(normalizeAreaValue);
+    const matchMode = rule.match || "contains-any";
+
+    if (matchMode === "contains-all") {
+      return normalizedValues.every((value) =>
+        buyerAreas.some((area) => area.includes(value))
+      );
+    }
+
+    if (matchMode === "exact") {
+      return normalizedValues.some((value) =>
+        buyerAreas.some((area) => area === value)
+      );
+    }
+
+    return normalizedValues.some((value) =>
+      buyerAreas.some((area) => area.includes(value))
+    );
+  }
+
+  return true;
+}
+
+function evaluateBuyerRules(buyer, rules, mode) {
+  if (!Array.isArray(rules) || rules.length === 0) return true;
+  const normalizedMode = mode === "or" ? "or" : "and";
+  const results = rules.map((rule) => evaluateBuyerRule(buyer, rule));
+  return normalizedMode === "and" ? results.every(Boolean) : results.some(Boolean);
+}
+
+function filterBuyersByFilters(buyers, filters) {
+  if (!filters) return buyers;
+
+  const advancedEnabled = Boolean(filters?.advanced?.enabled);
+  if (advancedEnabled) {
+    const groups = Array.isArray(filters?.advanced?.groups)
+      ? filters.advanced.groups
+      : [];
+
+    if (groups.length === 0) return buyers;
+
+    return buyers.filter((buyer) =>
+      groups.some((group) =>
+        evaluateBuyerRules(buyer, group?.rules, group?.mode)
+      )
+    );
+  }
+
+  return buyers.filter((buyer) =>
+    evaluateBuyerRules(buyer, filters?.rules, filters?.mode)
+  );
+}
+
+export const previewEmailListRecipients = asyncHandler(async (req, res) => {
+  const { filters, includeBuyerIds = false, sampleSize = 25 } = req.body || {};
+
+  const normalizedSampleSize = Number.isFinite(Number(sampleSize))
+    ? Math.max(0, Number(sampleSize))
+    : 25;
+
+  try {
+    const buyers = await prisma.buyer.findMany({
+      select: {
+        id: true,
+        email: true,
+        firstName: true,
+        lastName: true,
+        buyerType: true,
+        preferredAreas: true,
+        emailStatus: true,
+        emailPermissionStatus: true,
+      },
+    });
+
+    const filtered = filterBuyersByFilters(buyers, filters)
+      .filter((buyer) => isValidEmail(buyer.email))
+      .filter((buyer) => !isUnsubscribed(buyer));
+
+    const deduped = dedupeBuyers(filtered);
+    const total = deduped.length;
+
+    const sampleRecipients =
+      normalizedSampleSize > 0
+        ? deduped.slice(0, normalizedSampleSize).map((buyer) => ({
+            id: buyer.id,
+            email: buyer.email,
+            firstName: buyer.firstName,
+            lastName: buyer.lastName,
+            buyerType: buyer.buyerType,
+          }))
+        : [];
+
+    res.status(200).json({
+      total,
+      buyerIds: includeBuyerIds ? deduped.map((buyer) => buyer.id) : undefined,
+      sampleRecipients,
+    });
+  } catch (err) {
+    console.error("Error previewing email list recipients:", err);
+    res.status(500).json({
+      message: "An error occurred while previewing recipients",
+      error: err.message,
+    });
+  }
+});
+
+export const createGeneratedEmailList = asyncHandler(async (req, res) => {
+  const { name, description, criteria, buyerIds } = req.body || {};
+
+  if (!name) {
+    return res.status(400).json({ message: "List name is required" });
+  }
+
+  if (!Array.isArray(buyerIds) || buyerIds.length === 0) {
+    return res.status(400).json({ message: "buyerIds must be a non-empty array" });
+  }
+
+  let serializedCriteria = criteria || {};
+  try {
+    JSON.stringify(serializedCriteria);
+  } catch (error) {
+    return res.status(400).json({ message: "criteria must be JSON-serializable" });
+  }
+
+  const generatedName = name.startsWith(GENERATED_LIST_PREFIX)
+    ? name
+    : `${GENERATED_LIST_PREFIX} ${name}`;
+
+  try {
+    const buyers = await prisma.buyer.findMany({
+      where: {
+        id: { in: buyerIds },
+      },
+      select: {
+        id: true,
+        email: true,
+        emailStatus: true,
+        emailPermissionStatus: true,
+      },
+    });
+
+    const eligibleBuyers = dedupeBuyers(
+      buyers.filter((buyer) => isValidEmail(buyer.email) && !isUnsubscribed(buyer))
+    );
+
+    if (eligibleBuyers.length === 0) {
+      return res.status(400).json({
+        message: "No eligible buyers found after permission and email checks",
+      });
+    }
+
+    const criteriaPayload = {
+      ...serializedCriteria,
+      isGenerated: true,
+      generatedAt: serializedCriteria.generatedAt || new Date().toISOString(),
+    };
+
+    const list = await prisma.emailList.create({
+      data: {
+        name: generatedName,
+        description,
+        source: GENERATED_LIST_SOURCE,
+        criteria: criteriaPayload,
+        isDefault: false,
+        createdBy: req.userId,
+      },
+    });
+
+    const insertResult = await prisma.buyerEmailList.createMany({
+      data: eligibleBuyers.map((buyer) => ({
+        buyerId: buyer.id,
+        emailListId: list.id,
+      })),
+      skipDuplicates: true,
+    });
+
+    res.status(201).json({
+      generatedListId: list.id,
+      totalContacts: insertResult.count,
+    });
+  } catch (err) {
+    console.error("Error creating generated email list:", err);
+    res.status(500).json({
+      message: "An error occurred while creating the generated email list",
+      error: err.message,
+    });
+  }
+});
+
+export const scheduleGeneratedListDelete = asyncHandler(async (req, res) => {
+  const { id } = req.params;
+  const { sentAt, delaySeconds, deleteAfter, clear } = req.body || {};
+
+  if (!id) {
+    return res.status(400).json({ message: "List ID is required" });
+  }
+
+  try {
+    const list = await prisma.emailList.findUnique({
+      where: { id },
+    });
+
+    if (!list) {
+      return res.status(404).json({ message: "Email list not found" });
+    }
+
+    const isGenerated =
+      list.source === GENERATED_LIST_SOURCE ||
+      list?.criteria?.isGenerated === true ||
+      (list.name || "").startsWith(GENERATED_LIST_PREFIX);
+
+    if (!isGenerated) {
+      return res.status(400).json({ message: "Email list is not generated" });
+    }
+
+    if (clear) {
+      const clearedCriteria = {
+        ...(list.criteria || {}),
+        deleteAfter: null,
+      };
+
+      await prisma.emailList.update({
+        where: { id },
+        data: {
+          criteria: clearedCriteria,
+          updatedAt: new Date(),
+        },
+      });
+
+      return res.status(200).json({ message: "Delete schedule cleared" });
+    }
+
+    const ttlSeconds = Number.isFinite(Number(delaySeconds))
+      ? Number(delaySeconds)
+      : Number(process.env.GENERATED_LIST_TTL_SECONDS || 120);
+
+    const sentAtDate = sentAt ? new Date(sentAt) : new Date();
+    const baseDate = Number.isNaN(sentAtDate.getTime()) ? new Date() : sentAtDate;
+
+    const deleteAfterDate = deleteAfter
+      ? new Date(deleteAfter)
+      : new Date(baseDate.getTime() + ttlSeconds * 1000);
+
+    if (Number.isNaN(deleteAfterDate.getTime())) {
+      return res.status(400).json({ message: "deleteAfter is invalid" });
+    }
+
+    const updatedCriteria = {
+      ...(list.criteria || {}),
+      isGenerated: true,
+      deleteAfter: deleteAfterDate.toISOString(),
+    };
+
+    await prisma.emailList.update({
+      where: { id },
+      data: {
+        criteria: updatedCriteria,
+        updatedAt: new Date(),
+      },
+    });
+
+    res.status(200).json({
+      message: "Delete scheduled",
+      deleteAfter: deleteAfterDate.toISOString(),
+      ttlSeconds,
+    });
+  } catch (err) {
+    console.error("Error scheduling generated list deletion:", err);
+    res.status(500).json({
+      message: "An error occurred while scheduling deletion",
+      error: err.message,
+    });
+  }
+});
