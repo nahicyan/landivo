@@ -715,7 +715,7 @@ export const sendEmailToList = asyncHandler(async (req, res) => {
 });
 
 const GENERATED_LIST_PREFIX = "[generated]";
-const GENERATED_LIST_SOURCE = "generated";
+const GENERATED_LIST_SOURCE = "temp-generated";
 
 function normalizeWhitespace(value) {
   return String(value || "")
@@ -957,7 +957,6 @@ export const createGeneratedEmailList = asyncHandler(async (req, res) => {
         buyerId: buyer.id,
         emailListId: list.id,
       })),
-      skipDuplicates: true,
     });
 
     res.status(201).json({
@@ -968,92 +967,6 @@ export const createGeneratedEmailList = asyncHandler(async (req, res) => {
     console.error("Error creating generated email list:", err);
     res.status(500).json({
       message: "An error occurred while creating the generated email list",
-      error: err.message,
-    });
-  }
-});
-
-export const scheduleGeneratedListDelete = asyncHandler(async (req, res) => {
-  const { id } = req.params;
-  const { sentAt, delaySeconds, deleteAfter, clear } = req.body || {};
-
-  if (!id) {
-    return res.status(400).json({ message: "List ID is required" });
-  }
-
-  try {
-    const list = await prisma.emailList.findUnique({
-      where: { id },
-    });
-
-    if (!list) {
-      return res.status(404).json({ message: "Email list not found" });
-    }
-
-    const isGenerated =
-      list.source === GENERATED_LIST_SOURCE ||
-      list?.criteria?.isGenerated === true ||
-      (list.name || "").startsWith(GENERATED_LIST_PREFIX);
-
-    if (!isGenerated) {
-      return res.status(400).json({ message: "Email list is not generated" });
-    }
-
-    if (clear) {
-      const clearedCriteria = {
-        ...(list.criteria || {}),
-        deleteAfter: null,
-      };
-
-      await prisma.emailList.update({
-        where: { id },
-        data: {
-          criteria: clearedCriteria,
-          updatedAt: new Date(),
-        },
-      });
-
-      return res.status(200).json({ message: "Delete schedule cleared" });
-    }
-
-    const ttlSeconds = Number.isFinite(Number(delaySeconds))
-      ? Number(delaySeconds)
-      : Number(process.env.GENERATED_LIST_TTL_SECONDS || 120);
-
-    const sentAtDate = sentAt ? new Date(sentAt) : new Date();
-    const baseDate = Number.isNaN(sentAtDate.getTime()) ? new Date() : sentAtDate;
-
-    const deleteAfterDate = deleteAfter
-      ? new Date(deleteAfter)
-      : new Date(baseDate.getTime() + ttlSeconds * 1000);
-
-    if (Number.isNaN(deleteAfterDate.getTime())) {
-      return res.status(400).json({ message: "deleteAfter is invalid" });
-    }
-
-    const updatedCriteria = {
-      ...(list.criteria || {}),
-      isGenerated: true,
-      deleteAfter: deleteAfterDate.toISOString(),
-    };
-
-    await prisma.emailList.update({
-      where: { id },
-      data: {
-        criteria: updatedCriteria,
-        updatedAt: new Date(),
-      },
-    });
-
-    res.status(200).json({
-      message: "Delete scheduled",
-      deleteAfter: deleteAfterDate.toISOString(),
-      ttlSeconds,
-    });
-  } catch (err) {
-    console.error("Error scheduling generated list deletion:", err);
-    res.status(500).json({
-      message: "An error occurred while scheduling deletion",
       error: err.message,
     });
   }

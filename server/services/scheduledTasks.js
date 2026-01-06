@@ -77,52 +77,12 @@ async function updateDailyStats() {
   }
 }
 
-const GENERATED_LIST_CLEANUP_CRON =
-  process.env.GENERATED_LIST_CLEANUP_CRON || "*/1 * * * *";
-
-async function purgeExpiredGeneratedLists() {
-  const now = new Date();
-  try {
-    const generatedLists = await prisma.emailList.findMany({
-      where: { source: "generated" },
-    });
-
-    if (!generatedLists.length) {
-      return;
-    }
-
-    const expiredLists = generatedLists.filter((list) => {
-      const deleteAfter = list?.criteria?.deleteAfter;
-      if (!deleteAfter) return false;
-      const deleteAfterDate = new Date(deleteAfter);
-      if (Number.isNaN(deleteAfterDate.getTime())) return false;
-      return deleteAfterDate <= now;
-    });
-
-    for (const list of expiredLists) {
-      await prisma.buyerEmailList.deleteMany({
-        where: { emailListId: list.id },
-      });
-      await prisma.emailList.delete({
-        where: { id: list.id },
-      });
-    }
-
-    if (expiredLists.length > 0) {
-      console.log(`Purged ${expiredLists.length} expired generated email lists`);
-    }
-  } catch (error) {
-    console.error("Error purging expired generated lists:", error);
-  }
-}
-
 /**
  * Initialize scheduled tasks
  */
 export function initScheduledTasks() {
   // Run at 1:00 AM every day
   cron.schedule('0 1 * * *', updateDailyStats);
-  cron.schedule(GENERATED_LIST_CLEANUP_CRON, purgeExpiredGeneratedLists);
   
   console.log("Scheduled tasks initialized");
 }
