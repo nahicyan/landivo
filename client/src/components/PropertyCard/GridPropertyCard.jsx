@@ -1,5 +1,5 @@
 import React from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 import { Card } from "@/components/ui/card";
 import { formatPrice } from "../../utils/format";
 import { useShowAddress } from "../../utils/addressUtils";
@@ -15,12 +15,7 @@ const formatCountyName = (county) => {
 };
 
 // Updated function to get display address with county fallback
-const getDisplayAddress = (
-  streetAddress,
-  toggleObscure,
-  showAddress,
-  county
-) => {
+const getDisplayAddress = (streetAddress, toggleObscure, showAddress, county) => {
   if (!toggleObscure || showAddress) {
     return streetAddress || "Address unavailable";
   }
@@ -34,22 +29,20 @@ export default function GridPropertyCard({ card, isMobileGrid = false }) {
   if (!card) return null;
 
   const isSold = card.status === "Sold";
+  const isPending = card.status?.toLowerCase() === "pending";
 
   // Parse images safely
   const images = (() => {
     try {
       if (!card.imageUrls) return [];
-      return Array.isArray(card.imageUrls)
-        ? card.imageUrls
-        : JSON.parse(card.imageUrls);
+      return Array.isArray(card.imageUrls) ? card.imageUrls : JSON.parse(card.imageUrls);
     } catch (error) {
       console.error("Error parsing imageUrls:", error);
       return [];
     }
   })();
 
-  const firstImage =
-    images.length > 0 ? `${serverURL}/${images[0]}` : "/default-image.jpg";
+  const firstImage = images.length > 0 ? `${serverURL}/${images[0]}` : "/default-image.jpg";
 
   const formattedPrice = card.askingPrice ? formatPrice(card.askingPrice) : "0";
 
@@ -57,11 +50,7 @@ export default function GridPropertyCard({ card, isMobileGrid = false }) {
   const getMonthlyPayment = () => {
     if (!card.financing || card.financing !== "Available") return null;
 
-    const payments = [
-      card.monthlyPaymentOne,
-      card.monthlyPaymentTwo,
-      card.monthlyPaymentThree,
-    ].filter((payment) => payment && !isNaN(payment));
+    const payments = [card.monthlyPaymentOne, card.monthlyPaymentTwo, card.monthlyPaymentThree].filter((payment) => payment && !isNaN(payment));
 
     if (payments.length === 0) return null;
     const minPayment = Math.min(...payments);
@@ -70,27 +59,20 @@ export default function GridPropertyCard({ card, isMobileGrid = false }) {
 
   const monthlyPayment = getMonthlyPayment();
 
-  const displayAddress = getDisplayAddress(
-    card.streetAddress,
-    card.toggleObscure,
-    showAddress,
-    card.county
-  );
+  const displayAddress = getDisplayAddress(card.streetAddress, card.toggleObscure, showAddress, card.county);
 
   return (
-    <Card
-      onClick={() => navigate(`/properties/${card.id}`)}
-      className="w-full rounded-xl overflow-hidden shadow-lg hover:shadow-xl transition-shadow cursor-pointer bg-white relative"
-    >
-      {/* Left Tag - Only show if not sold */}
-      {!isSold && card.ltag && (
+    <Card className="w-full rounded-xl overflow-hidden shadow-lg hover:shadow-xl transition-shadow cursor-pointer bg-white relative">
+      <Link to={`/properties/${card.id}`} className="absolute inset-0 z-10" aria-label={displayAddress} />
+      {/* Left Tag - Only show if not sold & pending*/}
+      {!isSold && !isPending && card.ltag && (
         <div className="absolute top-2 left-2 sm:top-3 sm:left-3 z-10 bg-gradient-to-r from-blue-500 to-blue-600 text-white text-xs sm:text-sm font-semibold px-2 py-1 sm:px-3 sm:py-1.5 rounded-lg shadow-lg">
           {card.ltag}
         </div>
       )}
 
-      {/* Right Tag - Only show if not sold */}
-      {!isSold && card.rtag && (
+      {/* Right Tag - Only show if not sold & pending */}
+      {!isSold && !isPending && card.rtag && (
         <div className="absolute top-2 right-2 sm:top-3 sm:right-3 z-10 bg-gradient-to-r from-green-600 to-green-700 text-white text-xs sm:text-sm font-semibold px-2 py-1 sm:px-3 sm:py-1.5 rounded-lg shadow-lg">
           {card.rtag}
         </div>
@@ -103,45 +85,30 @@ export default function GridPropertyCard({ card, isMobileGrid = false }) {
         </div>
       )}
 
+      {/* PENDING Badge - Show when property is pending */}
+      {isPending && (
+        <div className="absolute top-2 right-2 sm:top-3 sm:right-3 z-10 bg-gradient-to-r from-amber-500 to-amber-600 text-white text-xs sm:text-sm font-semibold px-2 py-1 sm:px-3 sm:py-1.5 rounded-lg shadow-lg">
+          PENDING
+        </div>
+      )}
+
       {/* Image Section - Increased height for better aspect ratio */}
       <div className="relative w-full h-52 sm:h-60 lg:h-64">
-        <img
-          src={firstImage}
-          alt="Property"
-          className="w-full h-full object-cover"
-        />
+        <img src={firstImage} alt="Property" className="w-full h-full object-cover" />
       </div>
 
       {/* Content Section */}
       <div className="px-3 sm:px-4 pt-2.5 pb-3 space-y-1">
         {/* Acres and Price Row */}
         <div className="flex justify-between items-center gap-2">
-          <span className="text-gray-600 font-normal truncate text-sm sm:text-base">
-            {card.acre || "0"} Acres
-          </span>
-          <span
-            className={`text-[#517b75] font-semibold whitespace-nowrap leading-tight tracking-tight text-lg sm:text-xl ${
-              isSold ? "filter blur-sm" : ""
-            }`}
-          >
-            ${formattedPrice}
-          </span>
+          <span className="text-gray-600 font-normal truncate text-sm sm:text-base">{card.acre || "0"} Acres</span>
+          <span className={`text-[#517b75] font-semibold whitespace-nowrap leading-tight tracking-tight text-lg sm:text-xl ${isSold ? "filter blur-sm" : ""}`}>${formattedPrice}</span>
         </div>
 
         {/* Address and Monthly Payment Row */}
         <div className="flex justify-between items-center gap-2">
-          <h3 className="text-gray-800 font-semibold truncate flex-1 text-sm sm:text-base">
-            {displayAddress}
-          </h3>
-          {monthlyPayment && (
-            <span
-              className={`text-[#D4A017] font-medium tracking-tight whitespace-nowrap text-xs sm:text-sm ${
-                isSold ? "filter blur-sm" : ""
-              }`}
-            >
-              ${monthlyPayment}/mo
-            </span>
-          )}
+          <h3 className="text-gray-800 font-semibold truncate flex-1 text-sm sm:text-base">{displayAddress}</h3>
+          {monthlyPayment && <span className={`text-[#D4A017] font-medium tracking-tight whitespace-nowrap text-xs sm:text-sm ${isSold ? "filter blur-sm" : ""}`}>${monthlyPayment}/mo</span>}
         </div>
 
         {/* City, State, Zip */}
