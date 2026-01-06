@@ -1,22 +1,19 @@
 // client/src/hooks/usePropertyBulkDeletion.js
-import { useState } from 'react';
-import { useMutation, useQueryClient } from 'react-query';
-import { toast } from 'react-toastify';
-import { usePermissions } from '@/components/Auth0/PermissionsContext';
-import { 
-  requestPropertyBulkDeletion as apiRequestBulkDeletion, 
-  deletePropertiesBulk 
-} from '@/utils/api';
+import { useState } from "react";
+import { useMutation, useQueryClient } from "react-query";
+import { toast } from "react-toastify";
+import { usePermissions } from "@/components/Auth0/PermissionsContext";
+import { requestPropertyBulkDeletion as apiRequestBulkDeletion, deletePropertiesBulk } from "@/utils/api";
 
 /**
  * Bulk Deletion flow steps
  */
 const BULK_DELETION_STEPS = {
-  PERMISSION_CHECK: 'permission_check',
-  INITIAL_CONFIRM: 'initial_confirm',
-  STATUS_CHECK: 'status_check',
-  FINAL_CONFIRM: 'final_confirm',
-  REQUEST_DELETION: 'request_deletion'
+  PERMISSION_CHECK: "permission_check",
+  INITIAL_CONFIRM: "initial_confirm",
+  STATUS_CHECK: "status_check",
+  FINAL_CONFIRM: "final_confirm",
+  REQUEST_DELETION: "request_deletion",
 };
 
 /**
@@ -46,10 +43,10 @@ export const usePropertyBulkDeletion = () => {
     onSuccess: (data) => {
       toast.success(`Deletion request sent for ${data.count} properties`);
       closeBulkDeletionConfirm();
-      queryClient.invalidateQueries('allProperties');
+      queryClient.invalidateQueries("allProperties");
     },
     onError: (error) => {
-      toast.error(error.message || 'Failed to request bulk property deletion');
+      toast.error(error.message || "Failed to request bulk property deletion");
     },
   });
 
@@ -59,10 +56,10 @@ export const usePropertyBulkDeletion = () => {
     onSuccess: (data) => {
       toast.success(`Successfully deleted ${data.count} properties`);
       closeBulkDeletionConfirm();
-      queryClient.invalidateQueries('allProperties');
+      queryClient.invalidateQueries("allProperties");
     },
     onError: (error) => {
-      toast.error(error.message || 'Failed to delete properties');
+      toast.error(error.message || "Failed to delete properties");
     },
   });
 
@@ -74,16 +71,17 @@ export const usePropertyBulkDeletion = () => {
       sold: 0,
       notAvailable: 0,
       testing: 0,
-      other: 0
+      incomplete: 0,
+      other: 0,
     };
 
-    selectedProperties.forEach(property => {
+    selectedProperties.forEach((property) => {
       const status = property?.status;
-      if (status === 'Available') statusCounts.available++;
-      else if (status === 'Pending') statusCounts.pending++;
-      else if (status === 'Sold') statusCounts.sold++;
-      else if (status === 'Not Available') statusCounts.notAvailable++;
-      else if (status === 'Testing') statusCounts.testing++;
+      if (status === "Available") statusCounts.available++;
+      else if (status === "Pending") statusCounts.pending++;
+      else if (status === "Sold") statusCounts.sold++;
+      else if (status === "Not Available") statusCounts.notAvailable++;
+      else if (status === "Testing") statusCounts.testing++;
       else statusCounts.other++;
     });
 
@@ -99,31 +97,27 @@ export const usePropertyBulkDeletion = () => {
   // Check if all properties can be deleted directly
   const canDirectDelete = () => {
     const statusCounts = analyzeSelectedProperties();
-    return (
-      statusCounts.available === 0 && 
-      statusCounts.pending === 0 &&
-      selectedProperties.length > 0
-    );
+    return statusCounts.available === 0 && statusCounts.pending === 0 && selectedProperties.length > 0;
   };
 
   // Start bulk deletion flow with permission check
   const openBulkDeletionConfirm = async (properties) => {
     if (!properties || properties.length === 0) {
-      toast.error('No properties selected');
+      toast.error("No properties selected");
       return;
     }
 
     setSelectedProperties(properties);
     setIsConfirmOpen(true);
     setCurrentStep(BULK_DELETION_STEPS.PERMISSION_CHECK);
-    
+
     // Simulate loading for permission check
     setIsPermissionLoading(true);
-    
+
     // Short delay to show loading spinner
     setTimeout(() => {
       setIsPermissionLoading(false);
-      
+
       if (!check.canDeleteProperties) {
         // No permission - show request deletion flow
         setCurrentStep(BULK_DELETION_STEPS.REQUEST_DELETION);
@@ -137,7 +131,7 @@ export const usePropertyBulkDeletion = () => {
   // Handle initial confirmation (when user has delete permissions)
   const handleInitialConfirm = () => {
     if (selectedProperties.length === 0) return;
-    
+
     if (canDirectDelete()) {
       // All properties are sold/unavailable/testing - proceed with deletion
       setCurrentStep(BULK_DELETION_STEPS.STATUS_CHECK);
@@ -151,11 +145,11 @@ export const usePropertyBulkDeletion = () => {
   };
 
   // Handle final bulk deletion execution
-  const executeBulkPropertyDeletion = (reason = '') => {
+  const executeBulkPropertyDeletion = (reason = "") => {
     if (selectedProperties.length === 0) return;
-    
-    const propertyIds = selectedProperties.map(prop => prop.id);
-    
+
+    const propertyIds = selectedProperties.map((prop) => prop.id);
+
     if (check.canDeleteProperties) {
       // Use direct deletion for users with permissions
       directBulkDeletionMutation.mutate({
@@ -191,20 +185,20 @@ export const usePropertyBulkDeletion = () => {
     currentStep,
     isPermissionLoading,
     isLoading: bulkDeletionRequestMutation.isLoading || directBulkDeletionMutation.isLoading,
-    
+
     // Computed properties
     hasDeletePermission: check.canDeleteProperties,
     requiresStatusConfirmation: requiresStatusConfirmation(),
     canDirectDelete: canDirectDelete(),
     statusAnalysis: analyzeSelectedProperties(),
-    
+
     // Actions
     openBulkDeletionConfirm,
     closeBulkDeletionConfirm,
     handleInitialConfirm,
     executeBulkPropertyDeletion,
     goToStep,
-    
+
     // Constants
     BULK_DELETION_STEPS,
   };

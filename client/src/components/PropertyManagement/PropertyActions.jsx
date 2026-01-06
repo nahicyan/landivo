@@ -5,14 +5,7 @@ import { toast } from "react-toastify";
 import { updateProperty } from "@/utils/api";
 
 import { Button } from "@/components/ui/button";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -24,30 +17,13 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 
-import {
-  FileEdit,
-  Eye,
-  ChevronDown,
-  PencilLine,
-  Tag,
-  DollarSign,
-  CheckSquare,
-  Star,
-  StarOff,
-  CircleOff,
-  CircleCheck
-} from "lucide-react";
+import { FileEdit, Eye, ChevronDown, PencilLine, Tag, DollarSign, CheckSquare, Star, StarOff, CircleOff, CircleCheck } from "lucide-react";
 
-export function PropertyActions({ 
-  property, 
-  selectedProperties = [], 
-  onRefresh = () => {},
-  onToggleSelection = () => {} 
-}) {
+export function PropertyActions({ property, selectedProperties = [], onRefresh = () => {}, onToggleSelection = () => {} }) {
   const navigate = useNavigate();
   const [showBulkStatusDialog, setShowBulkStatusDialog] = React.useState(false);
   const [statusAction, setStatusAction] = React.useState("");
-  
+
   // For single property actions
   const handleViewProperty = () => {
     navigate(`/properties/${property.id}`);
@@ -67,30 +43,28 @@ export function PropertyActions({
     try {
       // Show processing toast
       const toastId = toast.loading(`Updating ${selectedProperties.length} properties...`);
-      
+
       // Create an array of promises to update all selected properties
-      const updatePromises = selectedProperties.map(propertyId => 
-        updateProperty(propertyId, { status })
-      );
-      
+      const updatePromises = selectedProperties.map((propertyId) => updateProperty(propertyId, { status }));
+
       // Wait for all updates to complete
       await Promise.all(updatePromises);
-      
+
       // Update the loading toast to success
-      toast.update(toastId, { 
-        render: `Successfully updated ${selectedProperties.length} properties to "${status}"`, 
-        type: "success", 
+      toast.update(toastId, {
+        render: `Successfully updated ${selectedProperties.length} properties to "${status}"`,
+        type: "success",
         isLoading: false,
-        autoClose: 3000
+        autoClose: 3000,
       });
-      
+
       // Refresh data
       onRefresh();
-      
+
       // Clear selection
       onToggleSelection([]);
     } catch (error) {
-      console.error('Error updating properties:', error);
+      console.error("Error updating properties:", error);
       toast.error(`Failed to update properties: ${error.message}`);
     }
   };
@@ -99,30 +73,28 @@ export function PropertyActions({
     try {
       // Show processing toast
       const toastId = toast.loading(`Updating ${selectedProperties.length} properties...`);
-      
+
       // Create an array of promises to update all selected properties
-      const updatePromises = selectedProperties.map(propertyId => 
-        updateProperty(propertyId, { featured })
-      );
-      
+      const updatePromises = selectedProperties.map((propertyId) => updateProperty(propertyId, { featured }));
+
       // Wait for all updates to complete
       await Promise.all(updatePromises);
-      
+
       // Update the loading toast to success
-      toast.update(toastId, { 
-        render: `Successfully ${featured === "Yes" ? "featured" : "unfeatured"} ${selectedProperties.length} properties`, 
-        type: "success", 
+      toast.update(toastId, {
+        render: `Successfully ${featured === "Yes" ? "featured" : "unfeatured"} ${selectedProperties.length} properties`,
+        type: "success",
         isLoading: false,
-        autoClose: 3000
+        autoClose: 3000,
       });
-      
+
       // Refresh data
       onRefresh();
-      
+
       // Clear selection
       onToggleSelection([]);
     } catch (error) {
-      console.error('Error updating properties:', error);
+      console.error("Error updating properties:", error);
       toast.error(`Failed to update properties: ${error.message}`);
     }
   };
@@ -163,6 +135,9 @@ export function PropertyActions({
           </DropdownMenuItem>
           <DropdownMenuSeparator />
           <DropdownMenuLabel>Status</DropdownMenuLabel>
+          <DropdownMenuItem onClick={() => updateSelectedPropertiesStatus("Incomplete")}>
+            <AlertCircle className="mr-2 h-4 w-4 text-purple-600" /> Set Incomplete
+          </DropdownMenuItem>
           <DropdownMenuItem onClick={() => updateSelectedPropertiesStatus("Available")}>
             <CircleCheck className="mr-2 h-4 w-4 text-green-600" /> Set Available
           </DropdownMenuItem>
@@ -174,6 +149,9 @@ export function PropertyActions({
           </DropdownMenuItem>
           <DropdownMenuItem onClick={() => updateSelectedPropertiesStatus("Not Available")}>
             <CircleOff className="mr-2 h-4 w-4 text-red-600" /> Set Not Available
+          </DropdownMenuItem>
+          <DropdownMenuItem onClick={() => handleBulkStatusUpdate("Testing")}>
+            <AlertCircle className="mr-2 h-4 w-4 text-blue-600" /> Set Testing
           </DropdownMenuItem>
           <DropdownMenuSeparator />
           <DropdownMenuLabel>Featured</DropdownMenuLabel>
@@ -192,28 +170,22 @@ export function PropertyActions({
   return (
     <>
       <div className="flex gap-2">
-        <Button 
-          variant="outline"
-          size="sm" 
-          className="text-sm"
-          disabled={selectedProperties.length === 0}
-        >
+        <Button variant="outline" size="sm" className="text-sm" disabled={selectedProperties.length === 0}>
           {selectedProperties.length} selected
         </Button>
 
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button 
-              variant="outline" 
-              size="sm"
-              disabled={selectedProperties.length === 0}
-            >
+            <Button variant="outline" size="sm" disabled={selectedProperties.length === 0}>
               Bulk Actions
               <ChevronDown className="ml-2 h-4 w-4" />
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent>
             <DropdownMenuLabel>Update Status</DropdownMenuLabel>
+            <DropdownMenuItem onClick={() => handleBulkStatusUpdate("Incomplete")}>
+              <AlertCircle className="mr-2 h-4 w-4 text-purple-600" /> Set Incomplete
+            </DropdownMenuItem>
             <DropdownMenuItem onClick={() => handleBulkStatusUpdate("Available")}>
               <CircleCheck className="mr-2 h-4 w-4 text-green-600" /> Set Available
             </DropdownMenuItem>
@@ -221,10 +193,13 @@ export function PropertyActions({
               <CheckSquare className="mr-2 h-4 w-4 text-amber-600" /> Set Pending
             </DropdownMenuItem>
             <DropdownMenuItem onClick={() => handleBulkStatusUpdate("Sold")}>
-              <DollarSign className="mr-2 h-4 w-4 text-blue-600" /> Set Sold
+              <DollarSign className="mr-2 h-4 w-4 text-red-600" /> Set Sold
             </DropdownMenuItem>
             <DropdownMenuItem onClick={() => handleBulkStatusUpdate("Not Available")}>
-              <CircleOff className="mr-2 h-4 w-4 text-red-600" /> Set Not Available
+              <CircleOff className="mr-2 h-4 w-4 text-yellow-600" /> Set Not Available
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => handleBulkStatusUpdate("Testing")}>
+              <AlertCircle className="mr-2 h-4 w-4 text-blue-600" /> Set Testing
             </DropdownMenuItem>
             <DropdownMenuSeparator />
             <DropdownMenuLabel>Featured Status</DropdownMenuLabel>
@@ -237,13 +212,12 @@ export function PropertyActions({
           </DropdownMenuContent>
         </DropdownMenu>
 
-        <Button 
-          variant="outline" 
+        <Button
+          variant="outline"
           size="sm"
           className="text-red-500 border-red-200 hover:bg-red-50 hover:text-red-600"
           onClick={() => onToggleSelection([])}
-          disabled={selectedProperties.length === 0}
-        >
+          disabled={selectedProperties.length === 0}>
           Clear Selection
         </Button>
       </div>
@@ -254,8 +228,7 @@ export function PropertyActions({
           <AlertDialogHeader>
             <AlertDialogTitle>Confirm Status Update</AlertDialogTitle>
             <AlertDialogDescription>
-              Are you sure you want to change the status of {selectedProperties.length} properties to "{statusAction}"?
-              This action cannot be undone.
+              Are you sure you want to change the status of {selectedProperties.length} properties to "{statusAction}"? This action cannot be undone.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

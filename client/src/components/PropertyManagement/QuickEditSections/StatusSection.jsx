@@ -24,10 +24,12 @@ export default function StatusSection({ watch, setValue }) {
               <SelectValue placeholder="Select status" />
             </SelectTrigger>
             <SelectContent>
+              <SelectItem value="Incomplete">Incomplete</SelectItem>
               <SelectItem value="Available">Available</SelectItem>
               <SelectItem value="Pending">Pending</SelectItem>
               <SelectItem value="Sold">Sold</SelectItem>
               <SelectItem value="Not Available">Not Available</SelectItem>
+              <SelectItem value="Testing">Testing</SelectItem>
             </SelectContent>
           </Select>
         </div>

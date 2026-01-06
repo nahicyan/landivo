@@ -46,7 +46,7 @@ export default function AddProperty() {
   const [formData, setFormData] = useState({
     // System Information
     ownerId: "",
-    status: "",
+    status: "Incomplete",
     area: "",
     featured: "Not Featured",
     featuredPosition: 0,
@@ -95,9 +95,9 @@ export default function AddProperty() {
     acre: "",
 
     // Pricing and Financing
-    askingPrice: "",
-    minPrice: "",
-    disPrice: "",
+    askingPrice: "1",
+    minPrice: "1",
+    disPrice: "1",
 
     // Financing and Payment Calculation
     financing: "Not-Available", // Default value

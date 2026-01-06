@@ -3,7 +3,7 @@
 
 import React, { useState, useEffect, useMemo } from "react";
 import { PuffLoader } from "react-spinners";
-import useProperties from "../../components/hooks/useProperties.js";
+import useAllPropertiesUnfiltered from "@/hooks/useAllPropertiesUnfiltered";
 import { DataTable } from "../DataTable/DataTable";
 import PropertiesTableFilter from "../PropertiesTableFilter/PropertiesTableFilter";
 import { QuickEditModal } from "@/components/PropertyManagement/QuickEditModal";
@@ -39,7 +39,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import { Alert, AlertDescription } from "@/components/ui/alert";
 
 export default function PropertiesTable({ propertyData }) {
-  const { data, isError, isLoading, refetch } = useProperties();
+  const { data, isError, isLoading, refetch } = useAllPropertiesUnfiltered();
   
   // Generic search query
   const [searchQuery, setSearchQuery] = useState("");
