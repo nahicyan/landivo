@@ -21,7 +21,8 @@ export const validateOfferInput = (req) => {
  * Find existing buyer or create a new one
  */
 export const findOrCreateBuyer = async (buyerData) => {
-  const { email, phone, buyerType, firstName, lastName, auth0Id } = buyerData;
+  const { email, phone, buyerType, firstName, lastName, auth0Id, preferredArea, preferredCity, preferredCounty } = buyerData;
+  const normalizedPreferredArea = preferredArea ? String(preferredArea).trim() : "";
   
   let buyer = null;
   let buyerFoundMethod = 'none';
@@ -72,6 +73,9 @@ export const findOrCreateBuyer = async (buyerData) => {
         firstName,
         lastName,
         source: "Property Offer",
+        preferredAreas: normalizedPreferredArea ? [normalizedPreferredArea] : [],
+        preferredCity: preferredCity || null,
+        preferredCounty: preferredCounty || null,
         auth0Id: auth0Id || null // Store Auth0 ID if provided
       },
     });

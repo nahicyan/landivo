@@ -1,8 +1,12 @@
-import React, { useState } from "react";
+import React, { useMemo, useState } from "react";
 import { Card } from "@/components/ui/card";
 import { PuffLoader } from "react-spinners";
 import { toast } from "react-toastify";
-import { importBuyers, updateBuyer, removeBuyersFromList as removeBuyersApi } from "@/utils/api";
+import { 
+  importBuyers, 
+  updateBuyer, 
+  removeBuyersFromList as removeBuyersApi
+} from "@/utils/api";
 
 // Import core components for email lists
 import EmailListsTable from "./EmailListsTable";
@@ -18,6 +22,106 @@ import DeleteListConfirmDialog from "./DeleteListConfirmDialog";
 import { useEmailLists } from "@/components/hooks/useEmailLists";
 import useBuyers from "@/components/hooks/useBuyers.js";
 
+const getListSource = (list) => list?.source || "Manual";
+
+const isGeneratedList = (list) => {
+  const name = String(list?.name || "").toLowerCase();
+  const source = String(list?.source || "").toLowerCase();
+  const isGeneratedFlag = Boolean(list?.criteria?.isGenerated);
+  return name.startsWith("[generated]") || source === "temp-generated" || isGeneratedFlag;
+};
+
+const createDefaultBuyerFilters = () => ({
+  mode: "and",
+  rules: [],
+  advanced: { enabled: false, groups: [] }
+});
+
+const normalizeWhitespace = (value) =>
+  String(value || "")
+    .trim()
+    .replace(/\s+/g, " ");
+
+const normalizeAreaValue = (value) => normalizeWhitespace(value).toLowerCase();
+
+const normalizeRuleValues = (values) => {
+  if (!Array.isArray(values)) return [];
+  return values.map((value) => normalizeWhitespace(value)).filter(Boolean);
+};
+
+const evaluateListRule = (list, rule) => {
+  if (!rule || !rule.field) return true;
+
+  const values = normalizeRuleValues(rule.value);
+  if (values.length === 0) return true;
+
+  const criteria = list?.criteria || {};
+
+  if (rule.field === "buyerType") {
+    const listBuyerTypes = Array.isArray(criteria.buyerTypes) ? criteria.buyerTypes : [];
+    if (listBuyerTypes.length === 0) return false;
+    return listBuyerTypes.some((type) => values.includes(type));
+  }
+
+  if (rule.field === "preferredAreas") {
+    const listAreas = Array.isArray(criteria.areas)
+      ? criteria.areas.map(normalizeAreaValue)
+      : [];
+    if (listAreas.length === 0) return false;
+
+    const normalizedValues = values.map(normalizeAreaValue);
+    const matchMode = rule.match || "contains-any";
+
+    if (matchMode === "contains-all") {
+      return normalizedValues.every((value) =>
+        listAreas.some((area) => area.includes(value))
+      );
+    }
+
+    if (matchMode === "exact") {
+      return normalizedValues.some((value) =>
+        listAreas.some((area) => area === value)
+      );
+    }
+
+    return normalizedValues.some((value) =>
+      listAreas.some((area) => area.includes(value))
+    );
+  }
+
+  return true;
+};
+
+const evaluateListRules = (list, rules, mode) => {
+  if (!Array.isArray(rules) || rules.length === 0) return true;
+  const normalizedMode = mode === "or" ? "or" : "and";
+  const results = rules.map((rule) => evaluateListRule(list, rule));
+  return normalizedMode === "and" ? results.every(Boolean) : results.some(Boolean);
+};
+
+const filterListsByBuyerFilters = (lists, filters) => {
+  if (!filters) return lists;
+
+  const advancedEnabled = Boolean(filters?.advanced?.enabled);
+  if (advancedEnabled) {
+    const groups = Array.isArray(filters?.advanced?.groups)
+      ? filters.advanced.groups
+      : [];
+
+    if (groups.length === 0) return lists;
+
+    return lists.filter((list) =>
+      groups.some((group) =>
+        evaluateListRules(list, group?.rules, group?.mode)
+      )
+    );
+  }
+
+  return lists.filter((list) =>
+    evaluateListRules(list, filters?.rules, filters?.mode)
+  );
+};
+
 export default function EmailLists() {
   // State for dialogs and selected list
   const [createListOpen, setCreateListOpen] = useState(false);
@@ -30,6 +134,10 @@ export default function EmailLists() {
   const [selectedList, setSelectedList] = useState(null);
   const [listToDelete, setListToDelete] = useState(null);
   const [searchQuery, setSearchQuery] = useState("");
+  const [sourceFilter, setSourceFilter] = useState("all");
+  const [includeGenerated, setIncludeGenerated] = useState(false);
+  const [useBuyerFilters, setUseBuyerFilters] = useState(false);
+  const [buyerFilters, setBuyerFilters] = useState(createDefaultBuyerFilters);
 
   // Add state for imported buyers
   const [importedBuyers, setImportedBuyers] = useState(null);
@@ -61,6 +169,51 @@ export default function EmailLists() {
     setSearchQuery(value);
     setListFilters({ search: value });
   };
+
+  const clearSearch = () => {
+    handleSearchChange("");
+  };
+
+  const handleSourceChange = (value) => {
+    setSourceFilter(value);
+    setListFilters({ source: value });
+  };
+
+  const handleIncludeGeneratedChange = (value) => {
+    setIncludeGenerated(value);
+    setListFilters({ includeGenerated: value });
+  };
+
+  const baseFilteredLists = useMemo(() => {
+    let result = [...lists];
+
+    if (!includeGenerated) {
+      result = result.filter((list) => !isGeneratedList(list));
+    }
+
+    if (sourceFilter && sourceFilter !== "all") {
+      result = result.filter((list) => getListSource(list) === sourceFilter);
+    }
+
+    return result;
+  }, [lists, includeGenerated, sourceFilter]);
+
+  const buyerFilteredBaseLists = useMemo(() => (
+    useBuyerFilters ? filterListsByBuyerFilters(baseFilteredLists, buyerFilters) : baseFilteredLists
+  ), [baseFilteredLists, buyerFilters, useBuyerFilters]);
+
+  const sourceOptions = useMemo(() => {
+    const sources = new Set();
+    lists.forEach((list) => {
+      if (list?.source) sources.add(list.source);
+    });
+    sources.add("Manual");
+    return ["all", ...Array.from(sources).sort()];
+  }, [lists]);
+
+  const displayedLists = useMemo(() => (
+    useBuyerFilters ? filterListsByBuyerFilters(filteredLists, buyerFilters) : filteredLists
+  ), [buyerFilters, filteredLists, useBuyerFilters]);
 
   // Handle opening the create list dialog
   const handleNewList = () => {
@@ -380,9 +533,22 @@ export default function EmailLists() {
       <Card className="border-[#324c48]/20">
         {/* Table with search and actions */}
         <EmailListsTable
-          lists={filteredLists}
+          lists={displayedLists}
           searchQuery={searchQuery}
           onSearchChange={handleSearchChange}
+          clearSearch={clearSearch}
+          resultCount={displayedLists.length}
+          totalCount={buyerFilteredBaseLists.length}
+          sourceOptions={sourceOptions}
+          sourceFilter={sourceFilter}
+          onSourceChange={handleSourceChange}
+          includeGenerated={includeGenerated}
+          onIncludeGeneratedChange={handleIncludeGeneratedChange}
+          showBuyerFilters
+          useBuyerFilters={useBuyerFilters}
+          onUseBuyerFiltersChange={setUseBuyerFilters}
+          buyerFilters={buyerFilters}
+          onBuyerFiltersChange={setBuyerFilters}
           onNewList={handleNewList}
           onEditList={handleEditList}
           onEmailList={handleEmailList}

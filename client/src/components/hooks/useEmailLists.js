@@ -18,7 +18,17 @@ export function useEmailLists() {
   const [error, setError] = useState(null);
   const [filters, setFilters] = useState({
     search: "",
+    source: "all",
+    includeGenerated: false,
   });
+
+  const getListSource = (list) => list?.source || "Manual";
+  const isGeneratedList = (list) => {
+    const name = String(list?.name || "").toLowerCase();
+    const source = String(list?.source || "").toLowerCase();
+    const isGeneratedFlag = Boolean(list?.criteria?.isGenerated);
+    return name.startsWith("[generated]") || source === "temp-generated" || isGeneratedFlag;
+  };
 
   // Function to fetch lists
   const fetchLists = useCallback(async () => {
@@ -52,6 +62,16 @@ export function useEmailLists() {
     if (!lists.length) return;
 
     let result = [...lists];
+
+    // Hide generated lists by default
+    if (!filters.includeGenerated) {
+      result = result.filter((list) => !isGeneratedList(list));
+    }
+
+    // Filter by source when selected
+    if (filters.source && filters.source !== "all") {
+      result = result.filter((list) => getListSource(list) === filters.source);
+    }
 
     // Apply search filter
     if (filters.search) {
@@ -208,6 +228,8 @@ const createList = async (listData) => {
     sendEmail,
     getListMembers,
     refetchLists,
-    setListFilters: setFilters
+    setListFilters: (updates) => {
+      setFilters((prev) => ({ ...prev, ...updates }));
+    }
   };
 }

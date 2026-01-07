@@ -25,7 +25,15 @@ export const makeOffer = asyncHandler(async (req, res) => {
 
     console.log(`Received offer: propertyId: ${propertyId}, price: ${offeredPrice}, email: ${email}, auth0Id: ${auth0Id || "not provided"}`);
 
-    // 2. Find or create buyer
+    // 2. Retrieve property details for notifications
+    const property = await prisma.residency.findUnique({
+      where: { id: propertyId },
+    });
+    if (!property) {
+      return res.status(404).json({ message: "Property not found." });
+    }
+
+    // 3. Find or create buyer
     const buyer = await findOrCreateBuyer({
       email,
       phone,
@@ -33,15 +41,10 @@ export const makeOffer = asyncHandler(async (req, res) => {
       firstName,
       lastName,
       auth0Id,
+      preferredArea: property.area,
+      preferredCity: property.city,
+      preferredCounty: property.county
     });
-
-    // 3. Retrieve property details for notifications
-    const property = await prisma.residency.findUnique({
-      where: { id: propertyId },
-    });
-    if (!property) {
-      return res.status(404).json({ message: "Property not found." });
-    }
 
     // 4. Check if the buyer already made an offer on the same property
     const existingOfferCheck = await checkExistingOffer(buyer.id, propertyId, offeredPrice);
