@@ -1,6 +1,8 @@
 import React from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { Card } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { useVipBuyer } from "@/utils/VipBuyerContext";
 import { formatPrice } from "../../utils/format";
 import { useShowAddress } from "../../utils/addressUtils";
 const serverURL = import.meta.env.VITE_SERVER_URL;
@@ -24,6 +26,7 @@ const getDisplayAddress = (streetAddress, toggleObscure, showAddress, county) =>
 
 export default function PropertyCard({ card, isMobileGrid = false }) {
   const navigate = useNavigate();
+  const { isVipBuyer } = useVipBuyer();
   const showAddress = useShowAddress(card.toggleObscure);
 
   if (!card) return null;
@@ -44,7 +47,14 @@ export default function PropertyCard({ card, isMobileGrid = false }) {
 
   const firstImage = images.length > 0 ? `${serverURL}/${images[0]}` : "/default-image.jpg";
 
-  const formattedPrice = card.askingPrice ? formatPrice(card.askingPrice) : "0";
+  const isDiscounted = Boolean(card.askingPrice && card.disPrice && card.disPrice < card.askingPrice);
+  const mainPrice = isVipBuyer && card.disPrice ? card.disPrice : card.askingPrice;
+  const formattedMainPrice = mainPrice ? formatPrice(mainPrice) : "0";
+  const formattedOriginalPrice = card.askingPrice ? formatPrice(card.askingPrice) : "0";
+  const discountPercentage = isDiscounted
+    ? Math.round(((card.askingPrice - card.disPrice) / card.askingPrice) * 100)
+    : 0;
+  const showDiscount = isVipBuyer && isDiscounted;
 
   // Calculate minimum monthly payment
   const getMonthlyPayment = () => {
@@ -73,31 +83,35 @@ export default function PropertyCard({ card, isMobileGrid = false }) {
       `}
     >
       <Link to={`/properties/${card.id}`} className="absolute inset-0 z-10" aria-label={displayAddress} />
-      {/* Left Tag - Only show if not sold & Pending */}
-      {!isSold && !isPending && card.ltag && (
-        <div className="absolute top-2 left-2 sm:top-3 sm:left-3 z-10 bg-gradient-to-r from-blue-500 to-blue-600 text-white text-xs sm:text-sm font-semibold px-2 py-1 sm:px-3 sm:py-1.5 rounded-lg shadow-lg">
-          {card.ltag}
-        </div>
-      )}
-
-      {/* Right Tag - Only show if not sold & pending */}
-      {!isSold && !isPending && card.rtag && (
-        <div className="absolute top-2 right-2 sm:top-3 sm:right-3 z-10 bg-gradient-to-r from-green-600 to-green-700 text-white text-xs sm:text-sm font-semibold px-2 py-1 sm:px-3 sm:py-1.5 rounded-lg shadow-lg">
-          {card.rtag}
-        </div>
-      )}
-
-      {/* SOLD Badge - Show when property is sold */}
-      {isSold && (
-        <div className="absolute top-2 right-2 sm:top-3 sm:right-3 z-10 bg-gradient-to-r from-red-500 to-red-600 text-white text-xs sm:text-sm font-semibold px-2 py-1 sm:px-3 sm:py-1.5 rounded-lg shadow-lg">
-          SOLD
-        </div>
-      )}
-      {/* PENDING Badge - Show when property is pending */}
-      {isPending && (
-        <div className="absolute top-2 right-2 sm:top-3 sm:right-3 z-10 bg-gradient-to-r from-amber-500 to-amber-600 text-white text-xs sm:text-sm font-semibold px-2 py-1 sm:px-3 sm:py-1.5 rounded-lg shadow-lg">
-          PENDING
-        </div>
+      {/* Top Row Tags */}
+      {(card.ltag || card.rtag || isSold || isPending || (showDiscount && discountPercentage > 0)) && (
+        <>
+          {!isSold && !isPending && card.ltag && (
+            <Badge className="absolute top-2 left-2 sm:top-3 sm:left-3 z-10 bg-gradient-to-r from-blue-600 to-blue-700 text-white text-xs sm:text-sm font-semibold px-2 py-1 sm:px-3 sm:py-1.5 rounded-lg shadow-lg border border-white/30">
+              {card.ltag}
+            </Badge>
+          )}
+          {!isSold && !isPending && card.rtag && (
+            <Badge className="absolute top-2 left-1/2 -translate-x-1/2 sm:top-3 z-10 bg-gradient-to-r from-green-600 to-green-700 text-white text-xs sm:text-sm font-semibold px-2 py-1 sm:px-3 sm:py-1.5 rounded-lg shadow-lg border border-white/30">
+              {card.rtag}
+            </Badge>
+          )}
+          {isSold && (
+            <Badge className="absolute top-2 right-2 sm:top-3 sm:right-3 z-10 bg-gradient-to-r from-red-500 to-red-600 text-white text-xs sm:text-sm font-semibold px-2 py-1 sm:px-3 sm:py-1.5 rounded-lg shadow-lg">
+              SOLD
+            </Badge>
+          )}
+          {!isSold && isPending && (
+            <Badge className="absolute top-2 right-2 sm:top-3 sm:right-3 z-10 bg-gradient-to-r from-amber-500 to-amber-600 text-white text-xs sm:text-sm font-semibold px-2 py-1 sm:px-3 sm:py-1.5 rounded-lg shadow-lg">
+              PENDING
+            </Badge>
+          )}
+          {!isSold && !isPending && showDiscount && discountPercentage > 0 && (
+            <Badge className="absolute top-2 right-2 sm:top-3 sm:right-3 z-10 bg-gradient-to-r from-red-600 to-red-700 text-white text-xs sm:text-sm font-semibold px-2 py-1 sm:px-3 sm:py-1.5 rounded-lg shadow-lg border border-white/30">
+              {discountPercentage}% OFF
+            </Badge>
+          )}
+        </>
       )}
 
       {/* Image Section */}
@@ -110,13 +124,20 @@ export default function PropertyCard({ card, isMobileGrid = false }) {
         {/* Acres and Price Row */}
         <div className="flex justify-between items-center gap-1">
           <span className={`text-gray-600 font-normal truncate ${isMobileGrid ? "text-sm sm:text-base" : "text-base sm:text-lg"}`}>{card.acre || "0"} Acres</span>
-          <span
-            className={`text-[#517b75] font-semibold whitespace-nowrap leading-tight tracking-tight ${isSold ? "filter blur-sm" : ""} ${
-              isMobileGrid ? "text-base sm:text-lg" : "text-lg sm:text-xl"
-            }`}
-          >
-            ${formattedPrice}
-          </span>
+          <div className="flex flex-col items-end leading-tight">
+            {showDiscount && (
+              <span className="text-xs text-gray-500 line-through">${formattedOriginalPrice}</span>
+            )}
+            <div className="flex items-center gap-2">
+              <span
+                className={`text-[#517b75] font-semibold whitespace-nowrap tracking-tight ${isSold ? "filter blur-sm" : ""} ${
+                  isMobileGrid ? "text-base sm:text-lg" : "text-lg sm:text-xl"
+                }`}
+              >
+                ${formattedMainPrice}
+              </span>
+            </div>
+          </div>
         </div>
 
         {/* Address and Monthly Payment Row */}
