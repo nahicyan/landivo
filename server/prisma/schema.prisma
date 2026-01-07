@@ -259,6 +259,8 @@ model Buyer {
   lastName       String?
   source         String?
   preferredAreas String[]
+  preferredCity  String?
+  preferredCounty String?
   offers         Offer[]    @relation("BuyerOffers")
   auth0Id        String?
 

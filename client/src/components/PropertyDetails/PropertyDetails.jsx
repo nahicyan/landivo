@@ -1,6 +1,5 @@
 import React from "react";
 import PropertyDetailsLeft from "../PropertyDetailsLeft/PropertyDetailsLeft";
-import Offer from "../Offer/Offer";
 import PropertyDetailsRight from "../PropertyDetailsRight/PropertyDetailsRight";
 
 export default function PropertyDetails({ propertyData }) {
