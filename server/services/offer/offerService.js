@@ -1,6 +1,28 @@
 // server/services/offer/offerService.js
 import { prisma } from "../../config/prismaConfig.js";
 
+const normalizeValue = (value) => String(value || "").trim();
+
+const normalizeList = (value) => {
+  if (!value) return [];
+  if (Array.isArray(value)) {
+    return value.map(normalizeValue).filter(Boolean);
+  }
+  const normalized = normalizeValue(value);
+  return normalized ? [normalized] : [];
+};
+
+const mergeUnique = (existing, incoming) => {
+  const merged = new Set([...normalizeList(existing), ...normalizeList(incoming)]);
+  return Array.from(merged);
+};
+
+const needsMerge = (existing, incoming) => {
+  const existingList = normalizeList(existing);
+  const mergedList = mergeUnique(existingList, incoming);
+  return mergedList.length !== existingList.length;
+};
+
 /**
  * Validates offer input from request
  */
@@ -26,6 +48,36 @@ export const findOrCreateBuyer = async (buyerData) => {
   
   let buyer = null;
   let buyerFoundMethod = 'none';
+
+  const applyPreferenceUpdates = async (existingBuyer) => {
+    const updateData = {};
+    const nextAreas = normalizedPreferredArea ? [normalizedPreferredArea] : [];
+
+    if (nextAreas.length && needsMerge(existingBuyer.preferredAreas, nextAreas)) {
+      updateData.preferredAreas = mergeUnique(existingBuyer.preferredAreas, nextAreas);
+    }
+
+    if (preferredCity && needsMerge(existingBuyer.preferredCity, preferredCity)) {
+      updateData.preferredCity = mergeUnique(existingBuyer.preferredCity, preferredCity);
+    }
+
+    if (preferredCounty && needsMerge(existingBuyer.preferredCounty, preferredCounty)) {
+      updateData.preferredCounty = mergeUnique(existingBuyer.preferredCounty, preferredCounty);
+    }
+
+    if (auth0Id && !existingBuyer.auth0Id) {
+      updateData.auth0Id = auth0Id;
+    }
+
+    if (Object.keys(updateData).length === 0) {
+      return existingBuyer;
+    }
+
+    return await prisma.buyer.update({
+      where: { id: existingBuyer.id },
+      data: updateData
+    });
+  };
   
   // First try to find buyer by Auth0 ID if provided
   if (auth0Id) {
@@ -38,7 +90,7 @@ export const findOrCreateBuyer = async (buyerData) => {
     if (buyer) {
       buyerFoundMethod = 'auth0Id';
       console.log(`Buyer found by Auth0 ID: ${auth0Id}, buyerId: ${buyer.id}`);
-      return buyer;
+      return await applyPreferenceUpdates(buyer);
     }
   }
   
@@ -53,15 +105,7 @@ export const findOrCreateBuyer = async (buyerData) => {
   if (buyer) {
     buyerFoundMethod = buyer.email.toLowerCase() === email.toLowerCase() ? 'email' : 'phone';
     console.log(`Buyer found by ${buyerFoundMethod}: buyerId: ${buyer.id}`);
-    
-    // If buyer found by email/phone but doesn't have Auth0 ID, update with Auth0 ID
-    if (auth0Id && !buyer.auth0Id) {
-      console.log(`Updating existing buyer (${buyer.id}) with Auth0 ID: ${auth0Id}`);
-      buyer = await prisma.buyer.update({
-        where: { id: buyer.id },
-        data: { auth0Id }
-      });
-    }
+    buyer = await applyPreferenceUpdates(buyer);
   } else {
     // Create a new buyer if not found
     console.log(`No existing buyer found. Creating new buyer with email: ${email}, phone: ${phone}${auth0Id ? `, auth0Id: ${auth0Id}` : ''}`);
@@ -74,8 +118,8 @@ export const findOrCreateBuyer = async (buyerData) => {
         lastName,
         source: "Property Offer",
         preferredAreas: normalizedPreferredArea ? [normalizedPreferredArea] : [],
-        preferredCity: preferredCity || null,
-        preferredCounty: preferredCounty || null,
+        preferredCity: mergeUnique([], preferredCity),
+        preferredCounty: mergeUnique([], preferredCounty),
         auth0Id: auth0Id || null // Store Auth0 ID if provided
       },
     });

@@ -17,7 +17,7 @@ export const Auth0ProviderWithNavigate = ({ children }) => {
   }, []);
 
   const onRedirectCallback = (appState) => {
-    navigate(appState?.returnTo || window.location.pathname);
+    navigate(appState?.returnTo || window.location.pathname, { replace: true });
   };
 
   // Ensure all required properties are present

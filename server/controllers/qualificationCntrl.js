@@ -238,6 +238,9 @@ async function findOrCreateBuyer(buyerData) {
         firstName,
         lastName,
         source: "Qualification Lead",
+        preferredAreas: [],
+        preferredCity: [],
+        preferredCounty: [],
         auth0Id: auth0Id || null
       },
     });
