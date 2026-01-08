@@ -1,6 +1,38 @@
 // server/services/buyer/vipBuyerEmailListService.js
 import { prisma } from "../../config/prismaConfig.js";
 
+const normalizeCriteriaListValue = (value) => {
+  const collected = [];
+  const collect = (entry) => {
+    if (Array.isArray(entry)) {
+      entry.forEach(collect);
+      return;
+    }
+    if (entry === null || entry === undefined) return;
+    const entryType = typeof entry;
+    if (entryType !== "string" && entryType !== "number" && entryType !== "boolean") {
+      return;
+    }
+    const trimmed = String(entry).trim();
+    if (trimmed) {
+      collected.push(trimmed);
+    }
+  };
+
+  collect(value);
+
+  if (collected.length === 0) return [];
+
+  const unique = [];
+  const seen = new Set();
+  collected.forEach((item) => {
+    if (seen.has(item)) return;
+    seen.add(item);
+    unique.push(item);
+  });
+  return unique;
+};
+
 /**
  * Handles VIP buyer registration list management
  * Creates or finds list with format: "{Source} {Area} {BuyerType}"
@@ -68,8 +100,8 @@ export const handleVipBuyerEmailList = async (buyer, source = "VIP", area, buyer
  */
 const createVipEmailList = async (listName, area, buyerType, source) => {
   const criteria = {
-    areas: [area],
-    buyerTypes: [buyerType],
+    areas: normalizeCriteriaListValue(area),
+    buyerTypes: normalizeCriteriaListValue(buyerType),
     isVIP: true,
     description: `VIP ${buyerType} buyers in ${area}`
   };

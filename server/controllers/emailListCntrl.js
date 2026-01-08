@@ -4,17 +4,37 @@ import asyncHandler from "express-async-handler";
 import { prisma } from "../config/prismaConfig.js";
 
 let buyerPreferenceNormalizationCompleted = false;
+let emailListLegacyNormalizationCompleted = false;
 const normalizeCriteriaListValue = (value) => {
-  if (Array.isArray(value)) {
-    return value
-      .map((entry) => String(entry).trim())
-      .filter(Boolean);
-  }
-  if (typeof value === "string") {
-    const trimmed = value.trim();
-    return trimmed ? [trimmed] : [];
-  }
-  return [];
+  const collected = [];
+  const collect = (entry) => {
+    if (Array.isArray(entry)) {
+      entry.forEach(collect);
+      return;
+    }
+    if (entry === null || entry === undefined) return;
+    const entryType = typeof entry;
+    if (entryType !== "string" && entryType !== "number" && entryType !== "boolean") {
+      return;
+    }
+    const trimmed = String(entry).trim();
+    if (trimmed) {
+      collected.push(trimmed);
+    }
+  };
+
+  collect(value);
+
+  if (collected.length === 0) return [];
+
+  const unique = [];
+  const seen = new Set();
+  collected.forEach((item) => {
+    if (seen.has(item)) return;
+    seen.add(item);
+    unique.push(item);
+  });
+  return unique;
 };
 
 const normalizeEmailListCriteria = (criteria) => {
@@ -89,6 +109,123 @@ async function normalizeBuyerPreferenceFields() {
       ],
     });
 
+    await prisma.$runCommandRaw({
+      update: "Buyer",
+      updates: [
+        {
+          q: { preferredAreas: { $elemMatch: { $type: "array" } } },
+          u: [
+            {
+              $set: {
+                preferredAreas: {
+                  $let: {
+                    vars: { input: { $ifNull: ["$preferredAreas", []] } },
+                    in: {
+                      $reduce: {
+                        input: "$$input",
+                        initialValue: [],
+                        in: {
+                          $concatArrays: [
+                            "$$value",
+                            {
+                              $cond: [
+                                { $isArray: "$$this" },
+                                "$$this",
+                                ["$$this"],
+                              ],
+                            },
+                          ],
+                        },
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          ],
+          multi: true,
+        },
+      ],
+    });
+
+    await prisma.$runCommandRaw({
+      update: "Buyer",
+      updates: [
+        {
+          q: { preferredCity: { $elemMatch: { $type: "array" } } },
+          u: [
+            {
+              $set: {
+                preferredCity: {
+                  $let: {
+                    vars: { input: { $ifNull: ["$preferredCity", []] } },
+                    in: {
+                      $reduce: {
+                        input: "$$input",
+                        initialValue: [],
+                        in: {
+                          $concatArrays: [
+                            "$$value",
+                            {
+                              $cond: [
+                                { $isArray: "$$this" },
+                                "$$this",
+                                ["$$this"],
+                              ],
+                            },
+                          ],
+                        },
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          ],
+          multi: true,
+        },
+      ],
+    });
+
+    await prisma.$runCommandRaw({
+      update: "Buyer",
+      updates: [
+        {
+          q: { preferredCounty: { $elemMatch: { $type: "array" } } },
+          u: [
+            {
+              $set: {
+                preferredCounty: {
+                  $let: {
+                    vars: { input: { $ifNull: ["$preferredCounty", []] } },
+                    in: {
+                      $reduce: {
+                        input: "$$input",
+                        initialValue: [],
+                        in: {
+                          $concatArrays: [
+                            "$$value",
+                            {
+                              $cond: [
+                                { $isArray: "$$this" },
+                                "$$this",
+                                ["$$this"],
+                              ],
+                            },
+                          ],
+                        },
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          ],
+          multi: true,
+        },
+      ],
+    });
+
     return true;
   } catch (error) {
     console.error("Failed to normalize buyer preference fields:", error);
@@ -104,12 +241,45 @@ async function ensureBuyerPreferenceFieldsNormalized() {
   }
 }
 
+async function normalizeEmailListLegacyFields() {
+  try {
+    await prisma.$runCommandRaw({
+      update: "EmailList",
+      updates: [
+        {
+          q: { preferredCity: { $type: "array" } },
+          u: { $unset: { preferredCity: "" } },
+          multi: true,
+        },
+        {
+          q: { preferredCounty: { $type: "array" } },
+          u: { $unset: { preferredCounty: "" } },
+          multi: true,
+        },
+      ],
+    });
+    return true;
+  } catch (error) {
+    console.error("Failed to normalize EmailList legacy fields:", error);
+    return false;
+  }
+}
+
+async function ensureEmailListLegacyFieldsNormalized() {
+  if (emailListLegacyNormalizationCompleted) return;
+  const didNormalize = await normalizeEmailListLegacyFields();
+  if (didNormalize) {
+    emailListLegacyNormalizationCompleted = true;
+  }
+}
+
 // Get all email lists
 export const getAllEmailLists = asyncHandler(async (req, res) => {
   try {
     console.log("[EmailListController]:[getAllEmailLists]:[Request]", {
       query: req?.query || {},
     });
+    await ensureEmailListLegacyFieldsNormalized();
     const lists = await prisma.emailList.findMany({
       orderBy: {
         createdAt: "desc",
@@ -132,29 +302,36 @@ export const getAllEmailLists = asyncHandler(async (req, res) => {
         // Get buyers that match criteria
         let criteriaBuyerIds = [];
         if (list.criteria) {
-          const criteria = JSON.parse(JSON.stringify(list.criteria));
+          const criteria = normalizeEmailListCriteria(
+            JSON.parse(JSON.stringify(list.criteria))
+          );
 
           // Check if criteria has any actual filters
-          const hasCriteriaFilters = 
-            (criteria.areas && criteria.areas.length > 0) || 
-            (criteria.buyerTypes && criteria.buyerTypes.length > 0) || 
-            criteria.isVIP ||
-            criteria.city ||
-            criteria.county;
+          const hasAreas = Array.isArray(criteria?.areas) && criteria.areas.length > 0;
+          const hasBuyerTypes =
+            Array.isArray(criteria?.buyerTypes) && criteria.buyerTypes.length > 0;
+          const hasCity = Array.isArray(criteria?.city)
+            ? criteria.city.length > 0
+            : Boolean(criteria?.city);
+          const hasCounty = Array.isArray(criteria?.county)
+            ? criteria.county.length > 0
+            : Boolean(criteria?.county);
+          const hasCriteriaFilters =
+            hasAreas || hasBuyerTypes || criteria?.isVIP || hasCity || hasCounty;
 
           if (hasCriteriaFilters) {
             // Build the query based on criteria
             const query = {};
 
             // Add area filter if specified
-            if (criteria.areas && criteria.areas.length > 0) {
+            if (hasAreas) {
               query.preferredAreas = {
                 hasSome: criteria.areas,
               };
             }
 
             // Add buyer type filter if specified
-            if (criteria.buyerTypes && criteria.buyerTypes.length > 0) {
+            if (hasBuyerTypes) {
               query.buyerType = {
                 in: criteria.buyerTypes,
               };
@@ -187,9 +364,13 @@ export const getAllEmailLists = asyncHandler(async (req, res) => {
 
         // Remove the buyerMemberships from the response
         const { buyerMemberships, ...listData } = list;
+        const normalizedCriteria = listData.criteria
+          ? normalizeEmailListCriteria(listData.criteria)
+          : listData.criteria;
 
         return {
           ...listData,
+          criteria: normalizedCriteria,
           buyerCount: totalCount,
         };
       })
@@ -218,6 +399,7 @@ export const getEmailList = asyncHandler(async (req, res) => {
 
   try {
     console.log("[EmailListController]:[getEmailList]:[Request]", { id });
+    await ensureEmailListLegacyFieldsNormalized();
     await ensureBuyerPreferenceFieldsNormalized();
     // Get the list with buyers through join table
     const list = await prisma.emailList.findUnique({
@@ -250,29 +432,36 @@ export const getEmailList = asyncHandler(async (req, res) => {
     // Get buyers matching criteria
     let criteriaBuyers = [];
     if (list.criteria) {
-      const criteria = JSON.parse(JSON.stringify(list.criteria));
+      const criteria = normalizeEmailListCriteria(
+        JSON.parse(JSON.stringify(list.criteria))
+      );
 
       // Check if criteria has any actual filters
-      const hasCriteriaFilters = 
-        (criteria.areas && criteria.areas.length > 0) || 
-        (criteria.buyerTypes && criteria.buyerTypes.length > 0) || 
-        criteria.isVIP ||
-        criteria.city ||
-        criteria.county;
+      const hasAreas = Array.isArray(criteria?.areas) && criteria.areas.length > 0;
+      const hasBuyerTypes =
+        Array.isArray(criteria?.buyerTypes) && criteria.buyerTypes.length > 0;
+      const hasCity = Array.isArray(criteria?.city)
+        ? criteria.city.length > 0
+        : Boolean(criteria?.city);
+      const hasCounty = Array.isArray(criteria?.county)
+        ? criteria.county.length > 0
+        : Boolean(criteria?.county);
+      const hasCriteriaFilters =
+        hasAreas || hasBuyerTypes || criteria?.isVIP || hasCity || hasCounty;
 
       if (hasCriteriaFilters) {
         // Build the query based on criteria
         const query = {};
 
         // Add area filter if specified
-        if (criteria.areas && criteria.areas.length > 0) {
+        if (hasAreas) {
           query.preferredAreas = {
             hasSome: criteria.areas,
           };
         }
 
         // Add buyer type filter if specified
-        if (criteria.buyerTypes && criteria.buyerTypes.length > 0) {
+        if (hasBuyerTypes) {
           query.buyerType = {
             in: criteria.buyerTypes,
           };
@@ -341,6 +530,9 @@ export const getEmailList = asyncHandler(async (req, res) => {
 
     // Remove buyerMemberships from response and add transformed buyers
     const { buyerMemberships, ...listData } = list;
+    const normalizedCriteria = listData.criteria
+      ? normalizeEmailListCriteria(listData.criteria)
+      : listData.criteria;
 
     console.log("[EmailListController]:[getEmailList]:[Response]", {
       id,
@@ -349,6 +541,7 @@ export const getEmailList = asyncHandler(async (req, res) => {
     });
     res.status(200).json({
       ...listData,
+      criteria: normalizedCriteria,
       buyers: buyersWithEmailLists,
       buyerCount: buyersWithEmailLists.length,
     });
@@ -699,6 +892,7 @@ export const sendEmailToList = asyncHandler(async (req, res) => {
   }
 
   try {
+    await ensureEmailListLegacyFieldsNormalized();
     // Get the list
     const list = await prisma.emailList.findUnique({
       where: { id },
@@ -723,15 +917,22 @@ export const sendEmailToList = asyncHandler(async (req, res) => {
     // Get buyers matching criteria
     let criteriaBuyers = [];
     if (list.criteria) {
-      const criteria = JSON.parse(JSON.stringify(list.criteria));
+      const criteria = normalizeEmailListCriteria(
+        JSON.parse(JSON.stringify(list.criteria))
+      );
 
       // Check if criteria has any actual filters
-      const hasCriteriaFilters = 
-        (criteria.areas && criteria.areas.length > 0) || 
-        (criteria.buyerTypes && criteria.buyerTypes.length > 0) || 
-        criteria.isVIP ||
-        criteria.city ||
-        criteria.county;
+      const hasAreas = Array.isArray(criteria?.areas) && criteria.areas.length > 0;
+      const hasBuyerTypes =
+        Array.isArray(criteria?.buyerTypes) && criteria.buyerTypes.length > 0;
+      const hasCity = Array.isArray(criteria?.city)
+        ? criteria.city.length > 0
+        : Boolean(criteria?.city);
+      const hasCounty = Array.isArray(criteria?.county)
+        ? criteria.county.length > 0
+        : Boolean(criteria?.county);
+      const hasCriteriaFilters =
+        hasAreas || hasBuyerTypes || criteria?.isVIP || hasCity || hasCounty;
 
       if (hasCriteriaFilters) {
         // Build the query based on criteria
@@ -744,14 +945,14 @@ export const sendEmailToList = asyncHandler(async (req, res) => {
         };
 
         // Add area filter if specified
-        if (criteria.areas && criteria.areas.length > 0) {
+        if (hasAreas) {
           query.preferredAreas = {
             hasSome: criteria.areas,
           };
         }
 
         // Add buyer type filter if specified
-        if (criteria.buyerTypes && criteria.buyerTypes.length > 0) {
+        if (hasBuyerTypes) {
           query.buyerType = {
             in: criteria.buyerTypes,
           };

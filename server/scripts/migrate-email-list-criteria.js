@@ -27,24 +27,92 @@ const buildCriteriaArrayUpdate = (field) => ({
   ],
 });
 
-const buildTopLevelArrayToStringUpdate = (field) => ({
+const buildCriteriaFlattenUpdate = (field) => ({
   update: "EmailList",
   updates: [
     {
-      q: { [field]: { $type: "array" } },
+      q: { [`criteria.${field}`]: { $elemMatch: { $type: "array" } } },
       u: [
         {
           $set: {
-            [field]: {
-              $cond: [
-                { $gt: [{ $size: `$${field}` }, 0] },
-                { $arrayElemAt: [`$${field}`, 0] },
-                "",
-              ],
+            [`criteria.${field}`]: {
+              $let: {
+                vars: {
+                  input: { $ifNull: [`$criteria.${field}`, []] },
+                },
+                in: {
+                  $reduce: {
+                    input: "$$input",
+                    initialValue: [],
+                    in: {
+                      $concatArrays: [
+                        "$$value",
+                        {
+                          $cond: [
+                            { $isArray: "$$this" },
+                            "$$this",
+                            ["$$this"],
+                          ],
+                        },
+                      ],
+                    },
+                  },
+                },
+              },
             },
           },
         },
       ],
+      multi: true,
+    },
+  ],
+});
+
+const buildBuyerFlattenUpdate = (field) => ({
+  update: "Buyer",
+  updates: [
+    {
+      q: { [field]: { $elemMatch: { $type: "array" } } },
+      u: [
+        {
+          $set: {
+            [field]: {
+              $let: {
+                vars: { input: { $ifNull: [`$${field}`, []] } },
+                in: {
+                  $reduce: {
+                    input: "$$input",
+                    initialValue: [],
+                    in: {
+                      $concatArrays: [
+                        "$$value",
+                        {
+                          $cond: [
+                            { $isArray: "$$this" },
+                            "$$this",
+                            ["$$this"],
+                          ],
+                        },
+                      ],
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
+      ],
+      multi: true,
+    },
+  ],
+});
+
+const buildTopLevelUnsetUpdate = (field) => ({
+  update: "EmailList",
+  updates: [
+    {
+      q: { [field]: { $exists: true } },
+      u: { $unset: { [field]: "" } },
       multi: true,
     },
   ],
@@ -62,6 +130,16 @@ const runUpdate = async (label, command) => {
     modified,
     result,
   });
+};
+
+const runCount = async (label, query) => {
+  const result = await prisma.$runCommandRaw({
+    count: "EmailList",
+    query,
+  });
+  const count = result?.n ?? result?.count ?? 0;
+  console.log(`[migrate-email-list-criteria] ${label}`, { count });
+  return count;
 };
 
 const main = async () => {
@@ -84,13 +162,79 @@ const main = async () => {
     buildCriteriaArrayUpdate("buyerTypes")
   );
 
+  await runCount("criteria.areas nested arrays", {
+    "criteria.areas": { $elemMatch: { $type: "array" } },
+  });
+  await runCount("criteria.city nested arrays", {
+    "criteria.city": { $elemMatch: { $type: "array" } },
+  });
+  await runCount("criteria.county nested arrays", {
+    "criteria.county": { $elemMatch: { $type: "array" } },
+  });
+  await runCount("criteria.buyerTypes nested arrays", {
+    "criteria.buyerTypes": { $elemMatch: { $type: "array" } },
+  });
+
   await runUpdate(
-    "preferredCity array -> string",
-    buildTopLevelArrayToStringUpdate("preferredCity")
+    "criteria.areas flatten",
+    buildCriteriaFlattenUpdate("areas")
   );
   await runUpdate(
-    "preferredCounty array -> string",
-    buildTopLevelArrayToStringUpdate("preferredCounty")
+    "criteria.city flatten",
+    buildCriteriaFlattenUpdate("city")
+  );
+  await runUpdate(
+    "criteria.county flatten",
+    buildCriteriaFlattenUpdate("county")
+  );
+  await runUpdate(
+    "criteria.buyerTypes flatten",
+    buildCriteriaFlattenUpdate("buyerTypes")
+  );
+
+  await runCount("Buyer preferredAreas nested arrays", {
+    preferredAreas: { $elemMatch: { $type: "array" } },
+  });
+  await runCount("Buyer preferredCity nested arrays", {
+    preferredCity: { $elemMatch: { $type: "array" } },
+  });
+  await runCount("Buyer preferredCounty nested arrays", {
+    preferredCounty: { $elemMatch: { $type: "array" } },
+  });
+
+  await runUpdate(
+    "Buyer preferredAreas flatten",
+    buildBuyerFlattenUpdate("preferredAreas")
+  );
+  await runUpdate(
+    "Buyer preferredCity flatten",
+    buildBuyerFlattenUpdate("preferredCity")
+  );
+  await runUpdate(
+    "Buyer preferredCounty flatten",
+    buildBuyerFlattenUpdate("preferredCounty")
+  );
+
+  await runCount("EmailList preferredCity present", {
+    preferredCity: { $exists: true },
+  });
+  await runCount("EmailList preferredCounty present", {
+    preferredCounty: { $exists: true },
+  });
+  await runCount("EmailList preferredCity or preferredCounty present", {
+    $or: [
+      { preferredCity: { $exists: true } },
+      { preferredCounty: { $exists: true } },
+    ],
+  });
+
+  await runUpdate(
+    "preferredCity unset",
+    buildTopLevelUnsetUpdate("preferredCity")
+  );
+  await runUpdate(
+    "preferredCounty unset",
+    buildTopLevelUnsetUpdate("preferredCounty")
   );
 
   console.log("[migrate-email-list-criteria] Done");
