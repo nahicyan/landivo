@@ -7,12 +7,21 @@ import { handleVipBuyerEmailList } from "../services/buyer/vipBuyerEmailListServ
 const normalizeValue = (value) => String(value || "").trim();
 
 const normalizeList = (value) => {
-  if (!value) return [];
-  if (Array.isArray(value)) {
-    return value.map(normalizeValue).filter(Boolean);
-  }
-  const normalized = normalizeValue(value);
-  return normalized ? [normalized] : [];
+  const collected = [];
+  const collect = (entry) => {
+    if (Array.isArray(entry)) {
+      entry.forEach(collect);
+      return;
+    }
+    if (entry === null || entry === undefined) return;
+    const trimmed = normalizeValue(entry);
+    if (trimmed) {
+      collected.push(trimmed);
+    }
+  };
+
+  collect(value);
+  return collected;
 };
 
 const mergeUnique = (existing, incoming) => {

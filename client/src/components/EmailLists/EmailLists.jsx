@@ -34,6 +34,9 @@ const isGeneratedList = (list) => {
 const createDefaultBuyerFilters = () => ({
   mode: "and",
   rules: [],
+  searchQuery: "",
+  preferredCity: [],
+  preferredCounty: [],
   advanced: { enabled: false, groups: [] }
 });
 
@@ -43,10 +46,42 @@ const normalizeWhitespace = (value) =>
     .replace(/\s+/g, " ");
 
 const normalizeAreaValue = (value) => normalizeWhitespace(value).toLowerCase();
+const normalizeLocationValue = (value) => normalizeWhitespace(value).toLowerCase();
 
 const normalizeRuleValues = (values) => {
   if (!Array.isArray(values)) return [];
   return values.map((value) => normalizeWhitespace(value)).filter(Boolean);
+};
+
+const normalizeLocationValues = (value) => {
+  const collected = [];
+  const collect = (entry) => {
+    if (Array.isArray(entry)) {
+      entry.forEach(collect);
+      return;
+    }
+    if (entry === null || entry === undefined) return;
+    const trimmed = normalizeLocationValue(entry);
+    if (trimmed) collected.push(trimmed);
+  };
+
+  collect(value);
+  return collected;
+};
+
+const matchesListSearch = (list, rawQuery) => {
+  const query = normalizeWhitespace(rawQuery).toLowerCase();
+  if (!query) return true;
+  const name = String(list?.name || "").toLowerCase();
+  return name.includes(query);
+};
+
+const matchesPreferredLocation = (listValue, filterValues) => {
+  const normalizedFilter = normalizeLocationValues(filterValues);
+  if (normalizedFilter.length === 0) return true;
+  const normalizedList = normalizeLocationValues(listValue);
+  if (normalizedList.length === 0) return false;
+  return normalizedFilter.some((value) => normalizedList.includes(value));
 };
 
 const evaluateListRule = (list, rule) => {
@@ -111,15 +146,27 @@ const filterListsByBuyerFilters = (lists, filters) => {
     if (groups.length === 0) return lists;
 
     return lists.filter((list) =>
-      groups.some((group) =>
-        evaluateListRules(list, group?.rules, group?.mode)
-      )
+      groups.some((group) => {
+        const criteria = list?.criteria || {};
+        return (
+          evaluateListRules(list, group?.rules, group?.mode) &&
+          matchesListSearch(list, group?.searchQuery) &&
+          matchesPreferredLocation(criteria.city, group?.preferredCity) &&
+          matchesPreferredLocation(criteria.county, group?.preferredCounty)
+        );
+      })
     );
   }
 
-  return lists.filter((list) =>
-    evaluateListRules(list, filters?.rules, filters?.mode)
-  );
+  return lists.filter((list) => {
+    const criteria = list?.criteria || {};
+    return (
+      evaluateListRules(list, filters?.rules, filters?.mode) &&
+      matchesListSearch(list, filters?.searchQuery) &&
+      matchesPreferredLocation(criteria.city, filters?.preferredCity) &&
+      matchesPreferredLocation(criteria.county, filters?.preferredCounty)
+    );
+  });
 };
 
 export default function EmailLists() {
@@ -201,6 +248,22 @@ export default function EmailLists() {
   const buyerFilteredBaseLists = useMemo(() => (
     useBuyerFilters ? filterListsByBuyerFilters(baseFilteredLists, buyerFilters) : baseFilteredLists
   ), [baseFilteredLists, buyerFilters, useBuyerFilters]);
+
+  const locationOptions = useMemo(() => {
+    const citySet = new Set();
+    const countySet = new Set();
+
+    lists.forEach((list) => {
+      const criteria = list?.criteria || {};
+      normalizeLocationValues(criteria.city).forEach((city) => citySet.add(city));
+      normalizeLocationValues(criteria.county).forEach((county) => countySet.add(county));
+    });
+
+    return {
+      cities: Array.from(citySet).sort((a, b) => a.localeCompare(b)),
+      counties: Array.from(countySet).sort((a, b) => a.localeCompare(b))
+    };
+  }, [lists]);
 
   const sourceOptions = useMemo(() => {
     const sources = new Set();
@@ -549,6 +612,8 @@ export default function EmailLists() {
           onUseBuyerFiltersChange={setUseBuyerFilters}
           buyerFilters={buyerFilters}
           onBuyerFiltersChange={setBuyerFilters}
+          preferredCityOptions={locationOptions.cities}
+          preferredCountyOptions={locationOptions.counties}
           onNewList={handleNewList}
           onEditList={handleEditList}
           onEmailList={handleEmailList}
