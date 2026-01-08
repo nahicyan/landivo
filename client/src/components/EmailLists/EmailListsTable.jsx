@@ -1,10 +1,8 @@
 import React from "react";
 import {
   CardContent,
-  CardDescription,
   CardHeader,
   CardTitle,
-  CardFooter,
 } from "@/components/ui/card";
 import {
   Table,
@@ -20,6 +18,7 @@ import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import {
   Select,
   SelectContent,
@@ -28,6 +27,8 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { 
+  Check,
+  ChevronsUpDown,
   Search, 
   Mail, 
   PlusCircle, 
@@ -56,6 +57,8 @@ export default function EmailListsTable({
   onUseBuyerFiltersChange = () => {},
   buyerFilters,
   onBuyerFiltersChange = () => {},
+  preferredCityOptions = [],
+  preferredCountyOptions = [],
   onNewList, 
   onEditList, 
   onEmailList, 
@@ -66,6 +69,9 @@ export default function EmailListsTable({
   const filters = buyerFilters || {
     mode: "and",
     rules: [],
+    searchQuery: "",
+    preferredCity: [],
+    preferredCounty: [],
     advanced: { enabled: false, groups: [] }
   };
 
@@ -78,10 +84,18 @@ export default function EmailListsTable({
     "Wholesaler"
   ];
 
+  const preferredAreaOptions = [
+    "DFW",
+    "Austin",
+    "Houston",
+    "San Antonio",
+    "Other Areas"
+  ];
+
   const matchOptions = [
-    { value: "contains-any", label: "Contains any" },
-    { value: "contains-all", label: "Contains all" },
-    { value: "exact", label: "Exact match" }
+    { value: "exact", label: "Exact Match" },
+    { value: "contains-any", label: "Match Any" },
+    { value: "contains-all", label: "Match All" }
   ];
 
   const baseRules = Array.isArray(filters.rules) ? filters.rules : [];
@@ -123,6 +137,20 @@ export default function EmailListsTable({
   const baseBuyerTypes = Array.isArray(baseBuyerTypeRule.value) ? baseBuyerTypeRule.value : [];
   const basePreferredAreas = Array.isArray(basePreferredAreasRule.value) ? basePreferredAreasRule.value : [];
   const baseMatch = basePreferredAreasRule.match || "contains-any";
+  const normalizeSelection = (value) => {
+    if (Array.isArray(value)) {
+      return value.map((entry) => String(entry).trim()).filter(Boolean);
+    }
+    if (typeof value === "string") {
+      const trimmed = value.trim();
+      return trimmed ? [trimmed] : [];
+    }
+    return [];
+  };
+
+  const baseSearchQuery = filters.searchQuery || "";
+  const basePreferredCity = normalizeSelection(filters.preferredCity);
+  const basePreferredCounty = normalizeSelection(filters.preferredCounty);
 
   const toggleBuyerType = (type, checked) => {
     const nextValues = checked
@@ -138,11 +166,10 @@ export default function EmailListsTable({
     updateFilters({ ...filters, rules: nextRules });
   };
 
-  const updatePreferredAreas = (raw) => {
-    const nextValues = raw
-      .split(",")
-      .map((value) => value.trim())
-      .filter(Boolean);
+  const togglePreferredArea = (area, checked) => {
+    const nextValues = checked
+      ? [...basePreferredAreas, area]
+      : basePreferredAreas.filter((value) => value !== area);
 
     const nextRules = upsertRule(baseRules, {
       field: "preferredAreas",
@@ -165,6 +192,18 @@ export default function EmailListsTable({
     updateFilters({ ...filters, rules: nextRules });
   };
 
+  const updateSearchQuery = (value) => {
+    updateFilters({ ...filters, searchQuery: value });
+  };
+
+  const updatePreferredCity = (value) => {
+    updateFilters({ ...filters, preferredCity: value });
+  };
+
+  const updatePreferredCounty = (value) => {
+    updateFilters({ ...filters, preferredCounty: value });
+  };
+
   const toggleAdvanced = (enabled) => {
     updateFilters({
       ...filters,
@@ -178,7 +217,13 @@ export default function EmailListsTable({
 
   const updateGroupAt = (index, updater) => {
     const nextGroups = [...advancedGroups];
-    const current = nextGroups[index] || { mode: "and", rules: [] };
+    const current = nextGroups[index] || {
+      mode: "and",
+      rules: [],
+      searchQuery: "",
+      preferredCity: [],
+      preferredCounty: []
+    };
     nextGroups[index] = updater(current);
     updateFilters({
       ...filters,
@@ -196,7 +241,10 @@ export default function EmailListsTable({
       advanced: {
         ...filters.advanced,
         enabled: true,
-        groups: [...advancedGroups, { mode: "and", rules: [] }]
+        groups: [
+          ...advancedGroups,
+          { mode: "and", rules: [], searchQuery: "", preferredCity: [], preferredCounty: [] }
+        ]
       }
     });
   };
@@ -227,12 +275,7 @@ export default function EmailListsTable({
     }));
   };
 
-  const updateGroupPreferredAreas = (index, raw) => {
-    const nextValues = raw
-      .split(",")
-      .map((value) => value.trim())
-      .filter(Boolean);
-
+  const updateGroupPreferredAreas = (index, values) => {
     const match =
       getGroupRule(advancedGroups[index], "preferredAreas")?.match || "contains-any";
 
@@ -241,7 +284,7 @@ export default function EmailListsTable({
       rules: upsertRule(group.rules || [], {
         field: "preferredAreas",
         op: "preferredAreas",
-        value: nextValues,
+        value: values,
         match
       })
     }));
@@ -257,6 +300,150 @@ export default function EmailListsTable({
         value: currentRule?.value || [],
         match: value
       })
+    }));
+  };
+
+  const MultiSelect = ({
+    options,
+    value,
+    onChange,
+    placeholder
+  }) => {
+    const [open, setOpen] = React.useState(false);
+    const [query, setQuery] = React.useState("");
+
+    const toggleOption = (option) => {
+      if (value.includes(option)) {
+        onChange(value.filter((item) => item !== option));
+      } else {
+        onChange([...value, option]);
+      }
+    };
+
+    const handleOpenChange = (nextOpen) => {
+      setOpen(nextOpen);
+      if (!nextOpen) {
+        setQuery("");
+      }
+    };
+
+    const handleRemove = (option, event) => {
+      event.stopPropagation();
+      onChange(value.filter((item) => item !== option));
+    };
+
+    const filteredOptions = options.filter((option) =>
+      option.toLowerCase().includes(query.trim().toLowerCase())
+    );
+
+    const searchLabel = String(placeholder || "").replace(/^Select\s+/i, "").trim();
+    const searchPlaceholder = searchLabel
+      ? `Search ${searchLabel.toLowerCase()}...`
+      : "Search...";
+
+    return (
+      <Popover open={open} onOpenChange={handleOpenChange}>
+        <PopoverTrigger asChild>
+          <div className="relative">
+            <div
+              role="button"
+              tabIndex={0}
+              className={`w-full flex min-h-10 px-3 py-2 text-left border rounded-md focus:outline-none focus:ring-1 focus:ring-[#324c48] border-gray-300 ${
+                !value.length ? "text-gray-400" : ""
+              }`}
+              aria-expanded={open}
+              onKeyDown={(event) => {
+                if (event.key === "Enter" || event.key === " ") {
+                  event.preventDefault();
+                  setOpen((prev) => !prev);
+                }
+              }}
+            >
+              <div className="flex flex-wrap gap-1 overflow-hidden">
+                {value.length > 0 ? (
+                  value.map((item) => (
+                    <Badge
+                      key={item}
+                      variant="secondary"
+                      className="bg-gray-100 text-gray-800 mr-1 mb-1"
+                    >
+                      {item}
+                      <button
+                        type="button"
+                        className="ml-1 hover:text-gray-600"
+                        onClick={(event) => handleRemove(item, event)}
+                        aria-label={`Remove ${item}`}
+                      >
+                        <X className="h-3 w-3" />
+                      </button>
+                    </Badge>
+                  ))
+                ) : (
+                  <span>{placeholder}</span>
+                )}
+              </div>
+
+              <div className="absolute right-3 top-3">
+                <ChevronsUpDown className="h-4 w-4 text-gray-500" />
+              </div>
+            </div>
+          </div>
+        </PopoverTrigger>
+
+        <PopoverContent className="w-[--radix-popover-trigger-width] p-2" align="start">
+          <div className="space-y-2">
+            <Input
+              type="text"
+              value={query}
+              onChange={(event) => setQuery(event.target.value)}
+              placeholder={searchPlaceholder}
+              className="h-8"
+            />
+          </div>
+          <div className="mt-2 max-h-60 overflow-auto space-y-1">
+            {filteredOptions.length === 0 ? (
+              <p className="px-2 py-1 text-xs text-gray-500">No options available.</p>
+            ) : (
+              filteredOptions.map((option) => (
+                <button
+                  type="button"
+                  key={option}
+                  onClick={() => toggleOption(option)}
+                  className="flex w-full items-center gap-2 rounded-md px-2 py-1 text-left text-sm text-gray-700 hover:bg-gray-50"
+                >
+                  <Check
+                    className={`h-4 w-4 text-[#324c48] ${
+                      value.includes(option) ? "opacity-100" : "opacity-0"
+                    }`}
+                  />
+                  <span>{option}</span>
+                </button>
+              ))
+            )}
+          </div>
+        </PopoverContent>
+      </Popover>
+    );
+  };
+
+  const updateGroupSearchQuery = (index, value) => {
+    updateGroupAt(index, (group) => ({
+      ...group,
+      searchQuery: value
+    }));
+  };
+
+  const updateGroupPreferredCity = (index, value) => {
+    updateGroupAt(index, (group) => ({
+      ...group,
+      preferredCity: value
+    }));
+  };
+
+  const updateGroupPreferredCounty = (index, value) => {
+    updateGroupAt(index, (group) => ({
+      ...group,
+      preferredCounty: value
     }));
   };
 
@@ -394,6 +581,20 @@ export default function EmailListsTable({
                 {!advancedEnabled && (
                   <div className="space-y-4">
                     <div className="space-y-2">
+                      <Label>Search by name</Label>
+                      <div className="relative">
+                        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                        <Input
+                          type="text"
+                          placeholder="Search by name..."
+                          value={baseSearchQuery}
+                          onChange={(e) => updateSearchQuery(e.target.value)}
+                          className="pl-10"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="space-y-2">
                       <Label>Buyer Types</Label>
                       <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
                         {buyerTypeOptions.map((type) => {
@@ -415,11 +616,22 @@ export default function EmailListsTable({
 
                     <div className="space-y-2">
                       <Label>Preferred Areas</Label>
-                      <Input
-                        placeholder="Dallas, Plano, Austin"
-                        value={basePreferredAreas.join(", ")}
-                        onChange={(e) => updatePreferredAreas(e.target.value)}
-                      />
+                      <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                        {preferredAreaOptions.map((area) => {
+                          const checked = basePreferredAreas.includes(area);
+                          return (
+                            <label key={area} className="flex items-center gap-2 text-sm">
+                              <Checkbox
+                                checked={checked}
+                                onCheckedChange={(value) =>
+                                  togglePreferredArea(area, Boolean(value))
+                                }
+                              />
+                              <span>{area}</span>
+                            </label>
+                          );
+                        })}
+                      </div>
                       <div className="flex flex-col sm:flex-row gap-2 sm:items-center">
                         <Label className="text-sm text-gray-600">Match mode</Label>
                         <Select
@@ -439,6 +651,27 @@ export default function EmailListsTable({
                         </Select>
                       </div>
                     </div>
+
+                    <div className="grid gap-3 sm:grid-cols-2">
+                      <div className="space-y-2">
+                        <Label>Preferred City</Label>
+                        <MultiSelect
+                          options={preferredCityOptions}
+                          value={basePreferredCity}
+                          onChange={updatePreferredCity}
+                          placeholder="Select cities"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Preferred County</Label>
+                        <MultiSelect
+                          options={preferredCountyOptions}
+                          value={basePreferredCounty}
+                          onChange={updatePreferredCounty}
+                          placeholder="Select counties"
+                        />
+                      </div>
+                    </div>
                   </div>
                 )}
 
@@ -454,10 +687,21 @@ export default function EmailListsTable({
                     </p>
 
                     {advancedGroups.map((group, index) => {
-                      const groupBuyerTypes = getGroupRule(group, "buyerType")?.value || [];
-                      const groupPreferredAreas = getGroupRule(group, "preferredAreas")?.value || [];
+                      const groupBuyerTypes = Array.isArray(
+                        getGroupRule(group, "buyerType")?.value
+                      )
+                        ? getGroupRule(group, "buyerType")?.value
+                        : [];
+                      const groupPreferredAreas = Array.isArray(
+                        getGroupRule(group, "preferredAreas")?.value
+                      )
+                        ? getGroupRule(group, "preferredAreas")?.value
+                        : [];
                       const groupMatch =
                         getGroupRule(group, "preferredAreas")?.match || "contains-any";
+                      const groupSearchQuery = group?.searchQuery || "";
+                      const groupPreferredCity = normalizeSelection(group?.preferredCity);
+                      const groupPreferredCounty = normalizeSelection(group?.preferredCounty);
 
                       return (
                         <div key={`group-${index}`} className="rounded-md border p-3 space-y-3">
@@ -471,6 +715,22 @@ export default function EmailListsTable({
                             >
                               Remove
                             </Button>
+                          </div>
+
+                          <div className="space-y-2">
+                            <Label>Search by name</Label>
+                            <div className="relative">
+                              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                              <Input
+                                type="text"
+                                placeholder="Search by name..."
+                                value={groupSearchQuery}
+                                onChange={(e) =>
+                                  updateGroupSearchQuery(index, e.target.value)
+                                }
+                                className="pl-10"
+                              />
+                            </div>
                           </div>
 
                           <div className="space-y-2">
@@ -498,15 +758,25 @@ export default function EmailListsTable({
 
                           <div className="space-y-2">
                             <Label>Preferred Areas</Label>
-                            <Input
-                              placeholder="Dallas, Plano, Austin"
-                              value={
-                                Array.isArray(groupPreferredAreas)
-                                  ? groupPreferredAreas.join(", ")
-                                  : ""
-                              }
-                              onChange={(e) => updateGroupPreferredAreas(index, e.target.value)}
-                            />
+                            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                              {preferredAreaOptions.map((area) => {
+                                const checked = groupPreferredAreas.includes(area);
+                                return (
+                                  <label key={area} className="flex items-center gap-2 text-sm">
+                                    <Checkbox
+                                      checked={checked}
+                                      onCheckedChange={(value) => {
+                                        const nextValues = Boolean(value)
+                                          ? [...groupPreferredAreas, area]
+                                          : groupPreferredAreas.filter((v) => v !== area);
+                                        updateGroupPreferredAreas(index, nextValues);
+                                      }}
+                                    />
+                                    <span>{area}</span>
+                                  </label>
+                                );
+                              })}
+                            </div>
                             <div className="flex flex-col sm:flex-row gap-2 sm:items-center">
                               <Label className="text-sm text-gray-600">Match mode</Label>
                               <Select
@@ -526,6 +796,27 @@ export default function EmailListsTable({
                                   ))}
                                 </SelectContent>
                               </Select>
+                            </div>
+                          </div>
+
+                          <div className="grid gap-3 sm:grid-cols-2">
+                            <div className="space-y-2">
+                              <Label>Preferred City</Label>
+                              <MultiSelect
+                                options={preferredCityOptions}
+                                value={groupPreferredCity}
+                                onChange={(value) => updateGroupPreferredCity(index, value)}
+                                placeholder="Select cities"
+                              />
+                            </div>
+                            <div className="space-y-2">
+                              <Label>Preferred County</Label>
+                              <MultiSelect
+                                options={preferredCountyOptions}
+                                value={groupPreferredCounty}
+                                onChange={(value) => updateGroupPreferredCounty(index, value)}
+                                placeholder="Select counties"
+                              />
                             </div>
                           </div>
                         </div>

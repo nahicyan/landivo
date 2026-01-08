@@ -1059,6 +1059,10 @@ function normalizeAreaValue(value) {
   return normalizeWhitespace(value).toLowerCase();
 }
 
+function normalizeLocationValue(value) {
+  return normalizeWhitespace(value).toLowerCase();
+}
+
 function normalizeRuleValues(values) {
   if (!Array.isArray(values)) return [];
   return values.map((value) => normalizeWhitespace(value)).filter(Boolean);
@@ -1146,6 +1150,37 @@ function evaluateBuyerRules(buyer, rules, mode) {
   return normalizedMode === "and" ? results.every(Boolean) : results.some(Boolean);
 }
 
+function normalizeLocationList(values) {
+  if (!Array.isArray(values)) return [];
+  return values
+    .map((value) => normalizeLocationValue(value))
+    .filter(Boolean);
+}
+
+function matchesPreferredLocation(buyerValues, filterValues) {
+  const normalizedFilter = normalizeLocationList(filterValues);
+  if (normalizedFilter.length === 0) return true;
+
+  const normalizedBuyer = normalizeLocationList(buyerValues);
+  if (normalizedBuyer.length === 0) return false;
+
+  return normalizedFilter.some((value) => normalizedBuyer.includes(value));
+}
+
+function evaluateBuyerGroup(buyer, group) {
+  if (!group) return true;
+  const rulesMatch = evaluateBuyerRules(buyer, group?.rules, group?.mode);
+  const cityMatch = matchesPreferredLocation(
+    buyer?.preferredCity,
+    group?.preferredCity
+  );
+  const countyMatch = matchesPreferredLocation(
+    buyer?.preferredCounty,
+    group?.preferredCounty
+  );
+  return rulesMatch && cityMatch && countyMatch;
+}
+
 function filterBuyersByFilters(buyers, filters) {
   if (!filters) return buyers;
 
@@ -1158,14 +1193,14 @@ function filterBuyersByFilters(buyers, filters) {
     if (groups.length === 0) return buyers;
 
     return buyers.filter((buyer) =>
-      groups.some((group) =>
-        evaluateBuyerRules(buyer, group?.rules, group?.mode)
-      )
+      groups.some((group) => evaluateBuyerGroup(buyer, group))
     );
   }
 
   return buyers.filter((buyer) =>
-    evaluateBuyerRules(buyer, filters?.rules, filters?.mode)
+    evaluateBuyerRules(buyer, filters?.rules, filters?.mode) &&
+    matchesPreferredLocation(buyer?.preferredCity, filters?.preferredCity) &&
+    matchesPreferredLocation(buyer?.preferredCounty, filters?.preferredCounty)
   );
 }
 
@@ -1191,6 +1226,8 @@ export const previewEmailListRecipients = asyncHandler(async (req, res) => {
         lastName: true,
         buyerType: true,
         preferredAreas: true,
+        preferredCity: true,
+        preferredCounty: true,
         emailStatus: true,
         emailPermissionStatus: true,
       },
