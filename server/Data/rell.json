@@ -14,9 +14,9 @@
         "image": "https://example.com/janesmith.jpg"
       }
     ],
-    "residencies": [
+    "properties": [
       {
-        "id": "residency1",
+        "id": "property1",
         "ownerId": 1,
         "title": "Modern Apartment",
         "description": "A beautiful modern apartment in the heart of the city.",
@@ -54,7 +54,7 @@
         "notes": "Close to public transport."
       },
       {
-        "id": "residency2",
+        "id": "property2",
         "ownerId": 2,
         "title": "Luxury Villa",
         "description": "A spacious luxury villa with a private pool and garden.",
@@ -103,12 +103,12 @@
         "lastName": "Johnson",
         "offers": [
           {
-            "propertyId": "residency1",
+            "propertyId": "property1",
             "offeredPrice": 480000,
             "timestamp": "2024-12-31T12:00:00Z"
           },
           {
-            "propertyId": "residency2",
+            "propertyId": "property2",
             "offeredPrice": 1150000,
             "timestamp": "2024-12-31T15:00:00Z"
           }
@@ -123,7 +123,7 @@
         "lastName": "Williams",
         "offers": [
           {
-            "propertyId": "residency2",
+            "propertyId": "property2",
             "offeredPrice": 1180000,
             "timestamp": "2024-12-31T16:00:00Z"
           }

@@ -1,8 +1,15 @@
 // server/controllers/qualificationCntrl.js
 import asyncHandler from "express-async-handler";
-import { prisma } from "../config/prismaConfig.js";
 import nodemailer from "nodemailer";
+import mongoose from "../config/mongoose.js";
+import { connectMongo } from "../config/mongoose.js";
+import { Buyer, Qualification, Property, Settings } from "../models/index.js";
 import { handleFinanceQualificationEmailList } from "../services/qualification/financeQualificationEmailListService.js";
+
+const toObjectId = (value) => {
+  if (!value || !mongoose.Types.ObjectId.isValid(value)) return null;
+  return new mongoose.Types.ObjectId(value);
+};
 
 // Create a new qualification entry
 export const createQualification = asyncHandler(async (req, res) => {
@@ -51,6 +58,7 @@ export const createQualification = asyncHandler(async (req, res) => {
     } = req.body;
 
     // Find or create buyer
+    await connectMongo();
     const buyer = await findOrCreateBuyer({
       email,
       phone,
@@ -90,60 +98,60 @@ export const createQualification = asyncHandler(async (req, res) => {
     }
 
     // Create a new qualification entry
-    const qualification = await prisma.qualification.create({
-      data: {
-        propertyId,
-        ownerId: ownerId ? parseInt(ownerId) : null,
-        propertyPrice: parseFloat(propertyPrice),
-        loanAmount: loanAmount ? parseFloat(loanAmount) : null,
-        interestRate: interestRate ? parseFloat(interestRate) : null,
-        monthlyPayment: monthlyPayment ? parseFloat(monthlyPayment) : null,
-        downPayment: downPayment ? parseFloat(downPayment) : null,
-        term: term ? parseInt(term) : null,
-        
-        // Survey data
-        language,
-        homeUsage,
-        realEstateAgent,
-        homePurchaseTiming,
-        currentHomeOwnership,
-        currentOnAllPayments,
-        employmentStatus,
-        verifyIncome,
-        incomeHistory,
-        openCreditLines,
-        totalMonthlyPayments: totalMonthlyPayments ? parseFloat(totalMonthlyPayments) : null,
-        grossAnnualIncome,
-        foreclosureForbearance,
-        declaredBankruptcy,
-        currentCreditScore,
-        liensOrJudgments,
-        
-        // Personal info
-        firstName,
-        lastName,
-        email,
-        phone,
-        
-        // Status
-        qualified,
-        disqualificationReason: disqualifiers.length > 0 ? disqualifiers.join(", ") : null,
-        
-        // Property info
-        propertyAddress,
-        propertyCity,
-        propertyState,
-        propertyZip,
-      }
+    const qualification = await Qualification.create({
+      propertyId,
+      ownerId: ownerId ? parseInt(ownerId) : null,
+      propertyPrice: parseFloat(propertyPrice),
+      loanAmount: loanAmount ? parseFloat(loanAmount) : null,
+      interestRate: interestRate ? parseFloat(interestRate) : null,
+      monthlyPayment: monthlyPayment ? parseFloat(monthlyPayment) : null,
+      downPayment: downPayment ? parseFloat(downPayment) : null,
+      term: term ? parseInt(term) : null,
+
+      // Survey data
+      language,
+      homeUsage,
+      realEstateAgent,
+      homePurchaseTiming,
+      currentHomeOwnership,
+      currentOnAllPayments,
+      employmentStatus,
+      verifyIncome,
+      incomeHistory,
+      openCreditLines,
+      totalMonthlyPayments: totalMonthlyPayments ? parseFloat(totalMonthlyPayments) : null,
+      grossAnnualIncome,
+      foreclosureForbearance,
+      declaredBankruptcy,
+      currentCreditScore,
+      liensOrJudgments,
+
+      // Personal info
+      firstName,
+      lastName,
+      email,
+      phone,
+
+      // Status
+      qualified,
+      disqualificationReason: disqualifiers.length > 0 ? disqualifiers.join(", ") : null,
+
+      // Property info
+      propertyAddress,
+      propertyCity,
+      propertyState,
+      propertyZip,
     });
 
     // Handle finance qualification email list management
     try {
       // Get property data - using AREA field, not city
-      const property = await prisma.residency.findUnique({
-        where: { id: propertyId },
-        select: { area: true, city: true, state: true, id: true }
-      });
+      const propertyObjectId = toObjectId(propertyId);
+      const property = propertyObjectId
+        ? await Property.findById(propertyObjectId)
+            .select("area city state")
+            .lean()
+        : null;
 
       if (property && buyer) {
         const emailListResult = await handleFinanceQualificationEmailList(
@@ -164,10 +172,13 @@ export const createQualification = asyncHandler(async (req, res) => {
     // Return success response
     res.status(201).json({
       message: "Qualification submitted successfully",
-      qualification,
+      qualification: {
+        ...(qualification?.toObject ? qualification.toObject() : qualification),
+        id: String(qualification._id),
+      },
       qualified,
       buyer: {
-        id: buyer.id,
+        id: String(buyer._id),
         firstName: buyer.firstName,
         lastName: buyer.lastName,
         email: buyer.email
@@ -195,9 +206,7 @@ async function findOrCreateBuyer(buyerData) {
   // First try to find buyer by Auth0 ID if provided
   if (auth0Id) {
     console.log(`Attempting to find buyer by Auth0 ID: ${auth0Id}`);
-    buyer = await prisma.buyer.findFirst({
-      where: { auth0Id }
-    });
+    buyer = await Buyer.findOne({ auth0Id });
     
     // If found by Auth0 ID, return early
     if (buyer) {
@@ -209,10 +218,8 @@ async function findOrCreateBuyer(buyerData) {
   
   // If not found by Auth0 ID, try email or phone
   console.log(`Attempting to find buyer by email: ${email} or phone: ${phone}`);
-  buyer = await prisma.buyer.findFirst({
-    where: {
-      OR: [{ email: email.toLowerCase() }, { phone }],
-    },
+  buyer = await Buyer.findOne({
+    $or: [{ email: email.toLowerCase() }, { phone }],
   });
 
   if (buyer) {
@@ -222,27 +229,22 @@ async function findOrCreateBuyer(buyerData) {
     // If buyer found by email/phone but doesn't have Auth0 ID, update with Auth0 ID
     if (auth0Id && !buyer.auth0Id) {
       console.log(`Updating existing buyer (${buyer.id}) with Auth0 ID: ${auth0Id}`);
-      buyer = await prisma.buyer.update({
-        where: { id: buyer.id },
-        data: { auth0Id }
-      });
+      buyer = await Buyer.findByIdAndUpdate(buyer._id, { auth0Id }, { new: true });
     }
   } else {
     // Create a new buyer if not found
     console.log(`No existing buyer found. Creating new buyer with email: ${email}, phone: ${phone}${auth0Id ? `, auth0Id: ${auth0Id}` : ''}`);
-    buyer = await prisma.buyer.create({
-      data: {
-        email: email.toLowerCase(),
-        phone,
-        buyerType,
-        firstName,
-        lastName,
-        source: "Qualification Lead",
-        preferredAreas: [],
-        preferredCity: [],
-        preferredCounty: [],
-        auth0Id: auth0Id || null
-      },
+    buyer = await Buyer.create({
+      email: email.toLowerCase(),
+      phone,
+      buyerType,
+      firstName,
+      lastName,
+      source: "Qualification Lead",
+      preferredAreas: [],
+      preferredCity: [],
+      preferredCounty: [],
+      auth0Id: auth0Id || null,
     });
     buyerFoundMethod = 'created';
     console.log(`New buyer created with ID: ${buyer.id}`);
@@ -256,12 +258,17 @@ export const getQualificationsForProperty = asyncHandler(async (req, res) => {
   const { propertyId } = req.params;
   
   try {
-    const qualifications = await prisma.qualification.findMany({
-      where: { propertyId },
-      orderBy: { createdAt: 'desc' }
-    });
+    await connectMongo();
+    const qualifications = await Qualification.find({ propertyId })
+      .sort({ createdAt: -1 })
+      .lean();
     
-    res.status(200).json(qualifications);
+    res.status(200).json(
+      qualifications.map((qualification) => ({
+        id: String(qualification._id),
+        ...qualification,
+      }))
+    );
   } catch (error) {
     console.error("Error fetching qualifications:", error);
     res.status(500).json({
@@ -287,6 +294,7 @@ export const getAllQualifications = asyncHandler(async (req, res) => {
   
   try {
     // Build filter object
+    await connectMongo();
     const where = {};
     
     // Add qualification filter if provided
@@ -296,28 +304,31 @@ export const getAllQualifications = asyncHandler(async (req, res) => {
     
     // Add search functionality
     if (search) {
-      where.OR = [
-        { firstName: { contains: search, mode: 'insensitive' } },
-        { lastName: { contains: search, mode: 'insensitive' } },
-        { email: { contains: search, mode: 'insensitive' } },
-        { phone: { contains: search, mode: 'insensitive' } },
-        { propertyAddress: { contains: search, mode: 'insensitive' } },
+      const regex = new RegExp(search, 'i');
+      where.$or = [
+        { firstName: regex },
+        { lastName: regex },
+        { email: regex },
+        { phone: regex },
+        { propertyAddress: regex },
       ];
     }
     
     // Get total count for pagination
-    const totalCount = await prisma.qualification.count({ where });
+    const totalCount = await Qualification.countDocuments(where);
     
     // Get data with sorting
-    const qualifications = await prisma.qualification.findMany({
-      where,
-      skip,
-      take,
-      orderBy: { [sortBy]: sortOrder.toLowerCase() }
-    });
+    const qualifications = await Qualification.find(where)
+      .sort({ [sortBy]: sortOrder.toLowerCase() === 'asc' ? 1 : -1 })
+      .skip(skip)
+      .limit(take)
+      .lean();
     
     res.status(200).json({
-      qualifications,
+      qualifications: qualifications.map((qualification) => ({
+        id: String(qualification._id),
+        ...qualification,
+      })),
       pagination: {
         totalCount,
         page: parseInt(page),
@@ -338,7 +349,8 @@ export const getAllQualifications = asyncHandler(async (req, res) => {
 async function sendQualificationEmail(qualification) {
   try {
     // Get system settings to check if financing emails are enabled
-    const settings = await prisma.settings.findFirst();
+    await connectMongo();
+    const settings = await Settings.findOne().lean();
     
     // If settings don't exist or financing emails are disabled, skip sending
     if (!settings || !settings.enableFinancingEmails) {

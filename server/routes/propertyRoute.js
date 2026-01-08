@@ -1,14 +1,14 @@
-// server/routes/residencyRoute.js
+// server/routes/propertyRoute.js
 import express from 'express';
 import { 
-    getAllResidencies, 
-    getResidency, 
-    updateResidency, 
-    getResidencyImages,
-    getResidencyVideos, // New function to get videos
-    createResidencyWithMultipleFiles,
+    getAllProperties, 
+    getProperty, 
+    updateProperty, 
+    getPropertyImages,
+    getPropertyVideos, // New function to get videos
+    createPropertyWithMultipleFiles,
     getCmaDocument 
-} from '../controllers/residencyCntrl.js';
+} from '../controllers/propertyCntrl.js';
 import { uploadWithMedia } from '../config/multerConfig.js'; // Updated import
 import { jwtCheck, extractUserFromToken, checkPermissions } from "../middlewares/authMiddleware.js";
 import { requestPropertyDeletion, approvePropertyDeletion, deletePropertyDirect } from "../controllers/propertyDeletionCntrl.js";
@@ -22,10 +22,10 @@ import {
 const router = express.Router();
 
 // Public routes
-router.get("/allresd", getAllResidencies);
-router.get("/:id", getResidency);
-router.get("/:id/image", getResidencyImages);
-router.get("/:id/video", getResidencyVideos); // New endpoint for videos
+router.get("/all", getAllProperties);
+router.get("/:id", getProperty);
+router.get("/:id/image", getPropertyImages);
+router.get("/:id/video", getPropertyVideos); // New endpoint for videos
 router.get("/:id/cma-document", getCmaDocument);
 router.post("/approve-deletion/:token", approvePropertyDeletion);
 
@@ -40,7 +40,7 @@ router.post(
     { name: 'videos', maxCount: 10 }, // New field for videos
     { name: 'cmaFile', maxCount: 1 }
   ]), 
-  createResidencyWithMultipleFiles
+  createPropertyWithMultipleFiles
 );
 router.post("/request-deletion/:id", jwtCheck, extractUserFromToken, requestPropertyDeletion);
 router.put(
@@ -53,7 +53,7 @@ router.put(
     { name: 'videos', maxCount: 10 }, // New field for videos
     { name: 'cmaFile', maxCount: 1 }
   ]), 
-  updateResidency
+  updateProperty
 );
 
 router.delete(
@@ -83,4 +83,4 @@ router.post(
   deletePropertiesBulkDirect
 );
 
-export { router as residencyRoute };
+export { router as propertyRoute };

@@ -33,7 +33,7 @@ export {
   getAllProperties,
   getProperty,
   createProperty,
-  createResidencyWithFiles,
+  createPropertyWithFiles,
   updateProperty,
   deleteProperty,
   requestPropertyDeletion,

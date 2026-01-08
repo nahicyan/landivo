@@ -1,5 +1,19 @@
 import asyncHandler from "express-async-handler";
-import { prisma } from "../config/prismaConfig.js";
+import mongoose from "../config/mongoose.js";
+import { connectMongo } from "../config/mongoose.js";
+import {
+  ActivityLog,
+  Buyer,
+  Deal,
+  Qualification,
+  Property,
+  User,
+} from "../models/index.js";
+
+const toObjectId = (value) => {
+  if (!value || !mongoose.Types.ObjectId.isValid(value)) return null;
+  return new mongoose.Types.ObjectId(value);
+};
 
 /**
  * Middleware to track activity for auditing purposes
@@ -17,6 +31,7 @@ export const trackActivity = asyncHandler(async (req, res, next) => {
     // Only track activities for authenticated users
     if (userId) {
       try {
+        await connectMongo();
         // Extract information from request
         const { method, originalUrl, body } = req;
         const entityType = getEntityTypeFromUrl(originalUrl);
@@ -25,19 +40,22 @@ export const trackActivity = asyncHandler(async (req, res, next) => {
         
         if (entityType && actionType) {
           // Create activity log entry
-          await prisma.activityLog.create({
-            data: {
+          const userObjectId = toObjectId(userId);
+          if (userObjectId) {
+            await ActivityLog.create({
               entityType,
-              entityId: entityId || 'unknown',
+              entityId: entityId || "unknown",
               actionType,
-              userId,
+              userId: userObjectId,
               previousData: req.previousData || null,
-              newData: method !== 'GET' ? body : null,
-              details: `${actionType} ${entityType}${entityId ? ` with ID ${entityId}` : ''}`,
+              newData: method !== "GET" ? body : null,
+              details: `${actionType} ${entityType}${
+                entityId ? ` with ID ${entityId}` : ""
+              }`,
               ipAddress: req.ip || req.connection?.remoteAddress,
-              userAgent: req.headers['user-agent']
-            }
-          });
+              userAgent: req.headers["user-agent"],
+            });
+          }
         }
       } catch (error) {
         console.error('Error tracking activity:', error);
@@ -67,28 +85,30 @@ export const trackModifications = (entityType) => {
           // Skip modification tracking if no user ID
           return next();
         }
+        await connectMongo();
         
         // Handle entity updates with ID
         if (req.params.id && (req.method === 'PUT' || req.method === 'PATCH')) {
           const id = req.params.id;
           let previousData = null;
+          const objectId = toObjectId(id);
           
           // Get previous data for comparison
           switch (entityType) {
-            case 'Residency':
-              previousData = await prisma.residency.findUnique({ where: { id } });
+            case 'Property':
+              previousData = objectId ? await Property.findById(objectId).lean() : null;
               break;
             case 'Buyer':
-              previousData = await prisma.buyer.findUnique({ where: { id } });
+              previousData = objectId ? await Buyer.findById(objectId).lean() : null;
               break;
             case 'Deal':
-              previousData = await prisma.deal.findUnique({ where: { id } });
+              previousData = objectId ? await Deal.findById(objectId).lean() : null;
               break;
             case 'User':
-              previousData = await prisma.user.findUnique({ where: { id } });
+              previousData = objectId ? await User.findById(objectId).lean() : null;
               break;
             case 'Qualification':
-              previousData = await prisma.qualification.findUnique({ where: { id } });
+              previousData = objectId ? await Qualification.findById(objectId).lean() : null;
               break;
             // Add other entity types as needed
           }
@@ -153,7 +173,7 @@ export const trackModifications = (entityType) => {
  * Helper function to extract entity type from URL
  */
 function getEntityTypeFromUrl(url) {
-  if (url.includes('/residency')) return 'Residency';
+  if (url.includes('/property')) return 'Property';
   if (url.includes('/buyer')) return 'Buyer';
   if (url.includes('/deal')) return 'Deal';
   if (url.includes('/user')) return 'User';

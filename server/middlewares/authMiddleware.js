@@ -1,7 +1,9 @@
 // server/middlewares/authMiddleware.js
 import { auth } from 'express-oauth2-jwt-bearer';
 import dotenv from 'dotenv';
-import { prisma } from '../config/prismaConfig.js';
+import mongoose from '../config/mongoose.js';
+import { connectMongo } from '../config/mongoose.js';
+import { User } from '../models/index.js';
 
 dotenv.config();
 
@@ -65,23 +67,20 @@ export const extractUserFromToken = async (req, res, next) => {
     // Check if this user has any roles or permissions (system user)
     if (permissions.length > 0 || roles.length > 0) {
       try {
+        await connectMongo();
         // Check if user exists in our database
-        let dbUser = await prisma.user.findUnique({
-          where: { auth0Id: auth0User.sub }
-        });
+        let dbUser = await User.findOne({ auth0Id: auth0User.sub });
         
         if (dbUser) {
           // User exists, update login stats
-          dbUser = await prisma.user.update({
-            where: { id: dbUser.id },
-            data: {
-              lastLoginAt: new Date(),
-              loginCount: { increment: 1 }
-            }
-          });
+          dbUser = await User.findByIdAndUpdate(
+            dbUser._id,
+            { $set: { lastLoginAt: new Date() }, $inc: { loginCount: 1 } },
+            { new: true }
+          );
           
           // Store database ID for controllers to use
-          req.userId = dbUser.id;
+          req.userId = String(dbUser._id);
           
           // Flag if profile needs completion
           auth0User.needsProfileCompletion = !dbUser.firstName || !dbUser.lastName;
@@ -97,19 +96,17 @@ export const extractUserFromToken = async (req, res, next) => {
           const lastName = names.length > 1 ? names.slice(1).join(' ') : null;
           
           // Create new user
-          const newUser = await prisma.user.create({
-            data: {
-              auth0Id: auth0User.sub,
-              email: auth0User.email,
-              firstName,
-              lastName,
-              lastLoginAt: new Date(),
-              loginCount: 1
-            }
+          const newUser = await User.create({
+            auth0Id: auth0User.sub,
+            email: auth0User.email,
+            firstName,
+            lastName,
+            lastLoginAt: new Date(),
+            loginCount: 1,
           });
           
           // Store database ID for controllers to use
-          req.userId = newUser.id;
+          req.userId = String(newUser._id);
           
           // Flag if profile needs completion
           auth0User.needsProfileCompletion = !firstName || !lastName;

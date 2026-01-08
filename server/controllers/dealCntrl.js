@@ -1,6 +1,13 @@
 // server/controllers/dealCntrl.js
 import asyncHandler from "express-async-handler";
-import { prisma } from "../config/prismaConfig.js";
+import mongoose from "../config/mongoose.js";
+import { connectMongo } from "../config/mongoose.js";
+import { Buyer, Deal, Payment, Property } from "../models/index.js";
+
+const toObjectId = (value) => {
+  if (!value || !mongoose.Types.ObjectId.isValid(value)) return null;
+  return new mongoose.Types.ObjectId(value);
+};
 
 // Create a new deal
 export const createDeal = asyncHandler(async (req, res) => {
@@ -20,6 +27,7 @@ export const createDeal = asyncHandler(async (req, res) => {
     financingType,
     startDate,
     notes,
+    createdById
   } = req.body;
 
   // Validate required fields
@@ -30,12 +38,18 @@ export const createDeal = asyncHandler(async (req, res) => {
 
   try {
     // Verify buyer and property exist
-    const buyer = await prisma.buyer.findUnique({ where: { id: buyerId } });
+    await connectMongo();
+    const buyerObjectId = toObjectId(buyerId);
+    const propertyObjectId = toObjectId(propertyId);
+    if (!buyerObjectId || !propertyObjectId) {
+      return res.status(400).json({ message: "Invalid buyer or property ID" });
+    }
+    const buyer = await Buyer.findById(buyerObjectId).lean();
     if (!buyer) {
       return res.status(404).json({ message: "Buyer not found" });
     }
 
-    const property = await prisma.residency.findUnique({ where: { id: propertyId } });
+    const property = await Property.findById(propertyObjectId).lean();
     if (!property) {
       return res.status(404).json({ message: "Property not found" });
     }
@@ -45,29 +59,33 @@ export const createDeal = asyncHandler(async (req, res) => {
     
     // Calculate total expected revenue
     const totalExpectedRevenue = downPayment + (monthlyPayment * term);
+
+    const creatorId = toObjectId(createdById || req.userId);
+    if (!creatorId) {
+      return res.status(400).json({ message: "createdById is required" });
+    }
     
     // Create the deal
-    const deal = await prisma.deal.create({
-      data: {
-        buyerId,
-        propertyId,
-        purchasePrice,
-        salePrice,
-        downPayment,
-        loanAmount,
-        interestRate,
-        term,
-        monthlyPayment,
-        closingCosts: closingCosts || 0,
-        transferTaxes: transferTaxes || 0,
-        appraisalValue: appraisalValue || salePrice,
-        loanOriginationFee: loanOriginationFee || 0,
-        financingType: financingType || "Owner",
-        status: "ACTIVE",
-        startDate: new Date(startDate),
-        totalExpectedRevenue,
-        notes,
-      }
+    const deal = await Deal.create({
+      buyerId: buyerObjectId,
+      propertyId: propertyObjectId,
+      createdById: creatorId,
+      purchasePrice,
+      salePrice,
+      downPayment,
+      loanAmount,
+      interestRate,
+      term,
+      monthlyPayment,
+      closingCosts: closingCosts || 0,
+      transferTaxes: transferTaxes || 0,
+      appraisalValue: appraisalValue || salePrice,
+      loanOriginationFee: loanOriginationFee || 0,
+      financingType: financingType || "Owner",
+      status: "ACTIVE",
+      startDate: new Date(startDate),
+      totalExpectedRevenue,
+      notes,
     });
 
     // Generate payment schedule
@@ -87,7 +105,7 @@ export const createDeal = asyncHandler(async (req, res) => {
       const principal = monthlyPayment - interest;
       
       payments.push({
-        dealId: deal.id,
+        dealId: deal._id,
         paymentNumber: i,
         amount: monthlyPayment,
         dueDate,
@@ -97,19 +115,20 @@ export const createDeal = asyncHandler(async (req, res) => {
       });
     }
 
-    await prisma.payment.createMany({
-      data: payments
-    });
+    await Payment.insertMany(payments);
 
     // Update property status to sold
-    await prisma.residency.update({
-      where: { id: propertyId },
-      data: { status: "Sold" }
-    });
+    await Property.updateOne(
+      { _id: propertyObjectId },
+      { $set: { status: "Sold" } }
+    );
 
     res.status(201).json({
       message: "Deal created successfully",
-      deal
+      deal: {
+        ...(deal?.toObject ? deal.toObject() : deal),
+        id: String(deal._id),
+      }
     });
   } catch (error) {
     console.error("Error creating deal:", error);
@@ -133,49 +152,70 @@ export const getAllDeals = asyncHandler(async (req, res) => {
   } = req.query;
   
   try {
+    await connectMongo();
     const skip = (parseInt(page) - 1) * parseInt(limit);
     const take = parseInt(limit);
     
     // Build filter
     const where = {};
     if (status) where.status = status;
-    if (buyerId) where.buyerId = buyerId;
-    if (propertyId) where.propertyId = propertyId;
+    if (buyerId) {
+      const buyerObjectId = toObjectId(buyerId);
+      where.buyerId = buyerObjectId || buyerId;
+    }
+    if (propertyId) {
+      const propertyObjectId = toObjectId(propertyId);
+      where.propertyId = propertyObjectId || propertyId;
+    }
     
     // Get total count
-    const totalCount = await prisma.deal.count({ where });
+    const totalCount = await Deal.countDocuments(where);
     
     // Get deals with relationships
-    const deals = await prisma.deal.findMany({
-      where,
-      include: {
-        buyer: {
-          select: {
-            firstName: true,
-            lastName: true,
-            email: true,
-            phone: true,
-            buyerType: true
-          }
-        },
-        property: {
-          select: {
-            title: true,
-            streetAddress: true,
-            city: true,
-            state: true,
-            zip: true,
-            imageUrls: true
-          }
-        }
-      },
-      orderBy: { [sort]: order.toLowerCase() },
-      skip,
-      take
-    });
+    const deals = await Deal.find(where)
+      .populate({
+        path: "buyerId",
+        select: "firstName lastName email phone buyerType",
+      })
+      .populate({
+        path: "propertyId",
+        select: "title streetAddress city state zip imageUrls",
+      })
+      .sort({ [sort]: order.toLowerCase() === "asc" ? 1 : -1 })
+      .skip(skip)
+      .limit(take)
+      .lean();
     
     res.status(200).json({
-      deals,
+      deals: deals.map((deal) => ({
+        ...deal,
+        id: String(deal._id),
+        buyer: deal.buyerId
+          ? {
+              id: String(deal.buyerId._id),
+              firstName: deal.buyerId.firstName,
+              lastName: deal.buyerId.lastName,
+              email: deal.buyerId.email,
+              phone: deal.buyerId.phone,
+              buyerType: deal.buyerId.buyerType,
+            }
+          : null,
+        buyerId: deal.buyerId ? String(deal.buyerId._id) : String(deal.buyerId),
+        property: deal.propertyId
+          ? {
+              id: String(deal.propertyId._id),
+              title: deal.propertyId.title,
+              streetAddress: deal.propertyId.streetAddress,
+              city: deal.propertyId.city,
+              state: deal.propertyId.state,
+              zip: deal.propertyId.zip,
+              imageUrls: deal.propertyId.imageUrls,
+            }
+          : null,
+        propertyId: deal.propertyId
+          ? String(deal.propertyId._id)
+          : String(deal.propertyId),
+      })),
       pagination: {
         totalCount,
         page: parseInt(page),
@@ -197,39 +237,60 @@ export const getDealById = asyncHandler(async (req, res) => {
   const { id } = req.params;
   
   try {
-    const deal = await prisma.deal.findUnique({
-      where: { id },
-      include: {
-        buyer: {
-          select: {
-            firstName: true,
-            lastName: true,
-            email: true,
-            phone: true,
-            buyerType: true
-          }
-        },
-        property: {
-          select: {
-            title: true,
-            streetAddress: true,
-            city: true,
-            state: true,
-            zip: true,
-            imageUrls: true
-          }
-        },
-        payments: {
-          orderBy: { paymentNumber: 'asc' }
-        }
-      }
-    });
+    await connectMongo();
+    const dealObjectId = toObjectId(id);
+    if (!dealObjectId) {
+      return res.status(400).json({ message: "Invalid deal ID" });
+    }
+    const deal = await Deal.findById(dealObjectId)
+      .populate({
+        path: "buyerId",
+        select: "firstName lastName email phone buyerType",
+      })
+      .populate({
+        path: "propertyId",
+        select: "title streetAddress city state zip imageUrls",
+      })
+      .lean();
     
     if (!deal) {
       return res.status(404).json({ message: "Deal not found" });
     }
+
+    const payments = await Payment.find({ dealId: dealObjectId })
+      .sort({ paymentNumber: 1 })
+      .lean();
     
-    res.status(200).json(deal);
+    res.status(200).json({
+      ...deal,
+      id: String(deal._id),
+      buyer: deal.buyerId
+        ? {
+            id: String(deal.buyerId._id),
+            firstName: deal.buyerId.firstName,
+            lastName: deal.buyerId.lastName,
+            email: deal.buyerId.email,
+            phone: deal.buyerId.phone,
+            buyerType: deal.buyerId.buyerType,
+          }
+        : null,
+      buyerId: deal.buyerId ? String(deal.buyerId._id) : String(deal.buyerId),
+      property: deal.propertyId
+        ? {
+            id: String(deal.propertyId._id),
+            title: deal.propertyId.title,
+            streetAddress: deal.propertyId.streetAddress,
+            city: deal.propertyId.city,
+            state: deal.propertyId.state,
+            zip: deal.propertyId.zip,
+            imageUrls: deal.propertyId.imageUrls,
+          }
+        : null,
+      propertyId: deal.propertyId
+        ? String(deal.propertyId._id)
+        : String(deal.propertyId),
+      payments,
+    });
   } catch (error) {
     console.error("Error fetching deal:", error);
     res.status(500).json({
@@ -255,32 +316,40 @@ export const updateDeal = asyncHandler(async (req, res) => {
   } = req.body;
   
   try {
-    const existingDeal = await prisma.deal.findUnique({
-      where: { id }
-    });
+    await connectMongo();
+    const dealObjectId = toObjectId(id);
+    if (!dealObjectId) {
+      return res.status(400).json({ message: "Invalid deal ID" });
+    }
+    const existingDeal = await Deal.findById(dealObjectId).lean();
     
     if (!existingDeal) {
       return res.status(404).json({ message: "Deal not found" });
     }
     
-    const updatedDeal = await prisma.deal.update({
-      where: { id },
-      data: {
-        status: status || undefined,
-        completionDate: completionDate ? new Date(completionDate) : undefined,
-        notes: notes || undefined,
-        paymentsReceived: paymentsReceived !== undefined ? paymentsReceived : undefined,
-        totalPaidToDate: totalPaidToDate !== undefined ? totalPaidToDate : undefined,
-        principalPaid: principalPaid !== undefined ? principalPaid : undefined,
-        interestPaid: interestPaid !== undefined ? interestPaid : undefined,
-        currentRevenue: currentRevenue !== undefined ? currentRevenue : undefined,
-        profitLoss: profitLoss !== undefined ? profitLoss : undefined
-      }
-    });
+    const updateData = {
+      ...(status ? { status } : {}),
+      ...(completionDate ? { completionDate: new Date(completionDate) } : {}),
+      ...(notes ? { notes } : {}),
+      ...(paymentsReceived !== undefined ? { paymentsReceived } : {}),
+      ...(totalPaidToDate !== undefined ? { totalPaidToDate } : {}),
+      ...(principalPaid !== undefined ? { principalPaid } : {}),
+      ...(interestPaid !== undefined ? { interestPaid } : {}),
+      ...(currentRevenue !== undefined ? { currentRevenue } : {}),
+      ...(profitLoss !== undefined ? { profitLoss } : {}),
+    };
+
+    const updatedDeal = await Deal.findByIdAndUpdate(
+      dealObjectId,
+      updateData,
+      { new: true }
+    ).lean();
     
     res.status(200).json({
       message: "Deal updated successfully",
       deal: updatedDeal
+        ? { id: String(updatedDeal._id), ...updatedDeal }
+        : updatedDeal
     });
   } catch (error) {
     console.error("Error updating deal:", error);
@@ -297,21 +366,22 @@ export const recordPayment = asyncHandler(async (req, res) => {
   
   try {
     // Find the payment
-    const payment = await prisma.payment.findFirst({
-      where: {
-        dealId,
-        paymentNumber: parseInt(paymentNumber)
-      }
-    });
+    await connectMongo();
+    const dealObjectId = toObjectId(dealId);
+    if (!dealObjectId) {
+      return res.status(400).json({ message: "Invalid deal ID" });
+    }
+    const payment = await Payment.findOne({
+      dealId: dealObjectId,
+      paymentNumber: parseInt(paymentNumber),
+    }).lean();
     
     if (!payment) {
       return res.status(404).json({ message: "Payment not found" });
     }
     
     // Get the deal
-    const deal = await prisma.deal.findUnique({
-      where: { id: dealId }
-    });
+    const deal = await Deal.findById(dealObjectId).lean();
     
     if (!deal) {
       return res.status(404).json({ message: "Deal not found" });
@@ -323,40 +393,49 @@ export const recordPayment = asyncHandler(async (req, res) => {
     const isLate = paymentDateObj > dueDate;
     
     // Update the payment
-    const updatedPayment = await prisma.payment.update({
-      where: { id: payment.id },
-      data: {
+    const updatedPayment = await Payment.findByIdAndUpdate(
+      payment._id,
+      {
         paymentDate: paymentDateObj,
         status: isLate ? "LATE" : "PAID",
         lateFee: isLate ? (lateFee || 0) : 0,
-        amount: amount || payment.amount
-      }
-    });
+        amount: amount || payment.amount,
+      },
+      { new: true }
+    ).lean();
     
     // Update deal stats
     const actualAmount = (amount || payment.amount) + (isLate ? (lateFee || 0) : 0);
     
-    await prisma.deal.update({
-      where: { id: dealId },
-      data: {
-        paymentsReceived: { increment: 1 },
-        paymentsOnTime: { increment: isLate ? 0 : 1 },
-        paymentsLate: { increment: isLate ? 1 : 0 },
-        totalPaidToDate: { increment: actualAmount },
-        principalPaid: { increment: payment.principal },
-        interestPaid: { increment: payment.interest },
-        currentRevenue: { increment: actualAmount },
-        profitLoss: { 
-          set: deal.purchasePrice < (deal.totalPaidToDate + actualAmount) ? 
-            (deal.totalPaidToDate + actualAmount - deal.purchasePrice) : 
-            (deal.purchasePrice - (deal.totalPaidToDate + actualAmount))
-        }
+    const nextTotalPaid = deal.totalPaidToDate + actualAmount;
+    const nextProfitLoss =
+      deal.purchasePrice < nextTotalPaid
+        ? nextTotalPaid - deal.purchasePrice
+        : deal.purchasePrice - nextTotalPaid;
+
+    await Deal.updateOne(
+      { _id: dealObjectId },
+      {
+        $inc: {
+          paymentsReceived: 1,
+          paymentsOnTime: isLate ? 0 : 1,
+          paymentsLate: isLate ? 1 : 0,
+          totalPaidToDate: actualAmount,
+          principalPaid: payment.principal,
+          interestPaid: payment.interest,
+          currentRevenue: actualAmount,
+        },
+        $set: {
+          profitLoss: nextProfitLoss,
+        },
       }
-    });
+    );
     
     res.status(200).json({
       message: "Payment recorded successfully",
       payment: updatedPayment
+        ? { id: String(updatedPayment._id), ...updatedPayment }
+        : updatedPayment
     });
   } catch (error) {
     console.error("Error recording payment:", error);
@@ -372,29 +451,31 @@ export const getDealFinancialSummary = asyncHandler(async (req, res) => {
   const { id } = req.params;
   
   try {
-    const deal = await prisma.deal.findUnique({
-      where: { id },
-      include: {
-        payments: true
-      }
-    });
+    await connectMongo();
+    const dealObjectId = toObjectId(id);
+    if (!dealObjectId) {
+      return res.status(400).json({ message: "Invalid deal ID" });
+    }
+    const deal = await Deal.findById(dealObjectId).lean();
     
     if (!deal) {
       return res.status(404).json({ message: "Deal not found" });
     }
+
+    const payments = await Payment.find({ dealId: dealObjectId }).lean();
     
     // Calculate metrics
-    const totalPayments = deal.payments.length;
-    const paidPayments = deal.payments.filter(p => p.status === "PAID" || p.status === "LATE").length;
+    const totalPayments = payments.length;
+    const paidPayments = payments.filter(p => p.status === "PAID" || p.status === "LATE").length;
     const remainingPayments = totalPayments - paidPayments;
     const remainingBalance = deal.loanAmount - deal.principalPaid;
     
     // Calculate projected completion date
-    const lastPaymentDate = deal.payments
+    const lastPaymentDate = payments
       .filter(p => p.paymentDate)
       .sort((a, b) => new Date(b.paymentDate) - new Date(a.paymentDate))[0]?.paymentDate;
     
-    const projectedCompletionDate = deal.payments
+    const projectedCompletionDate = payments
       .sort((a, b) => b.paymentNumber - a.paymentNumber)[0]?.dueDate;
     
     // Calculate ROI
@@ -405,7 +486,7 @@ export const getDealFinancialSummary = asyncHandler(async (req, res) => {
     
     // Create summary
     const summary = {
-      dealId: deal.id,
+      dealId: String(deal._id),
       salePrice: deal.salePrice,
       purchasePrice: deal.purchasePrice,
       downPayment: deal.downPayment,

@@ -1,5 +1,6 @@
 // server/services/scheduledTasks.js
-import { prisma } from "../config/prismaConfig.js";
+import { connectMongo } from "../config/mongoose.js";
+import { Visit, Visitor, VisitorStat } from "../models/index.js";
 import cron from "node-cron";
 
 /**
@@ -9,15 +10,14 @@ async function updateDailyStats() {
   console.log("Running scheduled task: updateDailyStats");
   
   try {
+    await connectMongo();
     // Get yesterday's date
     const yesterday = new Date();
     yesterday.setDate(yesterday.getDate() - 1);
     yesterday.setHours(0, 0, 0, 0);
     
     // Find yesterday's stats
-    const stats = await prisma.visitorStat.findUnique({
-      where: { date: yesterday }
-    });
+    const stats = await VisitorStat.findOne({ date: yesterday });
     
     if (!stats) {
       console.log("No stats found for yesterday");
@@ -25,51 +25,55 @@ async function updateDailyStats() {
     }
     
     // Get top pages
-    const topPages = await prisma.visit.groupBy({
-      by: ['entryPage'],
-      where: {
-        startTime: {
-          gte: yesterday,
-          lt: new Date(yesterday.getTime() + 24 * 60 * 60 * 1000)
-        }
+    const topPages = await Visit.aggregate([
+      {
+        $match: {
+          startTime: {
+            $gte: yesterday,
+            $lt: new Date(yesterday.getTime() + 24 * 60 * 60 * 1000),
+          },
+        },
       },
-      _count: { entryPage: true },
-      orderBy: { _count: { entryPage: 'desc' } },
-      take: 10
-    });
+      { $group: { _id: "$entryPage", count: { $sum: 1 } } },
+      { $sort: { count: -1 } },
+      { $limit: 10 },
+    ]);
     
     // Get device breakdown
-    const deviceBreakdown = await prisma.visitor.groupBy({
-      by: ['deviceType'],
-      where: {
-        lastVisit: {
-          gte: yesterday,
-          lt: new Date(yesterday.getTime() + 24 * 60 * 60 * 1000)
-        }
+    const deviceBreakdown = await Visitor.aggregate([
+      {
+        $match: {
+          lastVisit: {
+            $gte: yesterday,
+            $lt: new Date(yesterday.getTime() + 24 * 60 * 60 * 1000),
+          },
+        },
       },
-      _count: { visitorId: true }
-    });
+      { $group: { _id: "$deviceType", count: { $sum: 1 } } },
+    ]);
     
     // Format the data
-    const formattedTopPages = topPages.map(p => ({
-      page: p.entryPage,
-      count: p._count.entryPage
+    const formattedTopPages = topPages.map((p) => ({
+      page: p._id,
+      count: p.count,
     }));
     
-    const formattedDeviceBreakdown = deviceBreakdown.map(d => ({
-      device: d.deviceType || 'unknown',
-      count: d._count.visitorId
+    const formattedDeviceBreakdown = deviceBreakdown.map((d) => ({
+      device: d._id || "unknown",
+      count: d.count,
     }));
     
     // Update the stats
-    await prisma.visitorStat.update({
-      where: { id: stats.id },
-      data: {
-        topPages: formattedTopPages,
-        deviceBreakdown: formattedDeviceBreakdown,
-        updatedAt: new Date()
+    await VisitorStat.updateOne(
+      { _id: stats._id },
+      {
+        $set: {
+          topPages: formattedTopPages,
+          deviceBreakdown: formattedDeviceBreakdown,
+          updatedAt: new Date(),
+        },
       }
-    });
+    );
     
     console.log("Updated daily stats for yesterday");
   } catch (error) {

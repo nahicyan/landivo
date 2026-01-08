@@ -1,5 +1,7 @@
 // server/services/buyer/vipBuyerEmailListService.js
-import { prisma } from "../../config/prismaConfig.js";
+import mongoose from "../../config/mongoose.js";
+import { connectMongo } from "../../config/mongoose.js";
+import { BuyerEmailList, EmailList } from "../../models/index.js";
 
 const normalizeCriteriaListValue = (value) => {
   const collected = [];
@@ -39,6 +41,7 @@ const normalizeCriteriaListValue = (value) => {
  */
 export const handleVipBuyerEmailList = async (buyer, source = "VIP", area, buyerType) => {
   try {
+    await connectMongo();
     // Use provided area and buyerType
     const listArea = area;
     const listBuyerType = buyerType;
@@ -47,11 +50,9 @@ export const handleVipBuyerEmailList = async (buyer, source = "VIP", area, buyer
     const listName = `${source} ${listArea} ${listBuyerType}`;
     
     // Check if list already exists with matching source, area, and buyer type
-    let emailList = await prisma.emailList.findFirst({
-      where: { 
-        name: listName,
-        source: source
-      }
+    let emailList = await EmailList.findOne({
+      name: listName,
+      source: source,
     });
     
     // If list doesn't exist, create it
@@ -61,20 +62,19 @@ export const handleVipBuyerEmailList = async (buyer, source = "VIP", area, buyer
     }
     
     // Check if buyer is already in the list
-    const existingMembership = await prisma.buyerEmailList.findFirst({
-      where: {
-        buyerId: buyer.id,
-        emailListId: emailList.id
-      }
-    });
+    const buyerObjectId = mongoose.Types.ObjectId.isValid(buyer.id)
+      ? new mongoose.Types.ObjectId(buyer.id)
+      : buyer._id;
+    const existingMembership = await BuyerEmailList.findOne({
+      buyerId: buyerObjectId,
+      emailListId: emailList._id,
+    }).lean();
     
     // Add buyer to list if not already a member
     if (!existingMembership) {
-      await prisma.buyerEmailList.create({
-        data: {
-          buyerId: buyer.id,
-          emailListId: emailList.id
-        }
+      await BuyerEmailList.create({
+        buyerId: buyerObjectId,
+        emailListId: emailList._id,
       });
       console.log(`Added VIP buyer ${buyer.id} to list: ${listName}`);
     }
@@ -82,7 +82,7 @@ export const handleVipBuyerEmailList = async (buyer, source = "VIP", area, buyer
     return {
       success: true,
       listName,
-      listId: emailList.id,
+      listId: String(emailList._id),
       buyerAdded: !existingMembership
     };
     
@@ -106,13 +106,11 @@ const createVipEmailList = async (listName, area, buyerType, source) => {
     description: `VIP ${buyerType} buyers in ${area}`
   };
   
-  return await prisma.emailList.create({
-    data: {
-      name: listName,
-      description: `Auto-generated VIP list for ${buyerType} buyers in ${area}`,
-      source: source,
-      criteria: criteria,
-      isDefault: false
-    }
+  return await EmailList.create({
+    name: listName,
+    description: `Auto-generated VIP list for ${buyerType} buyers in ${area}`,
+    source: source,
+    criteria: criteria,
+    isDefault: false,
   });
 };

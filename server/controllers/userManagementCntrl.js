@@ -1,10 +1,24 @@
 // server/controllers/userManagementCntrl.js
 import asyncHandler from "express-async-handler";
-import { prisma } from "../config/prismaConfig.js";
+import mongoose from "../config/mongoose.js";
+import { connectMongo } from "../config/mongoose.js";
+import {
+  ActivityLog,
+  Buyer,
+  Deal,
+  Qualification,
+  Property,
+  User,
+} from "../models/index.js";
 import multer from "multer";
 import path from "path";
 import { fileURLToPath } from "url";
 import fs from "fs";
+
+const toObjectId = (value) => {
+  if (!value || !mongoose.Types.ObjectId.isValid(value)) return null;
+  return new mongoose.Types.ObjectId(value);
+};
 
 // Configure multer for avatar uploads
 const __filename = fileURLToPath(import.meta.url);
@@ -54,15 +68,14 @@ export const getUserByAuth0Id = asyncHandler(async (req, res) => {
   }
 
   try {
-    const user = await prisma.user.findUnique({
-      where: { auth0Id },
-    });
+    await connectMongo();
+    const user = await User.findOne({ auth0Id }).lean();
 
     if (!user) {
       return res.status(404).json({ message: "User not found" });
     }
 
-    res.status(200).json(user);
+    res.status(200).json({ id: String(user._id), ...user });
   } catch (error) {
     console.error("Error fetching user by Auth0 ID:", error);
     res.status(500).json({
@@ -85,51 +98,46 @@ export const createOrUpdateUser = asyncHandler(async (req, res) => {
 
   try {
     // Try to find existing user
-    let user = await prisma.user.findUnique({
-      where: { auth0Id },
-    });
+    await connectMongo();
+    let user = await User.findOne({ auth0Id });
 
     if (user) {
       // Update existing user with new fields
-      user = await prisma.user.update({
-        where: { auth0Id },
-        data: {
-          firstName: firstName || user.firstName,
-          lastName: lastName || user.lastName,
-          email,
-          phone: phone || user.phone,
-          profileRole: profileRole || user.profileRole,
-          avatarUrl: avatarUrl || user.avatarUrl,
-          allowedProfiles: allowedProfiles || user.allowedProfiles,
-          lastLoginAt: new Date(),
-          loginCount: { increment: 1 },
-        },
+      user.set({
+        firstName: firstName || user.firstName,
+        lastName: lastName || user.lastName,
+        email,
+        phone: phone || user.phone,
+        profileRole: profileRole || user.profileRole,
+        avatarUrl: avatarUrl || user.avatarUrl,
+        allowedProfiles: allowedProfiles || user.allowedProfiles,
+        lastLoginAt: new Date(),
       });
+      user.loginCount = (user.loginCount || 0) + 1;
+      await user.save();
 
       return res.status(200).json({
         message: "User updated successfully",
-        user,
+        user: { id: String(user._id), ...user.toObject() },
       });
     } else {
       // Create new user with new fields
-      user = await prisma.user.create({
-        data: {
-          auth0Id,
-          firstName,
-          lastName,
-          email,
-          phone,
-          profileRole,
-          avatarUrl,
-          allowedProfiles: allowedProfiles || [],
-          lastLoginAt: new Date(),
-          loginCount: 1,
-        },
+      user = await User.create({
+        auth0Id,
+        firstName,
+        lastName,
+        email,
+        phone,
+        profileRole,
+        avatarUrl,
+        allowedProfiles: allowedProfiles || [],
+        lastLoginAt: new Date(),
+        loginCount: 1,
       });
 
       return res.status(201).json({
         message: "User created successfully",
-        user,
+        user: { id: String(user._id), ...user.toObject() },
       });
     }
   } catch (error) {
@@ -153,27 +161,26 @@ export const getUserProfile = asyncHandler(async (req, res) => {
       return res.status(401).json({ message: "Unauthorized: User not authenticated" });
     }
 
-    const user = await prisma.user.findUnique({
-      where: { auth0Id },
-      include: {
-        createdResidencies: {
-          select: {
-            id: true,
-            title: true,
-            streetAddress: true,
-            city: true,
-            state: true,
-            imageUrls: true,
-          },
-        },
-      },
-    });
+    await connectMongo();
+    const user = await User.findOne({ auth0Id }).lean();
 
     if (!user) {
       return res.status(404).json({ message: "User not found in database" });
     }
 
-    res.status(200).json(user);
+    const createdProperties = await Property.find(
+      { createdById: user._id },
+      "title streetAddress city state imageUrls"
+    ).lean();
+
+    res.status(200).json({
+      id: String(user._id),
+      ...user,
+      createdProperties: createdProperties.map((property) => ({
+        id: String(property._id),
+        ...property,
+      })),
+    });
   } catch (error) {
     console.error("Error fetching user profile:", error);
     res.status(500).json({
@@ -208,9 +215,8 @@ export const updateUserProfile = asyncHandler(async (req, res) => {
       const { firstName, lastName, phone, profileRole, removeAvatar } = req.body;
 
       // Get the existing user to check if it exists
-      const existingUser = await prisma.user.findUnique({
-        where: { auth0Id },
-      });
+      await connectMongo();
+      const existingUser = await User.findOne({ auth0Id });
 
       if (!existingUser) {
         return res.status(404).json({ message: "User not found" });
@@ -243,20 +249,23 @@ export const updateUserProfile = asyncHandler(async (req, res) => {
       }
 
       // Update the user with new fields
-      const updatedUser = await prisma.user.update({
-        where: { auth0Id },
-        data: {
-          firstName,
-          lastName,
-          phone,
-          profileRole,
+      const updatedUser = await User.findOneAndUpdate(
+        { auth0Id },
+        {
+          ...(typeof firstName !== "undefined" ? { firstName } : {}),
+          ...(typeof lastName !== "undefined" ? { lastName } : {}),
+          ...(typeof phone !== "undefined" ? { phone } : {}),
+          ...(typeof profileRole !== "undefined" ? { profileRole } : {}),
           avatarUrl,
         },
-      });
+        { new: true }
+      ).lean();
 
       res.status(200).json({
         message: "Profile updated successfully",
-        user: updatedUser,
+        user: updatedUser
+          ? { id: String(updatedUser._id), ...updatedUser }
+          : updatedUser,
       });
     });
   } catch (error) {
@@ -272,20 +281,31 @@ export const updateUserProfile = asyncHandler(async (req, res) => {
  */
 export const getAllUsers = asyncHandler(async (req, res) => {
   try {
-    const users = await prisma.user.findMany({
-      orderBy: {
-        createdAt: "desc",
-      },
-      include: {
-        createdResidencies: {
-          select: {
-            id: true,
-          },
-        },
-      },
+    await connectMongo();
+    const users = await User.find({}).sort({ createdAt: -1 }).lean();
+    const userIds = users.map((user) => user._id);
+    const properties = userIds.length
+      ? await Property.find(
+          { createdById: { $in: userIds } },
+          "_id createdById"
+        ).lean()
+      : [];
+    const propertyMap = new Map();
+    properties.forEach((property) => {
+      const key = String(property.createdById);
+      if (!propertyMap.has(key)) {
+        propertyMap.set(key, []);
+      }
+      propertyMap.get(key).push({ id: String(property._id) });
     });
 
-    res.status(200).json(users);
+    res.status(200).json(
+      users.map((user) => ({
+        id: String(user._id),
+        ...user,
+        createdProperties: propertyMap.get(String(user._id)) || [],
+      }))
+    );
   } catch (error) {
     console.error("Error fetching all users:", error);
     res.status(500).json({
@@ -305,173 +325,168 @@ export const getUserById = asyncHandler(async (req, res) => {
   const { id } = req.params;
 
   try {
-    const user = await prisma.user.findUnique({
-      where: { id },
-      include: {
-        // Properties created by this user
-        createdResidencies: {
-          select: {
-            id: true,
-            title: true,
-            streetAddress: true,
-            city: true,
-            state: true,
-            imageUrls: true,
-            status: true,
-            featured: true,
-            createdAt: true,
-            updatedAt: true,
-          },
-          orderBy: {
-            createdAt: "desc"
-          }
-        },
-        // Properties updated by this user (limited to recent 10)
-        updatedResidencies: {
-          select: {
-            id: true,
-            title: true,
-            streetAddress: true,
-            city: true,
-            state: true,
-            updatedAt: true,
-          },
-          orderBy: {
-            updatedAt: "desc"
-          },
-          take: 10
-        },
-        // Buyers created by this user
-        createdBuyers: {
-          select: {
-            id: true,
-            firstName: true,
-            lastName: true,
-            email: true,
-            phone: true,
-            buyerType: true,
-            createdAt: true,
-          },
-          orderBy: {
-            createdAt: "desc"
-          }
-        },
-        // Buyers updated by this user (limited to recent 10)
-        updatedBuyers: {
-          select: {
-            id: true,
-            firstName: true,
-            lastName: true,
-            email: true,
-            updatedAt: true,
-          },
-          orderBy: {
-            updatedAt: "desc"
-          },
-          take: 10
-        },
-        // Deals created by this user - CORRECTED FIELDS
-        createdDeals: {
-          select: {
-            id: true,
-            purchasePrice: true,
-            salePrice: true,
-            status: true,
-            startDate: true,
-            completionDate: true,
-            profitLoss: true,
-            currentRevenue: true,
-            createdAt: true,
-            // Include related property for display
-            property: {
-              select: {
-                id: true,
-                title: true,
-                streetAddress: true,
-                city: true,
-                state: true,
-              }
-            },
-            // Include related buyer for display
-            buyer: {
-              select: {
-                id: true,
-                firstName: true,
-                lastName: true,
-                email: true,
-              }
-            }
-          },
-          orderBy: {
-            createdAt: "desc"
-          }
-        },
-        // Deals updated by this user (limited to recent 10) - CORRECTED FIELDS
-        updatedDeals: {
-          select: {
-            id: true,
-            purchasePrice: true,
-            salePrice: true,
-            status: true,
-            updatedAt: true,
-          },
-          orderBy: {
-            updatedAt: "desc"
-          },
-          take: 10
-        },
-        // Qualifications updated by this user - CORRECTED FIELDS (no status field!)
-        updatedQualifications: {
-          select: {
-            id: true,
-            qualified: true,  // Boolean field instead of status
-            disqualificationReason: true,
-            firstName: true,
-            lastName: true,
-            email: true,
-            propertyPrice: true,
-            updatedAt: true,
-          },
-          orderBy: {
-            updatedAt: "desc"
-          },
-          take: 10
-        },
-        // Activity logs for this user (limited to recent 20)
-        activityLogs: {
-          select: {
-            id: true,
-            entityType: true,
-            entityId: true,
-            actionType: true,
-            details: true,
-            createdAt: true,
-          },
-          orderBy: {
-            createdAt: "desc"
-          },
-          take: 20
-        },
-      },
-    });
+    await connectMongo();
+    const userId = toObjectId(id);
+    if (!userId) {
+      return res.status(400).json({ message: "Invalid user ID" });
+    }
+    const user = await User.findById(userId).lean();
 
     if (!user) {
       return res.status(404).json({ message: "User not found" });
     }
 
+    const [
+      createdProperties,
+      updatedProperties,
+      createdBuyers,
+      updatedBuyers,
+      createdDeals,
+      updatedDeals,
+      updatedQualifications,
+      activityLogs,
+    ] = await Promise.all([
+      Property.find(
+        { createdById: userId },
+        "title streetAddress city state imageUrls status featured createdAt updatedAt"
+      )
+        .sort({ createdAt: -1 })
+        .lean(),
+      Property.find(
+        { updatedById: userId },
+        "title streetAddress city state updatedAt"
+      )
+        .sort({ updatedAt: -1 })
+        .limit(10)
+        .lean(),
+      Buyer.find(
+        { createdById: userId },
+        "firstName lastName email phone buyerType createdAt"
+      )
+        .sort({ createdAt: -1 })
+        .lean(),
+      Buyer.find(
+        { updatedById: userId },
+        "firstName lastName email updatedAt"
+      )
+        .sort({ updatedAt: -1 })
+        .limit(10)
+        .lean(),
+      Deal.find({ createdById: userId })
+        .populate({ path: "propertyId", select: "title streetAddress city state" })
+        .populate({ path: "buyerId", select: "firstName lastName email" })
+        .sort({ createdAt: -1 })
+        .lean(),
+      Deal.find({ updatedById: userId })
+        .select("purchasePrice salePrice status updatedAt")
+        .sort({ updatedAt: -1 })
+        .limit(10)
+        .lean(),
+      Qualification.find(
+        { updatedById: userId },
+        "qualified disqualificationReason firstName lastName email propertyPrice updatedAt"
+      )
+        .sort({ updatedAt: -1 })
+        .limit(10)
+        .lean(),
+      ActivityLog.find(
+        { userId },
+        "entityType entityId actionType details createdAt"
+      )
+        .sort({ createdAt: -1 })
+        .limit(20)
+        .lean(),
+    ]);
+
+    const mappedCreatedDeals = createdDeals.map((deal) => ({
+      id: String(deal._id),
+      purchasePrice: deal.purchasePrice,
+      salePrice: deal.salePrice,
+      status: deal.status,
+      startDate: deal.startDate,
+      completionDate: deal.completionDate,
+      profitLoss: deal.profitLoss,
+      currentRevenue: deal.currentRevenue,
+      createdAt: deal.createdAt,
+      property: deal.propertyId
+        ? {
+            id: String(deal.propertyId._id),
+            title: deal.propertyId.title,
+            streetAddress: deal.propertyId.streetAddress,
+            city: deal.propertyId.city,
+            state: deal.propertyId.state,
+          }
+        : null,
+      buyer: deal.buyerId
+        ? {
+            id: String(deal.buyerId._id),
+            firstName: deal.buyerId.firstName,
+            lastName: deal.buyerId.lastName,
+            email: deal.buyerId.email,
+          }
+        : null,
+    }));
+
+    const mappedUpdatedDeals = updatedDeals.map((deal) => ({
+      id: String(deal._id),
+      purchasePrice: deal.purchasePrice,
+      salePrice: deal.salePrice,
+      status: deal.status,
+      updatedAt: deal.updatedAt,
+    }));
+
+    const mappedCreatedProperties = createdProperties.map((item) => ({
+      id: String(item._id),
+      ...item,
+    }));
+
+    const mappedUpdatedProperties = updatedProperties.map((item) => ({
+      id: String(item._id),
+      ...item,
+    }));
+
+    const mappedCreatedBuyers = createdBuyers.map((item) => ({
+      id: String(item._id),
+      ...item,
+    }));
+
+    const mappedUpdatedBuyers = updatedBuyers.map((item) => ({
+      id: String(item._id),
+      ...item,
+    }));
+
+    const mappedUpdatedQualifications = updatedQualifications.map((item) => ({
+      id: String(item._id),
+      ...item,
+    }));
+
+    const mappedActivityLogs = activityLogs.map((item) => ({
+      id: String(item._id),
+      ...item,
+    }));
+
     // Add computed statistics
     const userWithStats = {
+      id: String(user._id),
       ...user,
+      createdProperties: mappedCreatedProperties,
+      updatedProperties: mappedUpdatedProperties,
+      createdBuyers: mappedCreatedBuyers,
+      updatedBuyers: mappedUpdatedBuyers,
+      createdDeals: mappedCreatedDeals,
+      updatedDeals: mappedUpdatedDeals,
+      updatedQualifications: mappedUpdatedQualifications,
+      activityLogs: mappedActivityLogs,
       stats: {
-        totalPropertiesCreated: user.createdResidencies?.length || 0,
-        totalPropertiesUpdated: user.updatedResidencies?.length || 0,
-        totalBuyersCreated: user.createdBuyers?.length || 0,
-        totalBuyersUpdated: user.updatedBuyers?.length || 0,
-        totalDealsCreated: user.createdDeals?.length || 0,
-        totalDealsUpdated: user.updatedDeals?.length || 0,
-        totalQualificationsUpdated: user.updatedQualifications?.length || 0,
-        totalActivities: user.activityLogs?.length || 0,
-        lastActivity: user.activityLogs?.[0]?.createdAt || null,
+        totalPropertiesCreated: mappedCreatedProperties.length,
+        totalPropertiesUpdated: mappedUpdatedProperties.length,
+        totalBuyersCreated: mappedCreatedBuyers.length,
+        totalBuyersUpdated: mappedUpdatedBuyers.length,
+        totalDealsCreated: mappedCreatedDeals.length,
+        totalDealsUpdated: mappedUpdatedDeals.length,
+        totalQualificationsUpdated: mappedUpdatedQualifications.length,
+        totalActivities: mappedActivityLogs.length,
+        lastActivity: mappedActivityLogs[0]?.createdAt || null,
       }
     };
 
@@ -493,16 +508,22 @@ export const updateUserStatus = asyncHandler(async (req, res) => {
   const { isActive } = req.body;
 
   try {
-    const updatedUser = await prisma.user.update({
-      where: { id },
-      data: {
-        isActive: isActive === true || isActive === "true",
-      },
-    });
+    await connectMongo();
+    const userId = toObjectId(id);
+    if (!userId) {
+      return res.status(400).json({ message: "Invalid user ID" });
+    }
+    const updatedUser = await User.findByIdAndUpdate(
+      userId,
+      { isActive: isActive === true || isActive === "true" },
+      { new: true }
+    ).lean();
 
     res.status(200).json({
       message: `User ${isActive ? "enabled" : "disabled"} successfully`,
-      user: updatedUser,
+      user: updatedUser
+        ? { id: String(updatedUser._id), ...updatedUser }
+        : updatedUser,
     });
   } catch (error) {
     console.error("Error updating user status:", error);
@@ -521,14 +542,20 @@ export const updateUserProfiles = asyncHandler(async (req, res) => {
   const { allowedProfiles } = req.body;
 
   try {
-    const user = await prisma.user.update({
-      where: { id },
-      data: { allowedProfiles },
-    });
+    await connectMongo();
+    const userId = toObjectId(id);
+    if (!userId) {
+      return res.status(400).json({ message: "Invalid user ID" });
+    }
+    const user = await User.findByIdAndUpdate(
+      userId,
+      { allowedProfiles },
+      { new: true }
+    ).lean();
 
     res.status(200).json({
       message: "User profiles updated successfully",
-      user,
+      user: user ? { id: String(user._id), ...user } : user,
     });
   } catch (error) {
     console.error("Error updating user profiles:", error);
@@ -559,29 +586,35 @@ export const updateUser = asyncHandler(async (req, res) => {
 
   try {
     // Check if user exists
-    const existingUser = await prisma.user.findUnique({
-      where: { id },
-    });
+    await connectMongo();
+    const userId = toObjectId(id);
+    if (!userId) {
+      return res.status(400).json({ message: "Invalid user ID" });
+    }
+    const existingUser = await User.findById(userId).lean();
 
     if (!existingUser) {
       return res.status(404).json({ message: "User not found" });
     }
 
     // Update user with new information
-    const updatedUser = await prisma.user.update({
-      where: { id },
-      data: {
+    const updatedUser = await User.findByIdAndUpdate(
+      userId,
+      {
         firstName: firstName.trim(),
         lastName: lastName.trim(),
         phone: phone?.trim() || null,
         profileRole: profileRole?.trim() || null,
         updatedAt: new Date(),
       },
-    });
+      { new: true }
+    ).lean();
 
     res.status(200).json({
       message: "User updated successfully",
-      user: updatedUser,
+      user: updatedUser
+        ? { id: String(updatedUser._id), ...updatedUser }
+        : updatedUser,
     });
   } catch (error) {
     console.error("Error updating user:", error);
@@ -597,9 +630,12 @@ export const deleteUser = asyncHandler(async (req, res) => {
   const { id } = req.params;
 
   try {
-    const user = await prisma.user.findUnique({
-      where: { id },
-    });
+    await connectMongo();
+    const userId = toObjectId(id);
+    if (!userId) {
+      return res.status(400).json({ message: "Invalid user ID" });
+    }
+    const user = await User.findById(userId).lean();
 
     if (!user) {
       return res.status(404).json({ message: "User not found" });
@@ -612,14 +648,10 @@ export const deleteUser = asyncHandler(async (req, res) => {
     }
 
     // Delete related records first
-    await prisma.activityLog.deleteMany({
-      where: { userId: id },
-    });
+    await ActivityLog.deleteMany({ userId });
 
     // Now delete the user
-    await prisma.user.delete({
-      where: { id },
-    });
+    await User.deleteOne({ _id: userId });
 
     res.status(200).json({
       message: "User deleted successfully",
@@ -647,48 +679,45 @@ export const getProfilesForPropertyAssignment = asyncHandler(async (req, res) =>
     }
 
     // Get the current user from database to get their allowedProfiles
-    const currentUser = await prisma.user.findUnique({
-      where: { auth0Id },
-      select: {
-        id: true,
-        allowedProfiles: true,
-      },
-    });
+    await connectMongo();
+    const currentUser = await User.findOne({ auth0Id })
+      .select("_id allowedProfiles")
+      .lean();
 
     if (!currentUser) {
       return res.status(404).json({ message: "User not found" });
     }
 
     // Get only the profiles that the user is allowed to use
-    const allowedProfileIds = currentUser.allowedProfiles || [];
+    const allowedProfileIds = (currentUser.allowedProfiles || []).filter(Boolean);
 
     // Include the user's own profile
-    if (!allowedProfileIds.includes(currentUser.id)) {
-      allowedProfileIds.push(currentUser.id);
+    if (!allowedProfileIds.includes(String(currentUser._id))) {
+      allowedProfileIds.push(String(currentUser._id));
     }
 
-    const users = await prisma.user.findMany({
-      where: {
-        id: { in: allowedProfileIds },
-      },
-      select: {
-        id: true,
-        firstName: true,
-        lastName: true,
-        email: true,
-        profileRole: true,
-      },
-      orderBy: {
-        firstName: "asc",
-      },
-    });
+    const allowedObjectIds = allowedProfileIds
+      .map((value) => toObjectId(value))
+      .filter(Boolean);
+    const users = await User.find(
+      { _id: { $in: allowedObjectIds } },
+      "firstName lastName email profileRole"
+    )
+      .sort({ firstName: 1 })
+      .lean();
 
     // Return limited profile data
-    const profiles = users.map((user) => ({
-      id: user.id,
-      name: user.firstName && user.lastName ? `${user.firstName} ${user.lastName}` : user.email || `User (${user.id.substring(0, 8)}...)`,
-      role: user.profileRole || "Landivo Expert",
-    }));
+    const profiles = users.map((user) => {
+      const idString = String(user._id);
+      return {
+        id: idString,
+        name:
+          user.firstName && user.lastName
+            ? `${user.firstName} ${user.lastName}`
+            : user.email || `User (${idString.substring(0, 8)}...)`,
+        role: user.profileRole || "Landivo Expert",
+      };
+    });
 
     res.status(200).json(profiles);
   } catch (error) {
@@ -708,24 +737,21 @@ export const getPublicProfileById = asyncHandler(async (req, res) => {
   const { id } = req.params;
 
   try {
-    const user = await prisma.user.findUnique({
-      where: { id },
-      select: {
-        id: true,
-        firstName: true,
-        lastName: true,
-        email: true,
-        phone: true,
-        profileRole: true,
-        avatarUrl: true,
-      },
-    });
+    await connectMongo();
+    const userId = toObjectId(id);
+    if (!userId) {
+      return res.status(400).json({ message: "Invalid profile ID" });
+    }
+    const user = await User.findById(
+      userId,
+      "firstName lastName email phone profileRole avatarUrl"
+    ).lean();
 
     if (!user) {
       return res.status(404).json({ message: "Profile not found" });
     }
 
-    res.status(200).json(user);
+    res.status(200).json({ id: String(user._id), ...user });
   } catch (error) {
     console.error("Error fetching public profile:", error);
     res.status(500).json({
@@ -744,22 +770,20 @@ export const getPropertiesUsingProfile = asyncHandler(async (req, res) => {
   const { id } = req.params;
 
   try {
-    const properties = await prisma.residency.findMany({
-      where: { profileId: id },
-      select: {
-        id: true,
-        title: true,
-        streetAddress: true,
-        city: true,
-        state: true,
-        zip: true,
-      },
-      orderBy: {
-        updatedAt: "desc",
-      },
-    });
+    await connectMongo();
+    const properties = await Property.find(
+      { profileId: id },
+      "title streetAddress city state zip updatedAt"
+    )
+      .sort({ updatedAt: -1 })
+      .lean();
 
-    res.status(200).json(properties);
+    res.status(200).json(
+      properties.map((property) => ({
+        id: String(property._id),
+        ...property,
+      }))
+    );
   } catch (error) {
     console.error("Error fetching properties using profile:", error);
     res.status(500).json({
@@ -776,9 +800,8 @@ export const getPropertiesCountByProfile = asyncHandler(async (req, res) => {
   const { id } = req.params;
 
   try {
-    const count = await prisma.residency.count({
-      where: { profileId: id },
-    });
+    await connectMongo();
+    const count = await Property.countDocuments({ profileId: id });
 
     res.status(200).json({ count });
   } catch (error) {
@@ -803,24 +826,28 @@ export const reassignProperties = asyncHandler(async (req, res) => {
 
   try {
     // Check if new profile exists
-    const newProfile = await prisma.user.findUnique({
-      where: { id: newProfileId },
-      select: { id: true },
-    });
+    await connectMongo();
+    const newProfileObjectId = toObjectId(newProfileId);
+    if (!newProfileObjectId) {
+      return res.status(400).json({ message: "Invalid new profile ID" });
+    }
+    const newProfile = await User.findById(newProfileObjectId)
+      .select("_id")
+      .lean();
 
     if (!newProfile) {
       return res.status(404).json({ message: "New profile not found" });
     }
 
     // Update all properties using the old profile ID
-    const result = await prisma.residency.updateMany({
-      where: { profileId: id },
-      data: { profileId: newProfileId },
-    });
+    const result = await Property.updateMany(
+      { profileId: id },
+      { $set: { profileId: String(newProfile._id) } }
+    );
 
     res.status(200).json({
-      message: `${result.count} properties reassigned successfully`,
-      updatedCount: result.count,
+      message: `${result.modifiedCount} properties reassigned successfully`,
+      updatedCount: result.modifiedCount,
     });
   } catch (error) {
     console.error("Error reassigning properties:", error);
@@ -842,14 +869,10 @@ export const getPublicProfiles = asyncHandler(async (req, res) => {
     const { limit = 50, offset = 0, profileRole } = req.query;
 
     // Build where clause
+    await connectMongo();
     const whereClause = {
-      isActive: true, // Only return enabled/active users
-      // Ensure user has basic profile info
-      AND: [
-        {
-          OR: [{ firstName: { not: null } }, { lastName: { not: null } }],
-        },
-      ],
+      isActive: true,
+      $or: [{ firstName: { $ne: null } }, { lastName: { $ne: null } }],
     };
 
     // Add profileRole filter if provided
@@ -857,29 +880,20 @@ export const getPublicProfiles = asyncHandler(async (req, res) => {
       whereClause.profileRole = profileRole;
     }
 
-    const users = await prisma.user.findMany({
-      where: whereClause,
-      select: {
-        id: true,
-        firstName: true,
-        lastName: true,
-        email: true,
-        phone: true,
-        profileRole: true,
-        avatarUrl: true,
-      },
-      orderBy: [{ profileRole: "asc" }, { firstName: "asc" }, { lastName: "asc" }],
-      take: parseInt(limit),
-      skip: parseInt(offset),
-    });
+    const users = await User.find(
+      whereClause,
+      "firstName lastName email phone profileRole avatarUrl"
+    )
+      .sort({ profileRole: 1, firstName: 1, lastName: 1 })
+      .limit(parseInt(limit))
+      .skip(parseInt(offset))
+      .lean();
 
     // Get total count for pagination
-    const totalCount = await prisma.user.count({
-      where: whereClause,
-    });
+    const totalCount = await User.countDocuments(whereClause);
 
     res.status(200).json({
-      profiles: users,
+      profiles: users.map((user) => ({ id: String(user._id), ...user })),
       pagination: {
         total: totalCount,
         limit: parseInt(limit),

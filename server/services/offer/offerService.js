@@ -1,5 +1,7 @@
 // server/services/offer/offerService.js
-import { prisma } from "../../config/prismaConfig.js";
+import mongoose from "../../config/mongoose.js";
+import { connectMongo } from "../../config/mongoose.js";
+import { Buyer, Offer } from "../../models/index.js";
 
 const normalizeValue = (value) => String(value || "").trim();
 
@@ -30,6 +32,11 @@ const needsMerge = (existing, incoming) => {
   const existingList = normalizeList(existing);
   const mergedList = mergeUnique(existingList, incoming);
   return mergedList.length !== existingList.length;
+};
+
+const toObjectId = (value) => {
+  if (!value || !mongoose.Types.ObjectId.isValid(value)) return null;
+  return new mongoose.Types.ObjectId(value);
 };
 
 /**
@@ -82,18 +89,14 @@ export const findOrCreateBuyer = async (buyerData) => {
       return existingBuyer;
     }
 
-    return await prisma.buyer.update({
-      where: { id: existingBuyer.id },
-      data: updateData
-    });
+    return await Buyer.findByIdAndUpdate(existingBuyer._id, updateData, { new: true });
   };
   
   // First try to find buyer by Auth0 ID if provided
   if (auth0Id) {
     console.log(`Attempting to find buyer by Auth0 ID: ${auth0Id}`);
-    buyer = await prisma.buyer.findFirst({
-      where: { auth0Id }
-    });
+    await connectMongo();
+    buyer = await Buyer.findOne({ auth0Id });
     
     // If found by Auth0 ID, return early
     if (buyer) {
@@ -105,10 +108,9 @@ export const findOrCreateBuyer = async (buyerData) => {
   
   // If not found by Auth0 ID, try email or phone
   console.log(`Attempting to find buyer by email: ${email} or phone: ${phone}`);
-  buyer = await prisma.buyer.findFirst({
-    where: {
-      OR: [{ email: email.toLowerCase() }, { phone }],
-    },
+  await connectMongo();
+  buyer = await Buyer.findOne({
+    $or: [{ email: email.toLowerCase() }, { phone }],
   });
 
   if (buyer) {
@@ -118,19 +120,17 @@ export const findOrCreateBuyer = async (buyerData) => {
   } else {
     // Create a new buyer if not found
     console.log(`No existing buyer found. Creating new buyer with email: ${email}, phone: ${phone}${auth0Id ? `, auth0Id: ${auth0Id}` : ''}`);
-    buyer = await prisma.buyer.create({
-      data: {
-        email: email.toLowerCase(),
-        phone,
-        buyerType,
-        firstName,
-        lastName,
-        source: "Property Offer",
-        preferredAreas: normalizedPreferredArea ? [normalizedPreferredArea] : [],
-        preferredCity: mergeUnique([], preferredCity),
-        preferredCounty: mergeUnique([], preferredCounty),
-        auth0Id: auth0Id || null // Store Auth0 ID if provided
-      },
+    buyer = await Buyer.create({
+      email: email.toLowerCase(),
+      phone,
+      buyerType,
+      firstName,
+      lastName,
+      source: "Property Offer",
+      preferredAreas: normalizedPreferredArea ? [normalizedPreferredArea] : [],
+      preferredCity: mergeUnique([], preferredCity),
+      preferredCounty: mergeUnique([], preferredCounty),
+      auth0Id: auth0Id || null,
     });
     buyerFoundMethod = 'created';
     console.log(`New buyer created with ID: ${buyer.id}`);
@@ -143,11 +143,11 @@ export const findOrCreateBuyer = async (buyerData) => {
  * Check if an offer already exists and if it can be updated
  */
 export const checkExistingOffer = async (buyerId, propertyId, newOfferedPrice) => {
-  const existingOffer = await prisma.offer.findFirst({
-    where: {
-      buyerId,
-      propertyId,
-    },
+  await connectMongo();
+  const buyerObjectId = toObjectId(buyerId) || buyerId;
+  const existingOffer = await Offer.findOne({
+    buyerId: buyerObjectId,
+    propertyId,
   });
   
   if (existingOffer) {
@@ -179,9 +179,11 @@ export const checkExistingOffer = async (buyerId, propertyId, newOfferedPrice) =
  */
 export const updateExistingOffer = async (offerId, offeredPrice, buyerMessage = null, userId = null, userName = null) => {
   // First get the existing offer to get previous status and prices
-  const existingOffer = await prisma.offer.findUnique({
-    where: { id: offerId }
-  });
+  await connectMongo();
+  const offerObjectId = toObjectId(offerId);
+  const existingOffer = offerObjectId
+    ? await Offer.findById(offerObjectId)
+    : null;
   
   if (!existingOffer) {
     throw new Error(`Offer with ID ${offerId} not found`);
@@ -203,18 +205,18 @@ export const updateExistingOffer = async (offerId, offeredPrice, buyerMessage = 
   const existingHistory = existingOffer.offerHistory || [];
   
   // Update the offer with new price and add to history
-  return await prisma.offer.update({
-    where: { id: offerId },
-    data: {
+  return await Offer.findByIdAndUpdate(
+    offerObjectId,
+    {
       offeredPrice: parseFloat(offeredPrice),
-      offerStatus: "PENDING", // Reset to pending with new offer
-      buyerMessage: buyerMessage || null, // Set to null if not provided
-      // sysMessage: null, // Don't Always clear system message
+      offerStatus: "PENDING",
+      buyerMessage: buyerMessage || null,
       offerHistory: [...existingHistory, historyEntry],
       timestamp: new Date(),
-      updatedById: userId
+      updatedById: userId || null,
     },
-  });
+    { new: true }
+  );
 };
 
 /**
@@ -232,18 +234,18 @@ export const createNewOffer = async (propertyId, offeredPrice, buyerId, buyerMes
     createdByName: userName || "Buyer"
   }];
   
-  return await prisma.offer.create({
-    data: {
-      propertyId,
-      offeredPrice: parseFloat(offeredPrice),
-      buyerId,
-      offerStatus: "PENDING",
-      buyerMessage: buyerMessage || null, // Set to null if not provided
-      sysMessage: null, // Always clear system message
-      offerHistory: initialHistory,
-      timestamp: new Date(),
-      createdById: userId
-    },
+  await connectMongo();
+  const buyerObjectId = toObjectId(buyerId) || buyerId;
+  return await Offer.create({
+    propertyId,
+    offeredPrice: parseFloat(offeredPrice),
+    buyerId: buyerObjectId,
+    offerStatus: "PENDING",
+    buyerMessage: buyerMessage || null,
+    sysMessage: null,
+    offerHistory: initialHistory,
+    timestamp: new Date(),
+    createdById: userId || null,
   });
 };
 
