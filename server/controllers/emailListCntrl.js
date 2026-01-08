@@ -3,6 +3,71 @@
 import asyncHandler from "express-async-handler";
 import { prisma } from "../config/prismaConfig.js";
 
+let buyerPreferenceNormalizationCompleted = false;
+
+async function normalizeBuyerPreferenceFields() {
+  try {
+    await prisma.$runCommandRaw({
+      update: "Buyer",
+      updates: [
+        {
+          q: { preferredCity: { $type: "string" } },
+          u: [
+            {
+              $set: {
+                preferredCity: {
+                  $cond: [
+                    { $eq: ["$preferredCity", ""] },
+                    [],
+                    ["$preferredCity"],
+                  ],
+                },
+              },
+            },
+          ],
+          multi: true,
+        },
+      ],
+    });
+
+    await prisma.$runCommandRaw({
+      update: "Buyer",
+      updates: [
+        {
+          q: { preferredCounty: { $type: "string" } },
+          u: [
+            {
+              $set: {
+                preferredCounty: {
+                  $cond: [
+                    { $eq: ["$preferredCounty", ""] },
+                    [],
+                    ["$preferredCounty"],
+                  ],
+                },
+              },
+            },
+          ],
+          multi: true,
+        },
+      ],
+    });
+
+    return true;
+  } catch (error) {
+    console.error("Failed to normalize buyer preference fields:", error);
+    return false;
+  }
+}
+
+async function ensureBuyerPreferenceFieldsNormalized() {
+  if (buyerPreferenceNormalizationCompleted) return;
+  const didNormalize = await normalizeBuyerPreferenceFields();
+  if (didNormalize) {
+    buyerPreferenceNormalizationCompleted = true;
+  }
+}
+
 // Get all email lists
 export const getAllEmailLists = asyncHandler(async (req, res) => {
   try {
@@ -110,6 +175,7 @@ export const getEmailList = asyncHandler(async (req, res) => {
   }
 
   try {
+    await ensureBuyerPreferenceFieldsNormalized();
     // Get the list with buyers through join table
     const list = await prisma.emailList.findUnique({
       where: { id },
@@ -845,6 +911,7 @@ export const previewEmailListRecipients = asyncHandler(async (req, res) => {
     : 25;
 
   try {
+    await ensureBuyerPreferenceFieldsNormalized();
     const buyers = await prisma.buyer.findMany({
       select: {
         id: true,
