@@ -4,6 +4,42 @@ import asyncHandler from "express-async-handler";
 import { prisma } from "../config/prismaConfig.js";
 
 let buyerPreferenceNormalizationCompleted = false;
+const normalizeCriteriaListValue = (value) => {
+  if (Array.isArray(value)) {
+    return value
+      .map((entry) => String(entry).trim())
+      .filter(Boolean);
+  }
+  if (typeof value === "string") {
+    const trimmed = value.trim();
+    return trimmed ? [trimmed] : [];
+  }
+  return [];
+};
+
+const normalizeEmailListCriteria = (criteria) => {
+  if (!criteria || typeof criteria !== "object") return criteria;
+
+  const nextCriteria = { ...criteria };
+
+  if (Object.prototype.hasOwnProperty.call(criteria, "areas")) {
+    nextCriteria.areas = normalizeCriteriaListValue(criteria.areas);
+  }
+
+  if (Object.prototype.hasOwnProperty.call(criteria, "city")) {
+    nextCriteria.city = normalizeCriteriaListValue(criteria.city);
+  }
+
+  if (Object.prototype.hasOwnProperty.call(criteria, "county")) {
+    nextCriteria.county = normalizeCriteriaListValue(criteria.county);
+  }
+
+  if (Object.prototype.hasOwnProperty.call(criteria, "buyerTypes")) {
+    nextCriteria.buyerTypes = normalizeCriteriaListValue(criteria.buyerTypes);
+  }
+
+  return nextCriteria;
+};
 
 async function normalizeBuyerPreferenceFields() {
   try {
@@ -336,16 +372,17 @@ export const createEmailList = asyncHandler(async (req, res) => {
   try {
     // Ensure buyerIds is an array
     const buyerIdsArray = Array.isArray(buyerIds) ? buyerIds : [];
+    const normalizedCriteria = criteria ? normalizeEmailListCriteria(criteria) : criteria;
 
     // Log criteria for debugging (especially useful for city/county)
-    if (criteria) {
+    if (normalizedCriteria) {
       console.log("Creating email list with criteria:", {
         name,
-        areas: criteria.areas,
-        city: criteria.city,
-        county: criteria.county,
-        buyerTypes: criteria.buyerTypes,
-        isVIP: criteria.isVIP
+        areas: normalizedCriteria.areas,
+        city: normalizedCriteria.city,
+        county: normalizedCriteria.county,
+        buyerTypes: normalizedCriteria.buyerTypes,
+        isVIP: normalizedCriteria.isVIP
       });
     }
 
@@ -354,7 +391,7 @@ export const createEmailList = asyncHandler(async (req, res) => {
       data: {
         name,
         description,
-        criteria,
+        criteria: normalizedCriteria,
         color,
         source: source || "Manual", // Add source field with default fallback
         createdBy: req.userId,
@@ -403,15 +440,17 @@ export const updateEmailList = asyncHandler(async (req, res) => {
     }
 
     // Log criteria updates for debugging
-    if (criteria) {
+    const normalizedCriteria = criteria ? normalizeEmailListCriteria(criteria) : criteria;
+
+    if (normalizedCriteria) {
       console.log("Updating email list criteria:", {
         listId: id,
         name,
-        areas: criteria.areas,
-        city: criteria.city,
-        county: criteria.county,
-        buyerTypes: criteria.buyerTypes,
-        isVIP: criteria.isVIP
+        areas: normalizedCriteria.areas,
+        city: normalizedCriteria.city,
+        county: normalizedCriteria.county,
+        buyerTypes: normalizedCriteria.buyerTypes,
+        isVIP: normalizedCriteria.isVIP
       });
     }
 
@@ -421,7 +460,7 @@ export const updateEmailList = asyncHandler(async (req, res) => {
       data: {
         name,
         description,
-        criteria,
+        criteria: normalizedCriteria,
         color,
         updatedAt: new Date(),
       },
@@ -1041,7 +1080,7 @@ export const createGeneratedEmailList = asyncHandler(async (req, res) => {
     }
 
     const criteriaPayload = {
-      ...serializedCriteria,
+      ...normalizeEmailListCriteria(serializedCriteria),
       isGenerated: true,
       generatedAt: serializedCriteria.generatedAt || new Date().toISOString(),
     };

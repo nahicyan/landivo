@@ -1,6 +1,26 @@
 // File location: server/services/offer/offerEmailListService.js
 import { prisma } from "../../config/prismaConfig.js";
 
+const normalizeCriteriaListValue = (value) => {
+  if (Array.isArray(value)) {
+    return value
+      .map((entry) => String(entry).trim())
+      .filter(Boolean);
+  }
+  if (typeof value === "string") {
+    const trimmed = value.trim();
+    return trimmed ? [trimmed] : [];
+  }
+  return [];
+};
+
+const mergeCriteriaList = (currentValue, nextValue) => {
+  const current = normalizeCriteriaListValue(currentValue);
+  const next = normalizeCriteriaListValue(nextValue);
+  const merged = [...current, ...next];
+  return Array.from(new Set(merged));
+};
+
 /**
  * Manages automatic email list creation and buyer addition upon offer submission
  * Creates or finds list with format: "{Source} {Area} {BuyerType}"
@@ -119,10 +139,10 @@ export const handleOfferEmailList = async (buyer, property, offerSource = "Offer
 const createOfferEmailList = async (listName, area, city, county, buyerType, source) => {
   // Create criteria that includes area, city, county, and buyer type
   const criteria = {
-    areas: [area], // Property.area - the main area designation
-    city: city, // Property.city - specific city
-    county: county, // Property.county - county information
-    buyerTypes: [buyerType], // Buyer type
+    areas: normalizeCriteriaListValue(area), // Property.area - the main area designation
+    city: normalizeCriteriaListValue(city), // Property.city - specific city
+    county: normalizeCriteriaListValue(county), // Property.county - county information
+    buyerTypes: normalizeCriteriaListValue(buyerType), // Buyer type
     isVIP: false,
     description: `Automatically created for ${buyerType} buyers who made offers on properties in ${area} (${city}, ${county})`
   };
@@ -160,10 +180,10 @@ const updateEmailListCriteria = async (emailListId, area, city, county, buyerTyp
     // Update criteria with new structure
     const updatedCriteria = {
       ...currentCriteria,
-      areas: currentCriteria.areas || [area],
-      city: city,
-      county: county,
-      buyerTypes: currentCriteria.buyerTypes || [buyerType],
+      areas: mergeCriteriaList(currentCriteria.areas, area),
+      city: mergeCriteriaList(currentCriteria.city, city),
+      county: mergeCriteriaList(currentCriteria.county, county),
+      buyerTypes: mergeCriteriaList(currentCriteria.buyerTypes, buyerType),
       isVIP: currentCriteria.isVIP || false,
       description: currentCriteria.description || 
         `Automatically created for ${buyerType} buyers who made offers on properties in ${area} (${city}, ${county})`
