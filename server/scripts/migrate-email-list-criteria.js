@@ -27,24 +27,12 @@ const buildCriteriaArrayUpdate = (field) => ({
   ],
 });
 
-const buildTopLevelArrayToStringUpdate = (field) => ({
+const buildTopLevelUnsetUpdate = (field) => ({
   update: "EmailList",
   updates: [
     {
-      q: { [field]: { $type: "array" } },
-      u: [
-        {
-          $set: {
-            [field]: {
-              $cond: [
-                { $gt: [{ $size: `$${field}` }, 0] },
-                { $arrayElemAt: [`$${field}`, 0] },
-                "",
-              ],
-            },
-          },
-        },
-      ],
+      q: { [field]: { $exists: true } },
+      u: { $unset: { [field]: "" } },
       multi: true,
     },
   ],
@@ -62,6 +50,16 @@ const runUpdate = async (label, command) => {
     modified,
     result,
   });
+};
+
+const runCount = async (label, query) => {
+  const result = await prisma.$runCommandRaw({
+    count: "EmailList",
+    query,
+  });
+  const count = result?.n ?? result?.count ?? 0;
+  console.log(`[migrate-email-list-criteria] ${label}`, { count });
+  return count;
 };
 
 const main = async () => {
@@ -84,13 +82,26 @@ const main = async () => {
     buildCriteriaArrayUpdate("buyerTypes")
   );
 
+  await runCount("EmailList preferredCity present", {
+    preferredCity: { $exists: true },
+  });
+  await runCount("EmailList preferredCounty present", {
+    preferredCounty: { $exists: true },
+  });
+  await runCount("EmailList preferredCity or preferredCounty present", {
+    $or: [
+      { preferredCity: { $exists: true } },
+      { preferredCounty: { $exists: true } },
+    ],
+  });
+
   await runUpdate(
-    "preferredCity array -> string",
-    buildTopLevelArrayToStringUpdate("preferredCity")
+    "preferredCity unset",
+    buildTopLevelUnsetUpdate("preferredCity")
   );
   await runUpdate(
-    "preferredCounty array -> string",
-    buildTopLevelArrayToStringUpdate("preferredCounty")
+    "preferredCounty unset",
+    buildTopLevelUnsetUpdate("preferredCounty")
   );
 
   console.log("[migrate-email-list-criteria] Done");
