@@ -4,13 +4,29 @@ import { prisma } from "../config/prismaConfig.js";
 // Add this import
 import { handleVipBuyerEmailList } from "../services/buyer/vipBuyerEmailListService.js";
 
+const normalizeValue = (value) => String(value || "").trim();
+
+const normalizeList = (value) => {
+  if (!value) return [];
+  if (Array.isArray(value)) {
+    return value.map(normalizeValue).filter(Boolean);
+  }
+  const normalized = normalizeValue(value);
+  return normalized ? [normalized] : [];
+};
+
+const mergeUnique = (existing, incoming) => {
+  const merged = new Set([...normalizeList(existing), ...normalizeList(incoming)]);
+  return Array.from(merged);
+};
+
 /**
  * Create a VIP buyer with Auth0 ID
  * @route POST /api/buyer/createVipBuyer
  * @access Public
  */
 export const createVipBuyer = asyncHandler(async (req, res) => {
-  const { email, phone, buyerType, firstName, lastName, preferredAreas, auth0Id } = req.body;
+  const { email, phone, buyerType, firstName, lastName, preferredAreas, preferredCity, preferredCounty, auth0Id } = req.body;
 
   // Validate required fields
   if (!email || !phone || !buyerType || !firstName || !lastName || !preferredAreas || !Array.isArray(preferredAreas)) {
@@ -29,6 +45,10 @@ export const createVipBuyer = asyncHandler(async (req, res) => {
     });
 
     if (buyer) {
+      const mergedAreas = mergeUnique(buyer.preferredAreas, preferredAreas);
+      const mergedCities = mergeUnique(buyer.preferredCity, preferredCity);
+      const mergedCounties = mergeUnique(buyer.preferredCounty, preferredCounty);
+
       // Update existing buyer with VIP status, preferred areas, and Auth0 ID
       buyer = await prisma.buyer.update({
         where: { id: buyer.id },
@@ -36,12 +56,18 @@ export const createVipBuyer = asyncHandler(async (req, res) => {
           firstName,
           lastName,
           buyerType,
-          preferredAreas,
+          preferredAreas: mergedAreas,
+          preferredCity: mergedCities,
+          preferredCounty: mergedCounties,
           source: "VIP Buyers List",
           auth0Id, // Add Auth0 user ID to the buyer record
         },
       });
     } else {
+      const normalizedAreas = normalizeList(preferredAreas);
+      const normalizedCities = normalizeList(preferredCity);
+      const normalizedCounties = normalizeList(preferredCounty);
+
       // Create new buyer with VIP status, preferred areas, and Auth0 ID
       buyer = await prisma.buyer.create({
         data: {
@@ -50,7 +76,9 @@ export const createVipBuyer = asyncHandler(async (req, res) => {
           buyerType,
           firstName,
           lastName,
-          preferredAreas,
+          preferredAreas: normalizedAreas,
+          preferredCity: normalizedCities,
+          preferredCounty: normalizedCounties,
           source: "VIP Buyers List",
           auth0Id, // Add Auth0 user ID to the buyer record
         },
@@ -196,7 +224,17 @@ export const getBuyerById = asyncHandler(async (req, res) => {
  */
 export const updateBuyer = asyncHandler(async (req, res) => {
   const { id } = req.params;
-  const { firstName, lastName, email, phone, buyerType, source, preferredAreas } = req.body;
+  const {
+    firstName,
+    lastName,
+    email,
+    phone,
+    buyerType,
+    source,
+    preferredAreas,
+    preferredCity,
+    preferredCounty
+  } = req.body;
 
   if (!id) {
     return res.status(400).json({ message: "Buyer ID is required" });
@@ -245,6 +283,16 @@ export const updateBuyer = asyncHandler(async (req, res) => {
       }
     }
 
+    const nextPreferredAreas = preferredAreas
+      ? mergeUnique(existingBuyer.preferredAreas, preferredAreas)
+      : existingBuyer.preferredAreas || [];
+    const nextPreferredCities = preferredCity
+      ? mergeUnique(existingBuyer.preferredCity, preferredCity)
+      : existingBuyer.preferredCity || [];
+    const nextPreferredCounties = preferredCounty
+      ? mergeUnique(existingBuyer.preferredCounty, preferredCounty)
+      : existingBuyer.preferredCounty || [];
+
     // Update the buyer
     const updatedBuyer = await prisma.buyer.update({
       where: { id },
@@ -255,7 +303,9 @@ export const updateBuyer = asyncHandler(async (req, res) => {
         phone: phone && phone.trim() ? phone : null,
         buyerType: buyerType || null,
         source,
-        preferredAreas: preferredAreas || [],
+        preferredAreas: nextPreferredAreas,
+        preferredCity: nextPreferredCities,
+        preferredCounty: nextPreferredCounties
       },
       include: {
         offers: true,
@@ -348,6 +398,8 @@ export const createBuyer = asyncHandler(async (req, res) => {
     lastName,
     source,
     preferredAreas,
+    preferredCity,
+    preferredCounty,
     emailStatus,
     emailPermissionStatus,
     emailLists, // Array of list names or IDs
@@ -389,6 +441,10 @@ export const createBuyer = asyncHandler(async (req, res) => {
       emailListConnections = lists.map((list) => ({ id: list.id }));
     }
 
+    const normalizedAreas = normalizeList(preferredAreas);
+    const normalizedCities = normalizeList(preferredCity);
+    const normalizedCounties = normalizeList(preferredCounty);
+
     // Create new buyer with email list connections
     const buyer = await prisma.buyer.create({
       data: {
@@ -398,7 +454,9 @@ export const createBuyer = asyncHandler(async (req, res) => {
         firstName,
         lastName,
         source: source || "Manual Entry",
-        preferredAreas: preferredAreas || [],
+        preferredAreas: normalizedAreas,
+        preferredCity: normalizedCities,
+        preferredCounty: normalizedCounties,
         emailStatus: emailStatus || "available",
         emailPermissionStatus,
         emailListMemberships: {
@@ -562,7 +620,20 @@ export const importBuyersFromCsv = asyncHandler(async (req, res) => {
     // Process each buyer
     for (const buyerData of buyers) {
       try {
-        const { email, phone, firstName, lastName, buyerType, preferredAreas, emailStatus, emailPermissionStatus, isNew, existingBuyerId } = buyerData;
+        const {
+          email,
+          phone,
+          firstName,
+          lastName,
+          buyerType,
+          preferredAreas,
+          preferredCity,
+          preferredCounty,
+          emailStatus,
+          emailPermissionStatus,
+          isNew,
+          existingBuyerId
+        } = buyerData;
 
         // Check required fields
         if (!email) {
@@ -584,7 +655,9 @@ export const importBuyersFromCsv = asyncHandler(async (req, res) => {
               firstName: firstName || null,
               lastName: lastName || null,
               source: source,
-              preferredAreas: preferredAreas || [],
+              preferredAreas: normalizeList(preferredAreas),
+              preferredCity: normalizeList(preferredCity),
+              preferredCounty: normalizeList(preferredCounty),
               emailStatus: emailStatus || "available",
               emailPermissionStatus: emailPermissionStatus || null,
             },
@@ -593,6 +666,19 @@ export const importBuyersFromCsv = asyncHandler(async (req, res) => {
           results.created++;
           results.createdBuyerIds.push(newBuyer.id);
         } else if (existingBuyerId) {
+          const existingBuyer = await prisma.buyer.findUnique({
+            where: { id: existingBuyerId },
+            select: {
+              preferredAreas: true,
+              preferredCity: true,
+              preferredCounty: true
+            }
+          });
+
+          const nextPreferredAreas = mergeUnique(existingBuyer?.preferredAreas, preferredAreas);
+          const nextPreferredCities = mergeUnique(existingBuyer?.preferredCity, preferredCity);
+          const nextPreferredCounties = mergeUnique(existingBuyer?.preferredCounty, preferredCounty);
+
           // Update existing buyer (duplicates are handled in the frontend)
           await prisma.buyer.update({
             where: { id: existingBuyerId },
@@ -600,7 +686,9 @@ export const importBuyersFromCsv = asyncHandler(async (req, res) => {
               firstName: firstName || undefined,
               lastName: lastName || undefined,
               buyerType: buyerType || undefined,
-              preferredAreas: preferredAreas || undefined,
+              preferredAreas: nextPreferredAreas,
+              preferredCity: nextPreferredCities,
+              preferredCounty: nextPreferredCounties,
               source: source || undefined,
               emailStatus: emailStatus || undefined,
               emailPermissionStatus: emailPermissionStatus || undefined,

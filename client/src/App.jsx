@@ -52,6 +52,7 @@ import DealsList from "@/components/Deal/DealsList";
 import PaymentList from "@/components/Deal/PaymentList";
 import ProfileWarning from "./components/ProfileWarning/ProfileWarning";
 import { Auth0ProviderWithNavigate } from "./components/Auth0/Auth0Provider";
+import AuthProviderErrorBoundary from "./components/Auth0/AuthProviderErrorBoundary";
 import { PermissionsProvider } from "./components/Auth0/PermissionsContext";
 import { PERMISSIONS } from "./utils/permissions";
 import { ActivityTrackingProvider } from "./components/ActivityTracking/ActivityTrackingProvider";
@@ -72,6 +73,7 @@ import Unsubscribe from "./pages/Subscription/Unsubscribe";
 import MailMerge from "./pages/MailMerge/MailMerge";
 import EditUserDetail from "./components/EditUserDetail/EditUserDetail";
 import VerifyEmail from "./pages/VerifyEmail/VerifyEmail";
+import AuthCallbackSpinner from "./components/Auth0/AuthCallbackSpinner";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -113,17 +115,19 @@ function App() {
       <QueryClientProvider client={queryClient}>
         <ThemeProvider theme={theme}>
           <BrowserRouter>
-            <Auth0ProviderWithNavigate>
-              <AuthErrorBoundary>
-                <TokenValidationProvider>
-                  <PermissionsProvider>
-                    <ApiAuthProvider>
-                      <VipBuyerProvider>
-                        <ActivityTrackingProvider>
-                          <TrackingProvider>
-                            <ScrollToTop />
-                            <ProfileWarning />
-                            <Routes>
+            <AuthProviderErrorBoundary>
+              <Auth0ProviderWithNavigate>
+                <AuthCallbackSpinner />
+                <AuthErrorBoundary>
+                  <TokenValidationProvider>
+                    <PermissionsProvider>
+                      <ApiAuthProvider>
+                        <VipBuyerProvider>
+                          <ActivityTrackingProvider>
+                            <TrackingProvider>
+                              <ScrollToTop />
+                              <ProfileWarning />
+                              <Routes>
                               {/* Public routes - accessible to all */}
                               <Route element={<Layout />}>
                                 <Route path="/" element={<Site />} />
@@ -285,15 +289,16 @@ function App() {
                                     <AdminLayout />
                                   </ProtectedRoute>
                                 }></Route>
-                            </Routes>
-                          </TrackingProvider>
-                        </ActivityTrackingProvider>
-                      </VipBuyerProvider>
-                    </ApiAuthProvider>
-                  </PermissionsProvider>
-                </TokenValidationProvider>
-              </AuthErrorBoundary>
-            </Auth0ProviderWithNavigate>
+                              </Routes>
+                            </TrackingProvider>
+                          </ActivityTrackingProvider>
+                        </VipBuyerProvider>
+                      </ApiAuthProvider>
+                    </PermissionsProvider>
+                  </TokenValidationProvider>
+                </AuthErrorBoundary>
+              </Auth0ProviderWithNavigate>
+            </AuthProviderErrorBoundary>
           </BrowserRouter>
         </ThemeProvider>
         <ToastContainer />
