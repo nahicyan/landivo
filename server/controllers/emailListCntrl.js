@@ -71,6 +71,9 @@ async function ensureBuyerPreferenceFieldsNormalized() {
 // Get all email lists
 export const getAllEmailLists = asyncHandler(async (req, res) => {
   try {
+    console.log("[EmailListController]:[getAllEmailLists]:[Request]", {
+      query: req?.query || {},
+    });
     const lists = await prisma.emailList.findMany({
       orderBy: {
         createdAt: "desc",
@@ -156,6 +159,9 @@ export const getAllEmailLists = asyncHandler(async (req, res) => {
       })
     );
 
+    console.log("[EmailListController]:[getAllEmailLists]:[Response]", {
+      totalLists: listsWithCounts.length,
+    });
     res.status(200).json(listsWithCounts);
   } catch (err) {
     console.error("Error fetching email lists:", err);
@@ -175,6 +181,7 @@ export const getEmailList = asyncHandler(async (req, res) => {
   }
 
   try {
+    console.log("[EmailListController]:[getEmailList]:[Request]", { id });
     await ensureBuyerPreferenceFieldsNormalized();
     // Get the list with buyers through join table
     const list = await prisma.emailList.findUnique({
@@ -202,6 +209,7 @@ export const getEmailList = asyncHandler(async (req, res) => {
 
     // Extract buyers from join table
     const manualBuyers = list.buyerMemberships.map((membership) => membership.buyer);
+    const manualBuyerIds = manualBuyers.map((buyer) => buyer.id).filter(Boolean);
 
     // Get buyers matching criteria
     let criteriaBuyers = [];
@@ -254,11 +262,24 @@ export const getEmailList = asyncHandler(async (req, res) => {
             },
           },
         });
+        console.log("[EmailListController]:[getEmailList]:[Criteria]", {
+          id,
+          listName: list?.name,
+          query,
+          criteriaBuyerCount: criteriaBuyers.length,
+        });
       }
     }
 
     // Combine and remove duplicates
-    const allBuyerIds = new Set([...manualBuyers.map((b) => b.id), ...criteriaBuyers.map((b) => b.id)]);
+    const allBuyerIds = new Set([...manualBuyerIds, ...criteriaBuyers.map((b) => b.id)]);
+    console.log("[EmailListController]:[getEmailList]:[Buyers]", {
+      id,
+      listName: list?.name,
+      manualBuyerCount: manualBuyerIds.length,
+      criteriaBuyerCount: criteriaBuyers.length,
+      uniqueBuyerCount: allBuyerIds.size,
+    });
 
     const allBuyers = await prisma.buyer.findMany({
       where: {
@@ -285,6 +306,11 @@ export const getEmailList = asyncHandler(async (req, res) => {
     // Remove buyerMemberships from response and add transformed buyers
     const { buyerMemberships, ...listData } = list;
 
+    console.log("[EmailListController]:[getEmailList]:[Response]", {
+      id,
+      listName: list?.name,
+      buyerCount: buyersWithEmailLists.length,
+    });
     res.status(200).json({
       ...listData,
       buyers: buyersWithEmailLists,
@@ -911,6 +937,11 @@ export const previewEmailListRecipients = asyncHandler(async (req, res) => {
     : 25;
 
   try {
+    console.log("[EmailListController]:[previewEmailListRecipients]:[Request]", {
+      includeBuyerIds,
+      sampleSize: normalizedSampleSize,
+      filters,
+    });
     await ensureBuyerPreferenceFieldsNormalized();
     const buyers = await prisma.buyer.findMany({
       select: {
@@ -943,6 +974,13 @@ export const previewEmailListRecipients = asyncHandler(async (req, res) => {
           }))
         : [];
 
+    console.log("[EmailListController]:[previewEmailListRecipients]:[Response]", {
+      totalBuyers: buyers.length,
+      filteredCount: filtered.length,
+      dedupedCount: total,
+      sampleRecipients: sampleRecipients.length,
+      includeBuyerIds,
+    });
     res.status(200).json({
       total,
       buyerIds: includeBuyerIds ? deduped.map((buyer) => buyer.id) : undefined,
