@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useEffect, useMemo } from "react";
 import { useQuery } from "react-query";
 import { getAllProperties } from "../../utils/api";
 import { usePermissions } from "@/components/Auth0/PermissionsContext";
@@ -24,6 +24,22 @@ const useProperties = () => {
     const filteredData = filterPropertiesByStatus(rawData, filterFlags);
     return sortPropertiesWithPendingLast(filteredData);
   }, [rawData, settings, permissions]);
+
+  useEffect(() => {
+    console.log(
+      `[useProperties] > [Response]: rawDataCount=${
+        Array.isArray(rawData) ? rawData.length : rawData ? "<non-array>" : "<none>"
+      }`
+    );
+  }, [rawData]);
+
+  useEffect(() => {
+    console.log(
+      `[useProperties] > [Computed]: filteredDataCount=${
+        Array.isArray(data) ? data.length : data ? "<non-array>" : "<none>"
+      }`
+    );
+  }, [data]);
 
   return {
     data,

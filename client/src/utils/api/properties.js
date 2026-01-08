@@ -8,7 +8,13 @@ import { api, handleRequestError } from './config';
  */
 export const getAllProperties = async () => {
   try {
+    console.log("[properties:getAllProperties] > [Request]: GET /property/all");
     const response = await api.get('/property/all');
+    console.log(
+      `[properties:getAllProperties] > [Response]: received=${
+        Array.isArray(response.data) ? response.data.length : "unknown"
+      }`
+    );
     return response.data;
   } catch (error) {
     handleRequestError(error, "Failed to fetch properties");

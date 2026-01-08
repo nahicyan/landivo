@@ -148,20 +148,27 @@ const manageFeaturedDisplayOrder = async (propertyId, isFeatured, displayPositio
 // Get All Properties
 export const getAllProperties = asyncHandler(async (req, res) => {
   try {
+    console.log(
+      `[propertyCntrl:getAllProperties] > [Request]: query=${JSON.stringify(
+        req.query || {}
+      )}`
+    );
     await connectMongo();
     const properties = await Property.find({})
       .populate({ path: "createdById", select: "firstName lastName email" })
       .populate({ path: "updatedById", select: "firstName lastName email" })
       .sort({ createdAt: -1 })
       .lean();
-    res.status(200).send(
-      properties.map((property) => ({
-        id: String(property._id),
-        ...property,
-        createdBy: property.createdById || null,
-        updatedBy: property.updatedById || null,
-      }))
+    const responsePayload = properties.map((property) => ({
+      id: String(property._id),
+      ...property,
+      createdBy: property.createdById || null,
+      updatedBy: property.updatedById || null,
+    }));
+    console.log(
+      `[propertyCntrl:getAllProperties] > [Response]: count=${responsePayload.length}`
     );
+    res.status(200).send(responsePayload);
   } catch (error) {
     console.error("Error fetching properties:", error);
     res.status(500).send({

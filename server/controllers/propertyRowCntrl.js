@@ -14,6 +14,10 @@ export const getPropertyRows = asyncHandler(async (req, res) => {
   try {
     const { rowType } = req.query;
 
+    console.log(
+      `[propertyRowCntrl:getPropertyRows] > [Request]: rowType=${rowType || "<none>"}`
+    );
+
     // Filter by row type if provided
     const whereClause = rowType ? { rowType } : {};
 
@@ -22,9 +26,19 @@ export const getPropertyRows = asyncHandler(async (req, res) => {
       .sort({ updatedAt: -1 })
       .lean();
 
+    console.log(
+      `[propertyRowCntrl:getPropertyRows] > [Response]: rowsFetched=${propertyRows.length}`
+    );
+
     // If requesting featured rows, also include property details
     if (rowType === "featured" && propertyRows.length > 0) {
       const featuredRow = propertyRows[0];
+
+      console.log(
+        `[propertyRowCntrl:getPropertyRows] > [Response]: featuredRowId=${String(
+          featuredRow._id
+        )}, displayOrderCount=${featuredRow.displayOrder.length}`
+      );
 
       // Get property details for all IDs in the display order
       const propertyDetails = await Promise.all(
@@ -47,6 +61,11 @@ export const getPropertyRows = asyncHandler(async (req, res) => {
       );
 
       // Add property details to the response
+      console.log(
+        `[propertyRowCntrl:getPropertyRows] > [Response]: returning featured row with ${
+          propertyDetails.length
+        } propertyDetails`
+      );
       return res.status(200).json({
         id: String(featuredRow._id),
         ...featuredRow,
@@ -54,6 +73,9 @@ export const getPropertyRows = asyncHandler(async (req, res) => {
       });
     }
 
+    console.log(
+      `[propertyRowCntrl:getPropertyRows] > [Response]: fullRowsReturned=${propertyRows.length}`
+    );
     res.status(200).json(
       propertyRows.map((row) => ({
         id: String(row._id),

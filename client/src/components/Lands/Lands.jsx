@@ -16,6 +16,8 @@ const fadeUp = {
   },
 };
 
+
+
 export const Lands = () => {
   const { data, isError, isLoading } = useProperties();
   const navigate = useNavigate();
@@ -23,24 +25,39 @@ export const Lands = () => {
   // State for homepage featured properties
   const [featuredPropertyIds, setFeaturedPropertyIds] = useState([]);
   const [loadingFeatured, setLoadingFeatured] = useState(true);
-
   // Fetch homepage featured properties
   useEffect(() => {
     const fetchFeaturedProperties = async () => {
-      if (!data || data.length === 0) return;
-      
+      if (!data || data.length === 0) {
+        return;
+      }
       setLoadingFeatured(true);
       try {
-        const response = await getPropertyRows('?rowType=homepage');
-        
-        if (response.data && Array.isArray(response.data.displayOrder)) {
-          const displayOrder = response.data.displayOrder;
+        console.log("[Lands:useEffect] > [Request]: getPropertyRows(homepage)");
+        const rows = await getPropertyRows("homepage");
+        console.log(
+          `[Lands:useEffect] > [Response]: fetchedRows=${
+            Array.isArray(rows) ? rows.length : "non-array"
+          }`
+        );
+        const homepageRow = Array.isArray(rows)
+          ? rows.find((row) => row.rowType === "homepage") || rows[0]
+          : null;
+
+        console.log(
+          `[Lands:useEffect] > [Computed]: homepageRow=${homepageRow ? homepageRow.name || homepageRow.rowType || homepageRow.id : "<none>"}`
+        );
+        if (homepageRow && Array.isArray(homepageRow.displayOrder)) {
+          const displayOrder = homepageRow.displayOrder;
           const propertiesMap = new Map(data.map(property => [property.id, property]));
           const featuredIds = displayOrder.filter(id => {
             const property = propertiesMap.get(id);
             return property && property.featured === "Featured";
           });
-          
+
+          console.log(
+            `[Lands:useEffect] > [Computed]: featuredIds=${featuredIds.length}`
+          );
           setFeaturedPropertyIds(featuredIds);
         }
       } catch (error) {

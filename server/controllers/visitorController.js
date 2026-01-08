@@ -34,38 +34,49 @@ export const trackVisit = asyncHandler(async (req, res) => {
 
     // Check if visitor exists
     let visitor = await Visitor.findOne({ visitorId });
-
-    const isNewVisitor = !visitor;
+    let isNewVisitor = !visitor;
 
     if (isNewVisitor) {
-      // Create new visitor
-      visitor = await Visitor.create({
-        visitorId,
-        firstVisit: new Date(),
-        lastVisit: new Date(),
-        totalVisits: 1,
-        deviceType,
-        browser: userAgent.includes("Chrome")
-          ? "Chrome"
-          : userAgent.includes("Firefox")
-          ? "Firefox"
-          : userAgent.includes("Safari")
-          ? "Safari"
-          : userAgent.includes("Edge")
-          ? "Edge"
-          : "Other",
-        os: userAgent.includes("Windows")
-          ? "Windows"
-          : userAgent.includes("Mac")
-          ? "Mac"
-          : userAgent.includes("Linux")
-          ? "Linux"
-          : userAgent.includes("Android")
-          ? "Android"
-          : userAgent.includes("iOS")
-          ? "iOS"
-          : "Other",
-      });
+      // Create new visitor with duplicate-key safety
+      try {
+        visitor = await Visitor.create({
+          visitorId,
+          firstVisit: new Date(),
+          lastVisit: new Date(),
+          totalVisits: 1,
+          deviceType,
+          browser: userAgent.includes("Chrome")
+            ? "Chrome"
+            : userAgent.includes("Firefox")
+            ? "Firefox"
+            : userAgent.includes("Safari")
+            ? "Safari"
+            : userAgent.includes("Edge")
+            ? "Edge"
+            : "Other",
+          os: userAgent.includes("Windows")
+            ? "Windows"
+            : userAgent.includes("Mac")
+            ? "Mac"
+            : userAgent.includes("Linux")
+            ? "Linux"
+            : userAgent.includes("Android")
+            ? "Android"
+            : userAgent.includes("iOS")
+            ? "iOS"
+            : "Other",
+        });
+      } catch (err) {
+        if (err.code === 11000) {
+          console.warn(
+            `[visitorController:trackVisit] > [Request]: duplicate visitorId=${visitorId} during insert`
+          );
+          visitor = await Visitor.findOne({ visitorId });
+          isNewVisitor = false;
+        } else {
+          throw err;
+        }
+      }
     } else {
       // Update existing visitor
       visitor = await Visitor.findOneAndUpdate(
