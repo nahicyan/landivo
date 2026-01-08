@@ -1,6 +1,7 @@
 // server/services/propertyDeletionEmailService.js
 import nodemailer from "nodemailer";
-import { prisma } from "../config/prismaConfig.js";
+import { connectMongo } from "../config/mongoose.js";
+import { Settings } from "../models/index.js";
 
 /**
  * Send property deletion request email to admin
@@ -13,7 +14,8 @@ export const sendPropertyDeletionRequest = async ({
 }) => {
   try {
     // Get SMTP settings from database
-    const settings = await prisma.settings.findFirst();
+    await connectMongo();
+    const settings = await Settings.findOne().lean();
 
     if (
       !settings?.smtpServer ||

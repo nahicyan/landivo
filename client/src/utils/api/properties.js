@@ -8,7 +8,7 @@ import { api, handleRequestError } from './config';
  */
 export const getAllProperties = async () => {
   try {
-    const response = await api.get('/residency/allresd');
+    const response = await api.get('/property/all');
     return response.data;
   } catch (error) {
     handleRequestError(error, "Failed to fetch properties");
@@ -22,7 +22,7 @@ export const getAllProperties = async () => {
  */
 export const getProperty = async (id) => {
   try {
-    const response = await api.get(`/residency/${id}`);
+    const response = await api.get(`/property/${id}`);
     return response.data;
   } catch (error) {
     console.error("Error fetching property details:", error);
@@ -40,7 +40,7 @@ export const getProperty = async (id) => {
  */
 export const createProperty = async (propertyData) => {
   try {
-    const response = await api.post('/residency/create', propertyData);
+    const response = await api.post('/property/create', propertyData);
     return response.data;
   } catch (error) {
     handleRequestError(error, "Failed to create property");
@@ -52,9 +52,9 @@ export const createProperty = async (propertyData) => {
  * @param {FormData} formData - Form data with property info and files
  * @returns {Promise<Object>} Created property
  */
-export const createResidencyWithFiles = async (formData) => {
+export const createPropertyWithFiles = async (formData) => {
   try {
-    const response = await api.post('/residency/createWithFile', formData, {
+    const response = await api.post('/property/createWithFile', formData, {
       headers: { "Content-Type": "multipart/form-data" },
     });
     return response.data;
@@ -71,7 +71,7 @@ export const createResidencyWithFiles = async (formData) => {
  */
 export const updateProperty = async (id, updatedData) => {
   try {
-    const response = await api.put(`/residency/update/${id}`, updatedData);
+    const response = await api.put(`/property/update/${id}`, updatedData);
     return response.data;
   } catch (error) {
     handleRequestError(error, "Failed to update property");
@@ -85,7 +85,7 @@ export const updateProperty = async (id, updatedData) => {
  */
 export const deleteProperty = async (id) => {
   try {
-    const response = await api.delete(`/residency/delete/${id}`);
+    const response = await api.delete(`/property/delete/${id}`);
     return response.data;
   } catch (error) {
     handleRequestError(error, "Failed to delete property");
@@ -100,7 +100,7 @@ export const deleteProperty = async (id) => {
  */
 export const requestPropertyDeletion = async (propertyId, reason) => {
   try {
-    const response = await api.post(`/residency/request-deletion/${propertyId}`, {
+    const response = await api.post(`/property/request-deletion/${propertyId}`, {
       reason
     });
     return response.data;
@@ -117,7 +117,7 @@ export const requestPropertyDeletion = async (propertyId, reason) => {
  */
 export const deletePropertyDirect = async (propertyId, reason) => {
   try {
-    const response = await api.delete(`/residency/delete/${propertyId}`, {
+    const response = await api.delete(`/property/delete/${propertyId}`, {
       data: { reason }
     });
     return response.data;
@@ -133,7 +133,7 @@ export const deletePropertyDirect = async (propertyId, reason) => {
  */
 export const approvePropertyDeletion = async (token) => {
   try {
-    const response = await api.post(`/residency/approve-deletion/${token}`, {}, {
+    const response = await api.post(`/property/approve-deletion/${token}`, {}, {
       timeout: 30000
     });
     return response.data;
@@ -198,7 +198,7 @@ export const getPropertyActivities = async (propertyId) => {
  */
 export const requestPropertyBulkDeletion = async (propertyIds, reason) => {
   try {
-    const response = await api.post(`/residency/request-bulk-deletion`, {
+    const response = await api.post(`/property/request-bulk-deletion`, {
       propertyIds,
       reason
     });
@@ -216,7 +216,7 @@ export const requestPropertyBulkDeletion = async (propertyIds, reason) => {
  */
 export const deletePropertiesBulk = async (propertyIds, reason) => {
   try {
-    const response = await api.post(`/residency/delete-bulk`, {
+    const response = await api.post(`/property/delete-bulk`, {
       propertyIds,
       reason
     });

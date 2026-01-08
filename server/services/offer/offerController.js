@@ -1,11 +1,18 @@
 // server/services/offer/offerController.js
 import asyncHandler from "express-async-handler";
-import { prisma } from "../../config/prismaConfig.js";
+import mongoose from "../../config/mongoose.js";
+import { connectMongo } from "../../config/mongoose.js";
+import { Buyer, Offer, Property } from "../../models/index.js";
 import { validateOfferInput, findOrCreateBuyer, checkExistingOffer, updateExistingOffer, createNewOffer, checkOfferBelowMinimum } from "./offerService.js";
 import { sendOfferNotification, newOfferTemplate, updatedOfferTemplate, lowOfferTemplate, generateOfferSubject } from "./offerEmailService.js";
 import { sendBuyerOfferNotification, acceptedOfferTemplate, rejectedOfferTemplate, counterOfferTemplate, expiredOfferTemplate, generateBuyerOfferSubject } from "./offerBuyerEmailService.js";
 // Add this import
 import { handleOfferEmailList } from "./offerEmailListService.js";
+
+const toObjectId = (value) => {
+  if (!value || !mongoose.Types.ObjectId.isValid(value)) return null;
+  return new mongoose.Types.ObjectId(value);
+};
 
 /**
  * Make an offer on a property
@@ -26,9 +33,11 @@ export const makeOffer = asyncHandler(async (req, res) => {
     console.log(`Received offer: propertyId: ${propertyId}, price: ${offeredPrice}, email: ${email}, auth0Id: ${auth0Id || "not provided"}`);
 
     // 2. Retrieve property details for notifications
-    const property = await prisma.residency.findUnique({
-      where: { id: propertyId },
-    });
+    await connectMongo();
+    const propertyObjectId = toObjectId(propertyId);
+    const property = propertyObjectId
+      ? await Property.findById(propertyObjectId).lean()
+      : null;
     if (!property) {
       return res.status(404).json({ message: "Property not found." });
     }
@@ -164,27 +173,33 @@ export const getOffersOnProperty = asyncHandler(async (req, res) => {
 
   try {
     // Fetch all offers for the property, including buyer details
-    const offers = await prisma.offer.findMany({
-      where: { propertyId },
-      include: {
-        buyer: {
-          select: {
-            firstName: true,
-            lastName: true,
-            email: true,
-            phone: true,
-          },
-        },
-      },
-      orderBy: {
-        timestamp: "desc", // Change to "asc" for oldest first
-      },
+    await connectMongo();
+    const offers = await Offer.find({ propertyId })
+      .populate({ path: "buyerId", select: "firstName lastName email phone" })
+      .sort({ timestamp: -1 })
+      .lean();
+    const normalizedOffers = offers.map((offer) => {
+      const buyer = offer.buyerId
+        ? {
+            id: String(offer.buyerId._id),
+            firstName: offer.buyerId.firstName,
+            lastName: offer.buyerId.lastName,
+            email: offer.buyerId.email,
+            phone: offer.buyerId.phone,
+          }
+        : null;
+      return {
+        ...offer,
+        id: String(offer._id),
+        buyer,
+        buyerId: buyer ? buyer.id : String(offer.buyerId),
+      };
     });
 
     res.status(200).json({
       propertyId,
-      totalOffers: offers.length,
-      offers,
+      totalOffers: normalizedOffers.length,
+      offers: normalizedOffers,
     });
   } catch (err) {
     console.error(err);
@@ -214,21 +229,18 @@ export const getOffersByBuyer = asyncHandler(async (req, res) => {
     let buyer;
 
     if (buyerId) {
-      buyer = await prisma.buyer.findUnique({
-        where: { id: buyerId },
-      });
+      await connectMongo();
+      const buyerObjectId = toObjectId(buyerId);
+      buyer = buyerObjectId ? await Buyer.findById(buyerObjectId).lean() : null;
     } else if (auth0Id) {
-      buyer = await prisma.buyer.findFirst({
-        where: { auth0Id },
-      });
+      await connectMongo();
+      buyer = await Buyer.findOne({ auth0Id }).lean();
     } else if (email) {
-      buyer = await prisma.buyer.findFirst({
-        where: { email },
-      });
+      await connectMongo();
+      buyer = await Buyer.findOne({ email: String(email).toLowerCase() }).lean();
     } else if (phone) {
-      buyer = await prisma.buyer.findFirst({
-        where: { phone },
-      });
+      await connectMongo();
+      buyer = await Buyer.findOne({ phone }).lean();
     }
 
     if (!buyer) {
@@ -238,13 +250,14 @@ export const getOffersByBuyer = asyncHandler(async (req, res) => {
     }
 
     // Fetch all offers by the buyer without property relation
-    const offers = await prisma.offer.findMany({
-      where: { buyerId: buyer.id },
-      // Removed include: { property: true } that would cause an error
-      orderBy: {
-        timestamp: "desc", // Latest first
-      },
-    });
+    const offers = await Offer.find({ buyerId: buyer._id })
+      .sort({ timestamp: -1 })
+      .lean();
+    const normalizedOffers = offers.map((offer) => ({
+      ...offer,
+      id: String(offer._id),
+      buyerId: String(offer.buyerId),
+    }));
 
     // Return offers with buyer information
     res.status(200).json({
@@ -254,10 +267,10 @@ export const getOffersByBuyer = asyncHandler(async (req, res) => {
         email: buyer.email,
         phone: buyer.phone,
         buyerType: buyer.buyerType,
-        id: buyer.id,
+        id: String(buyer._id),
       },
-      totalOffers: offers.length,
-      offers,
+      totalOffers: normalizedOffers.length,
+      offers: normalizedOffers,
     });
   } catch (err) {
     console.error("Error fetching offers by buyer:", err);
@@ -288,21 +301,24 @@ export const updateOfferStatus = asyncHandler(async (req, res) => {
 
   try {
     // Get the existing offer with buyer
-    const existingOffer = await prisma.offer.findUnique({
-      where: { id },
-      include: {
-        buyer: true,
-      },
-    });
+    await connectMongo();
+    const offerObjectId = toObjectId(id);
+    if (!offerObjectId) {
+      return res.status(400).json({ message: "Invalid offer ID" });
+    }
+    const existingOffer = await Offer.findById(offerObjectId)
+      .populate("buyerId")
+      .lean();
 
     if (!existingOffer) {
       return res.status(404).json({ message: "Offer not found" });
     }
 
     // Fetch the property separately
-    const property = await prisma.residency.findUnique({
-      where: { id: existingOffer.propertyId },
-    });
+    const propertyObjectId = toObjectId(existingOffer.propertyId);
+    const property = propertyObjectId
+      ? await Property.findById(propertyObjectId).lean()
+      : null;
 
     if (!property) {
       return res.status(404).json({ message: "Property not found" });
@@ -310,6 +326,7 @@ export const updateOfferStatus = asyncHandler(async (req, res) => {
 
     // Add property to existingOffer for email sending
     existingOffer.property = property;
+    existingOffer.buyer = existingOffer.buyerId;
 
     // Build system message
     const updatedSysMessage = message || null;
@@ -330,22 +347,24 @@ export const updateOfferStatus = asyncHandler(async (req, res) => {
     const existingHistory = existingOffer.offerHistory || [];
 
     // Update the offer
-    const updatedOffer = await prisma.offer.update({
-      where: { id },
-      data: {
+    const updatedOffer = await Offer.findByIdAndUpdate(
+      offerObjectId,
+      {
         offerStatus: status,
         counteredPrice: status === "COUNTERED" ? parseFloat(counteredPrice) : null,
         sysMessage: updatedSysMessage,
-        //buyerMessage: null,
         offerHistory: [...existingHistory, historyEntry],
         updatedById: req.userId || null,
         updatedAt: new Date(),
       },
-    });
+      { new: true }
+    ).lean();
 
     res.status(200).json({
       message: `Offer status updated to ${status}`,
-      offer: updatedOffer,
+      offer: updatedOffer
+        ? { id: String(updatedOffer._id), ...updatedOffer }
+        : updatedOffer,
     });
 
     // Send buyer notification emails based on status (async, don't wait)
@@ -407,15 +426,15 @@ export const getOfferHistory = asyncHandler(async (req, res) => {
   }
 
   try {
-    const offer = await prisma.offer.findUnique({
-      where: { id },
-      select: {
-        id: true,
-        offerHistory: true,
-        buyerId: true,
-        propertyId: true,
-      },
-    });
+    await connectMongo();
+    const offerObjectId = toObjectId(id);
+    if (!offerObjectId) {
+      return res.status(400).json({ message: "Invalid offer ID" });
+    }
+    const offer = await Offer.findById(
+      offerObjectId,
+      "offerHistory buyerId propertyId"
+    ).lean();
 
     if (!offer) {
       return res.status(404).json({ message: "Offer not found" });
@@ -457,7 +476,8 @@ export const getAllOffers = asyncHandler(async (req, res) => {
     }
 
     if (buyerId) {
-      filter.buyerId = buyerId;
+      const buyerObjectId = toObjectId(buyerId);
+      filter.buyerId = buyerObjectId || buyerId;
     }
 
     if (propertyId) {
@@ -479,52 +499,59 @@ export const getAllOffers = asyncHandler(async (req, res) => {
     }
 
     // Fetch offers with buyer details
-    const offers = await prisma.offer.findMany({
-      where: filter,
-      include: {
-        buyer: {
-          select: {
-            id: true,
-            firstName: true,
-            lastName: true,
-            email: true,
-            phone: true,
-            buyerType: true,
-          },
-        },
-      },
-      orderBy: {
-        timestamp: "desc",
-      },
-      skip,
-      take: limit,
-    });
+    await connectMongo();
+    const offers = await Offer.find(filter)
+      .populate({
+        path: "buyerId",
+        select: "firstName lastName email phone buyerType",
+      })
+      .sort({ timestamp: -1 })
+      .skip(skip)
+      .limit(limit)
+      .lean();
 
     // Get total count for pagination
-    const totalCount = await prisma.offer.count({ where: filter });
+    const totalCount = await Offer.countDocuments(filter);
 
     // Get property titles since there's no direct relationship
     const propertyIds = [...new Set(offers.map((offer) => offer.propertyId))];
-    const properties = await prisma.residency.findMany({
-      where: { id: { in: propertyIds } },
-      select: {
-        id: true,
-        title: true,
-        streetAddress: true,
-        city: true,
-        state: true,
-      },
-    });
+    const propertyObjectIds = propertyIds
+      .map((propertyIdValue) => toObjectId(propertyIdValue))
+      .filter(Boolean);
+    const properties = propertyObjectIds.length
+      ? await Property.find(
+          { _id: { $in: propertyObjectIds } },
+          "title streetAddress city state"
+        ).lean()
+      : [];
 
     // Create a map of propertyId -> property data for quick lookup
     const propertyMap = {};
     properties.forEach((property) => {
-      propertyMap[property.id] = property;
+      propertyMap[String(property._id)] = {
+        id: String(property._id),
+        title: property.title,
+        streetAddress: property.streetAddress,
+        city: property.city,
+        state: property.state,
+      };
     });
 
     // Add property info to each offer
     const offersWithPropertyData = offers.map((offer) => ({
       ...offer,
+      id: String(offer._id),
+      buyer: offer.buyerId
+        ? {
+            id: String(offer.buyerId._id),
+            firstName: offer.buyerId.firstName,
+            lastName: offer.buyerId.lastName,
+            email: offer.buyerId.email,
+            phone: offer.buyerId.phone,
+            buyerType: offer.buyerId.buyerType,
+          }
+        : null,
+      buyerId: offer.buyerId ? String(offer.buyerId._id) : String(offer.buyerId),
       property: propertyMap[offer.propertyId] || null,
     }));
 
@@ -558,43 +585,41 @@ export const getRecentOfferActivity = asyncHandler(async (req, res) => {
     const limit = parseInt(req.query.limit) || 10;
 
     // Get all offers with history, ordered by most recent update
-    const offers = await prisma.offer.findMany({
-      orderBy: {
-        timestamp: "desc",
-      },
-      take: 50, // Get more than we need, since we'll filter for those with history
-      include: {
-        buyer: {
-          select: {
-            id: true,
-            firstName: true,
-            lastName: true,
-            email: true,
-          },
-        },
-      },
-    });
+    await connectMongo();
+    const offers = await Offer.find({})
+      .populate({
+        path: "buyerId",
+        select: "firstName lastName email",
+      })
+      .sort({ timestamp: -1 })
+      .limit(50)
+      .lean();
 
     // Extract activities from offer history and add context
     let allActivities = [];
 
     // Get property information for context
     const propertyIds = [...new Set(offers.map((offer) => offer.propertyId))];
-    const properties = await prisma.residency.findMany({
-      where: { id: { in: propertyIds } },
-      select: {
-        id: true,
-        title: true,
-        streetAddress: true,
-        city: true,
-        state: true,
-      },
-    });
+    const propertyObjectIds = propertyIds
+      .map((propertyIdValue) => toObjectId(propertyIdValue))
+      .filter(Boolean);
+    const properties = propertyObjectIds.length
+      ? await Property.find(
+          { _id: { $in: propertyObjectIds } },
+          "title streetAddress city state"
+        ).lean()
+      : [];
 
     // Create a map of propertyId -> property data for quick lookup
     const propertyMap = {};
     properties.forEach((property) => {
-      propertyMap[property.id] = property;
+      propertyMap[String(property._id)] = {
+        id: String(property._id),
+        title: property.title,
+        streetAddress: property.streetAddress,
+        city: property.city,
+        state: property.state,
+      };
     });
 
     // Process each offer to extract history
@@ -604,18 +629,19 @@ export const getRecentOfferActivity = asyncHandler(async (req, res) => {
         title: "Unknown Property",
         streetAddress: "Unknown Address",
       };
+      const buyer = offer.buyerId || {};
 
       // Add the initial offer as an activity if it has no history
       if (!offer.offerHistory || offer.offerHistory.length === 0) {
         allActivities.push({
-          offerId: offer.id,
+          offerId: String(offer._id),
           propertyId: offer.propertyId,
           propertyAddress: property.streetAddress,
           propertyTitle: property.title,
-          buyerId: offer.buyerId,
-          buyerName: `${offer.buyer.firstName} ${offer.buyer.lastName || ""}`,
-          buyerFirstName: offer.buyer.firstName,
-          buyerLastName: offer.buyer.lastName,
+          buyerId: buyer?._id ? String(buyer._id) : String(offer.buyerId),
+          buyerName: `${buyer.firstName || ""} ${buyer.lastName || ""}`.trim(),
+          buyerFirstName: buyer.firstName,
+          buyerLastName: buyer.lastName,
           timestamp: offer.timestamp,
           newStatus: offer.offerStatus,
           newPrice: offer.offeredPrice,
@@ -626,14 +652,14 @@ export const getRecentOfferActivity = asyncHandler(async (req, res) => {
       // Extract activities from history
       else if (Array.isArray(offer.offerHistory)) {
         const activities = offer.offerHistory.map((history) => ({
-          offerId: offer.id,
+          offerId: String(offer._id),
           propertyId: offer.propertyId,
           propertyAddress: property.streetAddress,
           propertyTitle: property.title,
-          buyerId: offer.buyerId,
-          buyerName: `${offer.buyer.firstName} ${offer.buyer.lastName || ""}`,
-          buyerFirstName: offer.buyer.firstName,
-          buyerLastName: offer.buyer.lastName,
+          buyerId: buyer?._id ? String(buyer._id) : String(offer.buyerId),
+          buyerName: `${buyer.firstName || ""} ${buyer.lastName || ""}`.trim(),
+          buyerFirstName: buyer.firstName,
+          buyerLastName: buyer.lastName,
           timestamp: history.timestamp,
           previousStatus: history.previousStatus,
           newStatus: history.newStatus,
@@ -680,21 +706,17 @@ export const getOfferById = asyncHandler(async (req, res) => {
   }
 
   try {
-    const offer = await prisma.offer.findUnique({
-      where: { id },
-      include: {
-        buyer: {
-          select: {
-            id: true,
-            firstName: true,
-            lastName: true,
-            email: true,
-            phone: true,
-            buyerType: true,
-          },
-        },
-      },
-    });
+    await connectMongo();
+    const offerObjectId = toObjectId(id);
+    if (!offerObjectId) {
+      return res.status(400).json({ message: "Invalid offer ID" });
+    }
+    const offer = await Offer.findById(offerObjectId)
+      .populate({
+        path: "buyerId",
+        select: "firstName lastName email phone buyerType",
+      })
+      .lean();
 
     if (!offer) {
       return res.status(404).json({ message: "Offer not found" });
@@ -703,18 +725,13 @@ export const getOfferById = asyncHandler(async (req, res) => {
     // Fetch property details separately
     let property = null;
     try {
-      property = await prisma.residency.findUnique({
-        where: { id: offer.propertyId },
-        select: {
-          id: true,
-          title: true,
-          streetAddress: true,
-          city: true,
-          state: true,
-          askingPrice: true,
-          minPrice: true,
-        },
-      });
+      const propertyObjectId = toObjectId(offer.propertyId);
+      property = propertyObjectId
+        ? await Property.findById(
+            propertyObjectId,
+            "title streetAddress city state askingPrice minPrice"
+          ).lean()
+        : null;
     } catch (propertyError) {
       console.warn("Error fetching property details:", propertyError);
     }
@@ -722,7 +739,29 @@ export const getOfferById = asyncHandler(async (req, res) => {
     res.status(200).json({
       offer: {
         ...offer,
-        property,
+        id: String(offer._id),
+        buyer: offer.buyerId
+          ? {
+              id: String(offer.buyerId._id),
+              firstName: offer.buyerId.firstName,
+              lastName: offer.buyerId.lastName,
+              email: offer.buyerId.email,
+              phone: offer.buyerId.phone,
+              buyerType: offer.buyerId.buyerType,
+            }
+          : null,
+        buyerId: offer.buyerId ? String(offer.buyerId._id) : String(offer.buyerId),
+        property: property
+          ? {
+              id: String(property._id),
+              title: property.title,
+              streetAddress: property.streetAddress,
+              city: property.city,
+              state: property.state,
+              askingPrice: property.askingPrice,
+              minPrice: property.minPrice,
+            }
+          : null,
       },
     });
   } catch (err) {

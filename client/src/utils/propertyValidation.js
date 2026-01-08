@@ -1,11 +1,11 @@
-// Example: src/utils/residencyValidation.js
+// Example: src/utils/propertyValidation.js
 
 /**
- * Transforms and validates Residency data before sending to the API.
+ * Transforms and validates Property data before sending to the API.
  * Converts numeric fields, ensures boolean fields are booleans, etc.
  * Throws an error if conversion fails.
  */
-export function transformResidencyData(rawData) {
+export function transformPropertyData(rawData) {
     // We’ll create a copy so we don’t mutate the original.
     const data = { ...rawData };
   

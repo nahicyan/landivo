@@ -1,10 +1,21 @@
 // File location: server/controllers/emailListCntrl.js
 
 import asyncHandler from "express-async-handler";
-import { prisma } from "../config/prismaConfig.js";
+import mongoose from "../config/mongoose.js";
+import { connectMongo } from "../config/mongoose.js";
+import { Buyer, BuyerActivity, BuyerEmailList, EmailList, Offer } from "../models/index.js";
 
 let buyerPreferenceNormalizationCompleted = false;
 let emailListLegacyNormalizationCompleted = false;
+const runMongoCommand = async (command) => {
+  await connectMongo();
+  return mongoose.connection.db.command(command);
+};
+
+const toObjectId = (value) => {
+  if (!value || !mongoose.Types.ObjectId.isValid(value)) return null;
+  return new mongoose.Types.ObjectId(value);
+};
 const normalizeCriteriaListValue = (value) => {
   const collected = [];
   const collect = (entry) => {
@@ -63,7 +74,7 @@ const normalizeEmailListCriteria = (criteria) => {
 
 async function normalizeBuyerPreferenceFields() {
   try {
-    await prisma.$runCommandRaw({
+    await runMongoCommand({
       update: "Buyer",
       updates: [
         {
@@ -86,7 +97,7 @@ async function normalizeBuyerPreferenceFields() {
       ],
     });
 
-    await prisma.$runCommandRaw({
+    await runMongoCommand({
       update: "Buyer",
       updates: [
         {
@@ -109,7 +120,7 @@ async function normalizeBuyerPreferenceFields() {
       ],
     });
 
-    await prisma.$runCommandRaw({
+    await runMongoCommand({
       update: "Buyer",
       updates: [
         {
@@ -148,7 +159,7 @@ async function normalizeBuyerPreferenceFields() {
       ],
     });
 
-    await prisma.$runCommandRaw({
+    await runMongoCommand({
       update: "Buyer",
       updates: [
         {
@@ -187,7 +198,7 @@ async function normalizeBuyerPreferenceFields() {
       ],
     });
 
-    await prisma.$runCommandRaw({
+    await runMongoCommand({
       update: "Buyer",
       updates: [
         {
@@ -243,7 +254,7 @@ async function ensureBuyerPreferenceFieldsNormalized() {
 
 async function normalizeEmailListLegacyFields() {
   try {
-    await prisma.$runCommandRaw({
+    await runMongoCommand({
       update: "EmailList",
       updates: [
         {
@@ -279,25 +290,34 @@ export const getAllEmailLists = asyncHandler(async (req, res) => {
     console.log("[EmailListController]:[getAllEmailLists]:[Request]", {
       query: req?.query || {},
     });
+    await connectMongo();
     await ensureEmailListLegacyFieldsNormalized();
-    const lists = await prisma.emailList.findMany({
-      orderBy: {
-        createdAt: "desc",
-      },
-      include: {
-        buyerMemberships: {
-          select: {
-            buyerId: true,
-          },
-        },
-      },
+    const lists = await EmailList.find({})
+      .sort({ createdAt: -1 })
+      .lean();
+    const listIds = lists.map((list) => list._id);
+    const memberships = listIds.length
+      ? await BuyerEmailList.find({ emailListId: { $in: listIds } })
+          .select("buyerId emailListId")
+          .lean()
+      : [];
+    const membershipMap = new Map();
+    memberships.forEach((membership) => {
+      const listId = String(membership.emailListId);
+      const buyerId = String(membership.buyerId);
+      if (!membershipMap.has(listId)) {
+        membershipMap.set(listId, new Set());
+      }
+      membershipMap.get(listId).add(buyerId);
     });
 
     // For each list, count the buyers that match its criteria and manual members
     const listsWithCounts = await Promise.all(
       lists.map(async (list) => {
         // Get manually added buyers through join table
-        const manualBuyerIds = list.buyerMemberships.map((m) => m.buyerId);
+        const manualBuyerIds = Array.from(
+          membershipMap.get(String(list._id)) || []
+        );
 
         // Get buyers that match criteria
         let criteriaBuyerIds = [];
@@ -325,16 +345,12 @@ export const getAllEmailLists = asyncHandler(async (req, res) => {
 
             // Add area filter if specified
             if (hasAreas) {
-              query.preferredAreas = {
-                hasSome: criteria.areas,
-              };
+              query.preferredAreas = { $in: criteria.areas };
             }
 
             // Add buyer type filter if specified
             if (hasBuyerTypes) {
-              query.buyerType = {
-                in: criteria.buyerTypes,
-              };
+              query.buyerType = { $in: criteria.buyerTypes };
             }
 
             // Add VIP filter if specified
@@ -349,12 +365,9 @@ export const getAllEmailLists = asyncHandler(async (req, res) => {
             // Buyers are matched by preferredAreas and buyerType instead.
 
             // Get buyer IDs matching the criteria
-            const criteriaBuyers = await prisma.buyer.findMany({
-              where: query,
-              select: { id: true },
-            });
+            const criteriaBuyers = await Buyer.find(query).select("_id").lean();
 
-            criteriaBuyerIds = criteriaBuyers.map((b) => b.id);
+            criteriaBuyerIds = criteriaBuyers.map((b) => String(b._id));
           }
         }
 
@@ -363,12 +376,13 @@ export const getAllEmailLists = asyncHandler(async (req, res) => {
         const totalCount = uniqueBuyerIds.size;
 
         // Remove the buyerMemberships from the response
-        const { buyerMemberships, ...listData } = list;
+        const { _id, ...listData } = list;
         const normalizedCriteria = listData.criteria
           ? normalizeEmailListCriteria(listData.criteria)
           : listData.criteria;
 
         return {
+          id: String(_id),
           ...listData,
           criteria: normalizedCriteria,
           buyerCount: totalCount,
@@ -399,35 +413,28 @@ export const getEmailList = asyncHandler(async (req, res) => {
 
   try {
     console.log("[EmailListController]:[getEmailList]:[Request]", { id });
+    await connectMongo();
     await ensureEmailListLegacyFieldsNormalized();
     await ensureBuyerPreferenceFieldsNormalized();
     // Get the list with buyers through join table
-    const list = await prisma.emailList.findUnique({
-      where: { id },
-      include: {
-        buyerMemberships: {
-          include: {
-            buyer: {
-              include: {
-                emailListMemberships: {
-                  include: {
-                    emailList: true,
-                  },
-                },
-              },
-            },
-          },
-        },
-      },
-    });
+    const listId = toObjectId(id);
+    if (!listId) {
+      return res.status(400).json({ message: "Invalid list ID" });
+    }
+
+    const list = await EmailList.findById(listId).lean();
 
     if (!list) {
       return res.status(404).json({ message: "Email list not found" });
     }
 
     // Extract buyers from join table
-    const manualBuyers = list.buyerMemberships.map((membership) => membership.buyer);
-    const manualBuyerIds = manualBuyers.map((buyer) => buyer.id).filter(Boolean);
+    const manualMemberships = await BuyerEmailList.find({ emailListId: listId })
+      .select("buyerId")
+      .lean();
+    const manualBuyerIds = manualMemberships.map((membership) =>
+      String(membership.buyerId)
+    );
 
     // Get buyers matching criteria
     let criteriaBuyers = [];
@@ -455,16 +462,12 @@ export const getEmailList = asyncHandler(async (req, res) => {
 
         // Add area filter if specified
         if (hasAreas) {
-          query.preferredAreas = {
-            hasSome: criteria.areas,
-          };
+          query.preferredAreas = { $in: criteria.areas };
         }
 
         // Add buyer type filter if specified
         if (hasBuyerTypes) {
-          query.buyerType = {
-            in: criteria.buyerTypes,
-          };
+          query.buyerType = { $in: criteria.buyerTypes };
         }
 
         // Add VIP filter if specified
@@ -477,16 +480,7 @@ export const getEmailList = asyncHandler(async (req, res) => {
         // since buyers don't have these fields
 
         // Get buyers matching the criteria
-        criteriaBuyers = await prisma.buyer.findMany({
-          where: query,
-          include: {
-            emailListMemberships: {
-              include: {
-                emailList: true,
-              },
-            },
-          },
-        });
+        criteriaBuyers = await Buyer.find(query).select("_id").lean();
         console.log("[EmailListController]:[getEmailList]:[Criteria]", {
           id,
           listName: list?.name,
@@ -497,7 +491,10 @@ export const getEmailList = asyncHandler(async (req, res) => {
     }
 
     // Combine and remove duplicates
-    const allBuyerIds = new Set([...manualBuyerIds, ...criteriaBuyers.map((b) => b.id)]);
+    const allBuyerIds = new Set([
+      ...manualBuyerIds,
+      ...criteriaBuyers.map((b) => String(b._id)),
+    ]);
     console.log("[EmailListController]:[getEmailList]:[Buyers]", {
       id,
       listName: list?.name,
@@ -506,30 +503,43 @@ export const getEmailList = asyncHandler(async (req, res) => {
       uniqueBuyerCount: allBuyerIds.size,
     });
 
-    const allBuyers = await prisma.buyer.findMany({
-      where: {
-        id: { in: Array.from(allBuyerIds) },
-      },
-      include: {
-        emailListMemberships: {
-          include: {
-            emailList: true,
-          },
-        },
-      },
+    const buyerObjectIds = Array.from(allBuyerIds)
+      .map((buyerId) => toObjectId(buyerId))
+      .filter(Boolean);
+
+    const allBuyers = buyerObjectIds.length
+      ? await Buyer.find({ _id: { $in: buyerObjectIds } }).lean()
+      : [];
+
+    const buyerMemberships = buyerObjectIds.length
+      ? await BuyerEmailList.find({ buyerId: { $in: buyerObjectIds } })
+          .populate("emailListId")
+          .lean()
+      : [];
+    const buyerMembershipMap = new Map();
+    buyerMemberships.forEach((membership) => {
+      const buyerId = String(membership.buyerId);
+      if (!buyerMembershipMap.has(buyerId)) {
+        buyerMembershipMap.set(buyerId, []);
+      }
+      if (membership.emailListId && membership.emailListId._id) {
+        const { _id, ...rest } = membership.emailListId;
+        buyerMembershipMap.get(buyerId).push({ id: String(_id), ...rest });
+      }
     });
 
     // Transform buyer data to include emailLists array
     const buyersWithEmailLists = allBuyers.map((buyer) => {
-      const { emailListMemberships, ...buyerData } = buyer;
+      const { _id, ...buyerData } = buyer;
       return {
+        id: String(_id),
         ...buyerData,
-        emailLists: emailListMemberships.map((m) => m.emailList),
+        emailLists: buyerMembershipMap.get(String(_id)) || [],
       };
     });
 
     // Remove buyerMemberships from response and add transformed buyers
-    const { buyerMemberships, ...listData } = list;
+    const { _id, ...listData } = list;
     const normalizedCriteria = listData.criteria
       ? normalizeEmailListCriteria(listData.criteria)
       : listData.criteria;
@@ -540,6 +550,7 @@ export const getEmailList = asyncHandler(async (req, res) => {
       buyerCount: buyersWithEmailLists.length,
     });
     res.status(200).json({
+      id: String(_id),
       ...listData,
       criteria: normalizedCriteria,
       buyers: buyersWithEmailLists,
@@ -563,6 +574,7 @@ export const createEmailList = asyncHandler(async (req, res) => {
   }
 
   try {
+    await connectMongo();
     // Ensure buyerIds is an array
     const buyerIdsArray = Array.isArray(buyerIds) ? buyerIds : [];
     const normalizedCriteria = criteria ? normalizeEmailListCriteria(criteria) : criteria;
@@ -580,25 +592,33 @@ export const createEmailList = asyncHandler(async (req, res) => {
     }
 
     // Create the list with initial buyers if provided
-    const newList = await prisma.emailList.create({
-      data: {
-        name,
-        description,
-        criteria: normalizedCriteria,
-        color,
-        source: source || "Manual", // Add source field with default fallback
-        createdBy: req.userId,
-        buyerMemberships: {
-          create: buyerIdsArray.map((buyerId) => ({
-            buyer: { connect: { id: buyerId } },
-          })),
-        },
-      },
+    const newList = await EmailList.create({
+      name,
+      description,
+      criteria: normalizedCriteria,
+      color,
+      source: source || "Manual",
+      createdBy: toObjectId(req.userId),
     });
+
+    const membershipDocs = buyerIdsArray
+      .map((buyerId) => toObjectId(buyerId))
+      .filter(Boolean)
+      .map((buyerId) => ({
+        buyerId,
+        emailListId: newList._id,
+      }));
+
+    if (membershipDocs.length > 0) {
+      await BuyerEmailList.insertMany(membershipDocs, { ordered: false });
+    }
 
     res.status(201).json({
       message: "Email list created successfully",
-      list: newList,
+      list: {
+        id: String(newList._id),
+        ...newList.toObject(),
+      },
     });
   } catch (err) {
     console.error("Error creating email list:", err);
@@ -624,9 +644,12 @@ export const updateEmailList = asyncHandler(async (req, res) => {
 
   try {
     // Check if the list exists
-    const existingList = await prisma.emailList.findUnique({
-      where: { id },
-    });
+    await connectMongo();
+    const listId = toObjectId(id);
+    if (!listId) {
+      return res.status(400).json({ message: "Invalid list ID" });
+    }
+    const existingList = await EmailList.findById(listId).lean();
 
     if (!existingList) {
       return res.status(404).json({ message: "Email list not found" });
@@ -648,20 +671,23 @@ export const updateEmailList = asyncHandler(async (req, res) => {
     }
 
     // Update the list
-    const updatedList = await prisma.emailList.update({
-      where: { id },
-      data: {
+    const updatedList = await EmailList.findByIdAndUpdate(
+      listId,
+      {
         name,
         description,
         criteria: normalizedCriteria,
         color,
         updatedAt: new Date(),
       },
-    });
+      { new: true }
+    ).lean();
 
     res.status(200).json({
       message: "Email list updated successfully",
-      list: updatedList,
+      list: updatedList
+        ? { id: String(updatedList._id), ...updatedList }
+        : updatedList,
     });
   } catch (err) {
     console.error("Error updating email list:", err);
@@ -683,9 +709,12 @@ export const deleteEmailList = asyncHandler(async (req, res) => {
 
   try {
     // Check if the list exists
-    const existingList = await prisma.emailList.findUnique({
-      where: { id },
-    });
+    await connectMongo();
+    const listId = toObjectId(id);
+    if (!listId) {
+      return res.status(400).json({ message: "Invalid list ID" });
+    }
+    const existingList = await EmailList.findById(listId).lean();
 
     if (!existingList) {
       return res.status(404).json({ message: "Email list not found" });
@@ -695,47 +724,36 @@ export const deleteEmailList = asyncHandler(async (req, res) => {
 
     if (deleteBuyers) {
       // Get all buyer IDs in this list
-      const buyerMemberships = await prisma.buyerEmailList.findMany({
-        where: { emailListId: id },
-        select: { buyerId: true },
-      });
+      const buyerMemberships = await BuyerEmailList.find({
+        emailListId: listId,
+      })
+        .select("buyerId")
+        .lean();
 
       const buyerIds = buyerMemberships.map((m) => m.buyerId);
 
       if (buyerIds.length > 0) {
         // Delete offers first (foreign key constraint)
-        await prisma.offer.deleteMany({
-          where: { buyerId: { in: buyerIds } },
-        });
+        await Offer.deleteMany({ buyerId: { $in: buyerIds } });
 
         // Delete buyer activities
-        await prisma.buyerActivity.deleteMany({
-          where: { buyerId: { in: buyerIds } },
-        });
+        await BuyerActivity.deleteMany({ buyerId: { $in: buyerIds } });
 
         // Delete all buyer memberships for these buyers
-        await prisma.buyerEmailList.deleteMany({
-          where: { buyerId: { in: buyerIds } },
-        });
+        await BuyerEmailList.deleteMany({ buyerId: { $in: buyerIds } });
 
         // Delete the buyers
-        const deleteResult = await prisma.buyer.deleteMany({
-          where: { id: { in: buyerIds } },
-        });
+        const deleteResult = await Buyer.deleteMany({ _id: { $in: buyerIds } });
 
-        deletedBuyersCount = deleteResult.count;
+        deletedBuyersCount = deleteResult.deletedCount || 0;
       }
     } else {
       // Just delete the memberships for this list
-      await prisma.buyerEmailList.deleteMany({
-        where: { emailListId: id },
-      });
+      await BuyerEmailList.deleteMany({ emailListId: listId });
     }
 
     // Delete the list
-    await prisma.emailList.delete({
-      where: { id },
-    });
+    await EmailList.deleteOne({ _id: listId });
 
     res.status(200).json({
       message: deleteBuyers ? `Email list and ${deletedBuyersCount} buyers deleted successfully` : "Email list deleted successfully",
@@ -765,54 +783,58 @@ export const addBuyersToList = asyncHandler(async (req, res) => {
 
   try {
     // Check if the list exists
-    const existingList = await prisma.emailList.findUnique({
-      where: { id },
-    });
+    await connectMongo();
+    const listId = toObjectId(id);
+    if (!listId) {
+      return res.status(400).json({ message: "Invalid list ID" });
+    }
+    const existingList = await EmailList.findById(listId).lean();
 
     if (!existingList) {
       return res.status(404).json({ message: "Email list not found" });
     }
 
     // Get existing memberships to avoid duplicates
-    const existingMemberships = await prisma.buyerEmailList.findMany({
-      where: {
-        emailListId: id,
-        buyerId: { in: buyerIds },
-      },
-      select: { buyerId: true },
-    });
+    const buyerObjectIds = buyerIds.map((buyerId) => toObjectId(buyerId)).filter(Boolean);
+    const existingMemberships = buyerObjectIds.length
+      ? await BuyerEmailList.find({
+          emailListId: listId,
+          buyerId: { $in: buyerObjectIds },
+        })
+          .select("buyerId")
+          .lean()
+      : [];
 
-    const existingBuyerIds = new Set(existingMemberships.map((m) => m.buyerId));
-    const newBuyerIds = buyerIds.filter((buyerId) => !existingBuyerIds.has(buyerId));
+    const existingBuyerIds = new Set(
+      existingMemberships.map((membership) => String(membership.buyerId))
+    );
+    const newBuyerIds = buyerObjectIds.filter(
+      (buyerId) => !existingBuyerIds.has(String(buyerId))
+    );
 
     // Create new memberships for buyers not already in the list
     if (newBuyerIds.length > 0) {
-      await prisma.buyerEmailList.createMany({
-        data: newBuyerIds.map((buyerId) => ({
+      await BuyerEmailList.insertMany(
+        newBuyerIds.map((buyerId) => ({
           buyerId,
-          emailListId: id,
+          emailListId: listId,
         })),
-      });
+        { ordered: false }
+      );
     }
 
     // Update the list's updatedAt timestamp
-    const updatedList = await prisma.emailList.update({
-      where: { id },
-      data: {
-        updatedAt: new Date(),
-      },
-      include: {
-        buyerMemberships: {
-          include: {
-            buyer: true,
-          },
-        },
-      },
-    });
+    await EmailList.updateOne(
+      { _id: listId },
+      { $set: { updatedAt: new Date() } }
+    );
+    const updatedList = await EmailList.findById(listId).lean();
 
     res.status(200).json({
       message: `Successfully added ${newBuyerIds.length} new buyers to the list (${existingBuyerIds.size} were already in the list)`,
-      list: updatedList,
+      list: updatedList
+        ? { id: String(updatedList._id), ...updatedList }
+        : updatedList,
       addedCount: newBuyerIds.length,
       skippedCount: existingBuyerIds.size,
     });
@@ -839,35 +861,42 @@ export const removeBuyersFromList = asyncHandler(async (req, res) => {
   }
 
   try {
-    // Check if the list exists
-    const existingList = await prisma.emailList.findUnique({
-      where: { id },
-    });
+    await connectMongo();
+    const listId = toObjectId(id);
+    if (!listId) {
+      return res.status(400).json({ message: "Invalid list ID" });
+    }
+    const existingList = await EmailList.findById(listId).lean();
 
     if (!existingList) {
       return res.status(404).json({ message: "Email list not found" });
     }
 
-    // Delete memberships
-    const deleteResult = await prisma.buyerEmailList.deleteMany({
-      where: {
-        emailListId: id,
-        buyerId: { in: buyerIds },
-      },
+    const buyerObjectIds = buyerIds
+      .map((buyerId) => toObjectId(buyerId))
+      .filter(Boolean);
+    if (buyerObjectIds.length === 0) {
+      return res.status(400).json({ message: "No valid buyer IDs provided" });
+    }
+
+    const deleteResult = await BuyerEmailList.deleteMany({
+      emailListId: listId,
+      buyerId: { $in: buyerObjectIds },
     });
 
     // Update the list
-    const updatedList = await prisma.emailList.update({
-      where: { id },
-      data: {
-        updatedAt: new Date(),
-      },
-    });
+    const updatedList = await EmailList.findByIdAndUpdate(
+      listId,
+      { updatedAt: new Date() },
+      { new: true }
+    ).lean();
 
     res.status(200).json({
-      message: `Successfully removed ${deleteResult.count} buyers from the list`,
-      list: updatedList,
-      removedCount: deleteResult.count,
+      message: `Successfully removed ${deleteResult.deletedCount} buyers from the list`,
+      list: updatedList
+        ? { id: String(updatedList._id), ...updatedList }
+        : updatedList,
+      removedCount: deleteResult.deletedCount,
     });
   } catch (err) {
     console.error("Error removing buyers from list:", err);
@@ -892,27 +921,29 @@ export const sendEmailToList = asyncHandler(async (req, res) => {
   }
 
   try {
+    await connectMongo();
     await ensureEmailListLegacyFieldsNormalized();
-    // Get the list
-    const list = await prisma.emailList.findUnique({
-      where: { id },
-    });
+    const listId = toObjectId(id);
+    if (!listId) {
+      return res.status(400).json({ message: "Invalid list ID" });
+    }
+    const list = await EmailList.findById(listId).lean();
 
     if (!list) {
       return res.status(404).json({ message: "Email list not found" });
     }
 
     // Get manually added buyers through join table
-    const manualBuyerMemberships = await prisma.buyerEmailList.findMany({
-      where: {
-        emailListId: id,
-      },
-      include: {
-        buyer: true,
-      },
-    });
+    const manualBuyerMemberships = await BuyerEmailList.find({
+      emailListId: listId,
+    })
+      .populate("buyerId")
+      .lean();
 
-    const manualBuyers = manualBuyerMemberships.map((m) => m.buyer);
+    const manualBuyers = manualBuyerMemberships
+      .map((membership) => membership.buyerId)
+      .filter(Boolean)
+      .map((buyer) => ({ ...buyer, id: String(buyer._id) }));
 
     // Get buyers matching criteria
     let criteriaBuyers = [];
@@ -936,26 +967,20 @@ export const sendEmailToList = asyncHandler(async (req, res) => {
 
       if (hasCriteriaFilters) {
         // Build the query based on criteria
-        const query = {
-          ...(includeUnsubscribed
-            ? {}
-            : {
-                OR: [{ emailStatus: null }, { emailStatus: "available" }],
-              }),
-        };
+        const query = {};
+
+        if (!includeUnsubscribed) {
+          query.$or = [{ emailStatus: null }, { emailStatus: "available" }];
+        }
 
         // Add area filter if specified
         if (hasAreas) {
-          query.preferredAreas = {
-            hasSome: criteria.areas,
-          };
+          query.preferredAreas = { $in: criteria.areas };
         }
 
         // Add buyer type filter if specified
         if (hasBuyerTypes) {
-          query.buyerType = {
-            in: criteria.buyerTypes,
-          };
+          query.buyerType = { $in: criteria.buyerTypes };
         }
 
         // Add VIP filter if specified
@@ -970,26 +995,34 @@ export const sendEmailToList = asyncHandler(async (req, res) => {
         // the list was created for, even though buyer matching uses preferredAreas.
 
         // Get buyers matching the criteria
-        criteriaBuyers = await prisma.buyer.findMany({
-          where: query,
-        });
+        const criteriaResults = await Buyer.find(query).lean();
+        criteriaBuyers = criteriaResults.map((buyer) => ({
+          ...buyer,
+          id: String(buyer._id),
+        }));
       }
     }
 
     // Combine and remove duplicates
-    const allBuyerIds = new Set([...manualBuyers.map((b) => b.id), ...criteriaBuyers.map((b) => b.id)]);
+    const allBuyerIds = new Set([
+      ...manualBuyers.map((b) => b.id),
+      ...criteriaBuyers.map((b) => b.id),
+    ]);
+    if (allBuyerIds.size === 0) {
+      return res.status(404).json({
+        message: "No eligible buyers found in this list",
+      });
+    }
 
     // Get all unique buyers with email status check
-    const allBuyers = await prisma.buyer.findMany({
-      where: {
-        id: { in: Array.from(allBuyerIds) },
-        ...(includeUnsubscribed
-          ? {}
-          : {
-              OR: [{ emailStatus: null }, { emailStatus: "available" }],
-            }),
-      },
-    });
+    const buyerObjectIds = Array.from(allBuyerIds)
+      .map((buyerId) => toObjectId(buyerId))
+      .filter(Boolean);
+    const allBuyerQuery = { _id: { $in: buyerObjectIds } };
+    if (!includeUnsubscribed) {
+      allBuyerQuery.$or = [{ emailStatus: null }, { emailStatus: "available" }];
+    }
+    const allBuyers = await Buyer.find(allBuyerQuery).lean();
 
     if (allBuyers.length === 0) {
       return res.status(404).json({
@@ -1017,7 +1050,7 @@ export const sendEmailToList = asyncHandler(async (req, res) => {
       // });
 
       return {
-        buyerId: buyer.id,
+        buyerId: String(buyer._id),
         email: buyer.email,
         name: `${buyer.firstName || ""} ${buyer.lastName || ""}`.trim(),
         status: "sent", // In a real implementation, this would be the actual status
@@ -1025,12 +1058,10 @@ export const sendEmailToList = asyncHandler(async (req, res) => {
     });
 
     // Update last email date for the list
-    await prisma.emailList.update({
-      where: { id },
-      data: {
-        lastEmailDate: new Date(),
-      },
-    });
+    await EmailList.updateOne(
+      { _id: listId },
+      { $set: { lastEmailDate: new Date() } }
+    );
 
     res.status(200).json({
       message: `Successfully sent emails to ${emailsSent.length} buyers in the list`,
@@ -1217,23 +1248,18 @@ export const previewEmailListRecipients = asyncHandler(async (req, res) => {
       sampleSize: normalizedSampleSize,
       filters,
     });
+    await connectMongo();
     await ensureBuyerPreferenceFieldsNormalized();
-    const buyers = await prisma.buyer.findMany({
-      select: {
-        id: true,
-        email: true,
-        firstName: true,
-        lastName: true,
-        buyerType: true,
-        preferredAreas: true,
-        preferredCity: true,
-        preferredCounty: true,
-        emailStatus: true,
-        emailPermissionStatus: true,
-      },
-    });
+    const buyers = await Buyer.find(
+      {},
+      "email firstName lastName buyerType preferredAreas preferredCity preferredCounty emailStatus emailPermissionStatus"
+    ).lean();
+    const buyersWithId = buyers.map((buyer) => ({
+      ...buyer,
+      id: String(buyer._id),
+    }));
 
-    const filtered = filterBuyersByFilters(buyers, filters)
+    const filtered = filterBuyersByFilters(buyersWithId, filters)
       .filter((buyer) => isValidEmail(buyer.email))
       .filter((buyer) => !isUnsubscribed(buyer));
 
@@ -1252,7 +1278,7 @@ export const previewEmailListRecipients = asyncHandler(async (req, res) => {
         : [];
 
     console.log("[EmailListController]:[previewEmailListRecipients]:[Response]", {
-      totalBuyers: buyers.length,
+      totalBuyers: buyersWithId.length,
       filteredCount: filtered.length,
       dedupedCount: total,
       sampleRecipients: sampleRecipients.length,
@@ -1295,20 +1321,24 @@ export const createGeneratedEmailList = asyncHandler(async (req, res) => {
     : `${GENERATED_LIST_PREFIX} ${name}`;
 
   try {
-    const buyers = await prisma.buyer.findMany({
-      where: {
-        id: { in: buyerIds },
-      },
-      select: {
-        id: true,
-        email: true,
-        emailStatus: true,
-        emailPermissionStatus: true,
-      },
-    });
+    await connectMongo();
+    const buyerObjectIds = buyerIds
+      .map((buyerId) => toObjectId(buyerId))
+      .filter(Boolean);
+    if (buyerObjectIds.length === 0) {
+      return res.status(400).json({ message: "No valid buyer IDs provided" });
+    }
+    const buyers = await Buyer.find(
+      { _id: { $in: buyerObjectIds } },
+      "email emailStatus emailPermissionStatus"
+    ).lean();
+    const buyersWithId = buyers.map((buyer) => ({
+      ...buyer,
+      id: String(buyer._id),
+    }));
 
     const eligibleBuyers = dedupeBuyers(
-      buyers.filter((buyer) => isValidEmail(buyer.email) && !isUnsubscribed(buyer))
+      buyersWithId.filter((buyer) => isValidEmail(buyer.email) && !isUnsubscribed(buyer))
     );
 
     if (eligibleBuyers.length === 0) {
@@ -1323,27 +1353,27 @@ export const createGeneratedEmailList = asyncHandler(async (req, res) => {
       generatedAt: serializedCriteria.generatedAt || new Date().toISOString(),
     };
 
-    const list = await prisma.emailList.create({
-      data: {
-        name: generatedName,
-        description,
-        source: GENERATED_LIST_SOURCE,
-        criteria: criteriaPayload,
-        isDefault: false,
-        createdBy: req.userId,
-      },
+    const createdBy = toObjectId(req.userId);
+    const list = await EmailList.create({
+      name: generatedName,
+      description,
+      source: GENERATED_LIST_SOURCE,
+      criteria: criteriaPayload,
+      isDefault: false,
+      ...(createdBy ? { createdBy } : {}),
     });
 
-    const insertResult = await prisma.buyerEmailList.createMany({
-      data: eligibleBuyers.map((buyer) => ({
-        buyerId: buyer.id,
-        emailListId: list.id,
+    const insertResult = await BuyerEmailList.insertMany(
+      eligibleBuyers.map((buyer) => ({
+        buyerId: toObjectId(buyer.id),
+        emailListId: list._id,
       })),
-    });
+      { ordered: false }
+    );
 
     res.status(201).json({
-      generatedListId: list.id,
-      totalContacts: insertResult.count,
+      generatedListId: String(list._id),
+      totalContacts: insertResult.length,
     });
   } catch (err) {
     console.error("Error creating generated email list:", err);

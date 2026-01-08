@@ -1,0 +1,98 @@
+import mongoose from "mongoose";
+
+const { Schema } = mongoose;
+
+const PropertySchema = new Schema(
+  {
+    createdById: { type: Schema.Types.ObjectId, ref: "User", required: true },
+    updatedById: { type: Schema.Types.ObjectId, ref: "User" },
+    modificationHistory: { type: Schema.Types.Mixed },
+    deals: [{ type: Schema.Types.ObjectId, ref: "Deal" }],
+    deletionRequests: [
+      { type: Schema.Types.ObjectId, ref: "PropertyDeletionRequest" },
+    ],
+    ownerId: { type: Number },
+    area: { type: String, required: true },
+    status: { type: String, required: true },
+    featured: { type: String },
+    title: { type: String, required: true },
+    description: { type: String, required: true },
+    notes: { type: String },
+    type: { type: String },
+    landType: { type: [String], default: [] },
+    zoning: { type: String, required: true },
+    restrictions: { type: String },
+    survey: { type: String },
+    legalDescription: { type: String },
+    mobileHomeFriendly: { type: String },
+    streetAddress: { type: String, required: true },
+    toggleObscure: { type: Boolean, default: false },
+    city: { type: String, required: true },
+    county: { type: String, required: true },
+    state: { type: String, required: true },
+    zip: { type: String, required: true },
+    latitude: { type: Number, required: true },
+    longitude: { type: Number, required: true },
+    apnOrPin: { type: String, required: true },
+    direction: { type: String },
+    landId: { type: Boolean, default: false },
+    landIdLink: { type: String },
+    sqft: { type: Number },
+    acre: { type: Number, required: true },
+    askingPrice: { type: Number, required: true },
+    minPrice: { type: Number, required: true },
+    disPrice: { type: Number, required: true },
+    hoaPoa: { type: String, required: true },
+    hoaFee: { type: Number },
+    hoaPaymentTerms: { type: String },
+    tax: { type: Number },
+    closingDate: { type: Date },
+    financing: { type: String, required: true },
+    financingTwo: { type: String },
+    financingThree: { type: String },
+    serviceFee: { type: Number },
+    termOne: { type: Number },
+    termTwo: { type: Number },
+    termThree: { type: Number },
+    hoaMonthly: { type: Number },
+    interestOne: { type: Number },
+    interestTwo: { type: Number },
+    interestThree: { type: Number },
+    monthlyPaymentOne: { type: Number },
+    monthlyPaymentTwo: { type: Number },
+    monthlyPaymentThree: { type: Number },
+    downPaymentOne: { type: Number },
+    downPaymentTwo: { type: Number },
+    downPaymentThree: { type: Number },
+    loanAmountOne: { type: Number },
+    loanAmountTwo: { type: Number },
+    loanAmountThree: { type: Number },
+    purchasePrice: { type: Number },
+    financedPrice: { type: Number },
+    water: { type: String },
+    sewer: { type: String },
+    electric: { type: String },
+    roadCondition: { type: String },
+    floodplain: { type: String },
+    hasCma: { type: Boolean, default: false },
+    cmaData: { type: String },
+    cmaFilePath: { type: String },
+    imageUrls: { type: Schema.Types.Mixed },
+    videoUrls: { type: Schema.Types.Mixed },
+    ltag: { type: String },
+    rtag: { type: String },
+    viewCount: { type: Number, default: 0 },
+    profileId: { type: String },
+  },
+  { timestamps: true }
+);
+
+PropertySchema.index(
+  { apnOrPin: 1, streetAddress: 1, city: 1, state: 1 },
+  { unique: true }
+);
+PropertySchema.index({ latitude: 1, longitude: 1 }, { unique: true });
+
+export const Property =
+  mongoose.models.Property || mongoose.model("Property", PropertySchema);
+export default Property;

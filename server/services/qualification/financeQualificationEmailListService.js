@@ -1,5 +1,7 @@
 // server/services/qualification/financeQualificationEmailListService.js
-import { prisma } from "../../config/prismaConfig.js";
+import mongoose from "../../config/mongoose.js";
+import { connectMongo } from "../../config/mongoose.js";
+import { BuyerEmailList, EmailList } from "../../models/index.js";
 
 const normalizeCriteriaListValue = (value) => {
   const collected = [];
@@ -39,6 +41,7 @@ const normalizeCriteriaListValue = (value) => {
  */
 export const handleFinanceQualificationEmailList = async (buyer, property, financeSource = "Finance Qualification") => {
   try {
+    await connectMongo();
     // Extract area from property (using area as primary area identifier)
     const area = property.area || "Unknown Area";
     
@@ -49,11 +52,9 @@ export const handleFinanceQualificationEmailList = async (buyer, property, finan
     const listName = `${financeSource} ${area} ${buyerType}`;
     
     // Check if list already exists with matching source, area, and buyer type
-    let emailList = await prisma.emailList.findFirst({
-      where: { 
-        name: listName,
-        source: financeSource
-      }
+    let emailList = await EmailList.findOne({
+      name: listName,
+      source: financeSource,
     });
     
     // If list doesn't exist, create it
@@ -63,20 +64,19 @@ export const handleFinanceQualificationEmailList = async (buyer, property, finan
     }
     
     // Check if buyer is already in the list
-    const existingMembership = await prisma.buyerEmailList.findFirst({
-      where: {
-        buyerId: buyer.id,
-        emailListId: emailList.id
-      }
-    });
+    const buyerObjectId = mongoose.Types.ObjectId.isValid(buyer.id)
+      ? new mongoose.Types.ObjectId(buyer.id)
+      : buyer._id;
+    const existingMembership = await BuyerEmailList.findOne({
+      buyerId: buyerObjectId,
+      emailListId: emailList._id,
+    }).lean();
     
     // Add buyer to list if not already a member
     if (!existingMembership) {
-      await prisma.buyerEmailList.create({
-        data: {
-          buyerId: buyer.id,
-          emailListId: emailList.id
-        }
+      await BuyerEmailList.create({
+        buyerId: buyerObjectId,
+        emailListId: emailList._id,
       });
       console.log(`Added buyer ${buyer.id} to finance qualification list: ${listName}`);
     }
@@ -84,7 +84,7 @@ export const handleFinanceQualificationEmailList = async (buyer, property, finan
     return {
       success: true,
       listName,
-      listId: emailList.id,
+      listId: String(emailList._id),
       buyerAdded: !existingMembership
     };
     
@@ -107,14 +107,12 @@ const createFinanceQualificationEmailList = async (listName, area, buyerType, so
     description: `Buyers who completed finance qualification for ${buyerType} properties in ${area}`
   };
   
-  return await prisma.emailList.create({
-    data: {
-      name: listName,
-      description: `Auto-generated list for ${buyerType} buyers completing finance qualification in ${area}`,
-      source: source,
-      criteria: criteria,
-      isDefault: false
-    }
+  return await EmailList.create({
+    name: listName,
+    description: `Auto-generated list for ${buyerType} buyers completing finance qualification in ${area}`,
+    source: source,
+    criteria: criteria,
+    isDefault: false,
   });
 };
 
@@ -123,31 +121,47 @@ const createFinanceQualificationEmailList = async (listName, area, buyerType, so
  */
 export const getFinanceQualificationEmailLists = async (financeSource = "Finance Qualification") => {
   try {
-    const lists = await prisma.emailList.findMany({
-      where: {
-        source: financeSource
-      },
-      include: {
-        buyerMemberships: {
-          include: {
-            buyer: {
-              select: {
-                id: true,
-                firstName: true,
-                lastName: true,
-                email: true,
-                buyerType: true
-              }
+    await connectMongo();
+    const lists = await EmailList.find({ source: financeSource })
+      .sort({ createdAt: -1 })
+      .lean();
+
+    const listIds = lists.map((list) => list._id);
+    const memberships = listIds.length
+      ? await BuyerEmailList.find({ emailListId: { $in: listIds } })
+          .populate({ path: "buyerId", select: "firstName lastName email buyerType" })
+          .lean()
+      : [];
+
+    const membershipMap = new Map();
+    memberships.forEach((membership) => {
+      const listId = String(membership.emailListId);
+      const buyer = membership.buyerId;
+      const entry = {
+        id: String(membership._id),
+        buyerId: buyer ? String(buyer._id) : String(membership.buyerId),
+        emailListId: listId,
+        buyer: buyer
+          ? {
+              id: String(buyer._id),
+              firstName: buyer.firstName,
+              lastName: buyer.lastName,
+              email: buyer.email,
+              buyerType: buyer.buyerType,
             }
-          }
-        }
-      },
-      orderBy: {
-        createdAt: 'desc'
+          : null,
+      };
+      if (!membershipMap.has(listId)) {
+        membershipMap.set(listId, []);
       }
+      membershipMap.get(listId).push(entry);
     });
-    
-    return lists;
+
+    return lists.map((list) => ({
+      ...list,
+      id: String(list._id),
+      buyerMemberships: membershipMap.get(String(list._id)) || [],
+    }));
   } catch (error) {
     console.error("Error fetching finance qualification email lists:", error);
     throw error;

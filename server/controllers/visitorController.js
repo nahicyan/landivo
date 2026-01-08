@@ -1,6 +1,13 @@
 // server/controllers/visitorController.js
 import asyncHandler from "express-async-handler";
-import { prisma } from "../config/prismaConfig.js";
+import mongoose from "../config/mongoose.js";
+import { connectMongo } from "../config/mongoose.js";
+import { Property, Visit, Visitor, VisitorStat } from "../models/index.js";
+
+const toObjectId = (value) => {
+  if (!value || !mongoose.Types.ObjectId.isValid(value)) return null;
+  return new mongoose.Types.ObjectId(value);
+};
 
 /**
  * Track a visitor page view
@@ -15,6 +22,7 @@ export const trackVisit = asyncHandler(async (req, res) => {
   }
 
   try {
+    await connectMongo();
     // Get IP and user agent
     const ip = req.ip || req.headers["x-forwarded-for"]?.split(",")[0] || "";
     const userAgent = req.headers["user-agent"] || "";
@@ -25,74 +33,68 @@ export const trackVisit = asyncHandler(async (req, res) => {
     const deviceType = isMobile ? "mobile" : isTablet ? "tablet" : "desktop";
 
     // Check if visitor exists
-    let visitor = await prisma.visitor.findUnique({
-      where: { visitorId },
-    });
+    let visitor = await Visitor.findOne({ visitorId });
 
     const isNewVisitor = !visitor;
 
     if (isNewVisitor) {
       // Create new visitor
-      visitor = await prisma.visitor.create({
-        data: {
-          visitorId,
-          firstVisit: new Date(),
-          lastVisit: new Date(),
-          totalVisits: 1,
-          deviceType,
-          browser: userAgent.includes("Chrome")
-            ? "Chrome"
-            : userAgent.includes("Firefox")
-            ? "Firefox"
-            : userAgent.includes("Safari")
-            ? "Safari"
-            : userAgent.includes("Edge")
-            ? "Edge"
-            : "Other",
-          os: userAgent.includes("Windows")
-            ? "Windows"
-            : userAgent.includes("Mac")
-            ? "Mac"
-            : userAgent.includes("Linux")
-            ? "Linux"
-            : userAgent.includes("Android")
-            ? "Android"
-            : userAgent.includes("iOS")
-            ? "iOS"
-            : "Other",
-        },
+      visitor = await Visitor.create({
+        visitorId,
+        firstVisit: new Date(),
+        lastVisit: new Date(),
+        totalVisits: 1,
+        deviceType,
+        browser: userAgent.includes("Chrome")
+          ? "Chrome"
+          : userAgent.includes("Firefox")
+          ? "Firefox"
+          : userAgent.includes("Safari")
+          ? "Safari"
+          : userAgent.includes("Edge")
+          ? "Edge"
+          : "Other",
+        os: userAgent.includes("Windows")
+          ? "Windows"
+          : userAgent.includes("Mac")
+          ? "Mac"
+          : userAgent.includes("Linux")
+          ? "Linux"
+          : userAgent.includes("Android")
+          ? "Android"
+          : userAgent.includes("iOS")
+          ? "iOS"
+          : "Other",
       });
     } else {
       // Update existing visitor
-      visitor = await prisma.visitor.update({
-        where: { visitorId },
-        data: {
-          lastVisit: new Date(),
-          totalVisits: { increment: 1 },
-        },
-      });
+      visitor = await Visitor.findOneAndUpdate(
+        { visitorId },
+        { $set: { lastVisit: new Date() }, $inc: { totalVisits: 1 } },
+        { new: true }
+      );
     }
 
     // Check if we need to close previous session
     if (previousSessionEnd && sessionId) {
       try {
-        const existingVisit = await prisma.visit.findFirst({
-          where: { sessionId },
-        });
+        const existingVisit = await Visit.findOne({ sessionId });
 
         if (existingVisit && !existingVisit.endTime) {
           const endTime = new Date(previousSessionEnd);
           const startTime = new Date(existingVisit.startTime);
           const durationSec = Math.floor((endTime - startTime) / 1000);
 
-          await prisma.visit.update({
-            where: { id: existingVisit.id },
-            data: {
-              endTime,
-              duration: durationSec > 0 ? durationSec : 0,
-              exitPage: page,
-            },
-          });
+          await Visit.updateOne(
+            { _id: existingVisit._id },
+            {
+              $set: {
+                endTime,
+                duration: durationSec > 0 ? durationSec : 0,
+                exitPage: page,
+              },
+            }
+          );
         }
       } catch (err) {
         console.error("Error updating previous session:", err);
@@ -103,36 +105,30 @@ export const trackVisit = asyncHandler(async (req, res) => {
     let visit;
     try {
       // First try to find an existing visit for this session
-      const existingVisit = await prisma.visit.findFirst({
-        where: {
-          sessionId,
-          visitorId: visitor.visitorId,
-        },
+      const existingVisit = await Visit.findOne({
+        sessionId,
+        visitorId: visitor.visitorId,
       });
 
       if (existingVisit) {
         // Update existing visit
-        visit = await prisma.visit.update({
-          where: { id: existingVisit.id },
-          data: {
-            pagesViewed: { increment: 1 },
-            exitPage: page,
-          },
-        });
+        visit = await Visit.findByIdAndUpdate(
+          existingVisit._id,
+          { $inc: { pagesViewed: 1 }, $set: { exitPage: page } },
+          { new: true }
+        );
       } else {
         // Create new visit
-        visit = await prisma.visit.create({
-          data: {
-            visitorId: visitor.visitorId,
-            sessionId,
-            startTime: new Date(),
-            entryPage: page,
-            exitPage: page,
-            referrer: referrer || null,
-            userAgent,
-            ipAddress: ip,
-            screenSize,
-          },
+        visit = await Visit.create({
+          visitorId: visitor.visitorId,
+          sessionId,
+          startTime: new Date(),
+          entryPage: page,
+          exitPage: page,
+          referrer: referrer || null,
+          userAgent,
+          ipAddress: ip,
+          screenSize,
         });
       }
     } catch (err) {
@@ -144,32 +140,28 @@ export const trackVisit = asyncHandler(async (req, res) => {
     today.setHours(0, 0, 0, 0);
 
     // First try to find today's stats
-    let todayStats = await prisma.visitorStat.findUnique({
-      where: { date: today },
-    });
+    let todayStats = await VisitorStat.findOne({ date: today });
 
     if (todayStats) {
       // Update existing stats
-      await prisma.visitorStat.update({
-        where: { id: todayStats.id },
-        data: {
-          uniqueVisitors: isNewVisitor ? { increment: 1 } : undefined,
-          totalVisits: { increment: 1 },
-          newVisitors: isNewVisitor ? { increment: 1 } : undefined,
-          returningVisitors: isNewVisitor ? undefined : { increment: 1 },
-          updatedAt: new Date(),
-        },
-      });
+      const incrementPayload = {
+        totalVisits: 1,
+        ...(isNewVisitor
+          ? { uniqueVisitors: 1, newVisitors: 1 }
+          : { returningVisitors: 1 }),
+      };
+      await VisitorStat.updateOne(
+        { _id: todayStats._id },
+        { $inc: incrementPayload, $set: { updatedAt: new Date() } }
+      );
     } else {
       // Create new stats for today
-      await prisma.visitorStat.create({
-        data: {
-          date: today,
-          uniqueVisitors: 1,
-          totalVisits: 1,
-          newVisitors: isNewVisitor ? 1 : 0,
-          returningVisitors: isNewVisitor ? 0 : 1,
-        },
+      await VisitorStat.create({
+        date: today,
+        uniqueVisitors: 1,
+        totalVisits: 1,
+        newVisitors: isNewVisitor ? 1 : 0,
+        returningVisitors: isNewVisitor ? 0 : 1,
       });
     }
 
@@ -190,6 +182,7 @@ export const getVisitorStats = asyncHandler(async (req, res) => {
   const { period = "week", startDate, endDate } = req.query;
 
   try {
+    await connectMongo();
     let start, end;
 
     if (startDate && endDate) {
@@ -220,69 +213,75 @@ export const getVisitorStats = asyncHandler(async (req, res) => {
     }
 
     // Get daily stats
-    const stats = await prisma.visitorStat.findMany({
-      where: {
-        date: { gte: start, lte: end },
-      },
-      orderBy: { date: "asc" },
-    });
+    const stats = await VisitorStat.find({
+      date: { $gte: start, $lte: end },
+    })
+      .sort({ date: 1 })
+      .lean();
 
     // Get current period totals
-    const currentPeriodStats = await prisma.visitorStat.aggregate({
-      where: { date: { gte: start, lte: end } },
-      _sum: {
-        uniqueVisitors: true,
-        totalVisits: true,
-        newVisitors: true,
-        returningVisitors: true,
+    const currentPeriodStats = await VisitorStat.aggregate([
+      { $match: { date: { $gte: start, $lte: end } } },
+      {
+        $group: {
+          _id: null,
+          uniqueVisitors: { $sum: "$uniqueVisitors" },
+          totalVisits: { $sum: "$totalVisits" },
+          newVisitors: { $sum: "$newVisitors" },
+          returningVisitors: { $sum: "$returningVisitors" },
+        },
       },
-    });
+    ]);
 
     // Get previous period stats
     const periodDuration = end.getTime() - start.getTime();
     const prevEnd = new Date(start.getTime() - 1);
     const prevStart = new Date(prevEnd.getTime() - periodDuration);
 
-    const previousPeriodStats = await prisma.visitorStat.aggregate({
-      where: { date: { gte: prevStart, lte: prevEnd } },
-      _sum: {
-        uniqueVisitors: true,
-        totalVisits: true,
-        newVisitors: true,
-        returningVisitors: true,
+    const previousPeriodStats = await VisitorStat.aggregate([
+      { $match: { date: { $gte: prevStart, $lte: prevEnd } } },
+      {
+        $group: {
+          _id: null,
+          uniqueVisitors: { $sum: "$uniqueVisitors" },
+          totalVisits: { $sum: "$totalVisits" },
+          newVisitors: { $sum: "$newVisitors" },
+          returningVisitors: { $sum: "$returningVisitors" },
+        },
       },
-    });
+    ]);
 
     // Get top pages - Updated to handle property pages better
-    const topPages = await prisma.visit.groupBy({
-      by: ["entryPage"],
-      where: { startTime: { gte: start, lte: end } },
-      _count: { entryPage: true },
-      orderBy: { _count: { entryPage: "desc" } },
-      take: 10,
-    });
+    const topPages = await Visit.aggregate([
+      { $match: { startTime: { $gte: start, $lte: end } } },
+      { $group: { _id: "$entryPage", count: { $sum: 1 } } },
+      { $sort: { count: -1 } },
+      { $limit: 10 },
+    ]);
 
     // Process top pages to properly handle property pages
     const processedTopPages = await Promise.all(
       topPages.map(async (p) => {
         // Check if this is a property page with an ID
-        if (p.entryPage.startsWith("/properties/") && p.entryPage.length > 12) {
-          const propertyId = p.entryPage.split("/").pop();
+        if (p._id.startsWith("/properties/") && p._id.length > 12) {
+          const propertyId = p._id.split("/").pop();
 
           // Try to get property info to enhance the display (title if available)
           let propertyInfo = null;
           try {
-            propertyInfo = await prisma.residency.findUnique({
-              where: { id: propertyId },
-              select: { title: true, streetAddress: true },
-            });
+            const propertyObjectId = toObjectId(propertyId);
+            propertyInfo = propertyObjectId
+              ? await Property.findById(propertyObjectId)
+                  .select("title streetAddress")
+                  .lean()
+              : null;
           } catch (err) {
             console.log("Property not found for ID:", propertyId);
           }
 
           return {
-            page: p.entryPage,
-            count: p._count.entryPage,
+            page: p._id,
+            count: p.count,
             isProperty: true,
             propertyId,
             propertyTitle: propertyInfo?.title || "Unknown Property",
@@ -291,52 +290,46 @@ export const getVisitorStats = asyncHandler(async (req, res) => {
         }
 
         return {
-          page: p.entryPage,
-          count: p._count.entryPage,
+          page: p._id,
+          count: p.count,
           isProperty: false,
         };
       })
     );
 
     // Get device breakdown
-    const deviceBreakdown = await prisma.visitor.groupBy({
-      by: ["deviceType"],
-      where: { lastVisit: { gte: start, lte: end } },
-      _count: { visitorId: true },
-    });
+    const deviceBreakdown = await Visitor.aggregate([
+      { $match: { lastVisit: { $gte: start, $lte: end } } },
+      { $group: { _id: "$deviceType", count: { $sum: 1 } } },
+    ]);
 
     // Get page performance details
     const pagePerformance = await Promise.all(
       processedTopPages.slice(0, 5).map(async (page) => {
         // Count unique visitors for this page
-        const uniqueVisitors = await prisma.visit.findMany({
-          where: {
-            entryPage: page.page,
-            startTime: { gte: start, lte: end },
-          },
-          distinct: ["visitorId"],
+        const uniqueVisitors = await Visit.distinct("visitorId", {
+          entryPage: page.page,
+          startTime: { $gte: start, $lte: end },
         });
 
         // Calculate average visit duration for this page
-        const pageDurations = await prisma.visit.findMany({
-          where: {
+        const pageDurations = await Visit.find(
+          {
             entryPage: page.page,
-            startTime: { gte: start, lte: end },
-            duration: { not: null },
+            startTime: { $gte: start, $lte: end },
+            duration: { $ne: null },
           },
-          select: { duration: true },
-        });
+          "duration"
+        ).lean();
 
         const totalDuration = pageDurations.reduce((sum, visit) => sum + (visit.duration || 0), 0);
         const avgDuration = pageDurations.length > 0 ? totalDuration / pageDurations.length : 0;
 
         // Calculate bounce rate (visits with just 1 page view)
-        const singlePageVisits = await prisma.visit.count({
-          where: {
-            entryPage: page.page,
-            startTime: { gte: start, lte: end },
-            pagesViewed: 1,
-          },
+        const singlePageVisits = await Visit.countDocuments({
+          entryPage: page.page,
+          startTime: { $gte: start, $lte: end },
+          pagesViewed: 1,
         });
 
         const bounceRate = page.count > 0 ? Math.round((singlePageVisits / page.count) * 100) : 0;
@@ -353,22 +346,22 @@ export const getVisitorStats = asyncHandler(async (req, res) => {
     res.status(200).json({
       dailyStats: stats,
       currentPeriod: {
-        uniqueVisitors: currentPeriodStats._sum.uniqueVisitors || 0,
-        totalVisits: currentPeriodStats._sum.totalVisits || 0,
-        newVisitors: currentPeriodStats._sum.newVisitors || 0,
-        returningVisitors: currentPeriodStats._sum.returningVisitors || 0,
+        uniqueVisitors: currentPeriodStats[0]?.uniqueVisitors || 0,
+        totalVisits: currentPeriodStats[0]?.totalVisits || 0,
+        newVisitors: currentPeriodStats[0]?.newVisitors || 0,
+        returningVisitors: currentPeriodStats[0]?.returningVisitors || 0,
       },
       previousPeriod: {
-        uniqueVisitors: previousPeriodStats._sum.uniqueVisitors || 0,
-        totalVisits: previousPeriodStats._sum.totalVisits || 0,
-        newVisitors: previousPeriodStats._sum.newVisitors || 0,
-        returningVisitors: previousPeriodStats._sum.returningVisitors || 0,
+        uniqueVisitors: previousPeriodStats[0]?.uniqueVisitors || 0,
+        totalVisits: previousPeriodStats[0]?.totalVisits || 0,
+        newVisitors: previousPeriodStats[0]?.newVisitors || 0,
+        returningVisitors: previousPeriodStats[0]?.returningVisitors || 0,
       },
       topPages: processedTopPages,
       pagePerformance,
       deviceBreakdown: deviceBreakdown.map((d) => ({
-        device: d.deviceType || "unknown",
-        count: d._count.visitorId,
+        device: d._id || "unknown",
+        count: d.count,
       })),
     });
   } catch (error) {
@@ -387,14 +380,15 @@ export const getVisitorStats = asyncHandler(async (req, res) => {
  */
 export const getCurrentVisitors = asyncHandler(async (req, res) => {
   try {
+    await connectMongo();
     const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000);
 
     // Use findMany with distinct instead, then count the results
-    const activeVisits = await prisma.visit.findMany({
-      where: {
-        OR: [{ startTime: { gte: fiveMinutesAgo } }, { endTime: { gte: fiveMinutesAgo } }],
-      },
-      distinct: ["visitorId"],
+    const activeVisits = await Visit.distinct("visitorId", {
+      $or: [
+        { startTime: { $gte: fiveMinutesAgo } },
+        { endTime: { $gte: fiveMinutesAgo } },
+      ],
     });
 
     // Count the unique visitors

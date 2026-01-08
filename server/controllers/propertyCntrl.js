@@ -1,6 +1,8 @@
-// server/controllers/residencyCntrl.js
+// server/controllers/propertyCntrl.js
 import asyncHandler from "express-async-handler";
-import { prisma } from "../config/prismaConfig.js";
+import mongoose from "../config/mongoose.js";
+import { connectMongo } from "../config/mongoose.js";
+import { PropertyRow, Property, User } from "../models/index.js";
 import path from "path";
 import fs from "fs";
 import { fileURLToPath } from "url";
@@ -9,26 +11,35 @@ import { fileURLToPath } from "url";
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
+const toObjectId = (value) => {
+  if (!value || !mongoose.Types.ObjectId.isValid(value)) return null;
+  return new mongoose.Types.ObjectId(value);
+};
+
 // Helper function to manage multiple property rows
 const managePropertyRowsDisplayOrder = async (propertyId, propertyRows) => {
   try {
+    await connectMongo();
     // 1) Fetch every row that currently contains this property
-    const existingRows = await prisma.propertyRow.findMany({
-      where: { displayOrder: { has: propertyId } },
-    });
-    const existingRowIds = existingRows.map((r) => r.id);
+    const existingRows = await PropertyRow.find({
+      displayOrder: propertyId,
+    }).lean();
+    const existingRowIds = existingRows.map((r) => String(r._id));
 
     // 2) Figure out which of those to delete (i.e. not in the new list)
     const newRowIds = Array.isArray(propertyRows) ? propertyRows.map((r) => r.rowId) : [];
 
     const rowsToRemove = existingRowIds.filter((id) => !newRowIds.includes(id));
     for (const rowId of rowsToRemove) {
-      const row = existingRows.find((r) => r.id === rowId);
+      const row = existingRows.find((r) => String(r._id) === rowId);
       const updatedOrder = row.displayOrder.filter((id) => id !== propertyId);
-      await prisma.propertyRow.update({
-        where: { id: rowId },
-        data: { displayOrder: updatedOrder },
-      });
+      const rowObjectId = toObjectId(rowId);
+      if (rowObjectId) {
+        await PropertyRow.updateOne(
+          { _id: rowObjectId },
+          { $set: { displayOrder: updatedOrder } }
+        );
+      }
       console.log(`Removed property ${propertyId} from row ${rowId}`);
     }
 
@@ -43,9 +54,10 @@ const managePropertyRowsDisplayOrder = async (propertyId, propertyRows) => {
         }
 
         // Find the specified row
-        const row = await prisma.propertyRow.findUnique({
-          where: { id: rowId },
-        });
+        const rowObjectId = toObjectId(rowId);
+        const row = rowObjectId
+          ? await PropertyRow.findById(rowObjectId).lean()
+          : null;
 
         if (!row) {
           console.warn(`Property row with ID ${rowId} not found`);
@@ -65,10 +77,12 @@ const managePropertyRowsDisplayOrder = async (propertyId, propertyRows) => {
         updatedOrder.splice(desiredPosition, 0, propertyId);
 
         // Update the PropertyRow with the new order
-        await prisma.propertyRow.update({
-          where: { id: rowId },
-          data: { displayOrder: updatedOrder },
-        });
+        if (rowObjectId) {
+          await PropertyRow.updateOne(
+            { _id: rowObjectId },
+            { $set: { displayOrder: updatedOrder } }
+          );
+        }
 
         console.log(`Updated display order for property ${propertyId} in row ${rowId} to position ${desiredPosition}`);
       }
@@ -82,19 +96,18 @@ const managePropertyRowsDisplayOrder = async (propertyId, propertyRows) => {
 const manageFeaturedDisplayOrder = async (propertyId, isFeatured, displayPosition) => {
   try {
     // Find PropertyRow for featured properties
-    let featuredRow = await prisma.propertyRow.findFirst({
-      where: { rowType: "featured" },
-    });
+    await connectMongo();
+    let featuredRow = await PropertyRow.findOne({ rowType: "featured" }).lean();
 
     // If property is not featured, remove it from the display order
     if (!isFeatured && featuredRow) {
       // Remove property ID from displayOrder if present
       const updatedOrder = featuredRow.displayOrder.filter((id) => id !== propertyId);
 
-      await prisma.propertyRow.update({
-        where: { id: featuredRow.id },
-        data: { displayOrder: updatedOrder },
-      });
+      await PropertyRow.updateOne(
+        { _id: featuredRow._id },
+        { $set: { displayOrder: updatedOrder } }
+      );
       console.log(`Removed property ${propertyId} from featured display order`);
       return;
     }
@@ -121,10 +134,10 @@ const manageFeaturedDisplayOrder = async (propertyId, isFeatured, displayPositio
     currentOrder.splice(desiredPosition, 0, propertyId);
 
     // Update the PropertyRow with the new order
-    await prisma.propertyRow.update({
-      where: { id: featuredRow.id },
-      data: { displayOrder: currentOrder },
-    });
+    await PropertyRow.updateOne(
+      { _id: featuredRow._id },
+      { $set: { displayOrder: currentOrder } }
+    );
 
     console.log(`Updated featured display order for property ${propertyId} to position ${desiredPosition}`);
   } catch (error) {
@@ -133,75 +146,65 @@ const manageFeaturedDisplayOrder = async (propertyId, isFeatured, displayPositio
 };
 
 // Get All Properties
-export const getAllResidencies = asyncHandler(async (req, res) => {
+export const getAllProperties = asyncHandler(async (req, res) => {
   try {
-    const residencies = await prisma.residency.findMany({
-      orderBy: {
-        createdAt: "desc",
-      },
-      include: {
-        createdBy: {
-          select: {
-            firstName: true,
-            lastName: true,
-            email: true,
-          },
-        },
-        updatedBy: {
-          select: {
-            firstName: true,
-            lastName: true,
-            email: true,
-          },
-        },
-      },
-    });
-    res.status(200).send(residencies);
+    await connectMongo();
+    const properties = await Property.find({})
+      .populate({ path: "createdById", select: "firstName lastName email" })
+      .populate({ path: "updatedById", select: "firstName lastName email" })
+      .sort({ createdAt: -1 })
+      .lean();
+    res.status(200).send(
+      properties.map((property) => ({
+        id: String(property._id),
+        ...property,
+        createdBy: property.createdById || null,
+        updatedBy: property.updatedById || null,
+      }))
+    );
   } catch (error) {
-    console.error("Error fetching residencies:", error);
+    console.error("Error fetching properties:", error);
     res.status(500).send({
-      message: "An error occurred while fetching residencies",
+      message: "An error occurred while fetching properties",
       error: error.message,
     });
   }
 });
 
 // Get A Specific Property
-export const getResidency = asyncHandler(async (req, res) => {
+export const getProperty = asyncHandler(async (req, res) => {
   const { id } = req.params;
   try {
-    const residency = await prisma.residency.findUnique({
-      where: { id },
-      include: {
-        createdBy: {
-          select: {
-            firstName: true,
-            lastName: true,
-            email: true,
-          },
-        },
-        updatedBy: {
-          select: {
-            firstName: true,
-            lastName: true,
-            email: true,
-          },
-        },
-      },
+    await connectMongo();
+    const propertyId = toObjectId(id);
+    if (!propertyId) {
+      return res.status(400).json({ message: "Invalid property ID" });
+    }
+    const property = await Property.findById(propertyId)
+      .populate({ path: "createdById", select: "firstName lastName email" })
+      .populate({ path: "updatedById", select: "firstName lastName email" })
+      .lean();
+    if (!property) {
+      return res.status(404).json({ message: "Property not found" });
+    }
+    res.send({
+      id: String(property._id),
+      ...property,
+      createdBy: property.createdById || null,
+      updatedBy: property.updatedById || null,
     });
-    res.send(residency);
   } catch (err) {
-    console.error("Error fetching residency:", err);
+    console.error("Error fetching property:", err);
     res.status(500).send({
-      message: "An error occurred while fetching the residency",
+      message: "An error occurred while fetching the property",
       error: err.message,
     });
   }
 });
 
 // Update a Property
-export const updateResidency = asyncHandler(async (req, res) => {
-  console.log("Received updateResidency request body:", req.body);
+export const updateProperty = asyncHandler(async (req, res) => {
+  console.log("Received updateProperty request body:", req.body);
   try {
     const { id } = req.params;
     let { imageUrls, videoUrls, viewCount, removeCmaFile, propertyRows, featuredPosition, profileId, toggleObscure, ...restOfData } = req.body;
@@ -211,6 +214,15 @@ export const updateResidency = asyncHandler(async (req, res) => {
     if (!updatedById) {
       return res.status(401).json({ message: "Unauthorized. User not authenticated." });
     }
+    await connectMongo();
+    const propertyId = toObjectId(id);
+    if (!propertyId) {
+      return res.status(400).json({ message: "Invalid property ID" });
+    }
+    const updatedByObjectId = toObjectId(updatedById);
+    if (!updatedByObjectId) {
+      return res.status(400).json({ message: "Invalid user ID" });
+    }
 
     // Remove non-updatable fields
     delete restOfData.id;
@@ -219,9 +231,7 @@ export const updateResidency = asyncHandler(async (req, res) => {
     delete restOfData.createdById;
 
     // Get the current property to track changes
-    const currentProperty = await prisma.residency.findUnique({
-      where: { id },
-    });
+    const currentProperty = await Property.findById(propertyId).lean();
 
     if (!currentProperty) {
       return res.status(404).json({ message: "Property not found" });
@@ -395,17 +405,18 @@ export const updateResidency = asyncHandler(async (req, res) => {
       ...restOfData,
       imageUrls: finalImageUrls,
       videoUrls: finalVideoUrls,
-      updatedBy: { connect: { id: updatedById } },
+      updatedById: updatedByObjectId,
       profileId: profileId || currentProperty.profileId,
       modificationHistory,
       cmaFilePath,
       profileId: profileId || currentProperty.profileId, // Add the profileId field
     };
 
-    const updatedResidency = await prisma.residency.update({
-      where: { id },
-      data: updateData,
-    });
+    const updatedProperty = await Property.findByIdAndUpdate(
+      propertyId,
+      updateData,
+      { new: true }
+    ).lean();
 
     // Handle property rows data
     let parsedPropertyRows = [];
@@ -422,14 +433,12 @@ export const updateResidency = asyncHandler(async (req, res) => {
               const positions = Array.isArray(featuredPosition) ? featuredPosition : [featuredPosition];
 
               // Get featured row information from database
-              const featuredRows = await prisma.propertyRow.findMany({
-                where: { rowType: "featured" },
-              });
+              const featuredRows = await PropertyRow.find({ rowType: "featured" }).lean();
 
               if (featuredRows.length > 0) {
                 parsedPropertyRows = featuredRows.map((row, index) => {
                   return {
-                    rowId: row.id,
+                    rowId: String(row._id),
                     position: parseInt(positions[index] || 0, 10),
                   };
                 });
@@ -468,28 +477,16 @@ export const updateResidency = asyncHandler(async (req, res) => {
       await manageFeaturedDisplayOrder(id, true, featPos);
     }
 
-    return res.status(200).json(updatedResidency);
-  } catch (error) {
-    console.error("Error updating residency:", error);
+    if (!updatedProperty) {
+      return res.status(404).json({ message: "Property not found" });
+    }
 
-    if (error.code === "P2025") {
-      return res.status(404).json({
-        message: "Residency with this ID does not exist",
-        error: error.message,
-      });
-    }
-    if (error.code === "P2002") {
-      return res.status(400).json({
-        message: "Unique constraint violation—some field must be unique",
-        error: error.message,
-      });
-    }
-    if (error.code === "P2003") {
-      return res.status(400).json({
-        message: "Foreign key constraint failed—invalid relation",
-        error: error.message,
-      });
-    }
+    return res.status(200).json({
+      id: String(updatedProperty._id),
+      ...updatedProperty,
+    });
+  } catch (error) {
+    console.error("Error updating property:", error);
 
     return res.status(500).json({
       message: "Failed to update property",
@@ -499,24 +496,29 @@ export const updateResidency = asyncHandler(async (req, res) => {
 });
 
 // Get Property Images
-export const getResidencyImages = asyncHandler(async (req, res) => {
+export const getPropertyImages = asyncHandler(async (req, res) => {
   const { id } = req.params;
 
   try {
-    const residency = await prisma.residency.findUnique({
-      where: { id },
-    });
+    await connectMongo();
+    const propertyId = toObjectId(id);
+    if (!propertyId) {
+      return res.status(400).json({ message: "Invalid property ID" });
+    }
+    const property = await Property.findById(propertyId)
+      .select("imageUrls")
+      .lean();
 
-    if (!residency || !residency.imageUrls) {
-      return res.status(404).json({ message: "No images found for this residency" });
+    if (!property || !property.imageUrls) {
+      return res.status(404).json({ message: "No images found for this property" });
     }
 
     res.status(200).json({
       message: "Images retrieved successfully",
-      images: residency.imageUrls,
+      images: property.imageUrls,
     });
   } catch (error) {
-    console.error("Error fetching residency images:", error);
+    console.error("Error fetching property images:", error);
     res.status(500).json({
       message: "Failed to retrieve images",
       error: error.message,
@@ -525,24 +527,29 @@ export const getResidencyImages = asyncHandler(async (req, res) => {
 });
 
 // Get Property Videos
-export const getResidencyVideos = asyncHandler(async (req, res) => {
+export const getPropertyVideos = asyncHandler(async (req, res) => {
   const { id } = req.params;
 
   try {
-    const residency = await prisma.residency.findUnique({
-      where: { id },
-    });
+    await connectMongo();
+    const propertyId = toObjectId(id);
+    if (!propertyId) {
+      return res.status(400).json({ message: "Invalid property ID" });
+    }
+    const property = await Property.findById(propertyId)
+      .select("videoUrls")
+      .lean();
 
-    if (!residency || !residency.videoUrls) {
-      return res.status(404).json({ message: "No videos found for this residency" });
+    if (!property || !property.videoUrls) {
+      return res.status(404).json({ message: "No videos found for this property" });
     }
 
     res.status(200).json({
       message: "Videos retrieved successfully",
-      videos: residency.videoUrls,
+      videos: property.videoUrls,
     });
   } catch (error) {
-    console.error("Error fetching residency videos:", error);
+    console.error("Error fetching property videos:", error);
     res.status(500).json({
       message: "Failed to retrieve videos",
       error: error.message,
@@ -551,7 +558,7 @@ export const getResidencyVideos = asyncHandler(async (req, res) => {
 });
 
 // Create Property with Multiple Files
-export const createResidencyWithMultipleFiles = asyncHandler(async (req, res) => {
+export const createPropertyWithMultipleFiles = asyncHandler(async (req, res) => {
   console.log("This is creation request body: ", req.body);
   try {
     // Get the authenticated user's ID from the req object (set by middleware)
@@ -559,6 +566,11 @@ export const createResidencyWithMultipleFiles = asyncHandler(async (req, res) =>
 
     if (!createdById) {
       return res.status(401).json({ message: "Unauthorized. User not authenticated." });
+    }
+    await connectMongo();
+    const createdByObjectId = toObjectId(createdById);
+    if (!createdByObjectId) {
+      return res.status(400).json({ message: "Invalid user ID" });
     }
 
     // Collect all uploaded image files
@@ -724,116 +736,110 @@ export const createResidencyWithMultipleFiles = asyncHandler(async (req, res) =>
       }
     }
 
-    // Create the residency with the array of image URLs and video URLs stored
-    const residency = await prisma.residency.create({
-      data: {
-        // Connect to the creating user
-        createdBy: {
-          connect: { id: createdById },
-        },
-        updatedBy: {
-          connect: { id: createdById },
-        },
+    // Create the property with the array of image URLs and video URLs stored
+    const property = await Property.create({
+      // Connect to the creating user
+      createdById: createdByObjectId,
+      updatedById: createdByObjectId,
 
-        // System Info
-        ownerId: ownerId ? parseInt(ownerId) : null,
-        area,
-        status,
-        featured: featured ?? "Not Featured",
-        profileId: profileId || null, // Add the profileId field
+      // System Info
+      ownerId: ownerId ? parseInt(ownerId) : null,
+      area,
+      status,
+      featured: featured ?? "Not Featured",
+      profileId: profileId || null, // Add the profileId field
 
-        // Listing Details
-        title,
-        description: description ?? null,
-        notes: notes ?? null,
+      // Listing Details
+      title,
+      description: description ?? null,
+      notes: notes ?? null,
 
-        // Classification
-        type: type ?? null,
-        landType: landTypeArray,
-        legalDescription: legalDescription ?? null,
-        zoning: zoning ?? null,
-        restrictions: restrictions ?? null,
-        mobileHomeFriendly: mobileHomeFriendly ?? null,
-        hoaPoa: hoaPoa ?? null,
-        hoaFee: hoaFee ? parseFloat(hoaFee) : null,
-        hoaPaymentTerms: hoaPaymentTerms ?? null,
-        survey: survey ?? null,
+      // Classification
+      type: type ?? null,
+      landType: landTypeArray,
+      legalDescription: legalDescription ?? null,
+      zoning: zoning ?? null,
+      restrictions: restrictions ?? null,
+      mobileHomeFriendly: mobileHomeFriendly ?? null,
+      hoaPoa: hoaPoa ?? null,
+      hoaFee: hoaFee ? parseFloat(hoaFee) : null,
+      hoaPaymentTerms: hoaPaymentTerms ?? null,
+      survey: survey ?? null,
 
-        // Location
-        streetAddress,
-        city,
-        county,
-        state,
-        zip,
-        latitude: latitude ? parseFloat(latitude) : null,
-        longitude: longitude ? parseFloat(longitude) : null,
-        apnOrPin,
-        direction: direction ?? null,
-        landIdLink: landIdLink ?? null,
-        landId: landId === true || landId === "true" || landId === "included",
+      // Location
+      streetAddress,
+      city,
+      county,
+      state,
+      zip,
+      latitude: latitude ? parseFloat(latitude) : null,
+      longitude: longitude ? parseFloat(longitude) : null,
+      apnOrPin,
+      direction: direction ?? null,
+      landIdLink: landIdLink ?? null,
+      landId: landId === true || landId === "true" || landId === "included",
 
-        // Dimensions
-        sqft: parseInt(sqft),
-        acre: acre ? parseFloat(acre) : null,
+      // Dimensions
+      sqft: parseInt(sqft),
+      acre: acre ? parseFloat(acre) : null,
 
-        // Pricing
-        askingPrice: parseFloat(askingPrice),
-        minPrice: parseFloat(minPrice),
-        disPrice: disPrice ? parseFloat(disPrice) : null,
+      // Pricing
+      askingPrice: parseFloat(askingPrice),
+      minPrice: parseFloat(minPrice),
+      disPrice: disPrice ? parseFloat(disPrice) : null,
 
-        // Financing and Payment Calculation
-        financing: financing ?? "Not-Available",
-        financingTwo: financingTwo ?? "Not-Available",
-        financingThree: financingThree ?? "Not-Available",
-        tax: tax ? parseFloat(tax) : null,
-        closingDate: closingDate ? new Date(closingDate) : null,
-        hoaMonthly: hoaMonthly ? parseFloat(hoaMonthly) : null,
-        serviceFee: serviceFee ? parseFloat(serviceFee) : null,
-        termOne: termOne ? parseInt(termOne, 10) : null,
-        termTwo: termTwo ? parseInt(termTwo, 10) : null,
-        termThree: termThree ? parseInt(termThree, 10) : null,
-        interestOne: interestOne ? parseFloat(interestOne) : null,
-        interestTwo: interestTwo ? parseFloat(interestTwo) : null,
-        interestThree: interestThree ? parseFloat(interestThree) : null,
-        monthlyPaymentOne: monthlyPaymentOne ? parseFloat(monthlyPaymentOne) : null,
-        monthlyPaymentTwo: monthlyPaymentTwo ? parseFloat(monthlyPaymentTwo) : null,
-        monthlyPaymentThree: monthlyPaymentThree ? parseFloat(monthlyPaymentThree) : null,
-        downPaymentOne: downPaymentOne ? parseFloat(downPaymentOne) : null,
-        downPaymentTwo: downPaymentTwo ? parseFloat(downPaymentTwo) : null,
-        downPaymentThree: downPaymentThree ? parseFloat(downPaymentThree) : null,
-        loanAmountOne: loanAmountOne ? parseFloat(loanAmountOne) : null,
-        loanAmountTwo: loanAmountTwo ? parseFloat(loanAmountTwo) : null,
-        loanAmountThree: loanAmountThree ? parseFloat(loanAmountThree) : null,
-        purchasePrice: purchasePrice ? parseFloat(purchasePrice) : null,
-        financedPrice: financedPrice ? parseFloat(financedPrice) : null,
+      // Financing and Payment Calculation
+      financing: financing ?? "Not-Available",
+      financingTwo: financingTwo ?? "Not-Available",
+      financingThree: financingThree ?? "Not-Available",
+      tax: tax ? parseFloat(tax) : null,
+      closingDate: closingDate ? new Date(closingDate) : null,
+      hoaMonthly: hoaMonthly ? parseFloat(hoaMonthly) : null,
+      serviceFee: serviceFee ? parseFloat(serviceFee) : null,
+      termOne: termOne ? parseInt(termOne, 10) : null,
+      termTwo: termTwo ? parseInt(termTwo, 10) : null,
+      termThree: termThree ? parseInt(termThree, 10) : null,
+      interestOne: interestOne ? parseFloat(interestOne) : null,
+      interestTwo: interestTwo ? parseFloat(interestTwo) : null,
+      interestThree: interestThree ? parseFloat(interestThree) : null,
+      monthlyPaymentOne: monthlyPaymentOne ? parseFloat(monthlyPaymentOne) : null,
+      monthlyPaymentTwo: monthlyPaymentTwo ? parseFloat(monthlyPaymentTwo) : null,
+      monthlyPaymentThree: monthlyPaymentThree ? parseFloat(monthlyPaymentThree) : null,
+      downPaymentOne: downPaymentOne ? parseFloat(downPaymentOne) : null,
+      downPaymentTwo: downPaymentTwo ? parseFloat(downPaymentTwo) : null,
+      downPaymentThree: downPaymentThree ? parseFloat(downPaymentThree) : null,
+      loanAmountOne: loanAmountOne ? parseFloat(loanAmountOne) : null,
+      loanAmountTwo: loanAmountTwo ? parseFloat(loanAmountTwo) : null,
+      loanAmountThree: loanAmountThree ? parseFloat(loanAmountThree) : null,
+      purchasePrice: purchasePrice ? parseFloat(purchasePrice) : null,
+      financedPrice: financedPrice ? parseFloat(financedPrice) : null,
 
-        // Utilities
-        water: water ?? null,
-        sewer: sewer ?? null,
-        electric: electric ?? null,
-        roadCondition: roadCondition ?? null,
-        floodplain: floodplain ?? null,
+      // Utilities
+      water: water ?? null,
+      sewer: sewer ?? null,
+      electric: electric ?? null,
+      roadCondition: roadCondition ?? null,
+      floodplain: floodplain ?? null,
 
-        // Media & Tags
-        ltag: ltag ?? null,
-        rtag: rtag ?? null,
-        imageUrls: allImageUrls.length > 0 ? allImageUrls : null,
-        videoUrls: allVideoUrls.length > 0 ? allVideoUrls : null,
+      // Media & Tags
+      ltag: ltag ?? null,
+      rtag: rtag ?? null,
+      imageUrls: allImageUrls.length > 0 ? allImageUrls : null,
+      videoUrls: allVideoUrls.length > 0 ? allVideoUrls : null,
 
-        // Display
-        toggleObscure: toggleObscure === "true" || toggleObscure === true,
+      // Display
+      toggleObscure: toggleObscure === "true" || toggleObscure === true,
 
-        // CMA fields
-        hasCma: hasCma === "true" || hasCma === true,
-        cmaData: cmaData || null,
-        cmaFilePath: cmaFilePath,
+      // CMA fields
+      hasCma: hasCma === "true" || hasCma === true,
+      cmaData: cmaData || null,
+      cmaFilePath: cmaFilePath,
 
-        //Profile
-        profileId: req.body.profileId || null,
+      //Profile
+      profileId: req.body.profileId || null,
 
-        // Initialize modification history as an empty array
-        modificationHistory: [],
-      },
+      // Initialize modification history as an empty array
+      modificationHistory: [],
     });
 
     // Handle property rows data
@@ -851,14 +857,12 @@ export const createResidencyWithMultipleFiles = asyncHandler(async (req, res) =>
               const positions = Array.isArray(featuredPosition) ? featuredPosition : [featuredPosition];
 
               // Get featured row information from database
-              const featuredRows = await prisma.propertyRow.findMany({
-                where: { rowType: "featured" },
-              });
+              const featuredRows = await PropertyRow.find({ rowType: "featured" }).lean();
 
               if (featuredRows.length > 0) {
                 parsedPropertyRows = featuredRows.map((row, index) => {
                   return {
-                    rowId: row.id,
+                    rowId: String(row._id),
                     position: parseInt(positions[index] || 0, 10),
                   };
                 });
@@ -887,21 +891,24 @@ export const createResidencyWithMultipleFiles = asyncHandler(async (req, res) =>
 
     // Update property rows if we have valid data
     if (Array.isArray(parsedPropertyRows) && parsedPropertyRows.length > 0 && parsedPropertyRows.some((row) => row && row.rowId)) {
-      await managePropertyRowsDisplayOrder(residency.id, parsedPropertyRows);
+      await managePropertyRowsDisplayOrder(propertyId, parsedPropertyRows);
     }
     // For backward compatibility - ONLY IF NO VALID PROPERTY ROWS
-    else if (residency && (featured === "Featured" || featured === "Yes")) {
+    else if (property && (featured === "Featured" || featured === "Yes")) {
       const featPos = featuredPosition !== undefined ? (Array.isArray(featuredPosition) ? parseInt(featuredPosition[0], 10) : parseInt(featuredPosition, 10)) : undefined;
 
-      await manageFeaturedDisplayOrder(residency.id, true, featPos);
+      await manageFeaturedDisplayOrder(propertyId, true, featPos);
     }
 
     res.status(201).json({
       message: "Property added successfully",
-      residency,
+      property: {
+        id: propertyId,
+        ...(property.toObject ? property.toObject() : property),
+      },
     });
   } catch (err) {
-    console.error("Error creating residency:", err);
+    console.error("Error creating property:", err);
     res.status(500).json({
       message: `Failed to create property: ${err.message}`,
       error: err.message,
@@ -913,6 +920,7 @@ export const createResidencyWithMultipleFiles = asyncHandler(async (req, res) =>
 export const getPropertyRows = asyncHandler(async (req, res) => {
   try {
     const { rowType, rowId } = req.query;
+    await connectMongo();
 
     // Filter by row type or specific row ID
     let whereClause = {};
@@ -920,36 +928,40 @@ export const getPropertyRows = asyncHandler(async (req, res) => {
       whereClause.rowType = rowType;
     }
     if (rowId) {
-      whereClause.id = rowId;
+      const rowObjectId = toObjectId(rowId);
+      if (!rowObjectId) {
+        return res.status(400).json({ message: "Invalid row ID" });
+      }
+      whereClause._id = rowObjectId;
     }
 
-    const propertyRows = await prisma.propertyRow.findMany({
-      where: whereClause,
-      orderBy: { updatedAt: "desc" },
-    });
+    const propertyRows = await PropertyRow.find(whereClause)
+      .sort({ updatedAt: -1 })
+      .lean();
+    const rowsWithIds = propertyRows.map((row) => ({
+      id: String(row._id),
+      ...row,
+    }));
 
     // If requesting a specific row ID or featured rows, also include property details
-    if ((rowType === "featured" || rowId) && propertyRows.length > 0) {
-      const targetRow = rowId ? propertyRows.find((row) => row.id === rowId) : propertyRows[0];
+    if ((rowType === "featured" || rowId) && rowsWithIds.length > 0) {
+      const targetRow = rowId ? rowsWithIds.find((row) => row.id === rowId) : rowsWithIds[0];
 
       if (targetRow && targetRow.displayOrder && targetRow.displayOrder.length > 0) {
         // Get property details for all IDs in the display order
         const propertyDetails = await Promise.all(
           targetRow.displayOrder.map(async (propertyId) => {
             try {
-              const property = await prisma.residency.findUnique({
-                where: { id: propertyId },
-                select: {
-                  id: true,
-                  title: true,
-                  streetAddress: true,
-                  city: true,
-                  state: true,
-                  askingPrice: true,
-                  imageUrls: true,
-                },
-              });
-              return property || { id: propertyId, title: "Unknown Property" };
+              const propertyObjectId = toObjectId(propertyId);
+              if (!propertyObjectId) {
+                return { id: propertyId, title: "Unknown Property" };
+              }
+              const property = await Property.findById(propertyObjectId)
+                .select("title streetAddress city state askingPrice imageUrls")
+                .lean();
+              return property
+                ? { id: String(property._id), ...property }
+                : { id: propertyId, title: "Unknown Property" };
             } catch (err) {
               return { id: propertyId, title: "Unknown Property" };
             }
@@ -964,7 +976,7 @@ export const getPropertyRows = asyncHandler(async (req, res) => {
       }
     }
 
-    res.status(200).json(propertyRows);
+    res.status(200).json(rowsWithIds);
   } catch (error) {
     console.error("Error fetching property rows:", error);
     res.status(500).json({ message: "Error fetching property rows", error: error.message });
@@ -981,22 +993,26 @@ export const getCmaDocument = asyncHandler(async (req, res) => {
 
   try {
     // Find the property
-    const residency = await prisma.residency.findUnique({
-      where: { id },
-      select: { hasCma: true, cmaFilePath: true },
-    });
+    await connectMongo();
+    const propertyId = toObjectId(id);
+    if (!propertyId) {
+      return res.status(400).json({ message: "Invalid property ID" });
+    }
+    const property = await Property.findById(propertyId)
+      .select("hasCma cmaFilePath")
+      .lean();
 
     // Check if property exists and has a CMA document
-    if (!residency) {
+    if (!property) {
       return res.status(404).json({ message: "Property not found" });
     }
 
-    if (!residency.hasCma || !residency.cmaFilePath) {
+    if (!property.hasCma || !property.cmaFilePath) {
       return res.status(404).json({ message: "No CMA document found for this property" });
     }
 
     // Construct the file path
-    const filePath = path.join(__dirname, "../", residency.cmaFilePath);
+    const filePath = path.join(__dirname, "../", property.cmaFilePath);
 
     // Check if file exists
     if (!fs.existsSync(filePath)) {
