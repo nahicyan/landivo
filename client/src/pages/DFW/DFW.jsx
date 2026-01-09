@@ -9,6 +9,9 @@ import SearchAreaWithTracking from "@/components/SearchArea/SearchAreaWithTracki
 import DisplayGrid, { createGridFilter } from "@/components/DisplayGrid/DisplayGrid";
 import { Button } from "@/components/ui/button";
 import { getPropertyRows } from "@/utils/api";
+import { getLogger } from "@/utils/logger";
+
+const log = getLogger("DFWProperty");
 
 export default function DFWProperty() {
   const { data, isError, isLoading } = useProperties();
@@ -44,7 +47,7 @@ export default function DFWProperty() {
           }
         }
       } catch (error) {
-        console.error("Error fetching DFW row properties:", error);
+        log.error(`[DFWProperty:fetchDFWRow] > [Error]: ${error.message}`);
         setFeaturedPropertyIds([]);
       } finally {
         setLoadingFeatured(false);

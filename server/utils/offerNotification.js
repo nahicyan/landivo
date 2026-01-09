@@ -1,7 +1,9 @@
 import nodemailer from "nodemailer";
 import dotenv from "dotenv";
+import { getLogger } from "./logger.js";
 
 dotenv.config(); // Load environment variables from .env file
+const log = getLogger("offerNotification");
 
 // 1. Configure SMTP Transport
 const transporter = nodemailer.createTransport({
@@ -15,12 +17,14 @@ const transporter = nodemailer.createTransport({
 });
 
 // 2. Verify SMTP Connection
-transporter.verify((error, success) => {
+transporter.verify((error) => {
   if (error) {
-    console.error("SMTP Connection Failed:", error);
-  } else {
-    console.log("SMTP Server is ready to send emails.");
+    log.error(
+      `[offerNotification:transporterVerify] > [Response]: SMTP connection failed: ${error?.message || error}`
+    );
+    return;
   }
+  log.info("[offerNotification:transporterVerify] > [Response]: SMTP ready");
 });
 
 /**
@@ -39,9 +43,13 @@ export const sendOfferNotification = async (subject, body) => {
     };
 
     await transporter.sendMail(mailOptions);
-    console.log(`Offer notification sent: ${subject}`);
+    log.info(
+      `[offerNotification:sendOfferNotification] > [Response]: sent subject=${subject}`
+    );
   } catch (error) {
-    console.error("Error sending email:", error);
+    log.error(
+      `[offerNotification:sendOfferNotification] > [Error]: ${error?.message || error}`
+    );
   }
 };
 

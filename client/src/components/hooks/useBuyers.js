@@ -1,6 +1,9 @@
 import { useState, useEffect, useCallback } from "react";
 import { getAllBuyers } from "@/utils/api";
 import { toast } from "react-toastify";
+import { getLogger } from "@/utils/logger";
+
+const log = getLogger("useBuyer");
 
 /**
  * Custom hook for managing buyer data
@@ -23,14 +26,16 @@ export function useBuyer() {
   // Fetch all buyers
   useEffect(() => {
     const fetchBuyers = async () => {
+      log.info("[useBuyer] > [Request]: fetchBuyers");
       try {
         setLoading(true);
         const data = await getAllBuyers();
+        log.info(`[useBuyer] > [Response]: fetched=${data.length}`);
         setBuyers(data);
         setAvailableBuyers(data);
         setFilteredBuyers(data);
       } catch (err) {
-        console.error("Error fetching buyers:", err);
+        log.error(`[useBuyer] > [Error]: ${err.message}`);
         setError("Failed to load buyers");
         toast.error("Failed to load buyers");
       } finally {

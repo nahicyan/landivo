@@ -14,6 +14,9 @@ import multer from "multer";
 import path from "path";
 import { fileURLToPath } from "url";
 import fs from "fs";
+import { getLogger } from "../utils/logger.js";
+
+const log = getLogger("userManagementCntrl");
 
 const toObjectId = (value) => {
   if (!value || !mongoose.Types.ObjectId.isValid(value)) return null;
@@ -77,7 +80,7 @@ export const getUserByAuth0Id = asyncHandler(async (req, res) => {
 
     res.status(200).json({ id: String(user._id), ...user });
   } catch (error) {
-    console.error("Error fetching user by Auth0 ID:", error);
+    log.error("Error fetching user by Auth0 ID:", error);
     res.status(500).json({
       message: "An error occurred while fetching user information",
       error: error.message,
@@ -141,7 +144,7 @@ export const createOrUpdateUser = asyncHandler(async (req, res) => {
       });
     }
   } catch (error) {
-    console.error("Error creating/updating user:", error);
+    log.error("Error creating/updating user:", error);
     res.status(500).json({
       message: "An error occurred while creating/updating the user",
       error: error.message,
@@ -182,7 +185,7 @@ export const getUserProfile = asyncHandler(async (req, res) => {
       })),
     });
   } catch (error) {
-    console.error("Error fetching user profile:", error);
+    log.error("Error fetching user profile:", error);
     res.status(500).json({
       message: "An error occurred while fetching user profile",
       error: error.message,
@@ -231,10 +234,10 @@ export const updateUserProfile = asyncHandler(async (req, res) => {
         try {
           if (fs.existsSync(oldAvatarPath)) {
             fs.unlinkSync(oldAvatarPath);
-            console.log(`Deleted old avatar: ${oldAvatarPath}`);
+            log.info(`Deleted old avatar: ${oldAvatarPath}`);
           }
         } catch (err) {
-          console.error(`Error deleting old avatar: ${err.message}`);
+          log.error(`Error deleting old avatar: ${err.message}`);
         }
 
         // Set to null if removing without replacement
@@ -269,7 +272,7 @@ export const updateUserProfile = asyncHandler(async (req, res) => {
       });
     });
   } catch (error) {
-    console.error("Error updating user profile:", error);
+    log.error("Error updating user profile:", error);
     res.status(500).json({
       message: "An error occurred while updating user profile",
       error: error.message,
@@ -307,7 +310,7 @@ export const getAllUsers = asyncHandler(async (req, res) => {
       }))
     );
   } catch (error) {
-    console.error("Error fetching all users:", error);
+    log.error("Error fetching all users:", error);
     res.status(500).json({
       message: "An error occurred while fetching users",
       error: error.message,
@@ -492,7 +495,7 @@ export const getUserById = asyncHandler(async (req, res) => {
 
     res.status(200).json(userWithStats);
   } catch (error) {
-    console.error("Error fetching user by ID:", error);
+    log.error("Error fetching user by ID:", error);
     res.status(500).json({
       message: "An error occurred while fetching user information",
       error: error.message,
@@ -526,7 +529,7 @@ export const updateUserStatus = asyncHandler(async (req, res) => {
         : updatedUser,
     });
   } catch (error) {
-    console.error("Error updating user status:", error);
+    log.error("Error updating user status:", error);
     res.status(500).json({
       message: "An error occurred while updating user status",
       error: error.message,
@@ -558,7 +561,7 @@ export const updateUserProfiles = asyncHandler(async (req, res) => {
       user: user ? { id: String(user._id), ...user } : user,
     });
   } catch (error) {
-    console.error("Error updating user profiles:", error);
+    log.error("Error updating user profiles:", error);
     res.status(500).json({
       message: "An error occurred while updating user profiles",
       error: error.message,
@@ -617,7 +620,7 @@ export const updateUser = asyncHandler(async (req, res) => {
         : updatedUser,
     });
   } catch (error) {
-    console.error("Error updating user:", error);
+    log.error("Error updating user:", error);
     res.status(500).json({
       message: "An error occurred while updating the user",
       error: error.message,
@@ -657,7 +660,7 @@ export const deleteUser = asyncHandler(async (req, res) => {
       message: "User deleted successfully",
     });
   } catch (error) {
-    console.error("Error deleting user:", error);
+    log.error("Error deleting user:", error);
     res.status(500).json({
       message: "Failed to delete user",
       error: error.message,
@@ -721,7 +724,7 @@ export const getProfilesForPropertyAssignment = asyncHandler(async (req, res) =>
 
     res.status(200).json(profiles);
   } catch (error) {
-    console.error("Error fetching profiles for property assignment:", error);
+    log.error("Error fetching profiles for property assignment:", error);
     res.status(500).json({
       message: "An error occurred while fetching profiles",
       error: error.message,
@@ -753,7 +756,7 @@ export const getPublicProfileById = asyncHandler(async (req, res) => {
 
     res.status(200).json({ id: String(user._id), ...user });
   } catch (error) {
-    console.error("Error fetching public profile:", error);
+    log.error("Error fetching public profile:", error);
     res.status(500).json({
       message: "An error occurred while fetching profile information",
       error: error.message,
@@ -785,7 +788,7 @@ export const getPropertiesUsingProfile = asyncHandler(async (req, res) => {
       }))
     );
   } catch (error) {
-    console.error("Error fetching properties using profile:", error);
+    log.error("Error fetching properties using profile:", error);
     res.status(500).json({
       message: "An error occurred while fetching properties",
       error: error.message,
@@ -805,7 +808,7 @@ export const getPropertiesCountByProfile = asyncHandler(async (req, res) => {
 
     res.status(200).json({ count });
   } catch (error) {
-    console.error("Error counting properties using profile:", error);
+    log.error("Error counting properties using profile:", error);
     res.status(500).json({
       message: "An error occurred while counting properties",
       error: error.message,
@@ -850,7 +853,7 @@ export const reassignProperties = asyncHandler(async (req, res) => {
       updatedCount: result.modifiedCount,
     });
   } catch (error) {
-    console.error("Error reassigning properties:", error);
+    log.error("Error reassigning properties:", error);
     res.status(500).json({
       message: "An error occurred while reassigning properties",
       error: error.message,
@@ -902,7 +905,7 @@ export const getPublicProfiles = asyncHandler(async (req, res) => {
       },
     });
   } catch (error) {
-    console.error("Error fetching public profiles:", error);
+    log.error("Error fetching public profiles:", error);
     res.status(500).json({
       message: "An error occurred while fetching profiles",
       error: error.message,

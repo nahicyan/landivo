@@ -2,10 +2,12 @@ import multer from "multer";
 import path from "path";
 import fs from "fs";
 import { fileURLToPath } from "url";
+import { getLogger } from "../utils/logger.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const ROOT_DIR = path.resolve(__dirname, "..");
+const log = getLogger("uploadMiddleware");
 
 // ===========================
 // ENSURE UPLOAD DIRECTORIES
@@ -21,7 +23,7 @@ export const ensureUploadDirectories = () => {
   dirs.forEach((dir) => {
     if (!fs.existsSync(dir)) {
       fs.mkdirSync(dir, { recursive: true });
-      console.log(`Created directory: ${dir}`);
+      log.info(`[uploadMiddleware:ensureUploadDirectories] > [Response]: created ${dir}`);
     }
   });
 };

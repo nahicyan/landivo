@@ -4,6 +4,9 @@ import mongoose from "../config/mongoose.js";
 import { connectMongo } from "../config/mongoose.js";
 import { Buyer, BuyerActivity, BuyerEmailList, EmailList, Offer } from "../models/index.js";
 import { handleVipBuyerEmailList } from "../services/buyer/vipBuyerEmailListService.js";
+import { getLogger } from "../utils/logger.js";
+
+const log = getLogger("buyerCntrl");
 
 const normalizeValue = (value) => String(value || "").trim();
 
@@ -106,12 +109,12 @@ export const createVipBuyer = asyncHandler(async (req, res) => {
       for (const area of preferredAreas) {
         const emailListResult = await handleVipBuyerEmailList(buyer, "VIP", area, buyerType);
         emailListResults.push(emailListResult);
-        console.log(`VIP email list result for ${area}:`, emailListResult);
+        log.info(`VIP email list result for ${area}:`, emailListResult);
       }
 
-      console.log("All VIP email list management completed:", emailListResults);
+      log.info("All VIP email list management completed:", emailListResults);
     } catch (emailListError) {
-      console.error("VIP email list management failed:", emailListError);
+      log.error("VIP email list management failed:", emailListError);
       // Don't fail registration if email list fails
     }
 
@@ -121,7 +124,7 @@ export const createVipBuyer = asyncHandler(async (req, res) => {
       buyer: toBuyerResponse(buyerResponse),
     });
   } catch (err) {
-    console.error(err);
+    log.error(err);
     res.status(500).json({
       message: "An error occurred while processing the request.",
       error: err.message,
@@ -202,7 +205,7 @@ export const getAllBuyers = asyncHandler(async (req, res) => {
 
     res.status(200).json(buyersWithRelations);
   } catch (err) {
-    console.error("Error fetching buyers:", err);
+    log.error("Error fetching buyers:", err);
     res.status(500).json({
       message: "An error occurred while fetching buyers",
       error: err.message,
@@ -273,7 +276,7 @@ export const getBuyerById = asyncHandler(async (req, res) => {
       emailListMemberships: mappedMemberships,
     });
   } catch (err) {
-    console.error("Error fetching buyer:", err);
+    log.error("Error fetching buyer:", err);
     res.status(500).json({
       message: "An error occurred while fetching the buyer",
       error: err.message,
@@ -413,7 +416,7 @@ export const updateBuyer = asyncHandler(async (req, res) => {
       emailListMemberships: mappedMemberships,
     });
   } catch (err) {
-    console.error("Error updating buyer:", err);
+    log.error("Error updating buyer:", err);
     res.status(500).json({
       message: "An error occurred while updating the buyer",
       error: err.message,
@@ -467,7 +470,7 @@ export const deleteBuyer = asyncHandler(async (req, res) => {
         : deletedBuyer,
     });
   } catch (err) {
-    console.error("Error deleting buyer:", err);
+    log.error("Error deleting buyer:", err);
     res.status(500).json({
       message: "An error occurred while deleting the buyer",
       error: err.message,
@@ -598,7 +601,7 @@ export const createBuyer = asyncHandler(async (req, res) => {
       },
     });
   } catch (err) {
-    console.error("Error creating buyer:", err);
+    log.error("Error creating buyer:", err);
     res.status(500).json({
       message: "An error occurred while processing the request.",
       error: err.message,
@@ -630,7 +633,7 @@ export const getBuyersByArea = asyncHandler(async (req, res) => {
       buyers: buyers.map((buyer) => ({ id: String(buyer._id), ...buyer })),
     });
   } catch (err) {
-    console.error("Error fetching buyers by area:", err);
+    log.error("Error fetching buyers by area:", err);
     res.status(500).json({
       message: "An error occurred while fetching buyers by area",
       error: err.message,
@@ -709,7 +712,7 @@ export const sendEmailToBuyers = asyncHandler(async (req, res) => {
       failedCount: buyerIds.length - emailsSent.length,
     });
   } catch (err) {
-    console.error("Error sending emails to buyers:", err);
+    log.error("Error sending emails to buyers:", err);
     res.status(500).json({
       message: "An error occurred while sending emails",
       error: err.message,
@@ -834,7 +837,7 @@ export const importBuyersFromCsv = asyncHandler(async (req, res) => {
       results,
     });
   } catch (err) {
-    console.error("Error importing buyers:", err);
+    log.error("Error importing buyers:", err);
     res.status(500).json({
       message: "An error occurred while importing buyers",
       error: err.message,
@@ -907,7 +910,7 @@ export const getBuyerStats = asyncHandler(async (req, res) => {
       monthlyGrowth,
     });
   } catch (err) {
-    console.error("Error getting buyer stats:", err);
+    log.error("Error getting buyer stats:", err);
     res.status(500).json({
       message: "An error occurred while fetching buyer statistics",
       error: err.message,
@@ -939,7 +942,7 @@ export const getBuyerByAuth0Id = asyncHandler(async (req, res) => {
     // Return buyer data with 200 status
     res.status(200).json({ id: String(buyer._id), ...buyer });
   } catch (err) {
-    console.error("Error fetching buyer by Auth0 ID:", err);
+    log.error("Error fetching buyer by Auth0 ID:", err);
     res.status(500).json({
       message: "An error occurred while fetching buyer information",
       error: err.message,
@@ -986,7 +989,7 @@ export const bulkDeleteBuyers = asyncHandler(async (req, res) => {
       deletedCount: result.deletedCount,
     });
   } catch (err) {
-    console.error("Error bulk deleting buyers:", err);
+    log.error("Error bulk deleting buyers:", err);
     res.status(500).json({
       message: "An error occurred while deleting buyers",
       error: err.message,
@@ -1061,7 +1064,7 @@ export const updateSubscriptionPreferences = asyncHandler(async (req, res) => {
         : updatedBuyer,
     });
   } catch (err) {
-    console.error("Error updating subscription preferences:", err);
+    log.error("Error updating subscription preferences:", err);
     res.status(500).json({
       message: "An error occurred while updating preferences",
       error: err.message,
@@ -1138,7 +1141,7 @@ export const resubscribeBuyer = asyncHandler(async (req, res) => {
         : updatedBuyer,
     });
   } catch (err) {
-    console.error("Error resubscribing buyer:", err);
+    log.error("Error resubscribing buyer:", err);
     res.status(500).json({
       message: "An error occurred while resubscribing",
       error: err.message,
@@ -1207,7 +1210,7 @@ export const completeUnsubscribe = asyncHandler(async (req, res) => {
         : updatedBuyer,
     });
   } catch (err) {
-    console.error("Error completing unsubscribe:", err);
+    log.error("Error completing unsubscribe:", err);
     res.status(500).json({
       message: "An error occurred while unsubscribing",
       error: err.message,
@@ -1255,7 +1258,7 @@ export const getBuyerForUnsubscribe = asyncHandler(async (req, res) => {
 
     res.status(200).json({ id: String(buyer._id), ...buyer });
   } catch (err) {
-    console.error("Error fetching buyer for unsubscribe:", err);
+    log.error("Error fetching buyer for unsubscribe:", err);
     res.status(500).json({
       message: "An error occurred while fetching buyer information",
       error: err.message,

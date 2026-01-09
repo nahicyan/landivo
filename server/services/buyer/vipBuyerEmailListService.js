@@ -2,6 +2,7 @@
 import mongoose from "../../config/mongoose.js";
 import { connectMongo } from "../../config/mongoose.js";
 import { BuyerEmailList, EmailList } from "../../models/index.js";
+import { getLogger } from "../../utils/logger.js";
 
 const normalizeCriteriaListValue = (value) => {
   const collected = [];
@@ -35,6 +36,8 @@ const normalizeCriteriaListValue = (value) => {
   return unique;
 };
 
+const log = getLogger("vipBuyerEmailListService");
+
 /**
  * Handles VIP buyer registration list management
  * Creates or finds list with format: "{Source} {Area} {BuyerType}"
@@ -58,7 +61,9 @@ export const handleVipBuyerEmailList = async (buyer, source = "VIP", area, buyer
     // If list doesn't exist, create it
     if (!emailList) {
       emailList = await createVipEmailList(listName, listArea, listBuyerType, source);
-      console.log(`Created new VIP email list: ${listName}`);
+      log.info(
+        `[vipBuyerEmailListService:handleVipBuyerEmailList] > [Response]: created list=${listName}`
+      );
     }
     
     // Check if buyer is already in the list
@@ -76,7 +81,9 @@ export const handleVipBuyerEmailList = async (buyer, source = "VIP", area, buyer
         buyerId: buyerObjectId,
         emailListId: emailList._id,
       });
-      console.log(`Added VIP buyer ${buyer.id} to list: ${listName}`);
+      log.info(
+        `[vipBuyerEmailListService:handleVipBuyerEmailList] > [Response]: added buyer=${buyer.id} to list=${listName}`
+      );
     }
     
     return {
@@ -87,7 +94,9 @@ export const handleVipBuyerEmailList = async (buyer, source = "VIP", area, buyer
     };
     
   } catch (error) {
-    console.error("Error handling VIP buyer email list:", error);
+    log.error(
+      `[vipBuyerEmailListService:handleVipBuyerEmailList] > [Error]: ${error?.message || error}`
+    );
     return {
       success: false,
       error: error.message

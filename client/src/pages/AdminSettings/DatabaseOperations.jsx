@@ -7,6 +7,9 @@ import { Separator } from "@/components/ui/separator";
 import { Form as UIForm, FormControl, FormDescription, FormField, FormItem, FormLabel } from "@/components/ui/form"; // Import the UI Form component
 import { DatabaseIcon } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { getLogger } from "@/utils/logger";
+
+const log = getLogger("DatabaseOperations");
 
 export default function DatabaseOperations() {
   const [isLoading, setIsLoading] = useState(false);
@@ -22,7 +25,9 @@ export default function DatabaseOperations() {
     
     // Simulate API call
     setTimeout(() => {
-      console.log("Backup executed:", type);
+      log.info(
+        `[DatabaseOperations:handleBackup] > [Response]: backup executed type=${type}`
+      );
       toast.success(`Database backup (${type}) completed successfully`);
       setIsLoading(false);
     }, 3000);

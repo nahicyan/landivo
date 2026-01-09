@@ -4,6 +4,9 @@ import { useMutation, useQueryClient } from "react-query";
 import { toast } from "react-toastify";
 import { usePermissions } from "@/components/Auth0/PermissionsContext";
 import { requestPropertyBulkDeletion as apiRequestBulkDeletion, deletePropertiesBulk } from "@/utils/api";
+import { getLogger } from "@/utils/logger";
+
+const log = getLogger("usePropertyBulkDeletion");
 
 /**
  * Bulk Deletion flow steps
@@ -20,6 +23,7 @@ const BULK_DELETION_STEPS = {
  * Custom hook for handling bulk property deletion workflow
  */
 export const usePropertyBulkDeletion = () => {
+  log.info("[usePropertyBulkDeletion] > [Init]: hook initialized");
   const [isConfirmOpen, setIsConfirmOpen] = useState(false);
   const [selectedProperties, setSelectedProperties] = useState([]);
   const [currentStep, setCurrentStep] = useState(BULK_DELETION_STEPS.PERMISSION_CHECK);
@@ -41,11 +45,15 @@ export const usePropertyBulkDeletion = () => {
   const bulkDeletionRequestMutation = useMutation({
     mutationFn: requestBulkDeletion,
     onSuccess: (data) => {
+      log.info(
+        `[usePropertyBulkDeletion] > [Response]: bulkDeletionRequest success ${data?.count || 0} properties`
+      );
       toast.success(`Deletion request sent for ${data.count} properties`);
       closeBulkDeletionConfirm();
       queryClient.invalidateQueries("allProperties");
     },
     onError: (error) => {
+      log.error(`[usePropertyBulkDeletion] > [Error]: ${error.message}`);
       toast.error(error.message || "Failed to request bulk property deletion");
     },
   });
@@ -54,11 +62,15 @@ export const usePropertyBulkDeletion = () => {
   const directBulkDeletionMutation = useMutation({
     mutationFn: directBulkDeletion,
     onSuccess: (data) => {
+      log.info(
+        `[usePropertyBulkDeletion] > [Response]: directBulkDeletion success ${data?.count || 0} properties`
+      );
       toast.success(`Successfully deleted ${data.count} properties`);
       closeBulkDeletionConfirm();
       queryClient.invalidateQueries("allProperties");
     },
     onError: (error) => {
+      log.error(`[usePropertyBulkDeletion] > [Error]: ${error.message}`);
       toast.error(error.message || "Failed to delete properties");
     },
   });
@@ -102,6 +114,9 @@ export const usePropertyBulkDeletion = () => {
 
   // Start bulk deletion flow with permission check
   const openBulkDeletionConfirm = async (properties) => {
+    log.info(
+      `[usePropertyBulkDeletion] > [Action]: openBulkDeletionConfirm count=${properties?.length || 0}`
+    );
     if (!properties || properties.length === 0) {
       toast.error("No properties selected");
       return;
@@ -146,6 +161,9 @@ export const usePropertyBulkDeletion = () => {
 
   // Handle final bulk deletion execution
   const executeBulkPropertyDeletion = (reason = "") => {
+    log.info(
+      `[usePropertyBulkDeletion] > [Action]: executeBulkPropertyDeletion count=${selectedProperties.length}`
+    );
     if (selectedProperties.length === 0) return;
 
     const propertyIds = selectedProperties.map((prop) => prop.id);

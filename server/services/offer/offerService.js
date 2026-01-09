@@ -2,6 +2,7 @@
 import mongoose from "../../config/mongoose.js";
 import { connectMongo } from "../../config/mongoose.js";
 import { Buyer, Offer } from "../../models/index.js";
+import { getLogger } from "../../utils/logger.js";
 
 const normalizeValue = (value) => String(value || "").trim();
 
@@ -38,6 +39,8 @@ const toObjectId = (value) => {
   if (!value || !mongoose.Types.ObjectId.isValid(value)) return null;
   return new mongoose.Types.ObjectId(value);
 };
+
+const log = getLogger("offerService");
 
 /**
  * Validates offer input from request
@@ -94,20 +97,26 @@ export const findOrCreateBuyer = async (buyerData) => {
   
   // First try to find buyer by Auth0 ID if provided
   if (auth0Id) {
-    console.log(`Attempting to find buyer by Auth0 ID: ${auth0Id}`);
+    log.info(
+      `[offerService:findOrCreateBuyer] > [Request]: auth0Id=${auth0Id}`
+    );
     await connectMongo();
     buyer = await Buyer.findOne({ auth0Id });
     
     // If found by Auth0 ID, return early
     if (buyer) {
       buyerFoundMethod = 'auth0Id';
-      console.log(`Buyer found by Auth0 ID: ${auth0Id}, buyerId: ${buyer.id}`);
+      log.info(
+        `[offerService:findOrCreateBuyer] > [Response]: Found by auth0Id, buyerId=${buyer.id}`
+      );
       return await applyPreferenceUpdates(buyer);
     }
   }
   
   // If not found by Auth0 ID, try email or phone
-  console.log(`Attempting to find buyer by email: ${email} or phone: ${phone}`);
+  log.info(
+    `[offerService:findOrCreateBuyer] > [Request]: email=${email.toLowerCase()}, phone=${phone}`
+  );
   await connectMongo();
   buyer = await Buyer.findOne({
     $or: [{ email: email.toLowerCase() }, { phone }],
@@ -115,11 +124,15 @@ export const findOrCreateBuyer = async (buyerData) => {
 
   if (buyer) {
     buyerFoundMethod = buyer.email.toLowerCase() === email.toLowerCase() ? 'email' : 'phone';
-    console.log(`Buyer found by ${buyerFoundMethod}: buyerId: ${buyer.id}`);
+    log.info(
+      `[offerService:findOrCreateBuyer] > [Response]: Found by ${buyerFoundMethod}, buyerId=${buyer.id}`
+    );
     buyer = await applyPreferenceUpdates(buyer);
   } else {
     // Create a new buyer if not found
-    console.log(`No existing buyer found. Creating new buyer with email: ${email}, phone: ${phone}${auth0Id ? `, auth0Id: ${auth0Id}` : ''}`);
+    log.info(
+      `[offerService:findOrCreateBuyer] > [Response]: Creating buyer email=${email.toLowerCase()}, phone=${phone}${auth0Id ? `, auth0Id=${auth0Id}` : ''}`
+    );
     buyer = await Buyer.create({
       email: email.toLowerCase(),
       phone,
@@ -133,7 +146,9 @@ export const findOrCreateBuyer = async (buyerData) => {
       auth0Id: auth0Id || null,
     });
     buyerFoundMethod = 'created';
-    console.log(`New buyer created with ID: ${buyer.id}`);
+    log.info(
+      `[offerService:findOrCreateBuyer] > [Response]: Created buyerId=${buyer.id}`
+    );
   }
   
   return buyer;

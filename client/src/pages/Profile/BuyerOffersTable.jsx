@@ -18,6 +18,9 @@ import { Button } from '@/components/ui/button';
 import { ArrowUpRight, ExternalLink, Handshake } from 'lucide-react';
 import { Badge } from "@/components/ui/badge";
 import { useNavigate } from 'react-router-dom';
+import { getLogger } from '@/utils/logger';
+
+const log = getLogger("BuyerOffersTable");
 
 const BuyerOffersTable = () => {
     const { vipBuyerData } = useVipBuyer();
@@ -34,13 +37,19 @@ const BuyerOffersTable = () => {
 
             try {
                 setLoading(true);
-                console.log("Fetching offers with buyer ID:", vipBuyerData.id);
+                log.info(
+                  `[BuyerOffersTable:fetchOffers] > [Request]: fetching offers for buyerId=${vipBuyerData.id}`
+                );
 
                 if (typeof vipBuyerData.id !== 'string') {
-                    console.error('Invalid buyer ID format:', vipBuyerData.id);
+                    log.error(
+                      `[BuyerOffersTable:fetchOffers] > [Error]: invalid buyer ID format=${vipBuyerData.id}`
+                    );
 
                     if (vipBuyerData.email) {
-                        console.log("Using email as fallback:", vipBuyerData.email);
+                        log.info(
+                          `[BuyerOffersTable:fetchOffers] > [Response]: using email fallback for ${vipBuyerData.email}`
+                        );
                         const data = await getBuyerOffers({ email: vipBuyerData.email });
                         setOffers(data.offers || []);
                     } else {
@@ -56,7 +65,9 @@ const BuyerOffersTable = () => {
                             const property = await getProperty(offer.propertyId);
                             propertyDetailsMap[offer.propertyId] = property;
                         } catch (error) {
-                            console.error(`Error fetching property ${offer.propertyId}:`, error);
+                            log.error(
+                              `[BuyerOffersTable:fetchOffers] > [Error]: property fetch ${offer.propertyId} ${error.message}`
+                            );
                             propertyDetailsMap[offer.propertyId] = { title: "Unknown Property" };
                         }
                     }
@@ -64,7 +75,7 @@ const BuyerOffersTable = () => {
                     setPropertyDetails(propertyDetailsMap);
                 }
             } catch (error) {
-                console.error("Error fetching offers:", error);
+                log.error(`[BuyerOffersTable:fetchOffers] > [Error]: ${error.message}`);
                 setError("Failed to load your offers. Please try again later.");
             } finally {
                 setLoading(false);

@@ -2,12 +2,15 @@
 import { connectMongo } from "../config/mongoose.js";
 import { Visit, Visitor, VisitorStat } from "../models/index.js";
 import cron from "node-cron";
+import { getLogger } from "../utils/logger.js";
 
 /**
  * Update top pages and device breakdown in daily stats
  */
+const log = getLogger("scheduledTasks");
+
 async function updateDailyStats() {
-  console.log("Running scheduled task: updateDailyStats");
+  log.info("[scheduledTasks:updateDailyStats] > [Request]: start");
   
   try {
     await connectMongo();
@@ -20,7 +23,7 @@ async function updateDailyStats() {
     const stats = await VisitorStat.findOne({ date: yesterday });
     
     if (!stats) {
-      console.log("No stats found for yesterday");
+      log.info("[scheduledTasks:updateDailyStats] > [Response]: No stats found for yesterday");
       return;
     }
     
@@ -75,9 +78,9 @@ async function updateDailyStats() {
       }
     );
     
-    console.log("Updated daily stats for yesterday");
+    log.info("[scheduledTasks:updateDailyStats] > [Response]: Updated daily stats for yesterday");
   } catch (error) {
-    console.error("Error updating daily stats:", error);
+    log.error(`[scheduledTasks:updateDailyStats] > [Error]: ${error?.message || error}`);
   }
 }
 
@@ -87,6 +90,5 @@ async function updateDailyStats() {
 export function initScheduledTasks() {
   // Run at 1:00 AM every day
   cron.schedule('0 1 * * *', updateDailyStats);
-  
-  console.log("Scheduled tasks initialized");
+  log.info("[scheduledTasks:initScheduledTasks] > [Response]: Scheduled tasks initialized");
 }

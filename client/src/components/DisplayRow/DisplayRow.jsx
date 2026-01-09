@@ -34,6 +34,7 @@ const DisplayRow = ({
     const availableWidth = containerWidth - padding;
     const minWidthForTwoCards = (cardWidth * 2) + spacing;
     
+    
     // Mobile vertical layout
     if (availableWidth < minWidthForTwoCards) {
       setUseVerticalLayout(true);

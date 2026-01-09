@@ -1,6 +1,9 @@
 // client/src/utils/api/propertyRows.js
 
 import { api, handleRequestError } from './config';
+import { getLogger } from '../logger';
+
+const log = getLogger('propertyRowsApi');
 
 /**
  * Get all property rows
@@ -8,7 +11,13 @@ import { api, handleRequestError } from './config';
  */
 export const getAllPropertyRows = async () => {
   try {
+    log.info('[propertyRows:getAllPropertyRows] > [Request]: GET /property-rows');
     const response = await api.get('/property-rows');
+    log.info(
+      `[propertyRows:getAllPropertyRows] > [Response]: received=${
+        Array.isArray(response.data) ? response.data.length : 'unknown'
+      }`
+    );
     return response.data;
   } catch (error) {
     handleRequestError(error, "Failed to fetch property rows");
@@ -22,11 +31,19 @@ export const getAllPropertyRows = async () => {
  */
 export const getPropertyRows = async (rowType) => {
   try {
+    log.info(
+      `[propertyRows:getPropertyRows] > [Request]: rowType=${rowType || '<none>'}`
+    );
     const queryParams = rowType ? `?rowType=${encodeURIComponent(rowType)}` : '';
     const response = await api.get(`/property-rows${queryParams}`);
+    log.info(
+      `[propertyRows:getPropertyRows] > [Response]: rows=${
+        Array.isArray(response.data) ? response.data.length : 'non-array'
+      }`
+    );
     return response.data;
   } catch (error) {
-    console.error('Error fetching property rows:', error);
+    log.error(`[propertyRows:getPropertyRows] > [Error]: ${error.message}`);
     throw error;
   }
 };
@@ -38,10 +55,12 @@ export const getPropertyRows = async (rowType) => {
  */
 export const getPropertyRowById = async (id) => {
   try {
+    log.info(`[propertyRows:getPropertyRowById] > [Request]: id=${id}`);
     const response = await api.get(`/property-rows/${id}`);
+    log.info(`[propertyRows:getPropertyRowById] > [Response]: id=${id}`);
     return response.data;
   } catch (error) {
-    console.error(`Error fetching property row ${id}:`, error);
+    log.error(`[propertyRows:getPropertyRowById] > [Error]: ${error.message}`);
     throw error;
   }
 };
@@ -52,10 +71,12 @@ export const getPropertyRowById = async (id) => {
  */
 export const getFeaturedPropertiesRow = async () => {
   try {
+    log.info('[propertyRows:getFeaturedPropertiesRow] > [Request]: featured row');
     const response = await api.get('/property-rows?rowType=featured');
+    log.info('[propertyRows:getFeaturedPropertiesRow] > [Response]: fetched featured row');
     return response.data;
   } catch (error) {
-    console.error('Error fetching featured property row:', error);
+    log.error(`[propertyRows:getFeaturedPropertiesRow] > [Error]: ${error.message}`);
     throw error;
   }
 };
@@ -67,7 +88,9 @@ export const getFeaturedPropertiesRow = async () => {
  */
 export const createPropertyRow = async (rowData) => {
   try {
+    log.info('[propertyRows:createPropertyRow] > [Request]: POST /property-rows');
     const response = await api.post('/property-rows', rowData);
+    log.info('[propertyRows:createPropertyRow] > [Response]: created row');
     return response.data;
   } catch (error) {
     handleRequestError(error, "Failed to create property row");
@@ -82,7 +105,9 @@ export const createPropertyRow = async (rowData) => {
  */
 export const updatePropertyRow = async (id, rowData) => {
   try {
+    log.info(`[propertyRows:updatePropertyRow] > [Request]: id=${id}`);
     const response = await api.put(`/property-rows/${id}`, rowData);
+    log.info(`[propertyRows:updatePropertyRow] > [Response]: id=${id}`);
     return response.data;
   } catch (error) {
     handleRequestError(error, "Failed to update property row");
@@ -96,7 +121,9 @@ export const updatePropertyRow = async (id, rowData) => {
  */
 export const deletePropertyRow = async (id) => {
   try {
+    log.info(`[propertyRows:deletePropertyRow] > [Request]: id=${id}`);
     const response = await api.delete(`/property-rows/${id}`);
+    log.info(`[propertyRows:deletePropertyRow] > [Response]: id=${id}`);
     return response.data;
   } catch (error) {
     handleRequestError(error, "Failed to delete property row");
@@ -127,7 +154,7 @@ export const getPropertyRowAssociations = async (propertyId) => {
     
     return propertyAssociations;
   } catch (error) {
-    console.error("Error fetching property row associations:", error);
+    log.error(`[propertyRows:getPropertyRowAssociations] > [Error]: ${error.message}`);
     return [];
   }
 };

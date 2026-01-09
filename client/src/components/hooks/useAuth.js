@@ -2,6 +2,9 @@
 import { useAuth0 } from '@auth0/auth0-react';
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { checkUserExists, syncAuth0User } from '@/utils/api';
+import { getLogger } from '@/utils/logger';
+
+const log = getLogger('useAuth');
 
 export function useAuth() {
   const {
@@ -32,7 +35,7 @@ export function useAuth() {
   // Extract roles from user object
   useEffect(() => {
     if (user) {
-      console.log('Auth0 user object:', user);
+      log.info('Auth0 user object:', user);
       
       // Find roles in the user object
       const AUTH0_NAMESPACE = 'https://landivo.com';
@@ -41,15 +44,15 @@ export function useAuth() {
       // Try different places where roles might be stored
       if (user[`${AUTH0_NAMESPACE}/roles`]) {
         roles = user[`${AUTH0_NAMESPACE}/roles`];
-        console.log(`Found roles in ${AUTH0_NAMESPACE}/roles:`, roles);
+        log.info(`Found roles in ${AUTH0_NAMESPACE}/roles:`, roles);
       } else if (user.roles) {
         roles = user.roles;
-        console.log('Found roles in user.roles:', roles); 
+        log.info('Found roles in user.roles:', roles); 
       } else if (user[AUTH0_NAMESPACE] && user[AUTH0_NAMESPACE].roles) {
         roles = user[AUTH0_NAMESPACE].roles;
-        console.log(`Found roles in ${AUTH0_NAMESPACE}.roles:`, roles);
+        log.info(`Found roles in ${AUTH0_NAMESPACE}.roles:`, roles);
       } else {
-        console.log('No roles found in user object');
+        log.info('No roles found in user object');
       }
       
       // Set roles in state
@@ -73,7 +76,7 @@ export function useAuth() {
           const tokenParts = accessToken.split('.');
           if (tokenParts.length === 3) {
             const payload = JSON.parse(atob(tokenParts[1]));
-            console.log('Access token payload:', payload);
+            log.info('Access token payload:', payload);
             
             // Look for permissions in the token payload
             let permissions = [];
@@ -81,19 +84,19 @@ export function useAuth() {
             // Check for permissions at root level first (this is where they are in your token)
             if (payload.permissions && Array.isArray(payload.permissions)) {
               permissions = payload.permissions;
-              console.log('Found permissions in token payload:', permissions);
+              log.info('Found permissions in token payload:', permissions);
             } 
             // Also check namespace locations as fallback
             else {
               const AUTH0_NAMESPACE = 'https://landivo.com';
               if (payload[`${AUTH0_NAMESPACE}/permissions`]) {
                 permissions = payload[`${AUTH0_NAMESPACE}/permissions`];
-                console.log(`Found permissions in ${AUTH0_NAMESPACE}/permissions:`, permissions);
+                log.info(`Found permissions in ${AUTH0_NAMESPACE}/permissions:`, permissions);
               } else if (payload[AUTH0_NAMESPACE] && payload[AUTH0_NAMESPACE].permissions) {
                 permissions = payload[AUTH0_NAMESPACE].permissions;
-                console.log(`Found permissions in ${AUTH0_NAMESPACE}.permissions:`, permissions);
+                log.info(`Found permissions in ${AUTH0_NAMESPACE}.permissions:`, permissions);
               } else {
-                console.log('No permissions found in token payload');
+                log.info('No permissions found in token payload');
               }
             }
             
@@ -102,9 +105,9 @@ export function useAuth() {
           
           setTokenLoaded(true);
           setPermissionsLoaded(true);
-          console.log('Fetched auth token successfully');
+          log.info('Fetched auth token successfully');
         } catch (error) {
-          console.error('Error fetching token:', error);
+          log.error('Error fetching token:', error);
           setTokenLoaded(true);
           setPermissionsLoaded(true);
         }
@@ -130,7 +133,7 @@ export function useAuth() {
           if (dbUser) {  
             // User exists, check if profile is complete
             setNeedsProfileCompletion(!dbUser.firstName || !dbUser.lastName);
-            console.log('User exists in database, profile complete:', !!dbUser.firstName && !!dbUser.lastName);
+            log.info('User exists in database, profile complete:', !!dbUser.firstName && !!dbUser.lastName);
           } else {
             // User with roles/permissions doesn't exist in database, create them
             // Extract name components if available
@@ -149,17 +152,17 @@ export function useAuth() {
                 lastName
               });
               
-              console.log('Created user in database:', result);
+              log.info('Created user in database:', result);
               
               // Check if profile is complete
               setNeedsProfileCompletion(!firstName || !lastName);
             } catch (syncError) {
-              console.error('Error creating user in database:', syncError);
+              log.error('Error creating user in database:', syncError);
               setNeedsProfileCompletion(true);
             }
           }
         } catch (error) {
-          console.error('Error checking user in database:', error);
+          log.error('Error checking user in database:', error);
         }
       }
     };
@@ -183,7 +186,7 @@ export function useAuth() {
       setToken(newToken);
       return newToken;
     } catch (error) {
-      console.error('Error getting access token:', error);
+      log.error('Error getting access token:', error);
       return null;
     }
   }, [isAuthenticated, getAccessTokenSilently, token]);

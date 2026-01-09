@@ -6,6 +6,9 @@ import { useVipBuyer } from '@/utils/VipBuyerContext';
 import { useParams } from 'react-router-dom';
 import { useQuery } from 'react-query';
 import { getProperty } from '@/utils/api';
+import { getLogger } from '@/utils/logger';
+
+const log = getLogger('PropertyWithTracking');
 
 /**
  * Enhanced Property page component with VIP buyer activity tracking
@@ -32,13 +35,19 @@ const PropertyWithTracking = (props) => {
   useEffect(() => {
     // Only track for VIP buyers with valid tracking and property data
     if (!isVipBuyer || !isTracking || !propertyData || !propertyData.id) {
-      console.log("Skipping property view tracking:", { 
-        isVipBuyer, isTracking, hasPropertyData: !!propertyData 
-      });
+      log.info(
+        `[PropertyWithTracking:useEffect] > [Action]: skipping property view tracking > [Comment]: ${JSON.stringify({
+          isVipBuyer,
+          isTracking,
+          hasPropertyData: !!propertyData,
+        })}`
+      );
       return;
     }
     
-    console.log("Tracking property view for:", propertyData.id);
+    log.info(
+      `[PropertyWithTracking:useEffect] > [Action]: tracking property view > [Comment]: propertyId=${propertyData.id}`
+    );
     
     // Track property view when the component mounts
     trackPropertyView({

@@ -3,6 +3,9 @@ import asyncHandler from "express-async-handler";
 import mongoose from "../config/mongoose.js";
 import { connectMongo } from "../config/mongoose.js";
 import { Buyer, BuyerActivity, Offer } from "../models/index.js";
+import { getLogger } from "../utils/logger.js";
+
+const log = getLogger("buyerActivityCntrl");
 
 const toObjectId = (value) => {
   if (!value || !mongoose.Types.ObjectId.isValid(value)) return null;
@@ -91,7 +94,7 @@ export const recordBuyerActivity = asyncHandler(async (req, res) => {
         // console.log(`Successfully recorded ${type} event:`, createdActivity.id);
         recordedEvents++;
       } catch (eventError) {
-        console.error("Error recording activity event:", eventError);
+        log.error("Error recording activity event:", eventError);
         errors.push({ event, error: eventError.message });
       }
     }
@@ -104,7 +107,7 @@ export const recordBuyerActivity = asyncHandler(async (req, res) => {
       errors: errors.length > 0 ? errors : undefined,
     });
   } catch (error) {
-    console.error("Error in recordBuyerActivity:", error);
+    log.error("Error in recordBuyerActivity:", error);
     res.status(500).json({
       message: "An error occurred while recording buyer activity",
       error: error.message,
@@ -184,7 +187,7 @@ export const getBuyerActivity = asyncHandler(async (req, res) => {
       activities,
     });
   } catch (error) {
-    console.error("Error in getBuyerActivity:", error);
+    log.error("Error in getBuyerActivity:", error);
     res.status(500).json({
       message: "An error occurred while fetching buyer activity",
       error: error.message,
@@ -323,7 +326,7 @@ export const getBuyerActivitySummary = asyncHandler(async (req, res) => {
 
     res.status(200).json(summary);
   } catch (error) {
-    console.error("Error in getBuyerActivitySummary:", error);
+    log.error("Error in getBuyerActivitySummary:", error);
     res.status(500).json({
       message: "An error occurred while fetching buyer activity summary",
       error: error.message,
@@ -371,7 +374,7 @@ export const deleteBuyerActivity = asyncHandler(async (req, res) => {
       deletedCount: result.deletedCount,
     });
   } catch (error) {
-    console.error("Error in deleteBuyerActivity:", error);
+    log.error("Error in deleteBuyerActivity:", error);
     res.status(500).json({
       message: "An error occurred while deleting buyer activity",
       error: error.message,

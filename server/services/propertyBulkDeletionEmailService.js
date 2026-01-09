@@ -2,6 +2,9 @@
 import nodemailer from "nodemailer";
 import { connectMongo } from "../config/mongoose.js";
 import { Settings } from "../models/index.js";
+import { getLogger } from "../utils/logger.js";
+
+const log = getLogger("propertyBulkDeletionEmailService");
 
 /**
  * Send bulk property deletion request email to admin
@@ -60,9 +63,13 @@ export const sendPropertyBulkDeletionRequest = async ({
       html: emailHtml,
     });
 
-    console.log("Bulk property deletion email sent successfully");
+    log.info(
+      "[propertyBulkDeletionEmailService:sendPropertyBulkDeletionRequest] > [Response]: email sent"
+    );
   } catch (error) {
-    console.error("Error sending bulk property deletion email:", error);
+    log.error(
+      `[propertyBulkDeletionEmailService:sendPropertyBulkDeletionRequest] > [Error]: ${error?.message || error}`
+    );
     throw error;
   }
 };

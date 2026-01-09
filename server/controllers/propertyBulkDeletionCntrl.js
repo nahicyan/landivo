@@ -5,6 +5,9 @@ import mongoose from "../config/mongoose.js";
 import { connectMongo } from "../config/mongoose.js";
 import { PropertyDeletionRequest, Property, User } from "../models/index.js";
 import { sendPropertyBulkDeletionRequest } from "../services/propertyBulkDeletionEmailService.js";
+import { getLogger } from "../utils/logger.js";
+
+const log = getLogger("propertyBulkDeletionCntrl");
 
 const toObjectId = (value) => {
   if (!value || !mongoose.Types.ObjectId.isValid(value)) return null;
@@ -67,7 +70,7 @@ export const requestPropertyBulkDeletion = asyncHandler(async (req, res) => {
           };
         }
       } catch (error) {
-        console.error("Error fetching user details:", error);
+        log.error("Error fetching user details:", error);
       }
     }
 
@@ -114,7 +117,7 @@ export const requestPropertyBulkDeletion = asyncHandler(async (req, res) => {
     });
 
   } catch (error) {
-    console.error("Error requesting bulk property deletion:", error);
+    log.error("Error requesting bulk property deletion:", error);
     res.status(500).json({
       message: "Failed to send bulk deletion request",
       error: error.message
@@ -178,7 +181,7 @@ export const deletePropertiesBulkDirect = asyncHandler(async (req, res) => {
           };
         }
       } catch (error) {
-        console.error("Error fetching user details:", error);
+        log.error("Error fetching user details:", error);
       }
     }
 
@@ -204,7 +207,7 @@ export const deletePropertiesBulkDirect = asyncHandler(async (req, res) => {
     }
 
     // Log the bulk deletion action
-    console.log(`Bulk property deletion by ${requestingUser.email}:`, {
+    log.info(`Bulk property deletion by ${requestingUser.email}:`, {
       count: result.deletedCount,
       propertyIds: propertyIds,
       reason: reason || "No reason provided",
@@ -221,7 +224,7 @@ export const deletePropertiesBulkDirect = asyncHandler(async (req, res) => {
         isDirect: true // Flag to indicate this was a direct deletion
       });
     } catch (emailError) {
-      console.error("Failed to send deletion notification email:", emailError);
+      log.error("Failed to send deletion notification email:", emailError);
       // Don't fail the deletion if email fails
     }
 
@@ -231,7 +234,7 @@ export const deletePropertiesBulkDirect = asyncHandler(async (req, res) => {
     });
 
   } catch (error) {
-    console.error("Error in bulk property deletion:", error);
+    log.error("Error in bulk property deletion:", error);
     res.status(500).json({
       message: "Failed to delete properties",
       error: error.message
@@ -310,7 +313,7 @@ export const approvePropertyBulkDeletion = asyncHandler(async (req, res) => {
     });
 
   } catch (error) {
-    console.error("Error approving bulk property deletion:", error);
+    log.error("Error approving bulk property deletion:", error);
     res.status(500).json({
       message: "Failed to delete properties",
       error: error.message

@@ -42,6 +42,9 @@ import { Separator } from "@/components/ui/separator";
 import { useForm } from "react-hook-form";
 import { BookOpenIcon, HelpCircleIcon, MailIcon, VideoIcon } from "lucide-react";
 import { toast } from "react-toastify";
+import { getLogger } from "@/utils/logger";
+
+const log = getLogger("AdminHelp");
 
 // Tutorial components - modular for easy addition
 const TutorialCard = ({ title, description, videoUrl, content }) => {
@@ -113,7 +116,7 @@ export default function AdminHelp() {
     
     // Simulate API call
     setTimeout(() => {
-      console.log("Support request submitted:", data);
+      log.info(`[AdminHelp:onContactSubmit] > [Response]: support request submitted`);
       toast.success("Your request has been submitted successfully!");
       contactForm.reset();
       setIsSubmitting(false);

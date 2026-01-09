@@ -9,6 +9,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Checkbox } from '@/components/ui/checkbox';
 import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
 import { updateBuyer } from '@/utils/api';
+import { getLogger } from '@/utils/logger';
+
+const log = getLogger("VipBuyerSection");
 
 // Buyer type options
 const BUYER_TYPES = [
@@ -99,7 +102,9 @@ const VipBuyerSection = () => {
     setUpdateError(null);
 
     try {
-      console.log("Sending update with data:", formData);
+      log.info(
+        `[VipBuyerSection:handleSubmit] > [Request]: sending update > [Comment]: ${JSON.stringify(formData)}`
+      );
       // Call the API to update the buyer
       await updateBuyer(vipBuyerData.id, {
         ...formData,
@@ -114,7 +119,7 @@ const VipBuyerSection = () => {
       // Force a refresh to get the updated data
       setTimeout(() => window.location.reload(), 1500);
     } catch (error) {
-      console.error('Error updating VIP buyer profile:', error);
+      log.error(`[VipBuyerSection:handleSubmit] > [Error]: ${error.message}`);
       setUpdateError('Failed to update your profile. Please try again later.');
     } finally {
       setIsSubmitting(false);
