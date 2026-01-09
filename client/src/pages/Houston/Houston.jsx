@@ -9,6 +9,9 @@ import SearchAreaWithTracking from "@/components/SearchArea/SearchAreaWithTracki
 import DisplayGrid, { createGridFilter } from "@/components/DisplayGrid/DisplayGrid";
 import { Button } from "@/components/ui/button";
 import { getPropertyRows } from "@/utils/api";
+import { getLogger } from "@/utils/logger";
+
+const log = getLogger("HoustonProperty");
 
 export default function HoustonProperty() {
   const { data, isError, isLoading } = useProperties();
@@ -44,7 +47,7 @@ export default function HoustonProperty() {
           }
         }
       } catch (error) {
-        console.error("Error fetching Houston row properties:", error);
+        log.error(`[HoustonProperty:fetchHoustonRow] > [Error]: ${error.message}`);
         setFeaturedPropertyIds([]);
       } finally {
         setLoadingFeatured(false);

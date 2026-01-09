@@ -4,6 +4,9 @@ import asyncHandler from "express-async-handler";
 import mongoose from "../config/mongoose.js";
 import { connectMongo } from "../config/mongoose.js";
 import { Buyer, BuyerActivity, BuyerEmailList, EmailList, Offer } from "../models/index.js";
+import { getLogger } from "../utils/logger.js";
+
+const log = getLogger("emailListCntrl");
 
 let buyerPreferenceNormalizationCompleted = false;
 let emailListLegacyNormalizationCompleted = false;
@@ -239,7 +242,7 @@ async function normalizeBuyerPreferenceFields() {
 
     return true;
   } catch (error) {
-    console.error("Failed to normalize buyer preference fields:", error);
+    log.error("Failed to normalize buyer preference fields:", error);
     return false;
   }
 }
@@ -271,7 +274,7 @@ async function normalizeEmailListLegacyFields() {
     });
     return true;
   } catch (error) {
-    console.error("Failed to normalize EmailList legacy fields:", error);
+    log.error("Failed to normalize EmailList legacy fields:", error);
     return false;
   }
 }
@@ -287,7 +290,7 @@ async function ensureEmailListLegacyFieldsNormalized() {
 // Get all email lists
 export const getAllEmailLists = asyncHandler(async (req, res) => {
   try {
-    console.log("[EmailListController]:[getAllEmailLists]:[Request]", {
+    log.info("[EmailListController]:[getAllEmailLists]:[Request]", {
       query: req?.query || {},
     });
     await connectMongo();
@@ -390,12 +393,12 @@ export const getAllEmailLists = asyncHandler(async (req, res) => {
       })
     );
 
-    console.log("[EmailListController]:[getAllEmailLists]:[Response]", {
+    log.info("[EmailListController]:[getAllEmailLists]:[Response]", {
       totalLists: listsWithCounts.length,
     });
     res.status(200).json(listsWithCounts);
   } catch (err) {
-    console.error("Error fetching email lists:", err);
+    log.error("Error fetching email lists:", err);
     res.status(500).json({
       message: "An error occurred while fetching email lists",
       error: err.message,
@@ -412,7 +415,7 @@ export const getEmailList = asyncHandler(async (req, res) => {
   }
 
   try {
-    console.log("[EmailListController]:[getEmailList]:[Request]", { id });
+    log.info("[EmailListController]:[getEmailList]:[Request]", { id });
     await connectMongo();
     await ensureEmailListLegacyFieldsNormalized();
     await ensureBuyerPreferenceFieldsNormalized();
@@ -481,7 +484,7 @@ export const getEmailList = asyncHandler(async (req, res) => {
 
         // Get buyers matching the criteria
         criteriaBuyers = await Buyer.find(query).select("_id").lean();
-        console.log("[EmailListController]:[getEmailList]:[Criteria]", {
+        log.info("[EmailListController]:[getEmailList]:[Criteria]", {
           id,
           listName: list?.name,
           query,
@@ -495,7 +498,7 @@ export const getEmailList = asyncHandler(async (req, res) => {
       ...manualBuyerIds,
       ...criteriaBuyers.map((b) => String(b._id)),
     ]);
-    console.log("[EmailListController]:[getEmailList]:[Buyers]", {
+    log.info("[EmailListController]:[getEmailList]:[Buyers]", {
       id,
       listName: list?.name,
       manualBuyerCount: manualBuyerIds.length,
@@ -544,7 +547,7 @@ export const getEmailList = asyncHandler(async (req, res) => {
       ? normalizeEmailListCriteria(listData.criteria)
       : listData.criteria;
 
-    console.log("[EmailListController]:[getEmailList]:[Response]", {
+    log.info("[EmailListController]:[getEmailList]:[Response]", {
       id,
       listName: list?.name,
       buyerCount: buyersWithEmailLists.length,
@@ -557,7 +560,7 @@ export const getEmailList = asyncHandler(async (req, res) => {
       buyerCount: buyersWithEmailLists.length,
     });
   } catch (err) {
-    console.error("Error fetching email list:", err);
+    log.error("Error fetching email list:", err);
     res.status(500).json({
       message: "An error occurred while fetching the email list",
       error: err.message,
@@ -581,7 +584,7 @@ export const createEmailList = asyncHandler(async (req, res) => {
 
     // Log criteria for debugging (especially useful for city/county)
     if (normalizedCriteria) {
-      console.log("Creating email list with criteria:", {
+      log.info("Creating email list with criteria:", {
         name,
         areas: normalizedCriteria.areas,
         city: normalizedCriteria.city,
@@ -621,7 +624,7 @@ export const createEmailList = asyncHandler(async (req, res) => {
       },
     });
   } catch (err) {
-    console.error("Error creating email list:", err);
+    log.error("Error creating email list:", err);
     res.status(500).json({
       message: "An error occurred while creating the email list",
       error: err.message,
@@ -659,7 +662,7 @@ export const updateEmailList = asyncHandler(async (req, res) => {
     const normalizedCriteria = criteria ? normalizeEmailListCriteria(criteria) : criteria;
 
     if (normalizedCriteria) {
-      console.log("Updating email list criteria:", {
+      log.info("Updating email list criteria:", {
         listId: id,
         name,
         areas: normalizedCriteria.areas,
@@ -690,7 +693,7 @@ export const updateEmailList = asyncHandler(async (req, res) => {
         : updatedList,
     });
   } catch (err) {
-    console.error("Error updating email list:", err);
+    log.error("Error updating email list:", err);
     res.status(500).json({
       message: "An error occurred while updating the email list",
       error: err.message,
@@ -760,7 +763,7 @@ export const deleteEmailList = asyncHandler(async (req, res) => {
       deletedBuyersCount,
     });
   } catch (err) {
-    console.error("Error deleting email list:", err);
+    log.error("Error deleting email list:", err);
     res.status(500).json({
       message: "An error occurred while deleting the email list",
       error: err.message,
@@ -839,7 +842,7 @@ export const addBuyersToList = asyncHandler(async (req, res) => {
       skippedCount: existingBuyerIds.size,
     });
   } catch (err) {
-    console.error("Error adding buyers to list:", err);
+    log.error("Error adding buyers to list:", err);
     res.status(500).json({
       message: "An error occurred while adding buyers to the list",
       error: err.message,
@@ -899,7 +902,7 @@ export const removeBuyersFromList = asyncHandler(async (req, res) => {
       removedCount: deleteResult.deletedCount,
     });
   } catch (err) {
-    console.error("Error removing buyers from list:", err);
+    log.error("Error removing buyers from list:", err);
     res.status(500).json({
       message: "An error occurred while removing buyers from the list",
       error: err.message,
@@ -1069,7 +1072,7 @@ export const sendEmailToList = asyncHandler(async (req, res) => {
       totalRecipients: emailsSent.length,
     });
   } catch (err) {
-    console.error("Error sending email to list:", err);
+    log.error("Error sending email to list:", err);
     res.status(500).json({
       message: "An error occurred while sending email to the list",
       error: err.message,
@@ -1243,7 +1246,7 @@ export const previewEmailListRecipients = asyncHandler(async (req, res) => {
     : 25;
 
   try {
-    console.log("[EmailListController]:[previewEmailListRecipients]:[Request]", {
+    log.info("[EmailListController]:[previewEmailListRecipients]:[Request]", {
       includeBuyerIds,
       sampleSize: normalizedSampleSize,
       filters,
@@ -1277,7 +1280,7 @@ export const previewEmailListRecipients = asyncHandler(async (req, res) => {
           }))
         : [];
 
-    console.log("[EmailListController]:[previewEmailListRecipients]:[Response]", {
+    log.info("[EmailListController]:[previewEmailListRecipients]:[Response]", {
       totalBuyers: buyersWithId.length,
       filteredCount: filtered.length,
       dedupedCount: total,
@@ -1290,7 +1293,7 @@ export const previewEmailListRecipients = asyncHandler(async (req, res) => {
       sampleRecipients,
     });
   } catch (err) {
-    console.error("Error previewing email list recipients:", err);
+    log.error("Error previewing email list recipients:", err);
     res.status(500).json({
       message: "An error occurred while previewing recipients",
       error: err.message,
@@ -1376,7 +1379,7 @@ export const createGeneratedEmailList = asyncHandler(async (req, res) => {
       totalContacts: insertResult.length,
     });
   } catch (err) {
-    console.error("Error creating generated email list:", err);
+    log.error("Error creating generated email list:", err);
     res.status(500).json({
       message: "An error occurred while creating the generated email list",
       error: err.message,

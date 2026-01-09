@@ -39,7 +39,7 @@ export default function PropertyCmaDetails({ propertyData }) {
             <span>Comparative Market Analysis</span>
           </div>
         </AccordionTrigger>
-        <AccordionContent className="py-4">
+        <AccordionContent className="py-4">  
           {/* CMA Content */}
           {propertyData.cmaData && (
             <div 

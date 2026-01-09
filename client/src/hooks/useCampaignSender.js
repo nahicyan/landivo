@@ -2,12 +2,17 @@
 import { useState } from "react";
 import { sendPropertyUploadCampaign } from "@/utils/api";
 import { toast } from "react-toastify";
+import { getLogger } from "@/utils/logger";
+
+const log = getLogger("useCampaignSender");
 
 export function useCampaignSender(propertyId, propertyData) {
+  log.info(`[useCampaignSender] > [Init]: propertyId=${propertyId}`);
   const [campaignSubject, setCampaignSubject] = useState("");
   const [sendingCampaign, setSendingCampaign] = useState(false);
 
   const handleSendCampaign = async (sendType) => {
+    log.info(`[useCampaignSender] > [Request]: sendType=${sendType}`);
     if (!campaignSubject.trim()) {
       toast.error("Please enter a subject line");
       return false;
@@ -29,6 +34,7 @@ export function useCampaignSender(propertyId, propertyData) {
       };
 
       const response = await sendPropertyUploadCampaign(payload);
+      log.info(`[useCampaignSender] > [Response]: success sendType=${sendType}`);
 
       if (sendType === "mailivo" && response.redirectUrl) {
         window.location.href = response.redirectUrl;
@@ -38,7 +44,7 @@ export function useCampaignSender(propertyId, propertyData) {
       toast.success("Campaign sent successfully!");
       return true;
     } catch (error) {
-      console.error("Error sending campaign:", error);
+      log.error(`[useCampaignSender] > [Error]: ${error.message}`);
       toast.error("Failed to send campaign");
       return false;
     } finally {

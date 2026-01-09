@@ -1,8 +1,10 @@
 // server/routes/mailivoAutomationRoute.js
 import express from "express";
 import axios from "axios";
+import { getLogger } from "../utils/logger.js";
 
 const router = express.Router();
+const log = getLogger("mailivoAutomationRoute");
 
 // Environment variables for configuration
 const MAILIVO_API_BASE_URL = process.env.MAILIVO_API_BASE_URL || "https://api.mailivo.landivo.com";
@@ -71,7 +73,9 @@ router.post("/", async (req, res) => {
           data: response.data
         });
       } catch (mailivoError) {
-        console.error("Mailivo API Error:", mailivoError.message);
+        log.error(
+          `[mailivoAutomationRoute:post] > [Error]: Mailivo API failed: ${mailivoError?.message || mailivoError}`
+        );
         return res.status(502).json({
           success: false,
           error: "Failed to send campaign to Mailivo",
@@ -123,7 +127,9 @@ router.post("/", async (req, res) => {
 
         // Validate redirect URL for security
         if (!isAllowedRedirectHost(redirectUrl)) {
-          console.error("Blocked redirect to unauthorized host:", redirectUrl);
+          log.warn(
+            `[mailivoAutomationRoute:post] > [Response]: blocked redirect host=${redirectUrl}`
+          );
           return res.status(403).json({
             success: false,
             error: "Redirect to unauthorized host blocked"
@@ -137,7 +143,9 @@ router.post("/", async (req, res) => {
         });
 
       } catch (mailivoError) {
-        console.error("Mailivo Redirect Error:", mailivoError.message);
+        log.error(
+          `[mailivoAutomationRoute:post] > [Error]: Mailivo redirect failed: ${mailivoError?.message || mailivoError}`
+        );
         
         // Fallback: Return default Mailivo URL
         const fallbackUrl = `${MAILIVO_FRONTEND_BASE_URL}/dashboard/landivo/campaigns/create`;
@@ -163,8 +171,10 @@ router.post("/", async (req, res) => {
       error: "Invalid sendType. Must be 'now' or 'mailivo'"
     });
 
-  } catch (error) {
-    console.error("Automation Route Error:", error);
+   } catch (error) {
+    log.error(
+      `[mailivoAutomationRoute:post] > [Error]: ${error?.message || error}`
+    );
     return res.status(500).json({
       success: false,
       error: "Internal server error",

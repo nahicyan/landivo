@@ -4,6 +4,9 @@ import { useMutation, useQueryClient } from 'react-query';
 import { toast } from 'react-toastify';
 import { usePermissions } from '@/components/Auth0/PermissionsContext';
 import { requestPropertyDeletion as apiRequestPropertyDeletion, deletePropertyDirect } from '@/utils/api';
+import { getLogger } from '@/utils/logger';
+
+const log = getLogger('usePropertyDeletion');
 
 /**
  * Deletion flow steps
@@ -20,6 +23,7 @@ const DELETION_STEPS = {
  * Enhanced custom hook for handling property deletion workflow
  */
 export const usePropertyDeletion = () => {
+  log.info('[usePropertyDeletion] > [Init]: hook initialized');
   const [isConfirmOpen, setIsConfirmOpen] = useState(false);
   const [selectedProperty, setSelectedProperty] = useState(null);
   const [currentStep, setCurrentStep] = useState(DELETION_STEPS.PERMISSION_CHECK);
@@ -41,11 +45,13 @@ export const usePropertyDeletion = () => {
   const deletionRequestMutation = useMutation({
     mutationFn: requestDeletion,
     onSuccess: () => {
+      log.info('[usePropertyDeletion] > [Response]: deletionRequestMutation success');
       toast.success('Deletion request sent to admin for approval');
       closeDeletionConfirm();
       queryClient.invalidateQueries('allProperties');
     },
     onError: (error) => {
+      log.error(`[usePropertyDeletion] > [Error]: ${error.message}`);
       toast.error(error.message || 'Failed to request property deletion');
     },
   });
@@ -54,11 +60,13 @@ export const usePropertyDeletion = () => {
   const directDeletionMutation = useMutation({
     mutationFn: directDeletion,
     onSuccess: () => {
+      log.info('[usePropertyDeletion] > [Response]: directDeletionMutation success');
       toast.success('Property deleted successfully');
       closeDeletionConfirm();
       queryClient.invalidateQueries('allProperties');
     },
     onError: (error) => {
+      log.error(`[usePropertyDeletion] > [Error]: ${error.message}`);
       toast.error(error.message || 'Failed to delete property');
     },
   });
@@ -82,6 +90,9 @@ export const usePropertyDeletion = () => {
 
   // Start deletion flow with permission check
   const openDeletionConfirm = async (property) => {
+    log.info(
+      `[usePropertyDeletion] > [Action]: openDeletionConfirm propertyId=${property?.id || '<none>'}`
+    );
     setSelectedProperty(property);
     setIsConfirmOpen(true);
     setCurrentStep(DELETION_STEPS.PERMISSION_CHECK);
@@ -121,6 +132,9 @@ export const usePropertyDeletion = () => {
 
   // Handle final deletion execution
   const executePropertyDeletion = (reason = '') => {
+    log.info(
+      `[usePropertyDeletion] > [Action]: executePropertyDeletion propertyId=${selectedProperty?.id || '<none>'}`
+    );
     if (!selectedProperty) return;
     
     if (check.canDeleteProperties) {

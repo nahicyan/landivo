@@ -10,6 +10,7 @@ import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { motion } from "framer-motion";
 import { CheckCircleIcon, HeartIcon, EnvelopeIcon, MapPinIcon, BellIcon, TagIcon, GiftIcon, StarIcon } from "@heroicons/react/24/outline";
+import { getLogger } from "@/utils/logger";
 
 // Define the available areas matching your project
 const AREAS = [
@@ -42,6 +43,8 @@ const EMAIL_TYPES = [
   },
 ];
 
+const log = getLogger("Unsubscribe");
+
 export default function Unsubscribe() {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -73,7 +76,9 @@ export default function Unsubscribe() {
       const buyerData = response.data; // Extract data from axios response
       setBuyer(buyerData);
 
-      console.log("Buyer data received:", buyerData); // Debug log
+      log.info(
+        `[Unsubscribe:fetchBuyerData] > [Response]: buyer data received id=${buyerData?.id}`
+      );
 
       // Set current preferences - default to 'available' if null/undefined/empty
       const loadedPreferences = {
@@ -83,7 +88,11 @@ export default function Unsubscribe() {
         specialDiscounts: buyerData.specialDiscounts === "unsubscribe" ? "unsubscribe" : "available",
       };
 
-      console.log("Setting preferences:", loadedPreferences); // Debug log
+      log.info(
+        `[Unsubscribe:fetchBuyerData] > [Computed]: preferences loaded=${JSON.stringify(
+          loadedPreferences
+        )}`
+      );
       setPreferences(loadedPreferences);
     } catch (err) {
       setError(err.message);
@@ -144,7 +153,11 @@ export default function Unsubscribe() {
       setSaving(true);
       setError(""); // Clear any previous errors
 
-      console.log("Resubscribing with preferences:", preferences);
+      log.info(
+        `[Unsubscribe:handleResubscribe] > [Request]: resubscribing preferences=${JSON.stringify(
+          preferences
+        )}`
+      );
 
       // Resubscribe with current preferences
       const result = await api.put(`/buyer/resubscribe/${id}`, {
@@ -156,7 +169,9 @@ export default function Unsubscribe() {
         areas: preferences.preferredAreas,
       });
 
-      console.log("Resubscribe result:", result);
+      log.info(
+        `[Unsubscribe:handleResubscribe] > [Response]: resubscribe success`
+      );
 
       // These lines should trigger the success message
       setActionType("resubscribe");
@@ -167,7 +182,7 @@ export default function Unsubscribe() {
         navigate("/");
       }, 3000);
     } catch (err) {
-      console.error("Resubscribe error:", err);
+      log.error(`[Unsubscribe:handleResubscribe] > [Error]: ${err.message}`);
       setError("Failed to resubscribe. Please try again.");
     } finally {
       setSaving(false);

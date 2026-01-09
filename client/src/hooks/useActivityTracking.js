@@ -4,6 +4,9 @@ import { useAuth0 } from '@auth0/auth0-react';
 import { useVipBuyer } from '@/utils/VipBuyerContext';
 import { useLocation } from 'react-router-dom';
 import activityTrackingService from '@/services/ActivityTrackingService';
+import { getLogger } from '@/utils/logger';
+
+const log = getLogger('useActivityTracking');
 
 /**
  * Hook for tracking VIP buyer activity
@@ -49,7 +52,7 @@ export function useActivityTracking(options = {}) {
       activityTrackingService.startTracking();
       initialized.current = true;
       
-      console.log('VIP buyer activity tracking initialized');
+      log.info('[useActivityTracking] > [Response]: VIP buyer activity tracking initialized');
       
       // Cleanup when component unmounts
       return () => {
@@ -81,18 +84,18 @@ export function useActivityTracking(options = {}) {
    */
   const trackPropertyView = useCallback((property) => {
     if (initialized.current && property) {
-      console.log("Tracking property view in hook:", property);
+      log.info(`[useActivityTracking:trackPropertyView] > [Action]: propertyId=${property?.id}`);
       activityTrackingService.recordPropertyView(property);
       
       // For debugging, also log the tracking state
-      console.log("Tracking state:", {
+      log.debug("Tracking state:", {
         isVipBuyer,
         isInitialized: initialized.current,
         vipBuyerId: vipBuyerData?.id,
         auth0Id: user?.sub
       });
     } else {
-      console.log("Cannot track property view:", { 
+      log.warn("Cannot track property view:", { 
         initialized: initialized.current,
         hasProperty: !!property
       });

@@ -1,6 +1,9 @@
 // client/src/utils/api/properties.js
 
 import { api, handleRequestError } from './config';
+import { getLogger } from '../logger';
+
+const log = getLogger('propertiesApi');
 
 /**
  * Get all properties
@@ -8,9 +11,16 @@ import { api, handleRequestError } from './config';
  */
 export const getAllProperties = async () => {
   try {
+    log.info("[properties:getAllProperties] > [Request]: GET /property/all");
     const response = await api.get('/property/all');
+    log.info(
+      `[properties:getAllProperties] > [Response]: received=${
+        Array.isArray(response.data) ? response.data.length : "unknown"
+      }`
+    );
     return response.data;
   } catch (error) {
+    log.error(`[properties:getAllProperties] > [Error]: ${error.message}`);
     handleRequestError(error, "Failed to fetch properties");
   }
 };

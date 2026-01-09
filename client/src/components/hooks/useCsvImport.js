@@ -1,6 +1,9 @@
 import { useState } from "react";
 import Papa from "papaparse";
 import { toast } from "react-toastify";
+import { getLogger } from "@/utils/logger";
+
+const log = getLogger("useCsvImport");
 
 /**
  * Custom hook for handling CSV file import
@@ -26,6 +29,7 @@ export function useCsvImport() {
    * @returns {Promise<boolean>} - True if parsing was successful
    */
   const parseCsvFile = (file) => {
+    log.info(`[useCsvImport] > [Request]: parseCsvFile file=${file?.name || "<none>"}`);
     return new Promise((resolve, reject) => {
       if (!file) {
         setCsvFile(null);
@@ -78,7 +82,7 @@ export function useCsvImport() {
           // Update state
           setCsvData(validData);
           setCsvErrors(errors);
-          
+
           // Return success if there are any valid rows and no errors
           if (validData.length > 0 && errors.length === 0) {
             resolve(true);
@@ -137,13 +141,14 @@ export function useCsvImport() {
    * @returns {Promise<boolean>} - True if processing was successful
    */
   const handleFileInputChange = async (event) => {
+    log.info("[useCsvImport] > [Request]: handleFileInputChange");
     const file = event.target.files[0];
     if (!file) return false;
     
     try {
       return await parseCsvFile(file);
     } catch (error) {
-      console.error("Error processing CSV file:", error);
+      log.error(`[useCsvImport] > [Error]: ${error.message}`);
       toast.error("Failed to process CSV file");
       return false;
     }
@@ -153,6 +158,7 @@ export function useCsvImport() {
    * Generate a CSV template for downloading
    */
   const downloadCsvTemplate = () => {
+    log.info("[useCsvImport] > [Action]: downloadCsvTemplate");
     const csv = "firstName,lastName,email,phone,buyerType,preferredAreas\nJohn,Doe,john@example.com,(555) 123-4567,Builder,\"Austin, DFW\"\nJane,Smith,jane@example.com,(555) 987-6543,Investor,Houston";
     const blob = new Blob([csv], { type: 'text/csv' });
     const url = URL.createObjectURL(blob);

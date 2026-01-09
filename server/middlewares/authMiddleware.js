@@ -4,6 +4,9 @@ import dotenv from 'dotenv';
 import mongoose from '../config/mongoose.js';
 import { connectMongo } from '../config/mongoose.js';
 import { User } from '../models/index.js';
+import { getLogger } from '../utils/logger.js';
+
+const log = getLogger('authMiddleware');
 
 dotenv.config();
 
@@ -17,52 +20,39 @@ export const jwtCheck = auth({
 // Middleware to extract user info from token and sync with database
 export const extractUserFromToken = async (req, res, next) => {
   if (req.auth && req.auth.payload) {
-    console.log('Extracting user from token payload:', JSON.stringify(req.auth.payload, null, 2));
-    
+    log.info(
+      '[authMiddleware:extractUserFromToken] > [Request]: auth payload present > [Response]: syncing user'
+    );
+
     // Try multiple possible locations for roles and permissions
     const AUTH0_NAMESPACE = process.env.AUTH0_NAMESPACE || 'https://landivo.com';
     
     let roles = [];
     let permissions = [];
     
-    // Try all possible locations where roles might be stored
     if (req.auth.payload[`${AUTH0_NAMESPACE}/roles`]) {
       roles = req.auth.payload[`${AUTH0_NAMESPACE}/roles`];
-      console.log(`Found roles in ${AUTH0_NAMESPACE}/roles:`, roles);
     } else if (req.auth.payload.roles) {
       roles = req.auth.payload.roles;
-      console.log('Found roles in roles claim:', roles);
     } else if (req.auth.payload[`${AUTH0_NAMESPACE}`] && req.auth.payload[`${AUTH0_NAMESPACE}`].roles) {
       roles = req.auth.payload[`${AUTH0_NAMESPACE}`].roles;
-      console.log(`Found roles in ${AUTH0_NAMESPACE}.roles:`, roles);
-    } else {
-      console.log('No roles found in the token payload');
     }
     
-    // Try all possible locations where permissions might be stored
     if (req.auth.payload[`${AUTH0_NAMESPACE}/permissions`]) {
       permissions = req.auth.payload[`${AUTH0_NAMESPACE}/permissions`];
-      console.log(`Found permissions in ${AUTH0_NAMESPACE}/permissions:`, permissions);
     } else if (req.auth.payload.permissions) {
       permissions = req.auth.payload.permissions;
-      console.log('Found permissions in permissions claim:', permissions);
     } else if (req.auth.payload[`${AUTH0_NAMESPACE}`] && req.auth.payload[`${AUTH0_NAMESPACE}`].permissions) {
       permissions = req.auth.payload[`${AUTH0_NAMESPACE}`].permissions;
-      console.log(`Found permissions in ${AUTH0_NAMESPACE}.permissions:`, permissions);
-    } else {
-      console.log('No permissions found in the token payload');
     }
 
-    // Extract user info from the JWT token
     const auth0User = {
       sub: req.auth.payload.sub, // Auth0 user ID
       email: req.auth.payload.email,
       name: req.auth.payload.name || req.auth.payload.nickname || '',
-      roles: roles,
-      permissions: permissions
+      roles,
+      permissions
     };
-    
-    console.log('Extracted auth0 user:', auth0User);
 
     // Check if this user has any roles or permissions (system user)
     if (permissions.length > 0 || roles.length > 0) {
@@ -111,10 +101,12 @@ export const extractUserFromToken = async (req, res, next) => {
           // Flag if profile needs completion
           auth0User.needsProfileCompletion = !firstName || !lastName;
           
-          console.log('Created new user in database:', newUser.id);
-        }
+        log.info(
+          `[authMiddleware:extractUserFromToken] > [Response]: Created new user ${newUser.id}`
+        );
+      }
       } catch (error) {
-        console.error('Error syncing user with database:', error);
+        log.error(`[authMiddleware:extractUserFromToken] > [Error]: ${error.message}`);
         // Continue without database user
       }
     }
@@ -122,7 +114,9 @@ export const extractUserFromToken = async (req, res, next) => {
     // Attach to request object
     req.user = auth0User;
   } else {
-    console.log('No auth payload found in request');
+    log.info(
+      '[authMiddleware:extractUserFromToken] > [Response]: no auth payload present'
+    );
   }
   
   next();
@@ -131,7 +125,9 @@ export const extractUserFromToken = async (req, res, next) => {
 // Simple middleware to check if user is authenticated
 export const ensureAuthenticated = (req, res, next) => {
   if (!req.auth || !req.auth.payload) {
-    console.log('Request lacks authentication');
+    log.info(
+      '[authMiddleware:ensureAuthenticated] > [Response]: missing auth payload'
+    );
     return res.status(401).json({ message: 'Unauthorized: Missing authentication' });
   }
   next();
@@ -141,7 +137,7 @@ export const ensureAuthenticated = (req, res, next) => {
 export const checkPermissions = (requiredPermissions) => {
   return (req, res, next) => {
     if (!req.auth || !req.auth.payload) {
-      console.log('Request lacks authentication for permission check');
+      log.info('[authMiddleware:checkPermissions] > [Response]: missing auth payload');
       return res.status(401).json({ message: 'Unauthorized: Missing authentication' });
     }
     
@@ -161,7 +157,9 @@ export const checkPermissions = (requiredPermissions) => {
     // Check if user has at least one of the required permissions
     const hasRequiredPermission = requiredPermissions.some(perm => userPermissions.includes(perm));
     
-    console.log(`Permission check: Required [${requiredPermissions.join(', ')}], User has [${userPermissions.join(', ')}], Result: ${hasRequiredPermission ? 'GRANTED' : 'DENIED'}`);
+    log.info(
+      `[authMiddleware:checkPermissions] > [Request]: required=[${requiredPermissions.join(', ')}] > [Response]: ${hasRequiredPermission ? 'GRANTED' : 'DENIED'}`
+    );
     
     if (!hasRequiredPermission) {
       return res.status(403).json({ 
@@ -179,7 +177,7 @@ export const checkPermissions = (requiredPermissions) => {
 export const checkRoles = (requiredRoles) => {
   return (req, res, next) => {
     if (!req.auth || !req.auth.payload) {
-      console.log('Request lacks authentication for role check');
+      log.info('[authMiddleware:checkRoles] > [Response]: missing auth payload');
       return res.status(401).json({ message: 'Unauthorized: Missing authentication' });
     }
     
@@ -199,7 +197,9 @@ export const checkRoles = (requiredRoles) => {
     // Check if user has at least one of the required roles
     const hasRequiredRole = requiredRoles.some(role => userRoles.includes(role));
     
-    console.log(`Role check: Required [${requiredRoles.join(', ')}], User has [${userRoles.join(', ')}], Result: ${hasRequiredRole ? 'GRANTED' : 'DENIED'}`);
+    log.info(
+      `[authMiddleware:checkRoles] > [Request]: required=[${requiredRoles.join(', ')}] > [Response]: ${hasRequiredRole ? 'GRANTED' : 'DENIED'}`
+    );
     
     if (!hasRequiredRole) {
       return res.status(403).json({ 

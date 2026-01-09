@@ -9,6 +9,9 @@ import SearchAreaWithTracking from "@/components/SearchArea/SearchAreaWithTracki
 import DisplayGrid, { createGridFilter } from "@/components/DisplayGrid/DisplayGrid";
 import { Button } from "@/components/ui/button";
 import { getPropertyRows } from "@/utils/api";
+import { getLogger } from "@/utils/logger";
+
+const log = getLogger("SanAntonioProperty");
 
 export default function SanAntonioProperty() {
   const { data, isError, isLoading } = useProperties();
@@ -44,7 +47,7 @@ export default function SanAntonioProperty() {
           }
         }
       } catch (error) {
-        console.error("Error fetching SanAntonio row properties:", error);
+        log.error(`[SanAntonioProperty:fetchSanAntonioRow] > [Error]: ${error.message}`);
         setFeaturedPropertyIds([]);
       } finally {
         setLoadingFeatured(false);

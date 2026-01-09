@@ -10,6 +10,9 @@ import {
   removeBuyersFromList as removeBuyersApi,
   sendEmailToList
 } from "@/utils/api";
+import { getLogger } from "@/utils/logger";
+
+const log = getLogger("useEmailLists");
 
 export function useEmailLists() {
   const [lists, setLists] = useState([]);
@@ -32,14 +35,16 @@ export function useEmailLists() {
 
   // Function to fetch lists
   const fetchLists = useCallback(async () => {
+    log.info("[useEmailLists] > [Request]: fetchLists");
     try {
       setLoading(true);
       const data = await getEmailLists();
+      log.info(`[useEmailLists] > [Response]: fetched=${data.length}`);
       setLists(data);
       setFilteredLists(data);
       setError(null);
     } catch (err) {
-      console.error("Error fetching email lists:", err);
+      log.error(`[useEmailLists] > [Error]: ${err.message}`);
       setError("Failed to load email lists");
       toast.error("Failed to load email lists");
     } finally {
@@ -93,12 +98,14 @@ export function useEmailLists() {
 
   // Create a new list
 const createList = async (listData) => {
+  log.info("[useEmailLists] > [Request]: createList");
   const response = await createEmailList(listData);
   return response.list || response; // Return the list object directly
 };
 
   // Update an existing list
   const updateList = async (listId, listData) => {
+    log.info(`[useEmailLists] > [Request]: updateList id=${listId}`);
     try {
       const response = await updateEmailList(listId, listData);
       setLists(prev =>
@@ -107,7 +114,7 @@ const createList = async (listData) => {
       toast.success("Buyer list updated successfully!");
       return response.list;
     } catch (err) {
-      console.error("Error updating email list:", err);
+      log.error("Error updating email list:", err);
       toast.error("Failed to update email list");
       throw err;
     }
@@ -115,6 +122,7 @@ const createList = async (listData) => {
 
   // Delete a list
   const deleteList = async (listId, deleteBuyers = false) => {
+    log.info(`[useEmailLists] > [Request]: deleteList id=${listId}`);
     try {
       await deleteEmailList(listId, deleteBuyers);
       toast.success("Email list deleted successfully");
@@ -127,6 +135,9 @@ const createList = async (listData) => {
 
   // Add buyers to a list
   const addBuyersToList = async (listId, buyerIds) => {
+    log.info(
+      `[useEmailLists] > [Request]: addBuyersToList id=${listId} count=${buyerIds.length}`
+    );
     try {
       await addBuyersApi(listId, buyerIds);
 
@@ -145,7 +156,7 @@ const createList = async (listData) => {
 
       toast.success(`${buyerIds.length} buyers added to list!`);
     } catch (err) {
-      console.error("Error adding buyers to list:", err);
+      log.error("Error adding buyers to list:", err);
       toast.error("Failed to add buyers to list");
       throw err;
     }
@@ -153,6 +164,9 @@ const createList = async (listData) => {
 
   // Remove buyers from a list
   const removeBuyersFromList = async (listId, buyerIds) => {
+    log.info(
+      `[useEmailLists] > [Request]: removeBuyersFromList id=${listId} count=${buyerIds.length}`
+    );
     try {
       await removeBuyersApi(listId, buyerIds);
 
@@ -171,7 +185,7 @@ const createList = async (listData) => {
 
       toast.success(`${buyerIds.length} buyers removed from list!`);
     } catch (err) {
-      console.error("Error removing buyers from list:", err);
+      log.error("Error removing buyers from list:", err);
       toast.error("Failed to remove buyers from list");
       throw err;
     }
@@ -179,6 +193,7 @@ const createList = async (listData) => {
 
   // Send email to list
   const sendEmail = async (listId, emailData) => {
+    log.info(`[useEmailLists] > [Request]: sendEmail listId=${listId}`);
     try {
       await sendEmailToList(listId, emailData);
 
@@ -197,7 +212,7 @@ const createList = async (listData) => {
 
       toast.success("Email sent successfully!");
     } catch (err) {
-      console.error("Error sending email:", err);
+      log.error("Error sending email:", err);
       toast.error("Failed to send email");
       throw err;
     }
@@ -205,11 +220,12 @@ const createList = async (listData) => {
 
   // Get list members
   const getListMembers = async (listId) => {
+    log.info(`[useEmailLists] > [Request]: getListMembers id=${listId}`);
     try {
       const listData = await getEmailList(listId);
       return listData.buyers || [];
     } catch (err) {
-      console.error("Error fetching list members:", err);
+      log.error("Error fetching list members:", err);
       toast.error("Failed to fetch list members");
       throw err;
     }

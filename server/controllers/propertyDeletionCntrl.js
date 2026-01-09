@@ -5,6 +5,9 @@ import mongoose from "../config/mongoose.js";
 import { connectMongo } from "../config/mongoose.js";
 import { PropertyDeletionRequest, Property, User } from "../models/index.js";
 import { sendPropertyDeletionRequest } from "../services/propertyDeletionEmailService.js";
+import { getLogger } from "../utils/logger.js";
+
+const log = getLogger("propertyDeletionCntrl");
 
 const toObjectId = (value) => {
   if (!value || !mongoose.Types.ObjectId.isValid(value)) return null;
@@ -64,7 +67,7 @@ export const requestPropertyDeletion = asyncHandler(async (req, res) => {
           };
         }
       } catch (error) {
-        console.error("Error fetching user details:", error);
+        log.error("Error fetching user details:", error);
         // Continue with fallback values
       }
     }
@@ -96,7 +99,7 @@ export const requestPropertyDeletion = asyncHandler(async (req, res) => {
     });
 
   } catch (error) {
-    console.error("Error requesting property deletion:", error);
+    log.error("Error requesting property deletion:", error);
     res.status(500).json({
       message: "Failed to send deletion request",
       error: error.message
@@ -166,7 +169,7 @@ export const approvePropertyDeletion = asyncHandler(async (req, res) => {
     });
 
   } catch (error) {
-    console.error("Error approving property deletion:", error);
+    log.error("Error approving property deletion:", error);
     res.status(500).json({
       message: "Failed to delete property",
       error: error.message
@@ -223,7 +226,7 @@ export const deletePropertyDirect = asyncHandler(async (req, res) => {
           };
         }
       } catch (error) {
-        console.error("Error fetching user details:", error);
+        log.error("Error fetching user details:", error);
         // Continue with fallback values
       }
     }
@@ -237,7 +240,7 @@ export const deletePropertyDirect = asyncHandler(async (req, res) => {
           { session }
         );
 
-        console.log(`Direct property deletion by ${requestingUser.email}:`, {
+        log.info(`Direct property deletion by ${requestingUser.email}:`, {
           propertyId: id,
           propertyTitle: property.title,
           propertyAddress: `${property.streetAddress}, ${property.city}, ${property.state}`,
@@ -266,7 +269,7 @@ export const deletePropertyDirect = asyncHandler(async (req, res) => {
     });
 
   } catch (error) {
-    console.error("Error in direct property deletion:", error);
+    log.error("Error in direct property deletion:", error);
     
     // Handle specific Prisma errors
     res.status(500).json({

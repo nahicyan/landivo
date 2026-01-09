@@ -32,6 +32,9 @@ import UserInfo from "@/components/FinanceQualify/UserInfo";
 import DownPayment from "@/components/FinanceQualify/DownPayment";
 import SurveyCompletion from "@/components/FinanceQualify/SurveyCompletion";
 import { submitQualification } from "@/utils/api";
+import { getLogger } from "@/utils/logger";
+
+const log = getLogger("Qualify");
 
 export default function Qualify() {
   const { propertyId } = useParams();
@@ -252,7 +255,12 @@ const handleSubmitSurvey = async () => {
       submission_date: new Date().toISOString()
     }));
     
-    console.log("Submitting qualification data:", qualificationData);
+    log.info(
+      `[Qualify:handleSubmitSurvey] > [Request]: submitting qualification data > [Comment]: ${JSON.stringify({
+        propertyId: qualificationData.propertyId,
+        qualified: qualificationData.qualified,
+      })}`
+    );
     
     // Submit to backend
     const response = await submitQualification(qualificationData);
@@ -262,11 +270,13 @@ const handleSubmitSurvey = async () => {
     }
     
     const result = await response.json();
-    console.log("Qualification submitted successfully:", result);
+    log.info(
+      `[Qualify:handleSubmitSurvey] > [Response]: qualification submitted`
+    );
     
     return result;
   } catch (error) {
-    console.error("Error submitting qualification:", error);
+    log.error(`[Qualify:handleSubmitSurvey] > [Error]: ${error.message}`);
     throw error;
   }
 };

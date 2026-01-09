@@ -49,6 +49,9 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { getLogger } from "@/utils/logger";
+
+const log = getLogger("AdminProperties");
 
 export default function AdminProperties() {
   const navigate = useNavigate();
@@ -130,7 +133,11 @@ export default function AdminProperties() {
   // Handle quick edit save
   const handleQuickEditSave = async (editedData) => {
     // Logic for saving quick edit data will go here
-    console.log("Saving quick edit:", editedData);
+    log.info(
+      `[AdminProperties:handleQuickEditSave] > [Action]: saving quick edit > [Comment]: ${JSON.stringify(
+        editedData
+      )}`
+    );
     setIsQuickEditOpen(false);
     refetch(); // Refresh the data after edit
   };

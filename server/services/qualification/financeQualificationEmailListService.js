@@ -2,6 +2,7 @@
 import mongoose from "../../config/mongoose.js";
 import { connectMongo } from "../../config/mongoose.js";
 import { BuyerEmailList, EmailList } from "../../models/index.js";
+import { getLogger } from "../../utils/logger.js";
 
 const normalizeCriteriaListValue = (value) => {
   const collected = [];
@@ -35,6 +36,8 @@ const normalizeCriteriaListValue = (value) => {
   return unique;
 };
 
+const log = getLogger("financeQualificationEmailListService");
+
 /**
  * Handles finance qualification email list management
  * Creates or finds list with format: "{Source} {Area} {BuyerType}"
@@ -60,7 +63,9 @@ export const handleFinanceQualificationEmailList = async (buyer, property, finan
     // If list doesn't exist, create it
     if (!emailList) {
       emailList = await createFinanceQualificationEmailList(listName, area, buyerType, financeSource);
-      console.log(`Created new finance qualification email list: ${listName}`);
+      log.info(
+        `[financeQualificationEmailListService:handleFinanceQualificationEmailList] > [Response]: created list=${listName}`
+      );
     }
     
     // Check if buyer is already in the list
@@ -78,7 +83,9 @@ export const handleFinanceQualificationEmailList = async (buyer, property, finan
         buyerId: buyerObjectId,
         emailListId: emailList._id,
       });
-      console.log(`Added buyer ${buyer.id} to finance qualification list: ${listName}`);
+      log.info(
+        `[financeQualificationEmailListService:handleFinanceQualificationEmailList] > [Response]: added buyer=${buyer.id} to list=${listName}`
+      );
     }
     
     return {
@@ -89,7 +96,9 @@ export const handleFinanceQualificationEmailList = async (buyer, property, finan
     };
     
   } catch (error) {
-    console.error("Error handling finance qualification email list:", error);
+    log.error(
+      `[financeQualificationEmailListService:handleFinanceQualificationEmailList] > [Error]: ${error?.message || error}`
+    );
     return {
       success: false,
       error: error.message
@@ -163,7 +172,9 @@ export const getFinanceQualificationEmailLists = async (financeSource = "Finance
       buyerMemberships: membershipMap.get(String(list._id)) || [],
     }));
   } catch (error) {
-    console.error("Error fetching finance qualification email lists:", error);
+    log.error(
+      `[financeQualificationEmailListService:getFinanceQualificationEmailLists] > [Error]: ${error?.message || error}`
+    );
     throw error;
   }
 };

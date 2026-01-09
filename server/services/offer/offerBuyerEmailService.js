@@ -2,6 +2,9 @@
 import nodemailer from "nodemailer";
 import { connectMongo } from "../../config/mongoose.js";
 import { Settings } from "../../models/index.js";
+import { getLogger } from "../../utils/logger.js";
+
+const log = getLogger("offerBuyerEmailService");
 
 /**
  * Send email notification to buyer when admin takes action on offer
@@ -20,7 +23,9 @@ export const sendBuyerOfferNotification = async (buyer, subject, body) => {
       !settings.smtpUser ||
       !settings.smtpPassword
     ) {
-      console.log("Incomplete SMTP configuration for buyer notification");
+      log.info(
+        "[offerBuyerEmailService:sendBuyerOfferNotification] > [Response]: incomplete SMTP configuration"
+      );
       return;
     }
 
@@ -47,9 +52,13 @@ export const sendBuyerOfferNotification = async (buyer, subject, body) => {
     };
 
     await transporter.sendMail(mailOptions);
-    console.log(`Buyer notification sent to ${buyer.email}: ${subject}`);
+    log.info(
+      `[offerBuyerEmailService:sendBuyerOfferNotification] > [Response]: sent to ${buyer.email}, subject=${subject}`
+    );
   } catch (error) {
-    console.error("Error sending buyer notification email:", error);
+    log.error(
+      `[offerBuyerEmailService:sendBuyerOfferNotification] > [Error]: ${error?.message || error}`
+    );
   }
 };
 

@@ -1,5 +1,8 @@
 import mongoose, { connectMongo } from "../config/mongoose.js";
 import { Buyer, EmailList } from "../models/index.js";
+import { getLogger } from "../utils/logger.js";
+
+const log = getLogger("migrateEmailListCriteria");
 
 const DEFAULT_MONGO_URL = "mongodb://127.0.0.1:27017/Landivo";
 process.env.DATABASE_URL =
@@ -98,20 +101,21 @@ const buildTopLevelUnsetUpdate = (field) => ({
 const runUpdate = async (label, collection, filter, update) => {
   const result = await collection.updateMany(filter, update);
   const modified = result?.modifiedCount ?? result?.nModified ?? result?.n ?? null;
-  console.log(`[migrate-email-list-criteria] ${label}`, {
-    modified,
-    result,
-  });
+  log.info(
+    `[migrateEmailListCriteria:runUpdate] > [Response]: ${label}, modified=${modified}`
+  );
 };
 
 const runCount = async (label, model, query) => {
   const count = await model.countDocuments(query);
-  console.log(`[migrate-email-list-criteria] ${label}`, { count });
+  log.info(
+    `[migrateEmailListCriteria:runCount] > [Response]: ${label}, count=${count}`
+  );
   return count;
 };
 
 const main = async () => {
-  console.log("[migrate-email-list-criteria] Starting normalization");
+  log.info("[migrateEmailListCriteria:main] > [Request]: start");
   await connectMongo();
 
   const emailListCollection = EmailList.collection;
@@ -248,12 +252,14 @@ const main = async () => {
     preferredCountyUnset.update
   );
 
-  console.log("[migrate-email-list-criteria] Done");
+  log.info("[migrateEmailListCriteria:main] > [Response]: done");
 };
 
 main()
   .catch((error) => {
-    console.error("[migrate-email-list-criteria] Failed", error);
+    log.error(
+      `[migrateEmailListCriteria:main] > [Error]: ${error?.message || error}`
+    );
     process.exitCode = 1;
   })
   .finally(async () => {

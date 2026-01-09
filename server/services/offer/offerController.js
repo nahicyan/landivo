@@ -8,11 +8,14 @@ import { sendOfferNotification, newOfferTemplate, updatedOfferTemplate, lowOffer
 import { sendBuyerOfferNotification, acceptedOfferTemplate, rejectedOfferTemplate, counterOfferTemplate, expiredOfferTemplate, generateBuyerOfferSubject } from "./offerBuyerEmailService.js";
 // Add this import
 import { handleOfferEmailList } from "./offerEmailListService.js";
+import { getLogger } from "../../utils/logger.js";
 
 const toObjectId = (value) => {
   if (!value || !mongoose.Types.ObjectId.isValid(value)) return null;
   return new mongoose.Types.ObjectId(value);
 };
+
+const log = getLogger("offerController");
 
 /**
  * Make an offer on a property
@@ -30,7 +33,9 @@ export const makeOffer = asyncHandler(async (req, res) => {
 
     const { email, phone, buyerType, propertyId, offeredPrice, firstName, lastName, auth0Id, buyerMessage } = req.body;
 
-    console.log(`Received offer: propertyId: ${propertyId}, price: ${offeredPrice}, email: ${email}, auth0Id: ${auth0Id || "not provided"}`);
+    log.info(
+      `[offerController:makeOffer] > [Request]: propertyId=${propertyId}, offeredPrice=${offeredPrice}, email=${email}, auth0Id=${auth0Id || "not provided"}`
+    );
 
     // 2. Retrieve property details for notifications
     await connectMongo();
@@ -67,7 +72,9 @@ export const makeOffer = asyncHandler(async (req, res) => {
         try {
           await handleOfferEmailList(buyer, property, "Offer");
         } catch (emailListError) {
-          console.error("Email list management failed:", emailListError);
+          log.error(
+            `[offerController:makeOffer] > [Error]: email list management failed: ${emailListError?.message || emailListError}`
+          );
           // Don't fail the offer update if email list fails
         }
 
@@ -120,9 +127,13 @@ export const makeOffer = asyncHandler(async (req, res) => {
     // 6. Handle email list management for new offers
     try {
       const emailListResult = await handleOfferEmailList(buyer, property, "Offer");
-      console.log("Email list management result:", emailListResult);
+      log.info(
+        `[offerController:makeOffer] > [Response]: email list result=${JSON.stringify(emailListResult)}`
+      );
     } catch (emailListError) {
-      console.error("Email list management failed:", emailListError);
+      log.error(
+        `[offerController:makeOffer] > [Error]: email list management failed: ${emailListError?.message || emailListError}`
+      );
       // Don't fail the offer creation if email list fails
     }
 
@@ -150,7 +161,9 @@ export const makeOffer = asyncHandler(async (req, res) => {
     // 9. Send new offer notification in the background
     await sendOfferNotification(generateOfferSubject("submitted", buyer, property), newOfferTemplate(property, buyer, offeredPrice, buyerMessage, newOffer.id));
   } catch (err) {
-    console.error(err);
+    log.error(
+      `[offerController:makeOffer] > [Error]: ${err?.message || err}`
+    );
     res.status(500).json({
       message: "An error occurred while processing the offer.",
       error: err.message,
@@ -202,7 +215,9 @@ export const getOffersOnProperty = asyncHandler(async (req, res) => {
       offers: normalizedOffers,
     });
   } catch (err) {
-    console.error(err);
+    log.error(
+      `[offerController:getOffersOnProperty] > [Error]: ${err?.message || err}`
+    );
     res.status(500).json({
       message: "An error occurred while fetching offers for the property.",
       error: err.message,
@@ -273,7 +288,9 @@ export const getOffersByBuyer = asyncHandler(async (req, res) => {
       offers: normalizedOffers,
     });
   } catch (err) {
-    console.error("Error fetching offers by buyer:", err);
+    log.error(
+      `[offerController:getOffersByBuyer] > [Error]: ${err?.message || err}`
+    );
     res.status(500).json({
       message: "An error occurred while fetching offers by buyer.",
       error: err.message,
@@ -400,12 +417,16 @@ export const updateOfferStatus = asyncHandler(async (req, res) => {
           await sendBuyerOfferNotification(existingOffer.buyer, emailSubject, emailTemplate);
         }
       } catch (emailError) {
-        console.error("Failed to send buyer notification:", emailError);
+        log.error(
+          `[offerController:updateOfferStatus] > [Error]: failed to send buyer notification: ${emailError?.message || emailError}`
+        );
         // Don't fail the offer update if email fails
       }
     }
   } catch (err) {
-    console.error("Error updating offer status:", err);
+    log.error(
+      `[offerController:updateOfferStatus] > [Error]: ${err?.message || err}`
+    );
     res.status(500).json({
       message: "An error occurred while updating offer status.",
       error: err.message,
@@ -445,7 +466,9 @@ export const getOfferHistory = asyncHandler(async (req, res) => {
       history: offer.offerHistory || [],
     });
   } catch (err) {
-    console.error("Error fetching offer history:", err);
+    log.error(
+      `[offerController:getOfferHistory] > [Error]: ${err?.message || err}`
+    );
     res.status(500).json({
       message: "An error occurred while fetching offer history",
       error: err.message,
@@ -566,7 +589,9 @@ export const getAllOffers = asyncHandler(async (req, res) => {
       },
     });
   } catch (err) {
-    console.error("Error fetching all offers:", err);
+    log.error(
+      `[offerController:getAllOffers] > [Error]: ${err?.message || err}`
+    );
     res.status(500).json({
       message: "An error occurred while fetching offers.",
       error: err.message,
@@ -685,7 +710,9 @@ export const getRecentOfferActivity = asyncHandler(async (req, res) => {
       totalCount: allActivities.length,
     });
   } catch (err) {
-    console.error("Error fetching recent offer activity:", err);
+    log.error(
+      `[offerController:getRecentOfferActivity] > [Error]: ${err?.message || err}`
+    );
     res.status(500).json({
       message: "An error occurred while fetching recent offer activity.",
       error: err.message,
@@ -733,7 +760,9 @@ export const getOfferById = asyncHandler(async (req, res) => {
           ).lean()
         : null;
     } catch (propertyError) {
-      console.warn("Error fetching property details:", propertyError);
+      log.warn(
+        `[offerController:getOfferById] > [Response]: property lookup failed: ${propertyError?.message || propertyError}`
+      );
     }
 
     res.status(200).json({
@@ -765,7 +794,9 @@ export const getOfferById = asyncHandler(async (req, res) => {
       },
     });
   } catch (err) {
-    console.error("Error fetching offer:", err);
+    log.error(
+      `[offerController:getOfferById] > [Error]: ${err?.message || err}`
+    );
     res.status(500).json({
       message: "An error occurred while fetching the offer",
       error: err.message,

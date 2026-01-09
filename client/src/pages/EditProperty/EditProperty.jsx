@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { motion, AnimatePresence } from "framer-motion";
 import { useAuth } from "@/components/hooks/useAuth";
 import { Loader2, Check, ChevronLeft, ChevronRight, AlertCircle } from "lucide-react";
+import { getLogger } from "@/utils/logger";
 
 // Import subcomponents
 import SystemInfo from "@/components/AddProperty/SystemInfo";
@@ -19,6 +20,8 @@ import Pricing from "@/components/AddProperty/Pricing";
 import Financing from "@/components/AddProperty/Financing";
 import Utilities from "@/components/AddProperty/Utilities";
 import MediaTags from "@/components/AddProperty/MediaTags";
+
+const log = getLogger("EditProperty");
 
 // Format number with commas for display
 const formatWithCommas = (value) => {
@@ -280,14 +283,14 @@ export default function EditProperty() {
           if (processedData.landType.length === 1 && typeof processedData.landType[0] === "string" && processedData.landType[0].startsWith("[") && processedData.landType[0].endsWith("]")) {
             try {
               processedData.landType = JSON.parse(processedData.landType[0]);
-            } catch (e) {
-              // Keep original if parsing fails
-            }
-          }
         } catch (e) {
-          console.error("Error processing landType:", e);
-          processedData.landType = [];
+          // Keep original if parsing fails
         }
+      }
+    } catch (e) {
+      log.error(`[EditProperty:processLandType] > [Error]: ${e.message}`);
+      processedData.landType = [];
+    }
 
         // Handle existing images
         let imageArray = [];
@@ -296,7 +299,7 @@ export default function EditProperty() {
             try {
               imageArray = JSON.parse(processedData.imageUrls);
             } catch (e) {
-              console.error("Error parsing image URLs:", e);
+              log.error(`[EditProperty:parseImageUrls] > [Error]: ${e.message}`);
               imageArray = [];
             }
           } else if (Array.isArray(processedData.imageUrls)) {
@@ -313,7 +316,7 @@ export default function EditProperty() {
             try {
               videoArray = JSON.parse(processedData.videoUrls);
             } catch (e) {
-              console.error("Error parsing video URLs:", e);
+              log.error(`[EditProperty:parseVideoUrls] > [Error]: ${e.message}`);
               videoArray = [];
             }
           } else if (Array.isArray(processedData.videoUrls)) {
@@ -329,9 +332,9 @@ export default function EditProperty() {
         setFormData(processedData);
         setRawValues(rawDataValues);
         setIsLoading(false);
-      } catch (error) {
-        console.error("Error fetching property:", error);
-        setLoadingError(error.message || "Failed to load property data");
+        } catch (error) {
+          log.error(`[EditProperty:fetchPropertyData] > [Error]: ${error.message}`);
+          setLoadingError(error.message || "Failed to load property data");
         setIsLoading(false);
       }
     };
@@ -588,14 +591,16 @@ export default function EditProperty() {
         form.append("cmaFile", cmaFile);
       }
 
-      console.log("Submitting update for property:", propertyId);
+      log.info(
+        `[EditProperty:handleSave] > [Request]: submitting update for property=${propertyId}`
+      );
       await updateProperty(propertyId, form);
 
       setDialogMessage("Property updated successfully!");
       setDialogType("success");
       setDialogOpen(true);
     } catch (error) {
-      console.error("Error updating property:", error);
+      log.error(`[EditProperty:handleSave] > [Error]: ${error.message}`);
       const errorMsg = error.response?.data?.message || error.message || "Unknown error";
       setDialogMessage(`Failed to update property: ${errorMsg}`);
       setDialogType("warning");
