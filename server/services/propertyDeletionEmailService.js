@@ -2,6 +2,9 @@
 import nodemailer from "nodemailer";
 import { connectMongo } from "../config/mongoose.js";
 import { Settings } from "../models/index.js";
+import { getLogger } from "../utils/logger.js";
+
+const log = getLogger("propertyDeletionEmailService");
 
 /**
  * Send property deletion request email to admin
@@ -52,9 +55,13 @@ export const sendPropertyDeletionRequest = async ({
       html: emailHtml,
     });
 
-    console.log("Property deletion request email sent successfully");
+    log.info(
+      "[propertyDeletionEmailService:sendPropertyDeletionRequest] > [Response]: email sent"
+    );
   } catch (error) {
-    console.error("Error sending property deletion email:", error);
+    log.error(
+      `[propertyDeletionEmailService:sendPropertyDeletionRequest] > [Error]: ${error?.message || error}`
+    );
     throw error;
   }
 };

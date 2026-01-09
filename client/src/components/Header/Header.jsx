@@ -30,6 +30,9 @@ import PermissionGuard from "@/components/Auth0/PermissionGuard";
 import { PERMISSIONS } from "@/utils/permissions";
 import { useVipBuyer } from "@/utils/VipBuyerContext";
 import { useUserProfileApi } from "@/utils/api";
+import { getLogger } from "@/utils/logger";
+
+const log = getLogger("Header");
 
 const Header = () => {
   const navigate = useNavigate();
@@ -54,10 +57,12 @@ const Header = () => {
       if (isAuthenticated && !isLoading) {
         try {
           const profile = await getUserProfile();
-          console.log("Loaded user profile in Header:", profile);
+          log.info(`Loaded user profile in Header: ${JSON.stringify(profile)}`);
           setDbUser(profile);
         } catch (error) {
-          console.error("Error loading user profile in Header:", error);
+          log.error(
+            `[Header:useEffect] > [Request]: loadUserProfile > [Error]: ${error?.message || error}`
+          );
         }
       }
     };

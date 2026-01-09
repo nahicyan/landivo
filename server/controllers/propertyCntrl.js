@@ -6,6 +6,9 @@ import { PropertyRow, Property, User } from "../models/index.js";
 import path from "path";
 import fs from "fs";
 import { fileURLToPath } from "url";
+import { getLogger } from "../utils/logger.js";
+
+const log = getLogger("propertyCntrl");
 
 // For ESM compatibility
 const __filename = fileURLToPath(import.meta.url);
@@ -40,7 +43,7 @@ const managePropertyRowsDisplayOrder = async (propertyId, propertyRows) => {
           { $set: { displayOrder: updatedOrder } }
         );
       }
-      console.log(`Removed property ${propertyId} from row ${rowId}`);
+      log.info(`Removed property ${propertyId} from row ${rowId}`);
     }
 
     // 3) Now handle all the additions/reorders
@@ -49,7 +52,7 @@ const managePropertyRowsDisplayOrder = async (propertyId, propertyRows) => {
         const { rowId, position } = rowSelection;
 
         if (!rowId) {
-          console.warn("Invalid row ID provided");
+          log.warn("Invalid row ID provided");
           continue;
         }
 
@@ -60,7 +63,7 @@ const managePropertyRowsDisplayOrder = async (propertyId, propertyRows) => {
           : null;
 
         if (!row) {
-          console.warn(`Property row with ID ${rowId} not found`);
+          log.warn(`Property row with ID ${rowId} not found`);
           continue;
         }
 
@@ -84,11 +87,11 @@ const managePropertyRowsDisplayOrder = async (propertyId, propertyRows) => {
           );
         }
 
-        console.log(`Updated display order for property ${propertyId} in row ${rowId} to position ${desiredPosition}`);
+        log.info(`Updated display order for property ${propertyId} in row ${rowId} to position ${desiredPosition}`);
       }
     }
   } catch (error) {
-    console.error("Error managing property rows display order:", error);
+    log.error("Error managing property rows display order:", error);
   }
 };
 
@@ -108,13 +111,13 @@ const manageFeaturedDisplayOrder = async (propertyId, isFeatured, displayPositio
         { _id: featuredRow._id },
         { $set: { displayOrder: updatedOrder } }
       );
-      console.log(`Removed property ${propertyId} from featured display order`);
+      log.info(`Removed property ${propertyId} from featured display order`);
       return;
     }
 
     // If property is featured but no row exists (edge case), just return
     if (isFeatured && !featuredRow) {
-      console.warn("Failed to create featured row");
+      log.warn("Failed to create featured row");
       return;
     }
 
@@ -139,16 +142,16 @@ const manageFeaturedDisplayOrder = async (propertyId, isFeatured, displayPositio
       { $set: { displayOrder: currentOrder } }
     );
 
-    console.log(`Updated featured display order for property ${propertyId} to position ${desiredPosition}`);
+    log.info(`Updated featured display order for property ${propertyId} to position ${desiredPosition}`);
   } catch (error) {
-    console.error("Error managing featured display order:", error);
+    log.error("Error managing featured display order:", error);
   }
 };
 
 // Get All Properties
 export const getAllProperties = asyncHandler(async (req, res) => {
   try {
-    console.log(
+    log.info(
       `[propertyCntrl:getAllProperties] > [Request]: query=${JSON.stringify(
         req.query || {}
       )}`
@@ -165,12 +168,12 @@ export const getAllProperties = asyncHandler(async (req, res) => {
       createdBy: property.createdById || null,
       updatedBy: property.updatedById || null,
     }));
-    console.log(
+    log.info(
       `[propertyCntrl:getAllProperties] > [Response]: count=${responsePayload.length}`
     );
     res.status(200).send(responsePayload);
   } catch (error) {
-    console.error("Error fetching properties:", error);
+    log.error("Error fetching properties:", error);
     res.status(500).send({
       message: "An error occurred while fetching properties",
       error: error.message,
@@ -201,7 +204,7 @@ export const getProperty = asyncHandler(async (req, res) => {
       updatedBy: property.updatedById || null,
     });
   } catch (err) {
-    console.error("Error fetching property:", err);
+    log.error("Error fetching property:", err);
     res.status(500).send({
       message: "An error occurred while fetching the property",
       error: err.message,
@@ -211,7 +214,7 @@ export const getProperty = asyncHandler(async (req, res) => {
 
 // Update a Property
 export const updateProperty = asyncHandler(async (req, res) => {
-  console.log("Received updateProperty request body:", req.body);
+  log.info("Received updateProperty request body:", req.body);
   try {
     const { id } = req.params;
     let { imageUrls, videoUrls, viewCount, removeCmaFile, propertyRows, featuredPosition, profileId, toggleObscure, ...restOfData } = req.body;
@@ -354,10 +357,10 @@ export const updateProperty = asyncHandler(async (req, res) => {
         try {
           if (fs.existsSync(oldFilePath)) {
             fs.unlinkSync(oldFilePath);
-            console.log(`Deleted old CMA file: ${oldFilePath}`);
+            log.info(`Deleted old CMA file: ${oldFilePath}`);
           }
         } catch (err) {
-          console.error(`Error deleting old CMA file: ${err.message}`);
+          log.error(`Error deleting old CMA file: ${err.message}`);
         }
       }
       // Set the path to null for database update
@@ -373,10 +376,10 @@ export const updateProperty = asyncHandler(async (req, res) => {
         try {
           if (fs.existsSync(oldFilePath)) {
             fs.unlinkSync(oldFilePath);
-            console.log(`Deleted old CMA file: ${oldFilePath}`);
+            log.info(`Deleted old CMA file: ${oldFilePath}`);
           }
         } catch (err) {
-          console.error(`Error deleting old CMA file: ${err.message}`);
+          log.error(`Error deleting old CMA file: ${err.message}`);
         }
       }
     }
@@ -433,7 +436,7 @@ export const updateProperty = asyncHandler(async (req, res) => {
         if (typeof propertyRows === "string") {
           // Handle malformed [object Object] string
           if (propertyRows === "[object Object]" || propertyRows.startsWith("[object Object]")) {
-            console.log("Received malformed propertyRows data. Attempting to extract from selected rows data.");
+            log.info("Received malformed propertyRows data. Attempting to extract from selected rows data.");
 
             // Try to recover using featuredPosition array if available
             if (featuredPosition && (Array.isArray(featuredPosition) || typeof featuredPosition === "string")) {
@@ -457,7 +460,7 @@ export const updateProperty = asyncHandler(async (req, res) => {
             try {
               parsedPropertyRows = JSON.parse(propertyRows);
             } catch (e) {
-              console.error("Error parsing propertyRows JSON:", e);
+              log.error("Error parsing propertyRows JSON:", e);
               // Fallback to empty array
               parsedPropertyRows = [];
             }
@@ -468,7 +471,7 @@ export const updateProperty = asyncHandler(async (req, res) => {
           parsedPropertyRows = Array.isArray(propertyRows) ? propertyRows : [propertyRows];
         }
       } catch (error) {
-        console.error("Error parsing propertyRows:", error);
+        log.error("Error parsing propertyRows:", error);
       }
     }
 
@@ -493,7 +496,7 @@ export const updateProperty = asyncHandler(async (req, res) => {
       ...updatedProperty,
     });
   } catch (error) {
-    console.error("Error updating property:", error);
+    log.error("Error updating property:", error);
 
     return res.status(500).json({
       message: "Failed to update property",
@@ -525,7 +528,7 @@ export const getPropertyImages = asyncHandler(async (req, res) => {
       images: property.imageUrls,
     });
   } catch (error) {
-    console.error("Error fetching property images:", error);
+    log.error("Error fetching property images:", error);
     res.status(500).json({
       message: "Failed to retrieve images",
       error: error.message,
@@ -556,7 +559,7 @@ export const getPropertyVideos = asyncHandler(async (req, res) => {
       videos: property.videoUrls,
     });
   } catch (error) {
-    console.error("Error fetching property videos:", error);
+    log.error("Error fetching property videos:", error);
     res.status(500).json({
       message: "Failed to retrieve videos",
       error: error.message,
@@ -566,7 +569,7 @@ export const getPropertyVideos = asyncHandler(async (req, res) => {
 
 // Create Property with Multiple Files
 export const createPropertyWithMultipleFiles = asyncHandler(async (req, res) => {
-  console.log("This is creation request body: ", req.body);
+  log.info("This is creation request body: ", req.body);
   try {
     // Get the authenticated user's ID from the req object (set by middleware)
     const createdById = req.userId;
@@ -738,7 +741,7 @@ export const createPropertyWithMultipleFiles = asyncHandler(async (req, res) => 
           landTypeArray = landType;
         }
       } catch (error) {
-        console.error("Error processing landType:", error);
+        log.error("Error processing landType:", error);
         landTypeArray = typeof landType === "string" ? [landType] : [];
       }
     }
@@ -857,7 +860,7 @@ export const createPropertyWithMultipleFiles = asyncHandler(async (req, res) => 
         if (typeof propertyRows === "string") {
           // Handle malformed [object Object] string
           if (propertyRows === "[object Object]" || propertyRows.startsWith("[object Object]")) {
-            console.log("Received malformed propertyRows data. Attempting to extract from featuredPosition array.");
+            log.info("Received malformed propertyRows data. Attempting to extract from featuredPosition array.");
 
             // Try to recover using featuredPosition array if available
             if (featuredPosition && (Array.isArray(featuredPosition) || typeof featuredPosition === "string")) {
@@ -881,7 +884,7 @@ export const createPropertyWithMultipleFiles = asyncHandler(async (req, res) => 
             try {
               parsedPropertyRows = JSON.parse(propertyRows);
             } catch (e) {
-              console.error("Error parsing propertyRows JSON:", e);
+              log.error("Error parsing propertyRows JSON:", e);
               // Fallback to empty array
               parsedPropertyRows = [];
             }
@@ -892,7 +895,7 @@ export const createPropertyWithMultipleFiles = asyncHandler(async (req, res) => 
           parsedPropertyRows = Array.isArray(propertyRows) ? propertyRows : [propertyRows];
         }
       } catch (error) {
-        console.error("Error parsing propertyRows:", error);
+        log.error("Error parsing propertyRows:", error);
       }
     }
 
@@ -915,7 +918,7 @@ export const createPropertyWithMultipleFiles = asyncHandler(async (req, res) => 
       },
     });
   } catch (err) {
-    console.error("Error creating property:", err);
+    log.error("Error creating property:", err);
     res.status(500).json({
       message: `Failed to create property: ${err.message}`,
       error: err.message,
@@ -985,7 +988,7 @@ export const getPropertyRows = asyncHandler(async (req, res) => {
 
     res.status(200).json(rowsWithIds);
   } catch (error) {
-    console.error("Error fetching property rows:", error);
+    log.error("Error fetching property rows:", error);
     res.status(500).json({ message: "Error fetching property rows", error: error.message });
   }
 });
@@ -1029,7 +1032,7 @@ export const getCmaDocument = asyncHandler(async (req, res) => {
     // Send the file
     res.sendFile(filePath);
   } catch (error) {
-    console.error("Error fetching CMA document:", error);
+    log.error("Error fetching CMA document:", error);
     res.status(500).json({
       message: "Failed to retrieve CMA document",
       error: error.message,

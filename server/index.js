@@ -23,8 +23,12 @@ import { automationClosingDateRoute } from "./routes/automationClosingDateRoute.
 import { pdfMergeRoute } from "./routes/pdfMergeRoute.js";
 import { ensureUploadDirectories } from "./middlewares/uploadMiddleware.js";
 import { connectMongo } from "./config/mongoose.js";
+import { setLogLevel, getLogger } from "./utils/logger.js";
 
 dotenv.config();
+
+const log = getLogger("serverIndex");
+setLogLevel(process.env.LOG_LEVEL || "INFO");
 
 const app = express();
 const PORT = process.env.PORT || 8200;
@@ -122,7 +126,9 @@ app.use("/uploads", express.static(path.join(__dirname, "uploads")));
 
 // Auth test route
 app.get("/auth/test-jwt", jwtCheck, extractUserFromToken, (req, res) => {
-  console.log("Authenticated user:", req.user);
+  log.info(
+    `[serverIndex:authTestJwt] > [Request]: jwtCheck > [Response]: user=${req.user?.sub || "unknown"}`
+  );
   res.json({
     message: "Authentication successful",
     user: req.user,
@@ -134,12 +140,12 @@ const startServer = async () => {
     await connectMongo();
     initScheduledTasks();
     app.listen(PORT, () => {
-      console.log("=".repeat(50));
-      console.log(`Server started on port ${PORT}`);
-      console.log("=".repeat(50));
+      log.info("=".repeat(50));
+      log.info(`[startServer] > [Response]: Server started on port ${PORT}`);
+      log.info("=".repeat(50));
     });
   } catch (error) {
-    console.error("Failed to start server:", error);
+    log.error(`[startServer] > [Error]: Failed to start server: ${error.message}`);
     process.exit(1);
   }
 };

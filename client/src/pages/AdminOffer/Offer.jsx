@@ -22,6 +22,9 @@ import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { InfoCircledIcon, CheckCircledIcon, CrossCircledIcon } from "@radix-ui/react-icons";
+import { getLogger } from "@/utils/logger";
+
+const log = getLogger("AdminOffer");
 
 export default function Offer({ propertyData }) {
   if (!propertyData) {
@@ -122,7 +125,9 @@ export default function Offer({ propertyData }) {
           const offerForThisProperty = response.offers.find((offer) => offer.propertyId === propertyData.id);
 
           if (offerForThisProperty) {
-            console.log("Found existing offer:", offerForThisProperty);
+            log.info(
+              `[AdminOffer:checkForExistingOffer] > [Response]: found existing offer > [Comment]: propertyId=${offerForThisProperty.propertyId} status=${offerForThisProperty.offerStatus}`
+            );
             setExistingOffer(offerForThisProperty);
             setHasExistingOffer(true);
 
@@ -147,7 +152,7 @@ export default function Offer({ propertyData }) {
         }
       }
     } catch (error) {
-      console.error("Error checking for existing offers:", error);
+      log.error(`[AdminOffer:checkForExistingOffer] > [Error]: ${error.message}`);
     }
   };
 
@@ -162,11 +167,9 @@ export default function Offer({ propertyData }) {
     if (!phone && buyer.phone) setPhone(formatPhoneNumber(buyer.phone));
     if (!buyerType && buyer.buyerType) setBuyerType(buyer.buyerType);
 
-    console.log("Auto-populated buyer data:", {
-      firstName: buyer.firstName,
-      lastName: buyer.lastName,
-      buyerType: buyer.buyerType,
-    });
+    log.info(
+      `[AdminOffer:populateBuyerData] > [Response]: auto-populated user > [Comment]: firstName=${buyer.firstName} lastName=${buyer.lastName} buyerType=${buyer.buyerType}`
+    );
   };
 
   // When email or phone changes, check for existing buyer and offers
@@ -224,8 +227,7 @@ export default function Offer({ propertyData }) {
           }
         }
       } catch (error) {
-        // It's okay if we don't find a buyer - just log and continue
-        console.log("No buyer found with the provided information");
+        log.info(`[AdminOffer:handleIdentifierChange] > [Response]: no buyer found, continuing`);
       }
     }
   };
@@ -291,7 +293,7 @@ export default function Offer({ propertyData }) {
       }
       return true;
     } catch (error) {
-      console.error("Phone validation error:", error);
+      log.error(`[AdminOffer:validatePhone] > [Error]: ${error.message}`);
       return false;
     }
   };
@@ -425,7 +427,12 @@ export default function Offer({ propertyData }) {
       auth0Id: user?.sub || null,
     };
 
-    console.log("Submitting offer with data:", offerData);
+    log.info(
+      `[AdminOffer:handleSubmit] > [Request]: submitting offer > [Comment]: ${JSON.stringify({
+        propertyId: offerData.propertyId,
+        offeredPrice: offerData.offeredPrice,
+      })}`
+    );
 
     try {
       // Use centralized API function to make offer
@@ -450,6 +457,7 @@ export default function Offer({ propertyData }) {
       setOfferStatus("PENDING");
       setBuyerMessage("");
     } catch (error) {
+      log.error(`[AdminOffer:handleSubmit] > [Error]: ${error.message}`);
       setDialogMessage("There was an error processing your offer. Please try again.");
       setDialogType("warning");
       setDialogOpen(true);

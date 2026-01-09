@@ -1,5 +1,6 @@
 import dotenv from "dotenv";
 import mongoose, { connectMongo } from "../config/mongoose.js";
+import { getLogger } from "../utils/logger.js";
 
 dotenv.config();
 
@@ -9,6 +10,7 @@ process.env.DATABASE_URL =
 
 const fromCollection = "residencies";
 const toCollection = "properties";
+const log = getLogger("migrateResidenciesToProperties");
 
 const collectionExists = async (name) => {
   const result = await mongoose.connection.db
@@ -18,40 +20,41 @@ const collectionExists = async (name) => {
 };
 
 const main = async () => {
-  console.log("[migrate-residencies-to-properties] Starting");
+  log.info("[migrateResidenciesToProperties:main] > [Request]: start");
   await connectMongo();
 
   const hasResidencies = await collectionExists(fromCollection);
   const hasProperties = await collectionExists(toCollection);
 
-  console.log("[migrate-residencies-to-properties] Found", {
-    residencies: hasResidencies,
-    properties: hasProperties,
-  });
+  log.info(
+    `[migrateResidenciesToProperties:main] > [Response]: residencies=${hasResidencies}, properties=${hasProperties}`
+  );
 
   if (!hasResidencies) {
-    console.log(
-      "[migrate-residencies-to-properties] No residencies collection found. Nothing to do."
+    log.info(
+      "[migrateResidenciesToProperties:main] > [Response]: no residencies collection found"
     );
     return;
   }
 
   if (hasProperties) {
-    console.log(
-      "[migrate-residencies-to-properties] Properties collection already exists. Skipping rename."
+    log.info(
+      "[migrateResidenciesToProperties:main] > [Response]: properties collection exists, skipping rename"
     );
     return;
   }
 
   await mongoose.connection.db.renameCollection(fromCollection, toCollection);
-  console.log(
-    `[migrate-residencies-to-properties] Renamed ${fromCollection} -> ${toCollection}`
+  log.info(
+    `[migrateResidenciesToProperties:main] > [Response]: renamed ${fromCollection} -> ${toCollection}`
   );
 };
 
 main()
   .catch((error) => {
-    console.error("[migrate-residencies-to-properties] Failed", error);
+    log.error(
+      `[migrateResidenciesToProperties:main] > [Error]: ${error?.message || error}`
+    );
     process.exitCode = 1;
   })
   .finally(async () => {

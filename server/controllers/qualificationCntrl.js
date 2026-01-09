@@ -5,6 +5,9 @@ import mongoose from "../config/mongoose.js";
 import { connectMongo } from "../config/mongoose.js";
 import { Buyer, Qualification, Property, Settings } from "../models/index.js";
 import { handleFinanceQualificationEmailList } from "../services/qualification/financeQualificationEmailListService.js";
+import { getLogger } from "../utils/logger.js";
+
+const log = getLogger("qualificationCntrl");
 
 const toObjectId = (value) => {
   if (!value || !mongoose.Types.ObjectId.isValid(value)) return null;
@@ -68,7 +71,7 @@ export const createQualification = asyncHandler(async (req, res) => {
       buyerType
     });
     
-    console.log(`Qualification for buyer: ${buyer.id}, ${buyer.firstName} ${buyer.lastName}`);
+    log.info(`Qualification for buyer: ${buyer.id}, ${buyer.firstName} ${buyer.lastName}`);
 
     // Check for disqualifying factors
     const disqualifiers = [];
@@ -159,10 +162,10 @@ export const createQualification = asyncHandler(async (req, res) => {
           property,
           "Finance Qualification"
         );
-        console.log("Finance qualification email list result:", emailListResult);
+        log.info("Finance qualification email list result:", emailListResult);
       }
     } catch (emailListError) {
-      console.error("Finance qualification email list management failed:", emailListError);
+      log.error("Finance qualification email list management failed:", emailListError);
       // Don't fail qualification if email list fails
     }
 
@@ -185,7 +188,7 @@ export const createQualification = asyncHandler(async (req, res) => {
       }
     });
   } catch (error) {
-    console.error("Error creating qualification:", error);
+    log.error("Error creating qualification:", error);
     res.status(500).json({
       message: "Failed to submit qualification",
       error: error.message
@@ -205,35 +208,35 @@ async function findOrCreateBuyer(buyerData) {
   
   // First try to find buyer by Auth0 ID if provided
   if (auth0Id) {
-    console.log(`Attempting to find buyer by Auth0 ID: ${auth0Id}`);
+    log.info(`Attempting to find buyer by Auth0 ID: ${auth0Id}`);
     buyer = await Buyer.findOne({ auth0Id });
     
     // If found by Auth0 ID, return early
     if (buyer) {
       buyerFoundMethod = 'auth0Id';
-      console.log(`Buyer found by Auth0 ID: ${auth0Id}, buyerId: ${buyer.id}`);
+      log.info(`Buyer found by Auth0 ID: ${auth0Id}, buyerId: ${buyer.id}`);
       return buyer;
     }
   }
   
   // If not found by Auth0 ID, try email or phone
-  console.log(`Attempting to find buyer by email: ${email} or phone: ${phone}`);
+  log.info(`Attempting to find buyer by email: ${email} or phone: ${phone}`);
   buyer = await Buyer.findOne({
     $or: [{ email: email.toLowerCase() }, { phone }],
   });
 
   if (buyer) {
     buyerFoundMethod = buyer.email.toLowerCase() === email.toLowerCase() ? 'email' : 'phone';
-    console.log(`Buyer found by ${buyerFoundMethod}: buyerId: ${buyer.id}`);
+    log.info(`Buyer found by ${buyerFoundMethod}: buyerId: ${buyer.id}`);
     
     // If buyer found by email/phone but doesn't have Auth0 ID, update with Auth0 ID
     if (auth0Id && !buyer.auth0Id) {
-      console.log(`Updating existing buyer (${buyer.id}) with Auth0 ID: ${auth0Id}`);
+      log.info(`Updating existing buyer (${buyer.id}) with Auth0 ID: ${auth0Id}`);
       buyer = await Buyer.findByIdAndUpdate(buyer._id, { auth0Id }, { new: true });
     }
   } else {
     // Create a new buyer if not found
-    console.log(`No existing buyer found. Creating new buyer with email: ${email}, phone: ${phone}${auth0Id ? `, auth0Id: ${auth0Id}` : ''}`);
+    log.info(`No existing buyer found. Creating new buyer with email: ${email}, phone: ${phone}${auth0Id ? `, auth0Id: ${auth0Id}` : ''}`);
     buyer = await Buyer.create({
       email: email.toLowerCase(),
       phone,
@@ -247,7 +250,7 @@ async function findOrCreateBuyer(buyerData) {
       auth0Id: auth0Id || null,
     });
     buyerFoundMethod = 'created';
-    console.log(`New buyer created with ID: ${buyer.id}`);
+    log.info(`New buyer created with ID: ${buyer.id}`);
   }
   
   return buyer;
@@ -270,7 +273,7 @@ export const getQualificationsForProperty = asyncHandler(async (req, res) => {
       }))
     );
   } catch (error) {
-    console.error("Error fetching qualifications:", error);
+    log.error("Error fetching qualifications:", error);
     res.status(500).json({
       message: "Failed to fetch qualifications",
       error: error.message
@@ -337,7 +340,7 @@ export const getAllQualifications = asyncHandler(async (req, res) => {
       }
     });
   } catch (error) {
-    console.error("Error fetching qualifications:", error);
+    log.error("Error fetching qualifications:", error);
     res.status(500).json({
       message: "Failed to fetch qualifications",
       error: error.message
@@ -354,19 +357,19 @@ async function sendQualificationEmail(qualification) {
     
     // If settings don't exist or financing emails are disabled, skip sending
     if (!settings || !settings.enableFinancingEmails) {
-      console.log('Financing email notifications are disabled in settings');
+      log.info('Financing email notifications are disabled in settings');
       return;
     }
     
     // Check if we have recipients
     if (!settings.financingEmailRecipients || settings.financingEmailRecipients.length === 0) {
-      console.log('No financing email recipients configured');
+      log.info('No financing email recipients configured');
       return;
     }
     
     // Check if we have SMTP configuration
     if (!settings.smtpServer || !settings.smtpPort || !settings.smtpUser || !settings.smtpPassword) {
-      console.log('Incomplete SMTP configuration');
+      log.info('Incomplete SMTP configuration');
       return;
     }
     
@@ -463,8 +466,8 @@ async function sendQualificationEmail(qualification) {
     };
 
     await transporter.sendMail(mailOptions);
-    console.log(`Qualification notification email sent to ${settings.financingEmailRecipients.length} recipients`);
+    log.info(`Qualification notification email sent to ${settings.financingEmailRecipients.length} recipients`);
   } catch (error) {
-    console.error("Error sending qualification email:", error);
+    log.error("Error sending qualification email:", error);
   }
 }

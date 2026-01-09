@@ -2,12 +2,21 @@
 import { useState } from "react";
 import { sendPropertyDiscountCampaign } from "@/utils/api";
 import { toast } from "react-toastify";
+import { getLogger } from "@/utils/logger";
+
+const log = getLogger("useDiscountCampaignSender");
 
 export function useDiscountCampaignSender(propertyId, propertyData) {
+  log.info(
+    `[useDiscountCampaignSender] > [Init]: propertyId=${propertyId}`
+  );
   const [campaignSubject, setCampaignSubject] = useState("");
   const [sendingCampaign, setSendingCampaign] = useState(false);
 
   const handleSendCampaign = async (sendType) => {
+    log.info(
+      `[useDiscountCampaignSender] > [Request]: start sendType=${sendType}`
+    );
     if (!campaignSubject.trim()) {
       toast.error("Please enter a subject line");
       return false;
@@ -29,6 +38,9 @@ export function useDiscountCampaignSender(propertyId, propertyData) {
       };
 
       const response = await sendPropertyDiscountCampaign(payload);
+      log.info(
+        `[useDiscountCampaignSender] > [Response]: success sendType=${sendType}`
+      );
 
       if (sendType === "mailivo" && response.redirectUrl) {
         window.location.href = response.redirectUrl;
@@ -38,7 +50,7 @@ export function useDiscountCampaignSender(propertyId, propertyData) {
       toast.success("Discount notification sent successfully!");
       return true;
     } catch (error) {
-      console.error("Error sending discount campaign:", error);
+      log.error(`[useDiscountCampaignSender] > [Error]: ${error.message}`);
       toast.error("Failed to send discount notification");
       return false;
     } finally {

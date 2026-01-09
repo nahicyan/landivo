@@ -3,6 +3,9 @@ import { toast } from "react-toastify";
 import { Button } from "@/components/ui/button";
 import { RefreshCwIcon, ServerIcon } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { getLogger } from "@/utils/logger";
+
+const log = getLogger("ServerOperations");
 
 export default function ServerOperations() {
   const [isLoading, setIsLoading] = useState(false);
@@ -12,7 +15,9 @@ export default function ServerOperations() {
     
     // Simulate API call
     setTimeout(() => {
-      console.log("Server action executed:", action);
+      log.info(
+        `[ServerOperations:handleServerAction] > [Action]: ${action}`
+      );
       toast.success(`Server ${action} completed successfully`);
       setIsLoading(false);
     }, 2000);

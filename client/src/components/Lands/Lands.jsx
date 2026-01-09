@@ -5,6 +5,9 @@ import { useNavigate } from "react-router-dom";
 import useProperties from "../../components/hooks/useProperties.js";
 import DisplayRow, { createFilter } from "../../components/DisplayRow/DisplayRow";
 import { getPropertyRows } from "@/utils/api.js";
+import { getLogger } from "@/utils/logger";
+
+const log = getLogger("Lands");
 
 // Simple variants for fade-up animation
 const fadeUp = {
@@ -33,9 +36,9 @@ export const Lands = () => {
       }
       setLoadingFeatured(true);
       try {
-        console.log("[Lands:useEffect] > [Request]: getPropertyRows(homepage)");
+        log.info("[Lands:useEffect] > [Request]: getPropertyRows(homepage)");
         const rows = await getPropertyRows("homepage");
-        console.log(
+        log.info(
           `[Lands:useEffect] > [Response]: fetchedRows=${
             Array.isArray(rows) ? rows.length : "non-array"
           }`
@@ -44,7 +47,7 @@ export const Lands = () => {
           ? rows.find((row) => row.rowType === "homepage") || rows[0]
           : null;
 
-        console.log(
+        log.info(
           `[Lands:useEffect] > [Computed]: homepageRow=${homepageRow ? homepageRow.name || homepageRow.rowType || homepageRow.id : "<none>"}`
         );
         if (homepageRow && Array.isArray(homepageRow.displayOrder)) {
@@ -55,7 +58,7 @@ export const Lands = () => {
             return property && property.featured === "Featured";
           });
 
-          console.log(
+          log.info(
             `[Lands:useEffect] > [Computed]: featuredIds=${featuredIds.length}`
           );
           setFeaturedPropertyIds(featuredIds);

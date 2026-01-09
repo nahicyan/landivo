@@ -2,6 +2,9 @@
 import nodemailer from "nodemailer";
 import { connectMongo } from "../../config/mongoose.js";
 import { Settings } from "../../models/index.js";
+import { getLogger } from "../../utils/logger.js";
+
+const log = getLogger("offerEmailService");
 
 /**
  * Send offer notification email using database settings
@@ -14,17 +17,17 @@ export const sendOfferNotification = async (subject, body) => {
     
     // Check if offer emails are enabled and properly configured
     if (!settings || !settings.enableOfferEmails) {
-      console.log('Offer email notifications are disabled in settings');
+      log.info("[offerEmailService:sendOfferNotification] > [Response]: disabled in settings");
       return;
     }
     
     if (!settings.offerEmailRecipients || settings.offerEmailRecipients.length === 0) {
-      console.log('No offer email recipients configured');
+      log.info("[offerEmailService:sendOfferNotification] > [Response]: no recipients configured");
       return;
     }
     
     if (!settings.smtpServer || !settings.smtpPort || !settings.smtpUser || !settings.smtpPassword) {
-      console.log('Incomplete SMTP configuration');
+      log.info("[offerEmailService:sendOfferNotification] > [Response]: incomplete SMTP configuration");
       return;
     }
     
@@ -51,9 +54,13 @@ export const sendOfferNotification = async (subject, body) => {
     };
     
     await transporter.sendMail(mailOptions);
-    console.log(`Offer notification sent to ${settings.offerEmailRecipients.length} recipients: ${subject}`);
+    log.info(
+      `[offerEmailService:sendOfferNotification] > [Response]: sent to count=${settings.offerEmailRecipients.length}, subject=${subject}`
+    );
   } catch (error) {
-    console.error("Error sending offer notification email:", error);
+    log.error(
+      `[offerEmailService:sendOfferNotification] > [Error]: ${error?.message || error}`
+    );
   }
 };
 

@@ -3,6 +3,9 @@ import asyncHandler from "express-async-handler";
 import nodemailer from "nodemailer";
 import { connectMongo } from "../config/mongoose.js";
 import { Settings } from "../models/index.js";
+import { getLogger } from "../utils/logger.js";
+
+const log = getLogger("settingsCntrl");
 
 /**
  * Get all settings or create default if none exist
@@ -39,7 +42,7 @@ export const getSettings = asyncHandler(async (req, res) => {
 
     res.status(200).json(safeSettings);
   } catch (error) {
-    console.error("Error fetching settings:", error);
+    log.error("Error fetching settings:", error);
     res.status(500).json({
       message: "An error occurred while fetching settings",
       error: error.message,
@@ -114,7 +117,7 @@ export const updateSettings = asyncHandler(async (req, res) => {
       settings: safeSettings,
     });
   } catch (error) {
-    console.error("Error updating settings:", error);
+    log.error("Error updating settings:", error);
     res.status(500).json({
       message: "An error occurred while updating settings",
       error: error.message,
@@ -209,7 +212,7 @@ export const testSmtpConnection = asyncHandler(async (req, res) => {
       message: `SMTP test successful! Email sent to ${testRecipient}`,
     });
   } catch (error) {
-    console.error("SMTP connection test failed:", error);
+    log.error("SMTP connection test failed:", error);
 
     // Provide more descriptive error messages based on common issues
     let errorMessage = "SMTP connection failed";

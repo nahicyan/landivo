@@ -11,6 +11,9 @@ import { ShieldIcon } from "lucide-react";
 import { 
   Card, CardContent, CardDescription, CardHeader, CardTitle 
 } from "@/components/ui/card";
+import { getLogger } from "@/utils/logger";
+
+const log = getLogger("Auth0Settings");
 
 export default function Auth0Settings() {
   const [isLoading, setIsLoading] = useState(false);
@@ -28,7 +31,7 @@ export default function Auth0Settings() {
     
     // Simulate API call
     setTimeout(() => {
-      console.log("Auth0 settings updated:", data);
+      log.info(`[Auth0Settings:onAuth0Submit] > [Response]: Auth0 settings updated`);
       toast.success("Auth0 settings updated successfully");
       setIsLoading(false);
     }, 1500);

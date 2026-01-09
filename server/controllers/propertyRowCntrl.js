@@ -3,6 +3,9 @@ import asyncHandler from "express-async-handler";
 import mongoose from "../config/mongoose.js";
 import { connectMongo } from "../config/mongoose.js";
 import { PropertyRow, Property } from "../models/index.js";
+import { getLogger } from "../utils/logger.js";
+
+const log = getLogger("propertyRowCntrl");
 
 const toObjectId = (value) => {
   if (!value || !mongoose.Types.ObjectId.isValid(value)) return null;
@@ -13,9 +16,8 @@ const toObjectId = (value) => {
 export const getPropertyRows = asyncHandler(async (req, res) => {
   try {
     const { rowType } = req.query;
-
-    console.log(
-      `[propertyRowCntrl:getPropertyRows] > [Request]: rowType=${rowType || "<none>"}`
+    log.info(
+      `[propertyRowCntrl:getPropertyRows] > [Request]: rowType=${rowType || "<none>"} > [Comment]: fetching rows`
     );
 
     // Filter by row type if provided
@@ -26,18 +28,14 @@ export const getPropertyRows = asyncHandler(async (req, res) => {
       .sort({ updatedAt: -1 })
       .lean();
 
-    console.log(
-      `[propertyRowCntrl:getPropertyRows] > [Response]: rowsFetched=${propertyRows.length}`
-    );
-
     // If requesting featured rows, also include property details
     if (rowType === "featured" && propertyRows.length > 0) {
       const featuredRow = propertyRows[0];
 
-      console.log(
-        `[propertyRowCntrl:getPropertyRows] > [Response]: featuredRowId=${String(
+      log.info(
+        `[propertyRowCntrl:getPropertyRows] > [Request]: rowType=featured > [Response]: featuredRowId=${String(
           featuredRow._id
-        )}, displayOrderCount=${featuredRow.displayOrder.length}`
+        )} displayOrderCount=${featuredRow.displayOrder.length} > [Comment]: fetching property details`
       );
 
       // Get property details for all IDs in the display order
@@ -61,10 +59,8 @@ export const getPropertyRows = asyncHandler(async (req, res) => {
       );
 
       // Add property details to the response
-      console.log(
-        `[propertyRowCntrl:getPropertyRows] > [Response]: returning featured row with ${
-          propertyDetails.length
-        } propertyDetails`
+      log.info(
+        `[propertyRowCntrl:getPropertyRows] > [Response]: returning featured row with ${propertyDetails.length} propertyDetails`
       );
       return res.status(200).json({
         id: String(featuredRow._id),
@@ -73,8 +69,8 @@ export const getPropertyRows = asyncHandler(async (req, res) => {
       });
     }
 
-    console.log(
-      `[propertyRowCntrl:getPropertyRows] > [Response]: fullRowsReturned=${propertyRows.length}`
+    log.info(
+      `[propertyRowCntrl:getPropertyRows] > [Request]: rowType=${rowType || "<none>"} > [Response]: fullRowsReturned=${propertyRows.length}`
     );
     res.status(200).json(
       propertyRows.map((row) => ({
@@ -83,7 +79,7 @@ export const getPropertyRows = asyncHandler(async (req, res) => {
       }))
     );
   } catch (error) {
-    console.error("Error fetching property rows:", error);
+    log.error(`[propertyRowCntrl:getPropertyRows] > [Error]: ${error.message}`);
     res.status(500).json({ message: "Error fetching property rows", error: error.message });
   }
 });
@@ -93,6 +89,9 @@ export const getPropertyRowById = asyncHandler(async (req, res) => {
   const { id } = req.params;
 
   try {
+    log.info(
+      `[propertyRowCntrl:getPropertyRowById] > [Request]: id=${id} > [Comment]: fetching by ID`
+    );
     await connectMongo();
     const rowId = toObjectId(id);
     if (!rowId) {
@@ -101,6 +100,9 @@ export const getPropertyRowById = asyncHandler(async (req, res) => {
     const propertyRow = await PropertyRow.findById(rowId).lean();
 
     if (!propertyRow) {
+      log.info(
+        `[propertyRowCntrl:getPropertyRowById] > [Request]: id=${id} > [Response]: not found`
+      );
       return res.status(404).json({ message: "Property row not found" });
     }
 
@@ -125,6 +127,11 @@ export const getPropertyRowById = asyncHandler(async (req, res) => {
         })
       );
 
+      log.info(
+        `[propertyRowCntrl:getPropertyRowById] > [Response]: id=${String(
+          propertyRow._id
+        )} displayOrderCount=${propertyRow.displayOrder.length}`
+      );
       return res.status(200).json({
         id: String(propertyRow._id),
         ...propertyRow,
@@ -132,9 +139,12 @@ export const getPropertyRowById = asyncHandler(async (req, res) => {
       });
     }
 
+    log.info(
+      `[propertyRowCntrl:getPropertyRowById] > [Response]: id=${String(propertyRow._id)}`
+    );
     res.status(200).json({ id: String(propertyRow._id), ...propertyRow });
   } catch (error) {
-    console.error("Error fetching property row:", error);
+    log.error(`[propertyRowCntrl:getPropertyRowById] > [Error]: ${error.message}`);
     res.status(500).json({ message: "Error fetching property row", error: error.message });
   }
 });
@@ -142,6 +152,9 @@ export const getPropertyRowById = asyncHandler(async (req, res) => {
 // Create a new property row
 export const createPropertyRow = asyncHandler(async (req, res) => {
   try {
+    log.info(
+      `[propertyRowCntrl:createPropertyRow] > [Request]: name=${req.body.name || "<none>"} rowType=${req.body.rowType || "<none>"}`
+    );
     const { name, rowType, sort, displayOrder } = req.body;
 
     await connectMongo();
@@ -152,9 +165,12 @@ export const createPropertyRow = asyncHandler(async (req, res) => {
       displayOrder: displayOrder || [],
     });
 
+    log.info(
+      `[propertyRowCntrl:createPropertyRow] > [Response]: rowId=${String(propertyRow._id)}`
+    );
     res.status(201).json({ id: String(propertyRow._id), ...propertyRow.toObject() });
   } catch (error) {
-    console.error("Error creating property row:", error);
+    log.error(`[propertyRowCntrl:createPropertyRow] > [Error]: ${error.message}`);
     res.status(500).json({ message: "Error creating property row", error: error.message });
   }
 });
@@ -164,6 +180,9 @@ export const updatePropertyRow = asyncHandler(async (req, res) => {
   const { id } = req.params;
 
   try {
+    log.info(
+      `[propertyRowCntrl:updatePropertyRow] > [Request]: id=${id} updates=${JSON.stringify(req.body)}`
+    );
     const { name, rowType, sort, displayOrder } = req.body;
 
     const updateData = {};
@@ -187,10 +206,12 @@ export const updatePropertyRow = asyncHandler(async (req, res) => {
       return res.status(404).json({ message: "Property row not found" });
     }
 
+    log.info(
+      `[propertyRowCntrl:updatePropertyRow] > [Response]: rowId=${String(updatedRow._id)}`
+    );
     res.status(200).json({ id: String(updatedRow._id), ...updatedRow });
   } catch (error) {
-    console.error("Error updating property row:", error);
-
+    log.error(`[propertyRowCntrl:updatePropertyRow] > [Error]: ${error.message}`);
     res.status(500).json({ message: "Error updating property row", error: error.message });
   }
 });
@@ -200,6 +221,7 @@ export const deletePropertyRow = asyncHandler(async (req, res) => {
   const { id } = req.params;
 
   try {
+    log.info(`[propertyRowCntrl:deletePropertyRow] > [Request]: id=${id}`);
     await connectMongo();
     const rowId = toObjectId(id);
     if (!rowId) {
@@ -211,10 +233,12 @@ export const deletePropertyRow = asyncHandler(async (req, res) => {
       return res.status(404).json({ message: "Property row not found" });
     }
 
+    log.info(
+      `[propertyRowCntrl:deletePropertyRow] > [Response]: rowId=${id} deleted`
+    );
     res.status(200).json({ message: "Property row deleted successfully" });
   } catch (error) {
-    console.error("Error deleting property row:", error);
-
+    log.error(`[propertyRowCntrl:deletePropertyRow] > [Error]: ${error.message}`);
     res.status(500).json({ message: "Error deleting property row", error: error.message });
   }
 });

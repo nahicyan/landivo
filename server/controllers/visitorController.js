@@ -3,6 +3,9 @@ import asyncHandler from "express-async-handler";
 import mongoose from "../config/mongoose.js";
 import { connectMongo } from "../config/mongoose.js";
 import { Property, Visit, Visitor, VisitorStat } from "../models/index.js";
+import { getLogger } from "../utils/logger.js";
+
+const log = getLogger("visitorController");
 
 const toObjectId = (value) => {
   if (!value || !mongoose.Types.ObjectId.isValid(value)) return null;
@@ -68,7 +71,7 @@ export const trackVisit = asyncHandler(async (req, res) => {
         });
       } catch (err) {
         if (err.code === 11000) {
-          console.warn(
+          log.warn(
             `[visitorController:trackVisit] > [Request]: duplicate visitorId=${visitorId} during insert`
           );
           visitor = await Visitor.findOne({ visitorId });
@@ -108,7 +111,7 @@ export const trackVisit = asyncHandler(async (req, res) => {
           );
         }
       } catch (err) {
-        console.error("Error updating previous session:", err);
+        log.error("Error updating previous session:", err);
       }
     }
 
@@ -143,7 +146,7 @@ export const trackVisit = asyncHandler(async (req, res) => {
         });
       }
     } catch (err) {
-      console.error("Error creating/updating visit:", err);
+      log.error("Error creating/updating visit:", err);
     }
 
     // Update daily stats
@@ -178,7 +181,7 @@ export const trackVisit = asyncHandler(async (req, res) => {
 
     res.status(200).json({ success: true });
   } catch (error) {
-    console.error("Error tracking visit:", error);
+    log.error("Error tracking visit:", error);
     // Return success anyway to not interrupt user experience
     res.status(200).json({ success: true });
   }
@@ -287,7 +290,7 @@ export const getVisitorStats = asyncHandler(async (req, res) => {
                   .lean()
               : null;
           } catch (err) {
-            console.log("Property not found for ID:", propertyId);
+            log.info("Property not found for ID:", propertyId);
           }
 
           return {
@@ -376,7 +379,7 @@ export const getVisitorStats = asyncHandler(async (req, res) => {
       })),
     });
   } catch (error) {
-    console.error("Error fetching visitor stats:", error);
+    log.error("Error fetching visitor stats:", error);
     res.status(500).json({
       message: "An error occurred while fetching visitor statistics",
       error: error.message,
@@ -407,7 +410,7 @@ export const getCurrentVisitors = asyncHandler(async (req, res) => {
 
     res.status(200).json({ currentVisitors: uniqueVisitorCount });
   } catch (error) {
-    console.error("Error fetching current visitors:", error);
+    log.error("Error fetching current visitors:", error);
     res.status(500).json({
       message: "An error occurred while fetching current visitor count",
       error: error.message,

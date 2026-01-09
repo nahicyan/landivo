@@ -3,6 +3,9 @@ import asyncHandler from "express-async-handler";
 import mongoose from "../config/mongoose.js";
 import { connectMongo } from "../config/mongoose.js";
 import { Buyer, Deal, Payment, Property } from "../models/index.js";
+import { getLogger } from "../utils/logger.js";
+
+const log = getLogger("dealCntrl");
 
 const toObjectId = (value) => {
   if (!value || !mongoose.Types.ObjectId.isValid(value)) return null;
@@ -131,7 +134,7 @@ export const createDeal = asyncHandler(async (req, res) => {
       }
     });
   } catch (error) {
-    console.error("Error creating deal:", error);
+    log.error("Error creating deal:", error);
     res.status(500).json({
       message: "An error occurred while creating the deal",
       error: error.message
@@ -224,7 +227,7 @@ export const getAllDeals = asyncHandler(async (req, res) => {
       }
     });
   } catch (error) {
-    console.error("Error fetching deals:", error);
+    log.error("Error fetching deals:", error);
     res.status(500).json({
       message: "An error occurred while fetching deals",
       error: error.message
@@ -292,7 +295,7 @@ export const getDealById = asyncHandler(async (req, res) => {
       payments,
     });
   } catch (error) {
-    console.error("Error fetching deal:", error);
+    log.error("Error fetching deal:", error);
     res.status(500).json({
       message: "An error occurred while fetching the deal",
       error: error.message
@@ -352,7 +355,7 @@ export const updateDeal = asyncHandler(async (req, res) => {
         : updatedDeal
     });
   } catch (error) {
-    console.error("Error updating deal:", error);
+    log.error("Error updating deal:", error);
     res.status(500).json({
       message: "An error occurred while updating the deal",
       error: error.message
@@ -438,7 +441,7 @@ export const recordPayment = asyncHandler(async (req, res) => {
         : updatedPayment
     });
   } catch (error) {
-    console.error("Error recording payment:", error);
+    log.error("Error recording payment:", error);
     res.status(500).json({
       message: "An error occurred while recording the payment",
       error: error.message
@@ -515,7 +518,7 @@ export const getDealFinancialSummary = asyncHandler(async (req, res) => {
     
     res.status(200).json(summary);
   } catch (error) {
-    console.error("Error fetching deal summary:", error);
+    log.error("Error fetching deal summary:", error);
     res.status(500).json({
       message: "An error occurred while fetching the deal summary",
       error: error.message

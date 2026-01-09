@@ -7,6 +7,9 @@ import mongoose from "../config/mongoose.js";
 import { connectMongo } from "../config/mongoose.js";
 import { PdfTemplate } from "../models/index.js";
 import { spawn, spawnSync } from "child_process";
+import { getLogger } from "../utils/logger.js";
+
+const log = getLogger("pdfMergeCntrl");
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -65,10 +68,10 @@ try {
     });
   }
   redis.on("error", (e) => {
-    console.warn("[pdf-merge] Redis error:", e.message);
+    log.warn("[pdf-merge] Redis error:", e.message);
   });
 } catch (e) {
-  console.warn("[pdf-merge] Redis init failed, using memory store:", e.message);
+  log.warn("[pdf-merge] Redis init failed, using memory store:", e.message);
   redis = null;
 }
 
@@ -81,7 +84,7 @@ async function setProgress(id, obj) {
       await redis.set(progressKey(id), JSON.stringify(obj), "EX", PROGRESS_TTL);
       return;
     } catch (e) {
-      console.warn("[pdf-merge] Redis set failed, fallback to memory:", e.message);
+      log.warn("[pdf-merge] Redis set failed, fallback to memory:", e.message);
     }
   }
   memStore.set(id, obj);
@@ -93,7 +96,7 @@ async function getProgress(id) {
       const s = await redis.get(progressKey(id));
       return s ? JSON.parse(s) : null;
     } catch (e) {
-      console.warn("[pdf-merge] Redis get failed, fallback to memory:", e.message);
+      log.warn("[pdf-merge] Redis get failed, fallback to memory:", e.message);
     }
   }
   return memStore.get(id) || null;
@@ -119,7 +122,7 @@ async function delProgress(id) {
 // ---- Run Python helper (NDJSON-capable) ----
 function runPythonScript(pythonPath, scriptPath, args, env, serverRoot, timeoutMs = 300000, onJsonLine = null) {
   return new Promise((resolve, reject) => {
-    console.log(`Starting Python process: ${pythonPath} ${scriptPath} ${args.join(" ")}`);
+    log.info(`Starting Python process: ${pythonPath} ${scriptPath} ${args.join(" ")}`);
     const child = spawn(pythonPath, [scriptPath, ...args], { env, cwd: serverRoot });
 
     let buf = "";
@@ -129,7 +132,7 @@ function runPythonScript(pythonPath, scriptPath, args, env, serverRoot, timeoutM
 
     const t = setTimeout(() => {
       if (!done) {
-        console.error("Python process timeout - killing process");
+        log.error("Python process timeout - killing process");
         child.kill();
         reject(new Error(`Process timeout after ${timeoutMs / 1000} seconds`));
       }
@@ -164,7 +167,7 @@ function runPythonScript(pythonPath, scriptPath, args, env, serverRoot, timeoutM
 
     child.stderr.on("data", (d) => {
       const s = d.toString();
-      console.error("Python stderr:", s);
+      log.error("Python stderr:", s);
       err += s;
     });
 
@@ -189,7 +192,7 @@ function runPythonScript(pythonPath, scriptPath, args, env, serverRoot, timeoutM
         }
       }
 
-      console.log("Python process exited with code:", code);
+      log.info("Python process exited with code:", code);
       if (code === 0 && lastStructured) {
         resolve(lastStructured);
       } else if (lastStructured && lastStructured.success === false) {
@@ -202,7 +205,7 @@ function runPythonScript(pythonPath, scriptPath, args, env, serverRoot, timeoutM
     child.on("error", (e) => {
       done = true;
       clearTimeout(t);
-      console.error("Failed to start Python process:", e);
+      log.error("Failed to start Python process:", e);
       reject(e);
     });
   });
@@ -215,7 +218,7 @@ function cleanupFiles(...paths) {
       try {
         fs.unlinkSync(p);
       } catch (err) {
-        console.error(`Failed to cleanup file ${p}:`, err.message);
+        log.error(`Failed to cleanup file ${p}:`, err.message);
       }
     }
   }

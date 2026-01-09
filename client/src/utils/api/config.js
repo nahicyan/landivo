@@ -1,5 +1,6 @@
 // client/src/utils/api/config.js
 import axios from 'axios';
+import { getLogger } from '../logger';
 
 /**
  * Main API instance for backend calls
@@ -17,13 +18,49 @@ export const mailivoApi = axios.create({
   withCredentials: true,
 });
 
+const apiLog = getLogger('apiConfig');
+const mailivoLog = getLogger('mailivoApi');
+
+const logRequest = (log, config) => {
+  log.info(
+    `[${log.context}] > [Request]: ${config.method?.toUpperCase()} ${config.url}`
+  );
+  return config;
+};
+
+const logResponse = (log, response) => {
+  log.info(
+    `[${log.context}] > [Response]: ${response.status} ${response.config?.url}`
+  );
+  return response;
+};
+
+const logError = (log, error) => {
+  log.error(
+    `[${log.context}] > [Error]: ${error?.response?.status || 'unknown'} ${error?.config?.url || ''} ${error.message}`
+  );
+  return Promise.reject(error);
+};
+
+api.interceptors.request.use((config) => logRequest(apiLog, config));
+api.interceptors.response.use(
+  (response) => logResponse(apiLog, response),
+  (error) => logError(apiLog, error)
+);
+
+mailivoApi.interceptors.request.use((config) => logRequest(mailivoLog, config));
+mailivoApi.interceptors.response.use(
+  (response) => logResponse(mailivoLog, response),
+  (error) => logError(mailivoLog, error)
+);
+
 /**
  * Centralized error handler for API requests
  * @param {Error} error - The error object
  * @param {string} message - Custom error message
  */
 export const handleRequestError = (error, message) => {
-  console.error(`${message}:`, error);
+  apiLog.error(`[handleRequestError] > [Error]: ${message} ${error.message}`);
   throw error;
 };
 

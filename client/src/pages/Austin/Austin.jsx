@@ -9,6 +9,9 @@ import SearchAreaWithTracking from "@/components/SearchArea/SearchAreaWithTracki
 import DisplayGrid, { createGridFilter } from "@/components/DisplayGrid/DisplayGrid";
 import { Button } from "@/components/ui/button";
 import { getPropertyRows } from "@/utils/api";
+import { getLogger } from "@/utils/logger";
+
+const log = getLogger("AustinProperty");
 
 export default function AustinProperty() {
   const { data, isError, isLoading } = useProperties();
@@ -44,7 +47,7 @@ export default function AustinProperty() {
           }
         }
       } catch (error) {
-        console.error("Error fetching Austin row properties:", error);
+        log.error(`[AustinProperty:fetchAustinRow] > [Error]: ${error.message}`);
         setFeaturedPropertyIds([]);
       } finally {
         setLoadingFeatured(false);

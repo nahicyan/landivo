@@ -5,6 +5,9 @@ import { usePermissions } from "@/components/Auth0/PermissionsContext";
 import { useSystemSettings } from "@/hooks/useSystemSettings";
 import { shouldFilterByStatus, filterPropertiesByStatus } from "@/utils/propertyFilters";
 import { sortPropertiesWithPendingLast } from "@/utils/propertySorting";
+import { getLogger } from "@/utils/logger";
+
+const log = getLogger("useProperties");
 
 const useProperties = () => {
   const { data: rawData, isLoading, isError, refetch } = useQuery(
@@ -26,7 +29,7 @@ const useProperties = () => {
   }, [rawData, settings, permissions]);
 
   useEffect(() => {
-    console.log(
+    log.info(
       `[useProperties] > [Response]: rawDataCount=${
         Array.isArray(rawData) ? rawData.length : rawData ? "<non-array>" : "<none>"
       }`
@@ -34,7 +37,7 @@ const useProperties = () => {
   }, [rawData]);
 
   useEffect(() => {
-    console.log(
+    log.info(
       `[useProperties] > [Computed]: filteredDataCount=${
         Array.isArray(data) ? data.length : data ? "<non-array>" : "<none>"
       }`

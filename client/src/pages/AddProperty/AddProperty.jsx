@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { useAuth } from "@/components/hooks/useAuth";
 import { motion, AnimatePresence } from "framer-motion";
 import { AlertCircle, Check, Loader2 } from "lucide-react";
+import { getLogger } from "@/utils/logger";
 // Import subcomponents
 import SystemInfo from "@/components/AddProperty/SystemInfo";
 import ListingDetails from "@/components/AddProperty/ListingDetails";
@@ -17,6 +18,8 @@ import Pricing from "@/components/AddProperty/Pricing";
 import Financing from "@/components/AddProperty/Financing";
 import Utilities from "@/components/AddProperty/Utilities";
 import MediaTags from "@/components/AddProperty/MediaTags";
+
+const log = getLogger("AddProperty");
 import PropertySuccessDialog from "@/components/PropertyUpload/PropertySuccessDialog";
 
 export default function AddProperty() {
@@ -386,7 +389,7 @@ export default function AddProperty() {
       setDialogType("success");
       setDialogOpen(true);
     } catch (error) {
-      console.error("Error creating property:", error);
+      log.error(`[AddProperty:handleSubmit] > [Error]: ${error.message}`);
       // Attempt to extract a detailed error message from the response
       const errorMsg = error.response?.data?.message || error.response?.data?.error || error.message || "Unknown error";
       setDialogMessage(`Failed to create property: ${errorMsg}`);

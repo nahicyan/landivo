@@ -1,6 +1,7 @@
 import asyncHandler from "express-async-handler";
 import mongoose from "../config/mongoose.js";
 import { connectMongo } from "../config/mongoose.js";
+import { getLogger } from "../utils/logger.js";
 import {
   ActivityLog,
   Buyer,
@@ -9,6 +10,8 @@ import {
   Property,
   User,
 } from "../models/index.js";
+
+const log = getLogger("auditMiddleware");
 
 const toObjectId = (value) => {
   if (!value || !mongoose.Types.ObjectId.isValid(value)) return null;
@@ -58,7 +61,9 @@ export const trackActivity = asyncHandler(async (req, res, next) => {
           }
         }
       } catch (error) {
-        console.error('Error tracking activity:', error);
+        log.error(
+          `[auditMiddleware:trackActivity] > [Error]: ${error?.message || error}`
+        );
         // Don't block the response if logging fails
       }
     }
@@ -161,7 +166,9 @@ export const trackModifications = (entityType) => {
         }
       }
     } catch (error) {
-      console.error(`Error in trackModifications middleware for ${entityType}:`, error);
+      log.error(
+        `[auditMiddleware:trackModifications] > [Error]: entity=${entityType}, ${error?.message || error}`
+      );
       // Don't block the request if tracking fails
     }
     

@@ -2,6 +2,7 @@
 import mongoose from "../../config/mongoose.js";
 import { connectMongo } from "../../config/mongoose.js";
 import { BuyerEmailList, EmailList } from "../../models/index.js";
+import { getLogger } from "../../utils/logger.js";
 
 const normalizeCriteriaListValue = (value) => {
   const collected = [];
@@ -47,6 +48,8 @@ const toObjectId = (value) => {
   return new mongoose.Types.ObjectId(value);
 };
 
+const log = getLogger("offerEmailListService");
+
 /**
  * Manages automatic email list creation and buyer addition upon offer submission
  * Creates or finds list with format: "{Source} {Area} {BuyerType}"
@@ -73,13 +76,9 @@ export const handleOfferEmailList = async (buyer, property, offerSource = "Offer
     // Using property.area for the list name (this is the designated area field)
     const listName = `${offerSource} ${propertyArea} ${buyerType}`;
     
-    console.log(`Processing offer email list:`, {
-      listName,
-      propertyArea,
-      propertyCity,
-      propertyCounty,
-      buyerType
-    });
+    log.info(
+      `[offerEmailListService:handleOfferEmailList] > [Request]: listName=${listName}, area=${propertyArea}, city=${propertyCity}, county=${propertyCounty}, buyerType=${buyerType}`
+    );
     
     // Check if list already exists with the same criteria
     let emailList = await EmailList.findOne({
@@ -97,16 +96,15 @@ export const handleOfferEmailList = async (buyer, property, offerSource = "Offer
         buyerType, 
         offerSource
       );
-      console.log(`Created new email list: ${listName} with criteria:`, {
-        area: propertyArea,
-        city: propertyCity,
-        county: propertyCounty,
-        buyerType
-      });
+      log.info(
+        `[offerEmailListService:handleOfferEmailList] > [Response]: created list=${listName}`
+      );
     } else {
       // Update existing list criteria to ensure it has the latest structure
       await updateEmailListCriteria(emailList._id, propertyArea, propertyCity, propertyCounty, buyerType);
-      console.log(`Updated existing email list criteria: ${listName}`);
+      log.info(
+        `[offerEmailListService:handleOfferEmailList] > [Response]: updated list criteria list=${listName}`
+      );
     }
     
     // Check if buyer is already in the list
@@ -123,9 +121,13 @@ export const handleOfferEmailList = async (buyer, property, offerSource = "Offer
         buyerId: buyerObjectId,
         emailListId: listObjectId,
       });
-      console.log(`Added buyer ${buyer.id} to list: ${listName}`);
+      log.info(
+        `[offerEmailListService:handleOfferEmailList] > [Response]: added buyer=${buyer.id} to list=${listName}`
+      );
     } else {
-      console.log(`Buyer ${buyer.id} already in list: ${listName}`);
+      log.info(
+        `[offerEmailListService:handleOfferEmailList] > [Response]: buyer=${buyer.id} already in list=${listName}`
+      );
     }
     
     return {
@@ -142,7 +144,9 @@ export const handleOfferEmailList = async (buyer, property, offerSource = "Offer
     };
     
   } catch (error) {
-    console.error("Error handling offer email list:", error);
+    log.error(
+      `[offerEmailListService:handleOfferEmailList] > [Error]: ${error?.message || error}`
+    );
     return {
       success: false,
       error: error.message
@@ -214,9 +218,13 @@ const updateEmailListCriteria = async (emailListId, area, city, county, buyerTyp
       { $set: { criteria: updatedCriteria } }
     );
     
-    console.log(`Updated criteria for list ${emailListId}:`, updatedCriteria);
+    log.info(
+      `[offerEmailListService:updateEmailListCriteria] > [Response]: updated list=${emailListId}`
+    );
   } catch (error) {
-    console.error("Error updating email list criteria:", error);
+    log.error(
+      `[offerEmailListService:updateEmailListCriteria] > [Error]: ${error?.message || error}`
+    );
     throw error;
   }
 };
@@ -268,7 +276,9 @@ export const getOfferEmailLists = async (offerSource = "Offer") => {
       buyerMemberships: membershipMap.get(String(list._id)) || [],
     }));
   } catch (error) {
-    console.error("Error fetching offer email lists:", error);
+    log.error(
+      `[offerEmailListService:getOfferEmailLists] > [Error]: ${error?.message || error}`
+    );
     throw error;
   }
 };
