@@ -3,14 +3,19 @@ import os from "os";
 import path from "path";
 import { fileURLToPath } from "url";
 import Redis from "ioredis";
-import { PrismaClient } from "@prisma/client";
+import mongoose from "../config/mongoose.js";
+import { connectMongo } from "../config/mongoose.js";
+import { PdfTemplate } from "../models/index.js";
 import { spawn, spawnSync } from "child_process";
-
-const prisma = new PrismaClient();
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const ROOT_DIR = path.resolve(__dirname, "..");
+
+const toObjectId = (value) => {
+  if (!value || !mongoose.Types.ObjectId.isValid(value)) return null;
+  return new mongoose.Types.ObjectId(value);
+};
 
 // ----------- LINUX PYTHON HELPERS --------------------
 const PYTHON_CMD = process.env.PYTHON_BIN || "python3";
@@ -227,6 +232,7 @@ export const createTemplateController = async (req, res) => {
   let uploadedPath = null;
 
   try {
+    await connectMongo();
     if (!req.file) {
       return res.status(400).json({
         success: false,
@@ -249,9 +255,7 @@ export const createTemplateController = async (req, res) => {
     const fileName = req.file.filename;
 
     // Check if template name already exists
-    const existing = await prisma.pdfTemplate.findUnique({
-      where: { name: name.trim() },
-    });
+    const existing = await PdfTemplate.findOne({ name: name.trim() }).lean();
 
     if (existing) {
       cleanupFiles(uploadedPath);
@@ -262,20 +266,18 @@ export const createTemplateController = async (req, res) => {
     }
 
     // Create template in database
-    const template = await prisma.pdfTemplate.create({
-      data: {
-        name: name.trim(),
-        fileName,
-        filePath: uploadedPath,
-        description: description?.trim() || null,
-      },
+    const template = await PdfTemplate.create({
+      name: name.trim(),
+      fileName,
+      filePath: uploadedPath,
+      description: description?.trim() || null,
     });
 
     return res.json({
       success: true,
       message: "Template created successfully",
       template: {
-        id: template.id,
+        id: String(template._id),
         name: template.name,
         fileName: template.fileName,
         description: template.description,
@@ -301,21 +303,18 @@ export const createTemplateController = async (req, res) => {
  */
 export const getTemplatesController = async (req, res) => {
   try {
-    const templates = await prisma.pdfTemplate.findMany({
-      orderBy: { createdAt: "desc" },
-      select: {
-        id: true,
-        name: true,
-        fileName: true,
-        description: true,
-        createdAt: true,
-        updatedAt: true,
-      },
-    });
+    await connectMongo();
+    const templates = await PdfTemplate.find({})
+      .sort({ createdAt: -1 })
+      .select("name fileName description createdAt updatedAt")
+      .lean();
 
     return res.json({
       success: true,
-      templates,
+      templates: templates.map((template) => ({
+        id: String(template._id),
+        ...template,
+      })),
     });
   } catch (error) {
     return res.status(500).json({
@@ -332,10 +331,16 @@ export const getTemplatesController = async (req, res) => {
 export const getTemplateByIdController = async (req, res) => {
   try {
     const { id } = req.params;
+    await connectMongo();
+    const templateId = toObjectId(id);
+    if (!templateId) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid template ID",
+      });
+    }
 
-    const template = await prisma.pdfTemplate.findUnique({
-      where: { id },
-    });
+    const template = await PdfTemplate.findById(templateId).lean();
 
     if (!template) {
       return res.status(404).json({
@@ -347,7 +352,7 @@ export const getTemplateByIdController = async (req, res) => {
     return res.json({
       success: true,
       template: {
-        id: template.id,
+        id: String(template._id),
         name: template.name,
         fileName: template.fileName,
         description: template.description,
@@ -371,9 +376,16 @@ export const deleteTemplateController = async (req, res) => {
   try {
     const { id } = req.params;
 
-    const template = await prisma.pdfTemplate.findUnique({
-      where: { id },
-    });
+    await connectMongo();
+    const templateId = toObjectId(id);
+    if (!templateId) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid template ID",
+      });
+    }
+
+    const template = await PdfTemplate.findById(templateId).lean();
 
     if (!template) {
       return res.status(404).json({
@@ -386,9 +398,7 @@ export const deleteTemplateController = async (req, res) => {
     cleanupFiles(template.filePath);
 
     // Delete from database
-    await prisma.pdfTemplate.delete({
-      where: { id },
-    });
+    await PdfTemplate.deleteOne({ _id: templateId });
 
     return res.json({
       success: true,
@@ -444,9 +454,15 @@ export const analyzeFilesController = async (req, res) => {
     }
 
     // Fetch template from database
-    const template = await prisma.pdfTemplate.findUnique({
-      where: { id: templateId },
-    });
+    await connectMongo();
+    const templateObjectId = toObjectId(templateId);
+    if (!templateObjectId) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid template ID",
+      });
+    }
+    const template = await PdfTemplate.findById(templateObjectId).lean();
 
     if (!template) {
       return res.status(404).json({
@@ -545,9 +561,15 @@ export const generatePdfController = async (req, res) => {
     }
 
     // Fetch template from database
-    const template = await prisma.pdfTemplate.findUnique({
-      where: { id: templateId },
-    });
+    await connectMongo();
+    const templateObjectId = toObjectId(templateId);
+    if (!templateObjectId) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid template ID",
+      });
+    }
+    const template = await PdfTemplate.findById(templateObjectId).lean();
 
     if (!template) {
       return res.status(404).json({

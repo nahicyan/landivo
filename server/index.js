@@ -1,9 +1,10 @@
+import dotenv from "dotenv";
 import express from "express";
 import cookieParser from "cookie-parser";
 import cors from "cors";
 import path from "path";
 import { fileURLToPath } from "url";
-import { residencyRoute } from "./routes/residencyRoute.js";
+import { propertyRoute } from "./routes/propertyRoute.js";
 import { buyerRoute } from "./routes/buyerRoute.js";
 import { offerRoute } from "./routes/offerRoute.js";
 import { dealRoute } from "./routes/dealRoute.js";
@@ -21,6 +22,9 @@ import { mailivoAutomationRoute } from "./routes/mailivoAutomationRoute.js";
 import { automationClosingDateRoute } from "./routes/automationClosingDateRoute.js";
 import { pdfMergeRoute } from "./routes/pdfMergeRoute.js";
 import { ensureUploadDirectories } from "./middlewares/uploadMiddleware.js";
+import { connectMongo } from "./config/mongoose.js";
+
+dotenv.config();
 
 const app = express();
 const PORT = process.env.PORT || 8200;
@@ -89,7 +93,7 @@ app.use(cookieParser());
 // API ROUTES
 // ===========================
 
-app.use("/residency", residencyRoute);
+app.use("/property", propertyRoute);
 app.use("/user", userManagementRoute);
 app.use("/property-rows", propertyRowRoute);
 app.use("/buyer", buyerRoute);
@@ -125,18 +129,19 @@ app.get("/auth/test-jwt", jwtCheck, extractUserFromToken, (req, res) => {
   });
 });
 
-// ===========================
-// INITIALIZE SCHEDULED TASKS
-// ===========================
+const startServer = async () => {
+  try {
+    await connectMongo();
+    initScheduledTasks();
+    app.listen(PORT, () => {
+      console.log("=".repeat(50));
+      console.log(`Server started on port ${PORT}`);
+      console.log("=".repeat(50));
+    });
+  } catch (error) {
+    console.error("Failed to start server:", error);
+    process.exit(1);
+  }
+};
 
-initScheduledTasks();
-
-// ===========================
-// START SERVER
-// ===========================
-
-app.listen(PORT, () => {
-  console.log("=".repeat(50));
-  console.log(`Server started on port ${PORT}`);
-  console.log("=".repeat(50));
-});
+startServer();

@@ -1,7 +1,7 @@
 // client/src/pages/AddProperty/AddProperty.jsx
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { createResidencyWithFiles } from "@/utils/api";
+import { createPropertyWithFiles } from "@/utils/api";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/components/hooks/useAuth";
 import { motion, AnimatePresence } from "framer-motion";
@@ -378,9 +378,9 @@ export default function AddProperty() {
       uploadedImages.forEach((file) => multipartForm.append("images", file));
       uploadedVideos.forEach((file) => multipartForm.append("videos", file));
 
-      const result = await createResidencyWithFiles(multipartForm);
-      setCreatedPropertyId(result.residency.id);
-      setCreatedPropertyData(result.residency);
+      const result = await createPropertyWithFiles(multipartForm);
+      setCreatedPropertyId(result.property.id);
+      setCreatedPropertyData(result.property);
 
       setDialogMessage("Property added successfully!");
       setDialogType("success");

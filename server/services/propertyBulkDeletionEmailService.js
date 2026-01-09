@@ -1,6 +1,7 @@
 // server/services/propertyBulkDeletionEmailService.js
 import nodemailer from "nodemailer";
-import { prisma } from "../config/prismaConfig.js";
+import { connectMongo } from "../config/mongoose.js";
+import { Settings } from "../models/index.js";
 
 /**
  * Send bulk property deletion request email to admin
@@ -15,7 +16,8 @@ export const sendPropertyBulkDeletionRequest = async ({
 }) => {
   try {
     // Get SMTP settings from database
-    const settings = await prisma.settings.findFirst();
+    await connectMongo();
+    const settings = await Settings.findOne().lean();
 
     if (
       !settings?.smtpServer ||
@@ -76,7 +78,7 @@ const generateBulkDeletionRequestTemplate = ({
   count,
   isDirect
 }) => {
-  const approvalUrl = `${process.env.VITE_SERVER_URL || 'https://api.landivo.com'}/api/residency/approve-bulk-deletion/${deletionToken}`;
+  const approvalUrl = `${process.env.VITE_SERVER_URL || 'https://api.landivo.com'}/api/property/approve-bulk-deletion/${deletionToken}`;
 
   // Generate property list HTML
   const propertyListHtml = properties.slice(0, 10).map((property, index) => `

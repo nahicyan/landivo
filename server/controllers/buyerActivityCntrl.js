@@ -1,6 +1,13 @@
 // server/controllers/buyerActivityCntrl.js
 import asyncHandler from "express-async-handler";
-import { prisma } from "../config/prismaConfig.js";
+import mongoose from "../config/mongoose.js";
+import { connectMongo } from "../config/mongoose.js";
+import { Buyer, BuyerActivity, Offer } from "../models/index.js";
+
+const toObjectId = (value) => {
+  if (!value || !mongoose.Types.ObjectId.isValid(value)) return null;
+  return new mongoose.Types.ObjectId(value);
+};
 
 /**
  * Record buyer activity
@@ -18,6 +25,7 @@ export const recordBuyerActivity = asyncHandler(async (req, res) => {
   }
 
   try {
+    await connectMongo();
     // console.log(`Processing ${events.length} activity events`);
     let recordedEvents = 0;
     const errors = [];
@@ -36,9 +44,12 @@ export const recordBuyerActivity = asyncHandler(async (req, res) => {
         }
 
         // Verify that the buyer exists
-        const buyer = await prisma.buyer.findUnique({
-          where: { id: buyerId },
-        });
+        const buyerObjectId = toObjectId(buyerId);
+        if (!buyerObjectId) {
+          errors.push({ event, error: "Invalid buyer ID" });
+          continue;
+        }
+        const buyer = await Buyer.findById(buyerObjectId).lean();
 
         if (!buyer) {
           errors.push({ event, error: `Buyer with ID ${buyerId} not found` });
@@ -52,31 +63,29 @@ export const recordBuyerActivity = asyncHandler(async (req, res) => {
         }
 
         // Create the activity record
-        const createdActivity = await prisma.buyerActivity.create({
-          data: {
-            eventType: type,
-            buyerId,
-            timestamp: timestamp ? new Date(timestamp) : new Date(),
-            eventData: {
-              ...data,
-              ...(type === "search" || type === "search_query"
-                ? {
-                    searchType: data.searchType || "standard",
-                    query: data.query || "",
-                    resultsCount: data.resultsCount || 0,
-                    area: data.area || null,
-                    context: data.context || null,
-                    filters: data.filters || {},
-                  }
-                : {}),
-            },
-            sessionId: data?.sessionId || null,
-            page: data?.path || data?.url || null,
-            propertyId: data?.propertyId || null,
-            interactionType: data?.elementType || (type === "search" ? "search" : null),
-            ipAddress: req.ip || null,
-            userAgent: req.headers["user-agent"] || null,
+        const createdActivity = await BuyerActivity.create({
+          eventType: type,
+          buyerId: buyerObjectId,
+          timestamp: timestamp ? new Date(timestamp) : new Date(),
+          eventData: {
+            ...data,
+            ...(type === "search" || type === "search_query"
+              ? {
+                  searchType: data.searchType || "standard",
+                  query: data.query || "",
+                  resultsCount: data.resultsCount || 0,
+                  area: data.area || null,
+                  context: data.context || null,
+                  filters: data.filters || {},
+                }
+              : {}),
           },
+          sessionId: data?.sessionId || null,
+          page: data?.path || data?.url || null,
+          propertyId: data?.propertyId || null,
+          interactionType: data?.elementType || (type === "search" ? "search" : null),
+          ipAddress: req.ip || null,
+          userAgent: req.headers["user-agent"] || null,
         });
 
         // console.log(`Successfully recorded ${type} event:`, createdActivity.id);
@@ -118,16 +127,19 @@ export const getBuyerActivity = asyncHandler(async (req, res) => {
 
   try {
     // Check if buyer exists
-    const buyer = await prisma.buyer.findUnique({
-      where: { id: buyerId },
-    });
+    await connectMongo();
+    const buyerObjectId = toObjectId(buyerId);
+    if (!buyerObjectId) {
+      return res.status(400).json({ message: "Invalid buyer ID" });
+    }
+    const buyer = await Buyer.findById(buyerObjectId).lean();
 
     if (!buyer) {
       return res.status(404).json({ message: "Buyer not found" });
     }
 
     // Build query filters
-    const filter = { buyerId };
+    const filter = { buyerId: buyerObjectId };
 
     if (type) {
       filter.eventType = type;
@@ -137,11 +149,11 @@ export const getBuyerActivity = asyncHandler(async (req, res) => {
       filter.timestamp = {};
 
       if (startDate) {
-        filter.timestamp.gte = new Date(startDate);
+        filter.timestamp.$gte = new Date(startDate);
       }
 
       if (endDate) {
-        filter.timestamp.lte = new Date(endDate);
+        filter.timestamp.$lte = new Date(endDate);
       }
     }
 
@@ -150,19 +162,14 @@ export const getBuyerActivity = asyncHandler(async (req, res) => {
     }
 
     // Get total count
-    const totalCount = await prisma.buyerActivity.count({
-      where: filter,
-    });
+    const totalCount = await BuyerActivity.countDocuments(filter);
 
     // Get paginated activities
-    const activities = await prisma.buyerActivity.findMany({
-      where: filter,
-      orderBy: {
-        timestamp: "desc",
-      },
-      skip: (parseInt(page) - 1) * parseInt(limit),
-      take: parseInt(limit),
-    });
+    const activities = await BuyerActivity.find(filter)
+      .sort({ timestamp: -1 })
+      .skip((parseInt(page) - 1) * parseInt(limit))
+      .limit(parseInt(limit))
+      .lean();
 
     res.status(200).json({
       buyerId,
@@ -194,101 +201,73 @@ export const getBuyerActivitySummary = asyncHandler(async (req, res) => {
 
   try {
     // Check if buyer exists
-    const buyer = await prisma.buyer.findUnique({
-      where: { id: buyerId },
-    });
+    await connectMongo();
+    const buyerObjectId = toObjectId(buyerId);
+    if (!buyerObjectId) {
+      return res.status(400).json({ message: "Invalid buyer ID" });
+    }
+    const buyer = await Buyer.findById(buyerObjectId).lean();
 
     if (!buyer) {
       return res.status(404).json({ message: "Buyer not found" });
     }
 
     // Get activity counts by type
-    const activityCounts = await prisma.buyerActivity.groupBy({
-      by: ["eventType"],
-      where: { buyerId },
-      _count: {
-        id: true,
-      },
-    });
+    const activityCounts = await BuyerActivity.aggregate([
+      { $match: { buyerId: buyerObjectId } },
+      { $group: { _id: "$eventType", count: { $sum: 1 } } },
+    ]);
 
     // Get ALL property views without limit
-    const propertyViews = await prisma.buyerActivity.findMany({
-      where: {
-        buyerId,
-        eventType: "property_view",
-      },
-      orderBy: {
-        timestamp: "desc",
-      },
-    });
+    const propertyViews = await BuyerActivity.find({
+      buyerId: buyerObjectId,
+      eventType: "property_view",
+    })
+      .sort({ timestamp: "desc" })
+      .lean();
 
     // Get ALL search history
-    const searchHistory = await prisma.buyerActivity.findMany({
-      where: {
-        buyerId,
-        eventType: "search",
-      },
-      orderBy: {
-        timestamp: "desc",
-      },
-    });
+    const searchHistory = await BuyerActivity.find({
+      buyerId: buyerObjectId,
+      eventType: "search",
+    })
+      .sort({ timestamp: "desc" })
+      .lean();
 
     // Get ALL page views
-    const pageViews = await prisma.buyerActivity.findMany({
-      where: {
-        buyerId,
-        eventType: "page_view",
-      },
-      orderBy: {
-        timestamp: "desc",
-      },
-    });
+    const pageViews = await BuyerActivity.find({
+      buyerId: buyerObjectId,
+      eventType: "page_view",
+    })
+      .sort({ timestamp: "desc" })
+      .lean();
 
     // Get ALL offer submissions WITHOUT the property include that's causing the error
-    const offerHistory = await prisma.offer.findMany({
-      where: {
-        buyerId,
-      },
-      orderBy: {
-        timestamp: "desc",
-      },
-      // Removed the include: { property: {...} } that was causing the error
-    });
+    const offerHistory = await Offer.find({ buyerId: buyerObjectId })
+      .sort({ timestamp: "desc" })
+      .lean();
 
     // Get ALL click events
-    const clickEvents = await prisma.buyerActivity.findMany({
-      where: {
-        buyerId,
-        eventType: "click",
-      },
-      orderBy: {
-        timestamp: "desc",
-      },
-    });
+    const clickEvents = await BuyerActivity.find({
+      buyerId: buyerObjectId,
+      eventType: "click",
+    })
+      .sort({ timestamp: "desc" })
+      .lean();
 
     // Get ALL session history
-    const sessionHistory = await prisma.buyerActivity.findMany({
-      where: {
-        buyerId,
-        eventType: {
-          in: ["session_start", "session_end"],
-        },
-      },
-      orderBy: {
-        timestamp: "desc",
-      },
-    });
+    const sessionHistory = await BuyerActivity.find({
+      buyerId: buyerObjectId,
+      eventType: { $in: ["session_start", "session_end"] },
+    })
+      .sort({ timestamp: "desc" })
+      .lean();
 
     // Find the most recent activity
-    const lastActive = await prisma.buyerActivity.findFirst({
-      where: { buyerId },
-      orderBy: {
-        timestamp: "desc",
-      },
-      select: {
-        timestamp: true,
-      },
-    });
+    const lastActive = await BuyerActivity.findOne({ buyerId: buyerObjectId })
+      .sort({ timestamp: "desc" })
+      .select("timestamp")
+      .lean();
 
     // Calculate engagement score based on activity volume and recency
     let engagementScore = 0;
@@ -296,7 +275,7 @@ export const getBuyerActivitySummary = asyncHandler(async (req, res) => {
     // Convert activityCounts to a more usable format
     const activityByType = {};
     activityCounts.forEach((item) => {
-      activityByType[item.eventType] = item._count.id;
+      activityByType[item._id] = item.count;
     });
 
     // Base score on total activity volume
@@ -367,11 +346,16 @@ export const deleteBuyerActivity = asyncHandler(async (req, res) => {
 
   try {
     // Build delete criteria
-    const deleteWhere = { buyerId };
+    await connectMongo();
+    const buyerObjectId = toObjectId(buyerId);
+    if (!buyerObjectId) {
+      return res.status(400).json({ message: "Invalid buyer ID" });
+    }
+    const deleteWhere = { buyerId: buyerObjectId };
 
     if (before) {
       deleteWhere.timestamp = {
-        lt: new Date(before),
+        $lt: new Date(before),
       };
     }
 
@@ -380,13 +364,11 @@ export const deleteBuyerActivity = asyncHandler(async (req, res) => {
     }
 
     // Delete the activities
-    const { count } = await prisma.buyerActivity.deleteMany({
-      where: deleteWhere,
-    });
+    const result = await BuyerActivity.deleteMany(deleteWhere);
 
     res.status(200).json({
-      message: `Successfully deleted ${count} activity records`,
-      deletedCount: count,
+      message: `Successfully deleted ${result.deletedCount} activity records`,
+      deletedCount: result.deletedCount,
     });
   } catch (error) {
     console.error("Error in deleteBuyerActivity:", error);

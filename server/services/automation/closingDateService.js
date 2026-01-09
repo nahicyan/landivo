@@ -1,6 +1,7 @@
 // server/services/automation/closingDateService.js
 import asyncHandler from "express-async-handler";
-import { prisma } from "../../config/prismaConfig.js";
+import { connectMongo } from "../../config/mongoose.js";
+import { Property } from "../../models/index.js";
 
 /**
  * Get all properties with future closing dates
@@ -8,29 +9,22 @@ import { prisma } from "../../config/prismaConfig.js";
  */
 export const getPropertiesWithClosingDates = asyncHandler(async (req, res) => {
   try {
+    await connectMongo();
     const today = new Date();
     today.setHours(0, 0, 0, 0);
 
-    const properties = await prisma.residency.findMany({
-      where: {
-        closingDate: {
-          gte: today,
-        },
-      },
-      select: {
-        id: true,
-        closingDate: true,
-      },
-      orderBy: {
-        closingDate: "asc",
-      },
-    });
+    const properties = await Property.find({
+      closingDate: { $gte: today },
+    })
+      .select("closingDate")
+      .sort({ closingDate: 1 })
+      .lean();
 
     res.status(200).json({
       success: true,
       count: properties.length,
       data: properties.map(p => ({
-        propertyId: p.id,
+        propertyId: String(p._id),
         closingDate: p.closingDate,
       })),
     });

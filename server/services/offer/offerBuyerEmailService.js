@@ -1,6 +1,7 @@
 // server/services/offer/offerBuyerEmailService.js
 import nodemailer from "nodemailer";
-import { prisma } from "../../config/prismaConfig.js";
+import { connectMongo } from "../../config/mongoose.js";
+import { Settings } from "../../models/index.js";
 
 /**
  * Send email notification to buyer when admin takes action on offer
@@ -8,7 +9,8 @@ import { prisma } from "../../config/prismaConfig.js";
 export const sendBuyerOfferNotification = async (buyer, subject, body) => {
   try {
     // Get system settings from database
-    const settings = await prisma.settings.findFirst();
+    await connectMongo();
+    const settings = await Settings.findOne().lean();
 
     // Check if SMTP is properly configured
     if (

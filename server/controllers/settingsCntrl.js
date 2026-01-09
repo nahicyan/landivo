@@ -1,7 +1,8 @@
 // server/controllers/settingsCntrl.js - Updated version
 import asyncHandler from "express-async-handler";
-import { prisma } from "../config/prismaConfig.js";
 import nodemailer from "nodemailer";
+import { connectMongo } from "../config/mongoose.js";
+import { Settings } from "../models/index.js";
 
 /**
  * Get all settings or create default if none exist
@@ -9,32 +10,32 @@ import nodemailer from "nodemailer";
 export const getSettings = asyncHandler(async (req, res) => {
   try {
     // Try to find settings
-    let settings = await prisma.settings.findFirst();
+    await connectMongo();
+    let settings = await Settings.findOne().lean();
 
     // If no settings exist, create default settings
     if (!settings) {
-      settings = await prisma.settings.create({
-        data: {
-          overrideContactPhone: null,
-          systemContactPhone: null,
-          smtpServer: null,
-          smtpPort: null,
-          smtpUser: null,
-          smtpPassword: null,
-          enableOfferEmails: false,
-          offerEmailRecipients: [],
-          enableFinancingEmails: false,
-          financingEmailRecipients: [],
-          displayIncomplete: false,
-          displaySold: false,
-          displayNotAvailable: false,
-          displayNotTesting: false,
-        },
+      settings = await Settings.create({
+        overrideContactPhone: null,
+        systemContactPhone: null,
+        smtpServer: null,
+        smtpPort: null,
+        smtpUser: null,
+        smtpPassword: null,
+        enableOfferEmails: false,
+        offerEmailRecipients: [],
+        enableFinancingEmails: false,
+        financingEmailRecipients: [],
+        displayIncomplete: false,
+        displaySold: false,
+        displayNotAvailable: false,
+        displayNotTesting: false,
       });
     }
 
     // Don't send the password back for security
-    const { smtpPassword, ...safeSettings } = settings;
+    const settingsPayload = settings?.toObject ? settings.toObject() : settings;
+    const { smtpPassword, ...safeSettings } = settingsPayload;
 
     res.status(200).json(safeSettings);
   } catch (error) {
@@ -69,7 +70,8 @@ export const updateSettings = asyncHandler(async (req, res) => {
 
   try {
     // Get existing settings or create if none exist
-    let settings = await prisma.settings.findFirst();
+    await connectMongo();
+    let settings = await Settings.findOne();
 
     // Prepare update data
     const updateData = {
@@ -96,19 +98,16 @@ export const updateSettings = asyncHandler(async (req, res) => {
 
     if (settings) {
       // Update existing settings
-      settings = await prisma.settings.update({
-        where: { id: settings.id },
-        data: updateData,
-      });
+      settings.set(updateData);
+      await settings.save();
     } else {
       // Create new settings if none exist
-      settings = await prisma.settings.create({
-        data: updateData,
-      });
+      settings = await Settings.create(updateData);
     }
 
     // Don't send the password back for security
-    const { smtpPassword: pass, ...safeSettings } = settings;
+    const settingsPayload = settings?.toObject ? settings.toObject() : settings;
+    const { smtpPassword: pass, ...safeSettings } = settingsPayload;
 
     res.status(200).json({
       message: "Settings updated successfully",
@@ -136,7 +135,8 @@ export const testSmtpConnection = asyncHandler(async (req, res) => {
 
   try {
     // Get existing settings from database for any missing fields
-    const dbSettings = await prisma.settings.findFirst();
+    await connectMongo();
+    const dbSettings = await Settings.findOne().lean();
 
     if (!dbSettings) {
       return res.status(400).json({ message: "No SMTP settings found in database" });

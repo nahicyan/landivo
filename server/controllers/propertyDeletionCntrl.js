@@ -1,12 +1,19 @@
 // server/controllers/propertyDeletionCntrl.js
 import asyncHandler from "express-async-handler";
-import { prisma } from "../config/prismaConfig.js";
-import { sendPropertyDeletionRequest } from "../services/propertyDeletionEmailService.js";
 import crypto from "crypto";
+import mongoose from "../config/mongoose.js";
+import { connectMongo } from "../config/mongoose.js";
+import { PropertyDeletionRequest, Property, User } from "../models/index.js";
+import { sendPropertyDeletionRequest } from "../services/propertyDeletionEmailService.js";
+
+const toObjectId = (value) => {
+  if (!value || !mongoose.Types.ObjectId.isValid(value)) return null;
+  return new mongoose.Types.ObjectId(value);
+};
 
 /**
  * Request property deletion - sends email to admin
- * @route POST /api/residency/request-deletion/:id
+ * @route POST /api/property/request-deletion/:id
  * @access Private (requires DELETE_PROPERTIES permission)
  */
 export const requestPropertyDeletion = asyncHandler(async (req, res) => {
@@ -14,10 +21,13 @@ export const requestPropertyDeletion = asyncHandler(async (req, res) => {
   const { reason } = req.body;
 
   try {
+    await connectMongo();
+    const propertyId = toObjectId(id);
+    if (!propertyId) {
+      return res.status(400).json({ message: "Invalid property ID" });
+    }
     // Get property details
-    const property = await prisma.residency.findUnique({
-      where: { id }
-    });
+    const property = await Property.findById(propertyId).lean();
 
     if (!property) {
       return res.status(404).json({ message: "Property not found" });
@@ -39,14 +49,12 @@ export const requestPropertyDeletion = asyncHandler(async (req, res) => {
 
     if (req.userId) {
       try {
-        const dbUser = await prisma.user.findUnique({
-          where: { id: req.userId },
-          select: {
-            firstName: true,
-            lastName: true,
-            email: true
-          }
-        });
+        const userId = toObjectId(req.userId);
+        const dbUser = userId
+          ? await User.findById(userId)
+              .select("firstName lastName email")
+              .lean()
+          : null;
 
         if (dbUser) {
           requestingUser = {
@@ -66,14 +74,12 @@ export const requestPropertyDeletion = asyncHandler(async (req, res) => {
     const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours
 
     // Store deletion request in database
-    const deletionRequest = await prisma.propertyDeletionRequest.create({
-      data: {
-        propertyId: id,
-        reason: reason || null,
-        token: deletionToken,
-        expiresAt,
-        status: "PENDING"
-      }
+    const deletionRequest = await PropertyDeletionRequest.create({
+      propertyId,
+      reason: reason || null,
+      token: deletionToken,
+      expiresAt,
+      status: "PENDING",
     });
 
     // Send email to admin with user details
@@ -86,7 +92,7 @@ export const requestPropertyDeletion = asyncHandler(async (req, res) => {
 
     res.status(200).json({
       message: "Deletion request sent to admin successfully",
-      requestId: deletionRequest.id
+      requestId: String(deletionRequest._id)
     });
 
   } catch (error) {
@@ -100,18 +106,18 @@ export const requestPropertyDeletion = asyncHandler(async (req, res) => {
 
 /**
  * Approve property deletion via email link
- * @route GET /api/residency/approve-deletion/:token
+ * @route GET /api/property/approve-deletion/:token
  * @access Public (but requires valid token)
  */
 export const approvePropertyDeletion = asyncHandler(async (req, res) => {
   const { token } = req.params;
 
   try {
+    await connectMongo();
     // Find and validate deletion request
-    const deletionRequest = await prisma.propertyDeletionRequest.findUnique({
-      where: { token },
-      include: { property: true }
-    });
+    const deletionRequest = await PropertyDeletionRequest.findOne({ token })
+      .populate("propertyId")
+      .lean();
 
     if (!deletionRequest) {
       return res.status(404).json({
@@ -132,26 +138,28 @@ export const approvePropertyDeletion = asyncHandler(async (req, res) => {
     }
 
     // Use a transaction to ensure both operations succeed or fail together
-    await prisma.$transaction(async (tx) => {
-      // First, update the deletion request status
-      await tx.propertyDeletionRequest.update({
-        where: { id: deletionRequest.id },
-        data: {
-          status: "APPROVED",
-          approvedAt: new Date()
-        }
-      });
+    const session = await mongoose.startSession();
+    try {
+      await session.withTransaction(async () => {
+        await PropertyDeletionRequest.updateOne(
+          { _id: deletionRequest._id },
+          { $set: { status: "APPROVED", approvedAt: new Date() } },
+          { session }
+        );
 
-      // Delete ALL deletion requests for this property (in case there are multiple)
-      await tx.propertyDeletionRequest.deleteMany({
-        where: { propertyId: deletionRequest.propertyId }
-      });
+        await PropertyDeletionRequest.deleteMany(
+          { propertyId: deletionRequest.propertyId },
+          { session }
+        );
 
-      // Now delete the property
-      await tx.residency.delete({
-        where: { id: deletionRequest.propertyId }
+        await Property.deleteOne(
+          { _id: deletionRequest.propertyId },
+          { session }
+        );
       });
-    });
+    } finally {
+      session.endSession();
+    }
 
     res.status(200).json({
       message: "Property has been successfully deleted."
@@ -169,7 +177,7 @@ export const approvePropertyDeletion = asyncHandler(async (req, res) => {
 
 /**
  * Direct property deletion - for users with DELETE_PROPERTIES permission
- * @route DELETE /api/residency/delete/:id
+ * @route DELETE /api/property/delete/:id
  * @access Private (requires DELETE_PROPERTIES permission)
  */
 export const deletePropertyDirect = asyncHandler(async (req, res) => {
@@ -177,10 +185,13 @@ export const deletePropertyDirect = asyncHandler(async (req, res) => {
   const { reason } = req.body;
 
   try {
+    await connectMongo();
+    const propertyId = toObjectId(id);
+    if (!propertyId) {
+      return res.status(400).json({ message: "Invalid property ID" });
+    }
     // Get property details
-    const property = await prisma.residency.findUnique({
-      where: { id }
-    });
+    const property = await Property.findById(propertyId).lean();
 
     if (!property) {
       return res.status(404).json({ message: "Property not found" });
@@ -196,15 +207,12 @@ export const deletePropertyDirect = asyncHandler(async (req, res) => {
 
     if (req.userId) {
       try {
-        const dbUser = await prisma.user.findUnique({
-          where: { id: req.userId },
-          select: {
-            firstName: true,
-            lastName: true,
-            email: true,
-            auth0Id: true
-          }
-        });
+        const userId = toObjectId(req.userId);
+        const dbUser = userId
+          ? await User.findById(userId)
+              .select("firstName lastName email auth0Id")
+              .lean()
+          : null;
 
         if (dbUser) {
           requestingUser = {
@@ -221,28 +229,29 @@ export const deletePropertyDirect = asyncHandler(async (req, res) => {
     }
 
     // Use a transaction to ensure all operations succeed or fail together
-    await prisma.$transaction(async (tx) => {
-      // First, clean up any existing deletion requests for this property
-      await tx.propertyDeletionRequest.deleteMany({
-        where: { propertyId: id }
-      });
+    const session = await mongoose.startSession();
+    try {
+      await session.withTransaction(async () => {
+        await PropertyDeletionRequest.deleteMany(
+          { propertyId },
+          { session }
+        );
 
-      // Log the deletion action
-      console.log(`Direct property deletion by ${requestingUser.email}:`, {
-        propertyId: id,
-        propertyTitle: property.title,
-        propertyAddress: `${property.streetAddress}, ${property.city}, ${property.state}`,
-        propertyStatus: property.status,
-        reason: reason || 'No reason provided',
-        deletedBy: requestingUser.email,
-        deletedAt: new Date().toISOString()
-      });
+        console.log(`Direct property deletion by ${requestingUser.email}:`, {
+          propertyId: id,
+          propertyTitle: property.title,
+          propertyAddress: `${property.streetAddress}, ${property.city}, ${property.state}`,
+          propertyStatus: property.status,
+          reason: reason || "No reason provided",
+          deletedBy: requestingUser.email,
+          deletedAt: new Date().toISOString(),
+        });
 
-      // Delete the property
-      await tx.residency.delete({
-        where: { id }
+        await Property.deleteOne({ _id: propertyId }, { session });
       });
-    });
+    } finally {
+      session.endSession();
+    }
 
     res.status(200).json({
       message: "Property has been successfully deleted",
@@ -260,12 +269,6 @@ export const deletePropertyDirect = asyncHandler(async (req, res) => {
     console.error("Error in direct property deletion:", error);
     
     // Handle specific Prisma errors
-    if (error.code === 'P2025') {
-      return res.status(404).json({
-        message: "Property not found or already deleted"
-      });
-    }
-    
     res.status(500).json({
       message: "Failed to delete property",
       error: error.message

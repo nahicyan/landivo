@@ -1,6 +1,7 @@
 // server/services/offer/offerEmailService.js
 import nodemailer from "nodemailer";
-import { prisma } from "../../config/prismaConfig.js";
+import { connectMongo } from "../../config/mongoose.js";
+import { Settings } from "../../models/index.js";
 
 /**
  * Send offer notification email using database settings
@@ -8,7 +9,8 @@ import { prisma } from "../../config/prismaConfig.js";
 export const sendOfferNotification = async (subject, body) => {
   try {
     // Get system settings from database
-    const settings = await prisma.settings.findFirst();
+    await connectMongo();
+    const settings = await Settings.findOne().lean();
     
     // Check if offer emails are enabled and properly configured
     if (!settings || !settings.enableOfferEmails) {
