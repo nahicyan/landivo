@@ -27,6 +27,7 @@ import {
 } from "@/components/ui/sidebar";
 
 // Sample data with updated icons
+// Static Url
 const data = {
   user: {
     name: "Nathan",
