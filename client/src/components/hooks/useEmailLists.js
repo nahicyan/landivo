@@ -97,11 +97,11 @@ export function useEmailLists() {
   }, [lists, filters]);
 
   // Create a new list
-const createList = async (listData) => {
-  log.info("[useEmailLists] > [Request]: createList");
-  const response = await createEmailList(listData);
-  return response.list || response; // Return the list object directly
-};
+  const createList = async (listData) => {
+    log.info("[useEmailLists] > [Request]: createList");
+    const response = await createEmailList(listData);
+    return response.list || response; // Return the list object directly
+  };
 
   // Update an existing list
   const updateList = async (listId, listData) => {
