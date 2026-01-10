@@ -21,7 +21,7 @@ import {
 } from "@/components/ui/table";
 import { 
   Search, 
-  UserPlus, 
+  //Removed: UserPlus, 
   Trash2,
   ChevronLeft,
   ChevronRight,
@@ -36,7 +36,7 @@ export default function ManageMembersDialog({
   onOpenChange, 
   selectedList,
   onRemoveMembers,
-  onAddBuyers 
+  //Removed: onAddBuyers 
 }) {
   // State for members and pagination
   const [listMembers, setListMembers] = useState([]);
@@ -196,7 +196,8 @@ export default function ManageMembersDialog({
               />
             </div>
             
-            <Button
+            {/* Removed: Button to Add Buyers */}
+            {/* <Button
               variant="outline"
               size="sm"
               className="border-[#324c48] text-[#324c48]"
@@ -204,7 +205,7 @@ export default function ManageMembersDialog({
             >
               <UserPlus className="h-4 w-4 mr-2" />
               Add Buyers
-            </Button>
+            </Button> */}
           </div>
           
           {selectedMembers.length > 0 && (

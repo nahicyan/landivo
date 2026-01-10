@@ -16,6 +16,7 @@ import {
   completeUnsubscribe,
   getBuyerForUnsubscribe,
   resubscribeBuyer,
+  getBuyersPaginated
 } from "../controllers/buyerCntrl.js";
 import { getBuyerByAuth0Id } from "../controllers/buyerCntrl.js";
 
@@ -28,6 +29,7 @@ router.post("/create", createBuyer);
 // Buyer CRUD operations
 router.get("/byAuth0Id", getBuyerByAuth0Id);
 router.get("/all", getAllBuyers);
+router.get('/paginated', getBuyersPaginated);
 router.get("/:id", getBuyerById);
 router.put("/update/:id", updateBuyer);
 router.delete("/delete/:id", deleteBuyer);

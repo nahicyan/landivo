@@ -29,13 +29,11 @@ import {
 import { 
   Check,
   ChevronsUpDown,
-  Search, 
-  Mail, 
+  Search,
   PlusCircle, 
   Trash2, 
   Edit, 
   Users,
-  UserPlus,
   X
 } from "lucide-react";
 
@@ -60,9 +58,7 @@ export default function EmailListsTable({
   preferredCityOptions = [],
   preferredCountyOptions = [],
   onNewList, 
-  onEditList, 
-  onEmailList, 
-  onAddBuyers, 
+  onEditList,
   onManageMembers, 
   onDeleteList 
 }) {
@@ -908,24 +904,6 @@ export default function EmailListsTable({
                     </TableCell>
                     <TableCell className="text-right">
                       <div className="flex justify-end gap-2">
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          className="text-[#324c48]"
-                          onClick={() => onEmailList(list.id)}
-                        >
-                          <Mail className="h-4 w-4" />
-                          <span className="sr-only">Email</span>
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          className="text-[#324c48]"
-                          onClick={() => onAddBuyers(list.id)}
-                        >
-                          <UserPlus className="h-4 w-4" />
-                          <span className="sr-only">Add Buyers</span>
-                        </Button>
                         <Button
                           size="sm"
                           variant="outline"

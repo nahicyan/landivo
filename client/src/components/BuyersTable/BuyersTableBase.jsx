@@ -51,7 +51,11 @@ import {
   Trash2, 
   Download, 
   MoreVertical, 
-  FileUp
+  FileUp,
+  ChevronLeft,
+  ChevronRight,
+  ChevronsLeft,
+  ChevronsRight
 } from "lucide-react";
 
 // Import constants - if not already defined, create them locally
@@ -104,6 +108,13 @@ export default function BuyersTableBase({
   onExport = () => {},
   onViewActivity = () => {},
   navigate = null,
+  // ADD THESE:
+  pagination = null,
+  onPageChange = () => {},
+  onNextPage = () => {},
+  onPrevPage = () => {},
+  onFirstPage = () => {},
+  onLastPage = () => {},
 }) {
   const routerNavigate = useNavigate();
   const navigateTo = navigate || routerNavigate;
@@ -588,21 +599,76 @@ export default function BuyersTableBase({
             </TableBody>
           </Table>
         </div>
+        
       </CardContent>
       
-      <CardFooter className="justify-between py-4 border-t">
-        <div className="text-sm text-gray-500">
-          Showing {buyersToDisplay.length} of {allBuyers.length} buyers
+      {pagination ? (
+        // Pagination mode
+        <div className="flex items-center justify-between px-4 py-3 border-t">
+          <div className="text-sm text-gray-500">
+            Showing {((pagination.currentPage - 1) * pagination.pageSize) + 1} to{' '}
+            {Math.min(pagination.currentPage * pagination.pageSize, pagination.totalCount)} of{' '}
+            {pagination.totalCount} buyers
+          </div>
+          
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={onFirstPage}
+              disabled={pagination.currentPage === 1}
+            >
+              <ChevronsLeft className="h-4 w-4" />
+            </Button>
+            
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={onPrevPage}
+              disabled={pagination.currentPage === 1}
+            >
+              <ChevronLeft className="h-4 w-4" />
+            </Button>
+            
+            <span className="text-sm px-3">
+              Page {pagination.currentPage} of {pagination.totalPages}
+            </span>
+            
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={onNextPage}
+              disabled={pagination.currentPage === pagination.totalPages}
+            >
+              <ChevronRight className="h-4 w-4" />
+            </Button>
+            
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={onLastPage}
+              disabled={pagination.currentPage === pagination.totalPages}
+            >
+              <ChevronsRight className="h-4 w-4" />
+            </Button>
+          </div>
         </div>
-        <Button 
-          variant="outline" 
-          className="border-[#324c48] text-[#324c48]"
-          onClick={() => navigateTo("/admin/buyers/create")}
-        >
-          <PlusCircle className="h-4 w-4 mr-2" />
-          Add New Buyer
-        </Button>
-      </CardFooter>
+      ) : (
+        // Non-pagination mode
+        <CardFooter className="justify-between py-4 border-t">
+          <div className="text-sm text-gray-500">
+            Showing {buyersToDisplay.length} of {allBuyers.length} buyers
+          </div>
+          <Button 
+            variant="outline" 
+            className="border-[#324c48] text-[#324c48]"
+            onClick={() => navigateTo("/admin/buyers/create")}
+          >
+            <PlusCircle className="h-4 w-4 mr-2" />
+            Add New Buyer
+          </Button>
+        </CardFooter>
+      )}
     </>
   );
 }

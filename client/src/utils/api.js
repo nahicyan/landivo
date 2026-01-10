@@ -61,7 +61,8 @@ export {
   deleteBuyer,
   importBuyers,
   getBuyerStats,
-  sendEmailToBuyers
+  sendEmailToBuyers,
+  getBuyersPaginated
 } from './api/buyers';
 
 // ============================================================================

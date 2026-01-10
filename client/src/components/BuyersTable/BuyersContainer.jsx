@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
-import { getAllBuyers, deleteBuyer } from "@/utils/api";
+import { getBuyersPaginated, deleteBuyer } from "@/utils/api";
 import { PuffLoader } from "react-spinners";
 import { toast } from "react-toastify";
 
@@ -61,8 +61,15 @@ const BuyersContainer = () => {
   // State for buyers data and filtering
   const [loading, setLoading] = useState(true);
   const [buyers, setBuyers] = useState([]);
-  const [filteredBuyers, setFilteredBuyers] = useState([]);
   const [selectedBuyers, setSelectedBuyers] = useState([]);
+  
+  // Pagination state
+  const [pagination, setPagination] = useState({
+    currentPage: 1,
+    pageSize: 25,
+    totalCount: 0,
+    totalPages: 0
+  });
   
   // Filter states
   const [searchQuery, setSearchQuery] = useState("");
@@ -96,44 +103,48 @@ const BuyersContainer = () => {
     byType: {}
   });
 
-  // Fetch buyers data
-  useEffect(() => {
-    const fetchBuyers = async () => {
-      try {
-        setLoading(true);
-        console.log("Fetching buyers...");
-        const data = await getAllBuyers();
-        console.log("Buyers data received:", data);
-        
-        // Ensure we have an array even if the API returns undefined
-        const buyersData = Array.isArray(data) ? data : [];
-        
-        // Debug buyers count
-        console.log(`Retrieved ${buyersData.length} buyers from API`);
-        
-        setBuyers(buyersData);
-        setFilteredBuyers(buyersData);
-        updateStats(buyersData);
-      } catch (error) {
-        console.error("Error fetching buyers:", error);
-        toast.error("Failed to load buyers list");
-        
-        // Set empty arrays as fallback
-        setBuyers([]);
-        setFilteredBuyers([]);
-        updateStats([]);
-      } finally {
-        setLoading(false);
-      }
-    };
+  // Fetch buyers data with pagination
+  const fetchBuyers = useCallback(async () => {
+    try {
+      setLoading(true);
+      console.log("Fetching buyers with pagination...");
+      
+      const data = await getBuyersPaginated({
+        page: pagination.currentPage,
+        limit: pagination.pageSize,
+        search: searchQuery,
+        area: areaFilter,
+        buyerType: buyerTypeFilter,
+        source: sourceFilter
+      });
+      
+      console.log("Paginated buyers data received:", data);
+      
+      const buyersData = Array.isArray(data?.buyers) ? data.buyers : [];
+      console.log(`Retrieved ${buyersData.length} buyers from API`);
+      
+      setBuyers(buyersData);
+      setPagination(data.pagination);
+      updateStats(buyersData);
+    } catch (error) {
+      console.error("Error fetching buyers:", error);
+      toast.error("Failed to load buyers list");
+      setBuyers([]);
+      updateStats([]);
+    } finally {
+      setLoading(false);
+    }
+  }, [pagination.currentPage, pagination.pageSize, searchQuery, areaFilter, buyerTypeFilter, sourceFilter]);
 
+  // Fetch buyers on mount and when filters/page change
+  useEffect(() => {
     fetchBuyers();
-  }, []);
+  }, [fetchBuyers]);
 
   // Update stats when buyers change
   const updateStats = useCallback((buyersList = []) => {
     const newStats = {
-      total: buyersList.length || 0,
+      total: pagination.totalCount || 0, // Use total count from pagination
       vip: buyersList.filter(b => b?.source === "VIP Buyers List").length || 0,
       byArea: {},
       byType: {}
@@ -144,12 +155,11 @@ const BuyersContainer = () => {
       newStats.byArea[area.id] = 0;
     });
 
-    // Count buyers by area
+    // Count buyers by area (for current page)
     buyersList.forEach(buyer => {
       if (buyer?.preferredAreas && Array.isArray(buyer.preferredAreas)) {
         buyer.preferredAreas.forEach(area => {
           if (area) {
-            // Find matching area handling case insensitivity
             const areaObj = AREAS.find(a => 
               a.value === area.toLowerCase() || 
               a.id.toLowerCase() === area.toLowerCase()
@@ -163,7 +173,7 @@ const BuyersContainer = () => {
       }
     });
 
-    // Count buyers by type
+    // Count buyers by type (for current page)
     buyersList.forEach(buyer => {
       if (buyer?.buyerType) {
         newStats.byType[buyer.buyerType] = (newStats.byType[buyer.buyerType] || 0) + 1;
@@ -171,66 +181,33 @@ const BuyersContainer = () => {
     });
 
     setStats(newStats);
+  }, [pagination.totalCount]);
+
+  // Pagination handlers
+  const goToPage = useCallback((page) => {
+    setPagination(prev => ({ ...prev, currentPage: page }));
+    setSelectedBuyers([]); // Clear selection when changing pages
   }, []);
 
-  // Apply filters to buyers
-  useEffect(() => {
-    const applyFilters = () => {
-      // Check if buyers array is valid
-      if (!Array.isArray(buyers) || buyers.length === 0) {
-        console.log("No buyers to filter");
-        setFilteredBuyers([]);
-        return;
-      }
-      
-      console.log(`Filtering ${buyers.length} buyers with criteria:`, {
-        searchQuery,
-        areaFilter,
-        buyerTypeFilter,
-        sourceFilter
-      });
-      
-      // Make a defensive copy of buyers array
-      let results = [...buyers];
+  const goToNextPage = useCallback(() => {
+    if (pagination.currentPage < pagination.totalPages) {
+      goToPage(pagination.currentPage + 1);
+    }
+  }, [pagination.currentPage, pagination.totalPages, goToPage]);
 
-      // Apply search query filter
-      if (searchQuery?.trim()) {
-        const query = searchQuery.toLowerCase();
-        results = results.filter(buyer => 
-          (buyer?.firstName || '').toLowerCase().includes(query) ||
-          (buyer?.lastName || '').toLowerCase().includes(query) ||
-          (buyer?.email || '').toLowerCase().includes(query) ||
-          (buyer?.phone || '').includes(query)
-        );
-      }
+  const goToPrevPage = useCallback(() => {
+    if (pagination.currentPage > 1) {
+      goToPage(pagination.currentPage - 1);
+    }
+  }, [pagination.currentPage, goToPage]);
 
-      // Apply area filter
-      if (areaFilter && areaFilter !== "all") {
-        const areaValue = AREAS.find(a => a.id === areaFilter)?.value || areaFilter.toLowerCase();
-        results = results.filter(buyer => {
-          if (!buyer?.preferredAreas || !Array.isArray(buyer.preferredAreas)) return false;
-          return buyer.preferredAreas.some(area => 
-            area && area.toLowerCase() === areaValue
-          );
-        });
-      }
+  const goToFirstPage = useCallback(() => {
+    goToPage(1);
+  }, [goToPage]);
 
-      // Apply buyer type filter
-      if (buyerTypeFilter && buyerTypeFilter !== "all") {
-        results = results.filter(buyer => buyer?.buyerType === buyerTypeFilter);
-      }
-
-      // Apply source filter
-      if (sourceFilter && sourceFilter !== "all") {
-        results = results.filter(buyer => buyer?.source === sourceFilter);
-      }
-
-      console.log(`Filter applied: ${results.length} buyers after filtering`);
-      setFilteredBuyers(results);
-    };
-
-    applyFilters();
-  }, [buyers, searchQuery, areaFilter, buyerTypeFilter, sourceFilter]);
+  const goToLastPage = useCallback(() => {
+    goToPage(pagination.totalPages);
+  }, [pagination.totalPages, goToPage]);
 
   // Handle buyer selection
   const handleSelectBuyer = useCallback((buyerId) => {
@@ -243,14 +220,14 @@ const BuyersContainer = () => {
     });
   }, []);
 
-  // Handle select all buyers
+  // Handle select all buyers (on current page)
   const handleSelectAll = useCallback((event) => {
     if (event) {
-      setSelectedBuyers(filteredBuyers.map(buyer => buyer.id));
+      setSelectedBuyers(buyers.map(buyer => buyer.id));
     } else {
       setSelectedBuyers([]);
     }
-  }, [filteredBuyers]);
+  }, [buyers]);
 
   // Handle email content change
   const handleEmailChange = useCallback((e) => {
@@ -269,7 +246,6 @@ const BuyersContainer = () => {
         return;
       }
 
-      // Get the selected buyers' data
       const selectedBuyersData = buyers.filter(buyer => 
         selectedBuyers.includes(buyer.id)
       );
@@ -277,7 +253,6 @@ const BuyersContainer = () => {
       // Here you would normally call an API to send emails
       toast.success(`Email sent to ${selectedBuyersData.length} buyers!`);
       
-      // Reset the form and close the dialog
       setEmailData({
         subject: "",
         content: "",
@@ -292,8 +267,6 @@ const BuyersContainer = () => {
 
   // Handle bulk import functionality
   const handleBulkImport = useCallback((e) => {
-    // This would handle CSV processing
-    // For now, just close the dialog and show a toast
     toast.info("Bulk import functionality will be implemented soon");
     setBulkImportOpen(false);
   }, []);
@@ -304,36 +277,30 @@ const BuyersContainer = () => {
   }, []);
 
   // Confirm and process buyer deletion
-const confirmDeleteSelected = useCallback(async () => {
-  try {
-    // Delete each selected buyer from the database
-    const deletePromises = selectedBuyers.map(buyerId => deleteBuyer(buyerId));
-    await Promise.all(deletePromises);
-    
-    // Refresh the buyers list from the server
-    const updatedBuyers = await getAllBuyers();
-    setBuyers(updatedBuyers);
-    setFilteredBuyers(updatedBuyers);
-    setSelectedBuyers([]);
-    updateStats(updatedBuyers);
-    
-    toast.success(`${selectedBuyers.length} buyer${selectedBuyers.length !== 1 ? 's' : ''} deleted successfully`);
-    setDeleteConfirmOpen(false);
-  } catch (error) {
-    console.error("Error deleting buyers:", error);
-    toast.error("Failed to delete selected buyers");
-  }
-}, [buyers, selectedBuyers, updateStats]);
+  const confirmDeleteSelected = useCallback(async () => {
+    try {
+      const deletePromises = selectedBuyers.map(buyerId => deleteBuyer(buyerId));
+      await Promise.all(deletePromises);
+      
+      // Refresh the buyers list
+      await fetchBuyers();
+      setSelectedBuyers([]);
+      
+      toast.success(`${selectedBuyers.length} buyer${selectedBuyers.length !== 1 ? 's' : ''} deleted successfully`);
+      setDeleteConfirmOpen(false);
+    } catch (error) {
+      console.error("Error deleting buyers:", error);
+      toast.error("Failed to delete selected buyers");
+    }
+  }, [selectedBuyers, fetchBuyers]);
 
   // Export email list
   const handleExport = useCallback(() => {
     try {
-      // Get the selected buyers (or all if none selected)
       const buyersToExport = selectedBuyers.length > 0
         ? buyers.filter(buyer => selectedBuyers.includes(buyer.id))
-        : filteredBuyers;
+        : buyers;
 
-      // Export to CSV
       const success = exportBuyersToCsv(buyersToExport, "buyers_list.csv");
       
       if (success) {
@@ -345,7 +312,7 @@ const confirmDeleteSelected = useCallback(async () => {
       console.error("Error exporting buyers:", error);
       toast.error("Failed to export buyers list");
     }
-  }, [buyers, filteredBuyers, selectedBuyers]);
+  }, [buyers, selectedBuyers]);
 
   // Get buyers for a specific area with proper case-insensitive matching
   const getBuyersForArea = useCallback((areaId) => {
@@ -390,7 +357,7 @@ const confirmDeleteSelected = useCallback(async () => {
         <TabsContent value="list">
           <Card className="border-[#324c48]/20">
             <BuyersTable 
-              filteredBuyers={filteredBuyers}
+              filteredBuyers={buyers}
               buyers={buyers}
               selectedBuyers={selectedBuyers}
               searchQuery={searchQuery}
@@ -408,6 +375,12 @@ const confirmDeleteSelected = useCallback(async () => {
               setBulkImportOpen={setBulkImportOpen}
               onExport={handleExport}
               navigate={navigate}
+              pagination={pagination}
+              onPageChange={goToPage}
+              onNextPage={goToNextPage}
+              onPrevPage={goToPrevPage}
+              onFirstPage={goToFirstPage}
+              onLastPage={goToLastPage}
             />
           </Card>
         </TabsContent>

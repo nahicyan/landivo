@@ -12,8 +12,6 @@ import {
 import EmailListsTable from "./EmailListsTable";
 import CreateListForm from "./CreateListForm";
 import EditListForm from "./EditListForm";
-import EmailForm from "./EmailForm";
-import AddBuyersDialog from "./AddBuyersDialog";
 import ManageMembersDialog from "./ManageMembersDialog";
 import ImportCsvDialog from "./ImportCsvDialog";
 import DeleteListConfirmDialog from "./DeleteListConfirmDialog";
@@ -173,8 +171,6 @@ export default function EmailLists() {
   // State for dialogs and selected list
   const [createListOpen, setCreateListOpen] = useState(false);
   const [editListOpen, setEditListOpen] = useState(false);
-  const [emailDialogOpen, setEmailDialogOpen] = useState(false);
-  const [addBuyersOpen, setAddBuyersOpen] = useState(false);
   const [manageBuyersOpen, setManageBuyersOpen] = useState(false);
   const [csvUploadOpen, setCsvUploadOpen] = useState(false);
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
@@ -253,6 +249,13 @@ export default function EmailLists() {
     const citySet = new Set();
     const countySet = new Set();
 
+    // Helper to convert to title case
+    const toTitleCase = (str) => {
+      return str.split(' ').map(word => 
+        word.charAt(0).toUpperCase() + word.slice(1).toLowerCase()
+      ).join(' ');
+    };
+
     lists.forEach((list) => {
       const criteria = list?.criteria || {};
       normalizeLocationValues(criteria.city).forEach((city) => citySet.add(city));
@@ -260,8 +263,8 @@ export default function EmailLists() {
     });
 
     return {
-      cities: Array.from(citySet).sort((a, b) => a.localeCompare(b)),
-      counties: Array.from(countySet).sort((a, b) => a.localeCompare(b))
+      cities: Array.from(citySet).map(toTitleCase).sort((a, b) => a.localeCompare(b)),
+      counties: Array.from(countySet).map(toTitleCase).sort((a, b) => a.localeCompare(b))
     };
   }, [lists]);
 
@@ -288,20 +291,6 @@ export default function EmailLists() {
     const list = lists.find(l => l.id === listId);
     setSelectedList(list);
     setEditListOpen(true);
-  };
-
-  // Handle opening the email dialog
-  const handleEmailList = (listId) => {
-    const list = lists.find(l => l.id === listId);
-    setSelectedList(list);
-    setEmailDialogOpen(true);
-  };
-
-  // Handle opening the add buyers dialog
-  const handleAddBuyers = (listId) => {
-    const list = lists.find(l => l.id === listId);
-    setSelectedList(list);
-    setAddBuyersOpen(true);
   };
 
   // Handle opening the manage members dialog
@@ -383,7 +372,6 @@ export default function EmailLists() {
         const createResponse = await createList({
           ...listData,
           buyerIds: buyersToAddToNewList,
-          criteria: {}
         });
         
         const newList = createResponse.list || createResponse;
@@ -551,16 +539,6 @@ export default function EmailLists() {
     }
   };
 
-  // Handle adding buyers to a list
-  const handleAddBuyersToList = async (listId, buyerIds) => {
-    try {
-      await addBuyersToListFn(listId, buyerIds);
-      setAddBuyersOpen(false);
-    } catch (error) {
-      console.error("Error adding buyers to list:", error);
-    }
-  };
-
   // Handle CSV import (updated to store imported buyers)
   const handleCsvImport = async (csvData, options) => {
     try {
@@ -616,8 +594,6 @@ export default function EmailLists() {
           preferredCountyOptions={locationOptions.counties}
           onNewList={handleNewList}
           onEditList={handleEditList}
-          onEmailList={handleEmailList}
-          onAddBuyers={handleAddBuyers}
           onManageMembers={handleManageMembers}
           onDeleteList={handleDeleteList}
         />
@@ -641,28 +617,11 @@ export default function EmailLists() {
         onImportCsv={handleImportCsv}
       />
 
-      <EmailForm
-        open={emailDialogOpen}
-        onOpenChange={setEmailDialogOpen}
-        selectedList={selectedList}
-        onSendEmail={(emailData) => sendEmail(selectedList?.id, emailData)}
-      />
-
-      <AddBuyersDialog
-        open={addBuyersOpen}
-        onOpenChange={setAddBuyersOpen}
-        selectedList={selectedList}
-        availableBuyers={availableBuyers}
-        onAddBuyers={(buyerIds) => handleAddBuyersToList(selectedList?.id, buyerIds)}
-        onImportCsv={handleImportCsv}
-      />
-
       <ManageMembersDialog
         open={manageBuyersOpen}
         onOpenChange={setManageBuyersOpen}
         selectedList={selectedList}
         onRemoveMembers={(buyerIds) => removeBuyersFromList(selectedList?.id, buyerIds)}
-        onAddBuyers={() => setAddBuyersOpen(true)}
       />
 
       <ImportCsvDialog

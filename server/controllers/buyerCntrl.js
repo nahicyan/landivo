@@ -1265,3 +1265,76 @@ export const getBuyerForUnsubscribe = asyncHandler(async (req, res) => {
     });
   }
 });
+
+export const getBuyersPaginated = asyncHandler(async (req, res) => {
+  const {
+    page = 1,
+    limit = 10,
+    search = "",
+    area = "all",
+    buyerType = "all",
+    source = "all"
+  } = req.query;
+
+  try {
+    await connectMongo();
+
+    // Build query
+    const query = {};
+
+    if (search) {
+      query.$or = [
+        { firstName: { $regex: search, $options: 'i' } },
+        { lastName: { $regex: search, $options: 'i' } },
+        { email: { $regex: search, $options: 'i' } },
+        { phone: { $regex: search, $options: 'i' } }
+      ];
+    }
+
+    if (area && area !== "all") {
+      query.preferredAreas = { $in: [area] };
+    }
+
+    if (buyerType && buyerType !== "all") {
+      query.buyerType = buyerType;
+    }
+
+    if (source && source !== "all") {
+      query.source = source;
+    }
+
+    // Calculate pagination
+    const pageNum = parseInt(page);
+    const limitNum = parseInt(limit);
+    const skip = (pageNum - 1) * limitNum;
+
+    // Get total count and paginated results
+    const [buyers, totalCount] = await Promise.all([
+      Buyer.find(query)
+        .skip(skip)
+        .limit(limitNum)
+        .sort({ createdAt: -1 })
+        .lean(),
+      Buyer.countDocuments(query)
+    ]);
+
+    // Normalize buyers
+    const normalizedBuyers = buyers.map(buyer => ({
+      ...buyer,
+      id: String(buyer._id),
+    }));
+
+    res.status(200).json({
+      buyers: normalizedBuyers,
+      pagination: {
+        currentPage: pageNum,
+        pageSize: limitNum,
+        totalCount,
+        totalPages: Math.ceil(totalCount / limitNum)
+      }
+    });
+  } catch (err) {
+    log.error("Error fetching paginated buyers:", err);
+    res.status(500).json({ message: "Error fetching buyers", error: err.message });
+  }
+});

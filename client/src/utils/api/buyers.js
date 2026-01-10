@@ -166,3 +166,21 @@ export const sendEmailToBuyers = async (buyerIds, subject, content, includeUnsub
     handleRequestError(error, "Failed to send emails to buyers");
   }
 };
+
+export const getBuyersPaginated = async (params = {}) => {
+  try {
+    const queryParams = new URLSearchParams({
+      page: params.page || 1,
+      limit: params.limit || 10,
+      search: params.search || "",
+      area: params.area || "all",
+      buyerType: params.buyerType || "all",
+      source: params.source || "all"
+    });
+    
+    const response = await api.get(`/buyer/paginated?${queryParams}`);
+    return response.data;
+  } catch (error) {
+    handleRequestError(error, "Failed to fetch buyers");
+  }
+};
